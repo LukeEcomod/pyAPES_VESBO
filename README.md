@@ -1,1 +1,1 @@
-# CCFPeat project's README!
+# CCFPeat project's README
