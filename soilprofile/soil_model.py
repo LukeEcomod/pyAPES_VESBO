@@ -1,0 +1,780 @@
+# -*- coding: utf-8 -*-
+"""
+TEST SCRIPT FOR CREATING SIMPLE SOIL PROFILE OBJECT AND RUNNING SOIL HEAT AND WATER BUDGET MODELS
+Uses soil_water and soil_heat modules.
+
+@author: slauniai
+
+LAST EDITS:
+    AJ 12.10.2017
+    Samuli 25.8.2017.
+"""
+
+import numpy as np
+import pandas as pd
+import os
+from datetime import datetime
+from matplotlib import pyplot as plt
+
+import soil_heat as hf
+import soil_water as wf
+
+eps = np.finfo(float).eps  # machine epsilon
+
+# function calls
+# def waterFlow1D(t_final, z, h0, pF, Ksat, Ftop, R, HM=0.0, lbcType='impermeable', lbcValue=None,
+#                Wice0=0.0, maxPond=0.0, pond0=0.0, cosalfa=1.0, h_atm=-1000.0, steps=10):
+#
+# def heatflow_1D(t_final, z, pF, T0, Wliq0, Wice0, ubc, lbc, spara, S=0.0, steps=10):
+
+
+class SoilModel():
+    import soil_water as wf
+    import soil_heat as hf
+    
+    def __init__(self, z, para):
+        """
+        Initializes SoilModel for 1D solutions of soil water and heat budgets
+        Args:
+            z (array): vertical grid [m], <0
+            para (dict): floats or arrays of len(z)
+                * pF (dict): vanGenuchten water retention parameters; scalars or arrays of len(z)
+                * Ksat (float/array): saturated vertical hydraulic conductivity [ms-1]
+                * Khsat (float/array): saturated horizontal hydraulic conductivity [ms-1]
+                * Csv (float/array): dry soil vol. heat capacity [J m-3 (total volume) K-1]
+                * vOrg (float(array): organic matter fraction of solid volume [-]
+                * vSand (float(array): sand fraction of solid volume [-]
+                * vSilt(float(array): silt fraction of solid volume [-]
+                * vClay (float(array): clay fraction of solid volume [-]
+                * fp (float/array): freezing curve parameter
+                * max_pond: [m] maximum pond depth
+                * ini_cond (dict): inputs are floats or arrays of len(z)
+                    * 'Wtot', vol. water content [-] or
+                    * 'h', materix water potential [m] or
+                    * 'gwl', ground water level, <0 [m] (assumes steady state in column)
+                    * 'T', soil temperature [degC]
+                    * 'pond', [m] initial pond depth at surface
+                * lbc_heat: lower boundary condition type for heat
+                * lbc_water: lower boundary condition type for water (type, value, depth)
+                * homogenous (boolean): True assumes vertically homogenous profile and float inputs
+                * solve_heat (boolean): True solves heatflow
+                * solve_water (boolean): True solves waterflow
+            
+        Returns:
+            object
+        """        
+        self.para = para
+
+        # --- boundary conditions and flags
+        self.lbc_heat = para['lbc_heat']
+        self.lbc_water = para['lbc_water']
+        
+        self.solve_heat = para['solve_heat']
+        self.solve_water = para['solve_water']
+
+        N = len(z)
+        self.Nlayers = N
+        
+        # grid
+        dz = np.empty(N)
+        dzu = np.empty(N)
+        dzl = np.empty(N)
+
+        # distances between grid points: dzu is between point i-1 and i, dzl between point i and i+1
+        dzu[1:] = z[:-1] - z[1:]
+        dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
+        dzl[:-1] = z[:-1] - z[1:]
+        dzl[-1] = (z[-2] - z[-1]) / 2.0 #  from last node to bottom surface
+        # compartment thickness
+        dz = (dzu + dzl) / 2.0
+        dz[0] = dzu[0] + dzl[0] / 2.0
+        dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+
+        self.z = z                          # vertical grid [m], <0
+        self.dz = dz                        # layer thickness [m]
+        del dz, dzu, dzl
+
+        # create homogenous soil profile: needs float inputs
+        if para['homogenous']:
+            # pF -parameters
+            self.pF = {key: np.ones(N)*para['pF'][key] for key in para['pF'].keys()}
+            # porosity [-]
+            self.porosity = np.ones(N)*self.pF['ThetaS']
+            # sat. vertical hydr. cond [ms-1]
+            self.Ksat = np.ones(N)*para['Ksat']
+            # sat. horizontal hydr. cond [ms-1]
+            self.Khsat = np.ones(N)*para['Khsat']
+            # freezing curve parameter [-]
+            fp = np.ones(N)*para['fp']
+            # organic matter vol. fraction of solids [-]
+            vOrg = np.ones(N)*para['vOrg']
+            # sand vol. fraction of solids [-]
+            vSand = np.ones(N)*para['vSand']
+            # silt vol. fraction of solids [-]
+            vSilt = np.ones(N)*para['vSilt']
+            # silt vol. fraction of solids [-]
+            vClay = np.ones(N)*para['vClay']
+            # dry soil vol. heat capacity [J m-3 K-1]           
+            Csv = np.ones(N)*para['Csv']
+
+        # create non-homogenous soil profile from inputs
+        # this uses information on soil horizons given in 'para', and assigns values for each soil
+        # layer above horizon bottom given in para['zh']
+        else:
+            Nhor = len(para['zh'])
+            keys = ['Ksat', 'Khsat', 'Cv_dry', 'fp', 'vOrg', 'vSand', 'vSilt', 'vClay']
+            lpara = {key: np.ones(N)*np.NaN for key in keys}
+            lpara['pF'] = {key: np.ones(N)*np.NaN for key in para['pF'].keys()}
+
+            ix0 = 0
+            for k in range(0, Nhor):
+                ix = np.where(z >= para['zh'][k])[0][-1]
+                for key in lpara.keys():
+                    if key is not 'pF':
+                        lpara[key][ix0:ix+1] = para[key][k]
+                else:
+                    for pp in lpara['pF'].keys():
+                        lpara['pF'][pp][ix0:ix+1] = para['pF'][pp][k]
+                ix0 = ix + 1
+
+            self.pF = lpara['pF']
+            self.porosity = self.pF['ThetaS']
+
+            self.Ksat = lpara['Ksat']
+            self.Khsat = lpara['Khsat']
+
+            # freezing curve parameter [-]
+            fp = lpara['fp']
+            # organic matter vol. fraction of solids [-]
+            vOrg = lpara['vOrg']
+            # sand vol. fraction of solids [-]
+            vSand = lpara['vSand']
+            # silt vol. fraction of solids [-]
+            vSilt = lpara['vSilt']
+            # silt vol. fraction of solids [-]
+            vClay = lpara['vClay']
+            # dry soil vol. heat capacity [J m-3 K-1]
+            Csv = lpara['Cv_dry']
+
+        bedrock = para['Bedrock']
+        max_pond = para['max_pond']
+        ini_cond = para['ini_cond']
+        self.max_pond = max_pond
+
+        # initialize state variables
+        T = np.ones(N)*ini_cond['T']
+        self.pond = ini_cond['pond']  # pond storage [m]
+
+        if 'h' in ini_cond:
+            h = np.ones(N)*ini_cond['h']
+            # vol. water content [-]
+            Wtot = wf.wrc(self.pF, x=h)
+        elif 'gwl' in ini_cond:
+            h = np.ones(N)*(ini_cond['gwl']-z)
+            Wtot = wf.wrc(self.pF, x=h)
+        else:
+            Wtot = np.ones(N)*ini_cond['Wtot']
+
+        Wliq, Wice, _ = hf.frozen_water(T, Wtot, fp=fp)
+        # temperature [degC]
+        self.T = T
+        # hydraulic head [m]
+        self.h = h
+        # liq. water content [-]
+        self.Wliq = Wliq
+        # ice content [-]
+        self.Wice = Wice
+        # air volume [-]
+        self.Wair = self.porosity - self.Wliq - self.Wice
+
+        # ground water level [m]
+        _, gwl = wf.get_gwl(self.h, self.z)
+        self.gwl = gwl
+        # print(self.z, self.Wliq, self.T, self.h, self.Wice, self.Ls)
+
+        # vertical & horizontal hydraulic conductivities [ms-1]
+        K = wf.hydraulic_conductivity(self.pF, x=self.Wliq, var='Th')
+        K = wf.spatial_average(K, self.z, method='arithmetic')                  # Miksi tässä?
+        self.Kv = K
+        self.Kh = 10*K
+
+        # thermal conductivity [Wm-1K-1]
+        self.Lambda = hf.thermal_conductivity(
+            self.porosity, self.Wliq, wice=self.Wice,
+            vOrg=vOrg, vSand=vSand, vSilt=vSilt, vClay=vClay)
+
+        # In case there is impermeable layer (bedrock bottom), water flow is solved only above this
+        self.ix_w = np.where(self.z >= self.lbc_water['depth'])
+        ix_max = np.max(self.ix_w)
+
+        if ix_max < self.Nlayers-1:
+            self.h[ix_max + 1:] = np.NaN
+            self.Wliq[ix_max + 1:] = 0.0 + eps
+            self.Wice[ix_max + 1:] = 0.0 + eps
+            self.Wair[ix_max + 1:] = 0.0 + eps
+            self.porosity[ix_max + 1:] = 0.0 + eps
+            self.Kv[ix_max + 1:] = 0.0 + eps
+            self.Kh[ix_max + 1:] = 0.0 + eps
+            self.Lambda[ix_max + 1:] = bedrock['Lambda']
+            Csv[ix_max + 1:] = bedrock['Cv']
+            fp[ix_max + 1:] = 1.0
+            vOrg[ix_max + 1:] = 0.0 + eps
+            vSand[ix_max + 1:] = 0.0 + eps
+            vSilt[ix_max + 1:] = 0.0 + eps
+            vClay[ix_max + 1:] = 0.0 + eps
+
+        # input dict for heat flow solver
+        self.solids_prop = {'cs': Csv, 'fp': fp,
+                            'vOrg': vOrg, 'vSand': vSand, 'vSilt': vSilt, 'vClay': vClay,
+                            'bedrockL': bedrock['Lambda']
+                            } 
+        
+        # drainage equation
+        if 'drainage_equation' in para:
+            self.drainage_equation = para['drainage_equation']
+        else:
+            self.drainage_equation = {'type': None}
+            
+        # Keep track of dt used in solving water
+        self.dt_water = None
+                
+
+    def _run(self, dt, ubc_water, ubc_heat, h_atm=-1000.0, water_sink=None, heat_sink=None, 
+                      lbc_water=None, lbc_heat=None):
+        """
+        Runs soil model for one timestep and updates soil state variables
+        
+        Returns (dict):
+            fluxes
+                * 'infiltration' [m]
+                * 'evaporation' [m]
+                * 'drainage' [m]
+                * 'runoff' [m]
+                * 'vertical_water_flux'
+                * 'vertical_heat_flux'
+                * 'water_closure' [m]
+            state
+                * 'temperature' [degC]
+                * 'water_potential' [m]
+                * 'volumetric_water_content' [m3m-3]
+                * 'ice_content' [m3m-3]
+                * 'pond_storage' [m]
+                * 'ground_water_level' [m]
+                * 'hydraulic_conductivity' [ms-1]
+                * 'thermal_conductivity [Wm-1s-1]
+        """
+
+        ix = self.ix_w
+        pFpara = {'ThetaS': self.pF['ThetaS'][ix], 'ThetaR': self.pF['ThetaR'][ix],
+                  'alpha': self.pF['alpha'][ix], 'n': self.pF['n'][ix]}
+       
+        fluxes = {}
+
+        if water_sink is None:
+            water_sink = np.zeros(self.Nlayers)
+        if heat_sink is None:
+            heat_sink = np.zeros(self.Nlayers)
+
+        # this allows lower bc's be changed during simulation
+        if lbc_water:
+            self.lbc_water = lbc_water
+        if lbc_heat:
+            self.lbc_heat = lbc_heat
+
+        if self.solve_water:
+            # drainage to ditches
+            if self.drainage_equation['type'] == 'Hooghoudt':  # Hooghoudt's drainage
+                _, q_drain = wf.drainage_hooghoud(self.z[ix], 
+                                              self.Ksat[ix], 
+                                              self.gwl, 
+                                              self.drainage_equation['depth'], 
+                                              self.drainage_equation['spacing'], 
+                                              self.drainage_equation['width'])
+            else:
+                q_drain = np.zeros(len(self.z[ix]))  # no drainage
+            if self.dt_water == None:
+                self.dt_water = dt
+            
+            # solve water flow in domain of ix layers
+            h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe, self.dt_water = \
+                wf.waterFlow1D(t_final=dt,
+                               z=self.z[ix],
+                               h0=self.h[ix],
+                               pF=pFpara,
+                               Ksat=self.Ksat[ix],
+                               Prec=ubc_water['Prec'],  # flux-based precipitation >0 [m s-1]
+                               Evap=ubc_water['Evap'],  # flux-based evaporation >0 [m s-1]
+                               R=water_sink[ix],  # total water sink (root etc.)
+                               HM=q_drain,  # lateral flow 
+                               lbc=self.lbc_water,  # lower boundary condition {'type': xx, 'value': yy}
+                               Wice0=self.Wice[ix],
+                               maxPond=self.max_pond,
+                               pond0=self.pond,
+                               cosalfa=1.0,
+                               h_atm=h_atm,  # atmospheric pressure head [m]; for soil evap. controls
+                               steps=10)#dt / self.dt_water)
+            self.h[ix] = h.copy()
+            self.Wliq[ix] = Wliq.copy()
+            self.Kv[ix] = Kv.copy()
+            self.Wair = self.porosity - self.Wliq - self.Wice
+
+            fluxes.update({'infiltration': infil,
+                           'evaporation': evapo,
+                           'transpiration': trans,
+                           'drainage': drainage,
+                           'runoff': roff, 
+                           'vertical_water_flux': fliq,
+                           'water_closure': mbe
+                          })
+        else:
+            self.gwl = self.para['ground_water_level']
+            self._steady_state_water(pF= self.pF, Ksat=self.Ksat, gwl=self.gwl)
+
+        if self.solve_heat:
+            self.T, self.Wliq, self.Wice, fheat, self.Lambda = \
+                hf.heatflow_1D(t_final=dt,
+                               z=self.z,
+                               poros=self.porosity,
+                               T0=self.T,
+                               Wliq0=self.Wliq,
+                               Wice0=self.Wice,
+                               ubc=ubc_heat,  # upper boundary condition {'type': xx, 'value': yy}
+                               lbc=self.lbc_heat,
+                               spara=self.solids_prop,  # dict of properties of solid part
+                               S=heat_sink,
+                               steps=1)
+            self.Wair = self.porosity - self.Wliq - self.Wice
+
+            fluxes.update({'vertical_heat_flux': fheat})
+
+        # return state in dictionary
+        state = {"water_potential": self.h,
+                 "volumetric_water_content": self.Wliq,
+                 "column_water_content": sum(self.Wliq*self.dz),
+                 "ice_content": self.Wice,
+                 "pond_storage": self.pond,
+                 "ground_water_level": self.gwl,
+                 "hydraulic_conductivity": self.Kv,
+                 "temperature": self.T,
+                 "thermal_conductivity": self.Lambda
+                 }
+
+        return fluxes, state
+
+    def _steady_state_water(self, pF, Ksat, gwl):
+        """ Calculates soil water content in steady state with ground water level
+        """
+
+        h = np.arange(self.z[0], gwl, self.z[1]-self.z[0])
+        h = np.append(np.flip(h, axis=0), np.zeros(self.Nlayers - len(h)))
+        self.h = h.copy()
+
+        Wtot = wf.wrc(pF, x=h)
+        self.Kv = wf.hydraulic_conductivity(pF, h, Ksat)
+
+        self.Wliq, self.Wice, _ = hf.frozen_water(self.T, Wtot, self.solids_prop['fp'])
+        self.Wair = self.porosity - self.Wliq - self.Wice
+
+def update_steady_state(h, T, Wtot, fp, porosity):
+
+    Wliq, Wice = hf.frozen_water(T, Wtot, fp)
+    Wair = porosity - Wliq - Wice
+
+    return Wliq, Wice, Wair
+
+"""
+Main program for testing soil water and heatflow solutions
+
+"""
+
+def test_soilmodel(forcfile, start_time, end_time):
+    dt0 = 1800.0
+    start_time = "2005-06-01"
+    end_time = "2005-08-31"
+
+    forcfile = 'C:\\Users\\L1656\\Documents\\Git_repos\\CCFPeat\\bryo_microclimate_LAI4.5.csv'
+    
+    from soil_parameters import para
+    
+    # --- read forcing
+
+    dat = pd.read_csv(forcfile, sep=',', header='infer', na_values=-999)
+    # parse first columns to datetime
+    N = len(dat)
+    t = []
+    for k in range(N):
+        t.append(
+            datetime(dat['yyyy'].iloc[k],
+                     dat['mo'].iloc[k],
+                     dat['dd'].iloc[k],
+                     dat['hh'].iloc[k],
+                     dat['mm'].iloc[k]))
+    # set to dataframe index
+    dat.index = t
+    dat['Trfall'] = dat['Trfall'] / 1000  # [mm/s --> m/s]
+    Forc = dat[['Par', 'Nir', 'LWdn', 'U', 'H2O', 'CO2', 'Trfall', 'G']]
+    Forc = Forc[(Forc.index >= start_time) & (Forc.index <= end_time)]
+    Nsteps = len(Forc)
+    del dat, t, N
+
+    model = SoilModel(para['z'], para)
+
+    # -- create results dictionary
+    res = {
+        'gwl': [],
+        'h': [],
+        'Wliq': [],
+        'h_pond': [],
+        'Prec': [],
+        'Infil': [],
+        'Evap': [],
+        'Trans': [],
+        'Drain': [],
+        'Roff': [],
+        'WSto': [],
+        'Mbew': [],
+        }
+
+    for k in range(0, Nsteps):
+        print 'k = ' + str(k)
+        Prec = Forc['Trfall'].iloc[k]  
+        ubc_w = {'Prec': Prec, 'Evap': 0.0}  #1e-8}
+        # Rootsink = np.zeros(N)
+
+        ubc_T = {'type': 'flux', 'value': 0.0}
+        #ubc_T = {'type': 'temperature', 'value': 20.0}
+
+        # solve water and heatflow
+        flx, state = model._run(dt=dt0, ubc_water=ubc_w, ubc_heat=ubc_T)
+
+        # -- update results
+        res['gwl'].append(model.gwl.copy())
+        res['h'].append(model.h.copy())
+        res['Wliq'].append(model.Wliq.copy())
+        res['h_pond'].append(model.pond.copy())
+        res['Prec'].append(Prec * dt0)
+        res['Infil'].append(flx['infiltration'])
+        res['Evap'].append(flx['evaporation'])
+        res['Trans'].append(flx['transpiration'])
+        res['Drain'].append(flx['drainage'])
+        res['Roff'].append(flx['runoff'])
+        res['WSto'].append(state['column_water_content'])
+        res['Mbew'].append(flx['water_closure'])
+        
+        if res['gwl'][-1] > 0.05:
+            break
+
+    plt.figure(1)
+    plt.plot(res['gwl'])
+    plt.title('Ground water level (m)', fontsize=14)
+    plt.figure(2)
+    plt.plot(res['Mbew'])
+    plt.title('Water model mass balance error (m)', fontsize=14)
+    plt.figure(3)
+    plt.plot(1000 * np.add(res['Drain'], res['Roff']) / dt0 * 3600)
+    plt.title('Total runoff (mm/h)', fontsize=14)
+    
+    print 'Water balance:'
+    print('Precipition:\t %.2f mm (%.1f)' % (sum(res['Prec'])*1000, 100*sum(res['Prec'])/sum(res['Prec'])))
+    print('Evaporation:\t %.2f mm (%.1f)' % (sum(res['Evap'])*1000, 100*sum(res['Evap'])/sum(res['Prec'])))
+    print('Transpition:\t %.2f mm (%.1f)' % (sum(res['Trans'])*1000, 100*sum(res['Trans'])/sum(res['Prec'])))
+    print('Drainage:\t %.2f mm (%.1f)' % (sum(res['Drain'])*1000, 100*sum(res['Drain'])/sum(res['Prec'])))
+    print('Surface runoff:\t %.2f mm (%.1f)' % (sum(res['Roff'])*1000, 100*sum(res['Roff'])/sum(res['Prec'])))
+    print('Storage change:\t %.2f mm (%.1f)' % ((res['WSto'][-1]-res['WSto'][0])*1000, 100*(res['WSto'][-1]-res['WSto'][0])/sum(res['Prec'])))
+    
+    return res, model, Forc
+
+#def create_soilmodel():
+#    # define grid
+#    # [m]
+#    z = np.arange(-0.01, -2.0, -0.02)
+#    N = len(z)
+#
+#    # define soil type
+#    pF = {'ThetaS': 0.5, 'ThetaR': 0.05, 'alpha': 0.3, 'n': 1.3}
+#    poros = pF['ThetaS']
+#    vOrg = 0.01
+#    vQuartz = 0.1
+#    vMineral = 1.0 - poros - vQuartz - vOrg
+#    # heat capacity
+#    Cvs = hf.volumetric_heat_capacity(poros, orgfract=vOrg)
+#    Ksat = 1e-5
+#    Khsat = Ksat
+#    Ls = hf.thermal_conductivity_solids(
+#        poros, vMineral=vMineral, vQuartz=vQuartz, vOrg=vOrg)
+#    fp = 2.0
+#    ini_cond = {'T': 10.0, 'h': -0.1, 'pond': 0.0}
+#
+#    # model bcs
+#    max_pond = 0.05  # m
+#    lbc_heat = {'type': 'temperature', 'value': 10.0}
+#    lbc_water = {'type': 'flux', 'value': 0.0}
+#
+#    model = SoilModel(z, pF, Ksat, Khsat, Cvs, Ls, fp, vOrg, max_pond, ini_cond, lbc_heat, 
+#                 lbc_water, homogenous=True, solve_heat=True, solve_water=True)
+#
+#    return model
+
+
+class SoilProfile():
+    """
+    One-dimensional soil profile class definition
+    """
+    def __init__(self, z, pF, Ksat, Khsat, Cvs, Ls, fp, vOrg, vSand, vSilt, vClay, ini_cond, homogenous=False):
+        """
+        Initializes soil profile.
+        Args:
+            z (array): vertical grid [m], <0
+            pF (dict): vanGenuchten water retention parameters; scalars or arrays of len(z)
+            Ksat (float/array): saturated vertical hydraulic conductivity [ms-1]
+            Khsat (float/array): saturated horizontal hydraulic conductivity [ms-1]
+            Cvs (float/array): soil solid material vol. heat capacity [J m-3 K-1]
+            Ls (float/array): soil solid material thermal conductivity [Wm-1K-1]
+            fp (float/array): freezing curve parameter
+            ini_cond (dict): inputs are floats or arrays of len(z)
+                * 'Wtot', vol. water content [-] or
+                * 'h', materix water potential  [m]
+                * 'T', soil temperature [degC]
+                * 'pond', pond storage [m]
+            homogenous (boolean): True assumes vertically homogenous profile and float inputs
+        Returns:
+            object
+        """
+        N = len(z)
+
+        # grid
+        dz = np.empty(N)
+        dzu = np.empty(N)
+        dzl = np.empty(N)
+
+        # distances between grid points:
+        # dzu is between point i-1 and i, dzl between point i and i+1
+        dzu[1:] = z[0:-1] - z[1:N]
+        dzu[0] = -z[0]
+        dzl[0:-1] = z[0:-1] - z[1:]
+        dzl[-1] = (z[-2] - z[-1]) / 2.0
+
+        dz = (dzu + dzl) / 2.0
+        dz[0] = dzu[0] + dzl[0] / 2.0
+
+        self.z = z                          # vertical grid [m], <0
+        self.dz = dz                        # layer thickness [m]
+        del dz, dzu, dzl
+
+        # create homogenous soil profile: needs float inputs
+        if homogenous:
+            # pF -parameters
+            self.pF = {key: np.ones(N)*pF[key] for key in pF.keys()}
+            # porosity [-]
+            self.porosity = np.ones(N)*self.pF['ThetaS']
+            # sat. vertical hydr. cond [ms-1]
+            self.Ksat = np.ones(N)*Ksat
+            # sat. horizontal hydr. cond [ms-1]
+            self.Khsat = np.ones(N)*Khsat
+            # soil solid vol. heat capacity [J m-3 K-1]
+            self.Cvs = np.ones(N)*Cvs
+            # soil solid thermal conductivity [Wm-1K-1]
+            self.Ls = np.ones(N)*Ls
+            # freezing curve parameter [-]
+            self.fp = np.ones(N)*fp
+            # organic matter vol. fraction of solids [-]
+            self.vOrg = np.ones(N)*vOrg
+            # sand vol. fraction of solids [-]
+            self.vSand = np.ones(N)*vSand
+            # silt vol. fraction of solids [-]
+            self.vSilt = np.ones(N)*vSilt
+            # silt vol. fraction of solids [-]
+            self.vClay = np.ones(N)*vClay
+
+        else:
+            self.pF = pF
+            self.porosity = self.pF['ThetaS']
+            self.Ksat = Ksat
+            self.Khsat = Khsat
+            self.Cvs = Cvs
+            self.Ls = Ls
+            self.fp = fp
+            self.vOrg = vOrg
+
+        # initialize state variables
+        T = np.ones(N)*ini_cond['T']
+
+        if 'h' in ini_cond:
+            h = np.ones(N)*ini_cond['h']
+            # vol. water content [-]
+            Wtot = wf.wrc(self.pF, x=h)
+        else:
+            Wtot = np.ones(N)*ini_cond['Wtot']
+
+        Wliq, Wice = hf.frozen_water(T, Wtot, fp=self.fp)
+        # temperature [degC]
+        self.T = T
+        # hydraulic head [m]
+        self.h = h
+        # liq. water content [-]
+        self.Wliq = Wliq
+        # ice content [-]
+        self.Wice = Wice
+        # air volume [-]
+        self.Wair = self.porosity - self.Wliq - self.Wice
+        # ground water level [m]
+        _, Gwl = wf.get_gwl(self.h, self.z)
+        self.Gwl = Gwl
+
+        print(self.z, self.Wliq, self.T, self.h, self.Wice, self.Ls)
+        # thermal conductivity [Wm-1K-1]
+        self.Lambda = hf.thermal_conductivity_deVries(
+            self.porosity, self.Wliq, wice=self.Wice,
+            h=self.h, pF=self.pF, T=self.T, ks=self.Ls, vOrg=self.vOrg)
+        # hydraulic conductivity [ms-1]
+        K = wf.hydraulic_conductivity(self.pF, x=self.Wliq, var='Th')
+        K = wf.spatial_average(K, self.z, method='arithmetic')
+        self.Khydr = K
+
+        self.pond = ini_cond['pond']        # pond storage [m]
+        del K
+
+def create_profile():
+    """
+    tests creating homogenous soil profile
+    """
+    # define grid
+    # [m]
+    z = np.arange(-0.01, -2.0, -0.02)
+    N = len(z)
+
+    # define soil type
+    pF = {'ThetaS': 0.5, 'ThetaR': 0.05, 'alpha': 0.3, 'n': 1.3}
+    poros = pF['ThetaS']
+    vOrg = 0.01
+    vQuartz = 0.1
+    vMineral = 1.0 - vQuartz - vOrg
+    # heat capacity
+    Cvs = hf.volumetric_heat_capacity(poros, orgfract=vOrg)
+    Ksat = 1e-5
+    Khsat = Ksat
+    Ls = hf.thermal_conductivity_solids(
+        poros, vMineral=vMineral, vQuartz=vQuartz, vOrg=vOrg)
+    fp = 2.0
+    ini_cond = {'T': 10.0, 'h': -0.1, 'pond': 0.0}
+
+    soil0 = SoilProfile(
+        z, pF, Ksat, Khsat, Cvs, Ls, fp, vOrg, ini_cond, homogenous=True)
+
+    return soil0
+
+def read_setup(init_file):
+    import json
+    climoss_path = os.path.join('/projects/Climoss/EnergyBudget/climoss')
+    with open(os.path.join(climoss_path, init_file), 'r') as init_file:
+        cfg = json.load(init_file)
+
+    general = cfg['general']
+    bryo = cfg['bryotype']
+    soil = cfg['soil']
+
+    return general, bryo, soil
+    
+    # dz = np.empty(np.shape(z))
+    # dzu = dz.copy(); dzl=dz.copy()
+    # dzu[1:] = z[0:-1] - z[1:N]; dzu[0]=-z[0]
+    # dzl[0:-1] = z[0:-1] - z[1:]; dzl[-1]=(z[-2] - z[-1])/2.0;
+
+    # dz = (dzu + dzl)/2.0;
+    # dz[0] = dzu[0] + dzl[0]/2.0;
+    #
+
+
+# model params
+
+# #%%
+
+# t=np.arange(-10.0,3.0, 0.1)
+# w=0.5
+# wl,wi=hf.frozen_water(t,w,fp=4.0, To=0.0)
+
+# plt.figure()
+# plt.plot(t,wl,'r.-',t,wi,'c.-'); plt.ylabel('water & ice'); plt.xlabel('T')
+# #%%
+
+# #w = np.array([0.1,0.2,0.3,0.4,0.5])
+# w = np.arange(0.1,0.5,0.05)
+# hh = wf.wrc(pF, x=w, var='Th')
+# ksolid = hf.thermal_conductivity_solids(poros=0.5, vMineral=0.0, vQuartz=0.0, vOrg=0.5)
+#
+# ks1=hf.thermal_conductivity_Campbell(
+#     pF['ThetaS'], w, wice=0.0, vQuartz=0.05, vClay=0.9, vMineral=0.05)
+# ks2=hf.thermal_conductivity_deVries(
+#    pF['ThetaS'], w, wice=0.0, h=hh, pF=pF, T=15.0, ks=None, vOrg=0.0, vQuartz=0.05)
+# print 'Ks1=' + str(ks1)
+# print 'Ks2=' + str(ks2)
+#
+# #%% heatflow_1D
+#
+# spara = {'frp': 2.0, 'cs': 2.3, 'ktherm': 2.6}
+# T0 = np.ones(np.shape(z))
+# W0 = np.zeros(np.shape(z)) + 0.3
+# Wi0 = np.zeros(np.shape(z))
+#
+# # sink term
+# S0 = np.zeros(np.shape(z))
+# S0[10:20] = 100.0
+#
+# # heatFlow1D(t_final,z,pF,T0,Wliq0,Wice0, ubc, lbc,spara, S=0.0, steps=10):
+# dt0 = 24*60*60 # 1 day
+# # dt = 1800
+# # Ftop = +1.0e-3/dt0#+0.0e-3#-2e-3/dt0#-2.0e-3/dt0
+#
+# ubc = {'type': 'flux', 'value': 100.0}
+# lbc = {'type': 'temperature', 'value': 1.0}
+#
+# T_new, W_new, Wi_new, Fsoil, Lambda = hf.heatflow_1D(
+#     dt0, z, pF, T0, W0, Wi0, ubc, lbc, spara, S=S0)
+#
+# plt.close('all')
+#
+# plt.subplot(121)
+# plt.plot(T0,z,'k.-', T_new,z,'r.-'); plt.ylabel('z'); plt.xlabel('T')
+# plt.subplot(122)
+# plt.plot(W_new,z,'r.-', Wi_new,z,'b.-'); plt.ylabel('z'); plt.xlabel('Wliq (r), Wice(b)')
+#
+# ##%% test simpler version
+# #spara={'frp':2.0, 'Ktherm':0.5, 'cs':1.3e6, 'poros':0.5}
+
+# #T0=np.ones(np.shape(z))*-1.0
+# #W0=np.zeros(np.shape(z)) + 0.3
+
+# #S0=np.zeros(np.shape(z))
+# ##heatFlow1D(t_final,z,pF,T0,Wliq0,Wice0, ubc, lbc,spara, S=0.0, steps=10):
+# #dt0=24*60*60#1 day
+# ##dt=1800
+# ##Ftop=+1.0e-3/dt0#+0.0e-3#-2e-3/dt0#-2.0e-3/dt0
+# #
+# #ubc={'type': 'flux', 'value': -1.0}
+# #lbc={'type': 'temperature', 'value': 1.0}
+# #
+# Tnew, W_new, Wi_new, Fsoil, frd, thd = hf.heatFlow1D_Simple(
+#     dt0,z,T0,W0, ubc, lbc,spara, S=0.0, steps=10)
+
+# #plt.close('all')
+
+# #plt.plot(T0,z,'k-', Tnew,z,'r.-')
+# #%% Test Rankinen et al. soil temperature model
+
+# param={'poros': 0.5, 'Ktherm': 0.7, 'Cs': 1.3e6, 'Cice':10.0e6, 'fs':3.0}
+
+# zlow=-2.0
+# z=np.arange(-0.1,zlow,-0.1) #m
+# N=len(z)
+
+# To=np.ones(N)*0.0
+# Wtot=0.8*param['poros']
+# Ds=0.2
+
+# dt0=10*24*3600 #s
+# T_sur=-3.0
+# T_sur1=T_sur*np.exp(-3.0*Ds)
+
+# Tnew=hf.soil_temperature_Rankinen(dt0, z, To, T_sur, Ds, param, steps=100)
+# T_sur=+1.0
+# Tnew1=hf.soil_temperature_Rankinen(dt0, z, Tnew, T_sur, Ds, param, steps=100)
