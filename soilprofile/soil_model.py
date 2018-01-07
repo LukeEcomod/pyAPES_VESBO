@@ -312,7 +312,7 @@ class SoilModel():
                                pond0=self.pond,
                                cosalfa=1.0,
                                h_atm=h_atm,  # atmospheric pressure head [m]; for soil evap. controls
-                               steps=10)#dt / self.dt_water)
+                               steps=dt / self.dt_water)
             self.h[ix] = h.copy()
             self.Wliq[ix] = Wliq.copy()
             self.Kv[ix] = Kv.copy()
@@ -437,8 +437,8 @@ def test_soilmodel(forcfile, start_time, end_time):
 
     for k in range(0, Nsteps):
         print 'k = ' + str(k)
-        Prec = Forc['Trfall'].iloc[k]  
-        ubc_w = {'Prec': Prec, 'Evap': 0.0}  #1e-8}
+        Prec = 2 * Forc['Trfall'].iloc[k]  
+        ubc_w = {'Prec': Prec, 'Evap': 1e-8}
         # Rootsink = np.zeros(N)
 
         ubc_T = {'type': 'flux', 'value': 0.0}
@@ -451,7 +451,7 @@ def test_soilmodel(forcfile, start_time, end_time):
         res['gwl'].append(model.gwl.copy())
         res['h'].append(model.h.copy())
         res['Wliq'].append(model.Wliq.copy())
-        res['h_pond'].append(model.pond.copy())
+        res['h_pond'].append(model.pond)
         res['Prec'].append(Prec * dt0)
         res['Infil'].append(flx['infiltration'])
         res['Evap'].append(flx['evaporation'])
@@ -461,7 +461,7 @@ def test_soilmodel(forcfile, start_time, end_time):
         res['WSto'].append(state['column_water_content'])
         res['Mbew'].append(flx['water_closure'])
         
-        if res['gwl'][-1] > 0.05:
+        if res['gwl'][-1] > 0.05 or any(np.isnan(res['h'][-1])) or res['h_pond'][-1] < 0.0 or abs(res['Mbew'][-1]) >1e-5:
             break
 
     plt.figure(1)

@@ -120,6 +120,46 @@ def wrc(pF, x=None, var=None):
 
     return y
 
+def h_to_cellmoist(pF,h,dzu,dzl):
+    
+    dzu = dzu / 2
+    dzl = dzl / 2
+    dzu[0] = dzu[0] * 2
+    dzl[-1] = dzl[-1] * 2
+    
+    # Ts, Tr, alfa, n = pF['ThetaS'], pF['ThetaR'], pF['alpha'], pF['n']
+    Ts = np.array(pF['ThetaS'])
+    Tr = np.array(pF['ThetaR'])
+    alfa = np.array(pF['alpha'])
+    n = np.array(pF['n'])
+    m = 1.0 - np.divide(1.0, n)
+    
+    # Theta based on cell center h
+    x = np.minimum(h, 0)
+    theta = Tr + (Ts - Tr) / (1 + abs(alfa*100*x)**n)**m    
+    
+    # Correct moisture of partly unsatrurated cells
+    ix1 = np.where(h < dzu )
+    ix2 = np.where(h > -dzl)
+    ix = np.intersect1d(ix1, ix2)
+    del ix1, ix2
+    # moisture of unsaturated part
+    x[ix] = (dzu[ix] - h[ix]) / 2
+    theta[ix] = Tr[ix] + (Ts[ix] - Tr[ix]) / (1 + abs(alfa[ix]*100*x[ix])**n[ix])**m[ix]
+    # total moisture
+    theta[ix] = (theta[ix] * (dzu[ix] - h[ix]) + Ts[ix] * (dzl[ix] + h[ix]))/(dzu[ix] + dzl[ix])
+    
+    return theta
+
+def diff_wcapa(pF,h,dzu,dzl):
+
+    dh = 1e-5
+    theta_plus = h_to_cellmoist(pF,h + dh,dzu,dzl)
+    theta_minus = h_to_cellmoist(pF,h - dh,dzu,dzl)
+
+    dwcapa = (theta_plus - theta_minus) / (2 * dh)
+    
+    return dwcapa
 
 def effSat(pF, x, var=None):
     """
@@ -351,7 +391,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
         Ksat = np.zeros(N) + Ksat
 
     poros = pF['ThetaS']
-    W_ini = wrc(pF, x=h0)  # m3m-3
+    W_ini = h_to_cellmoist(pF,h0,dzu,dzl) #wrc(pF, x=h0)  # m3m-3
     # h_ini = h0
     pond_ini = pond0
 
@@ -381,27 +421,23 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
 
         # these change during iteration
         h_iter = h.copy()
-        h_iterold = h.copy()
         W_iter = W.copy()
         afp_iter = poros - W_iter  # air filled prosity [m3m-3]
+        
+        KLh = hydraulic_conductivity(pF, x=h_iter, Ksat=Ksat)  # [m s-1]
+        KLh = spatial_average(KLh, method='arithmetic')                     # Returns K at i-1/2
 
         err1 = 999.0
         err2 = 999.0
         iterNo = 0
 
-        if np.any(h < -1e-7):
-            Conv_crit2 = 1e-8
-        else:
-            Conv_crit2 = 1.0
-        # Conv_crit2=1.0e-7
+        Conv_crit2 = 1.0
 
         # start iterative solution of Richards equation
         pass_flag = True
         while (err1 > Conv_crit or err2 > Conv_crit2):  # and pass_flag is False:
             # print pass_flag
             iterNo += 1
-            KLh = hydraulic_conductivity(pF, x=h_iter, Ksat=Ksat)  # [m s-1]
-            KLh = spatial_average(KLh, method='arithmetic')                     # Returns K at i-1/2
 
             # ------ lower bc check -------
             if lbc['type'] == 'free_drain':
@@ -419,34 +455,38 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
             # ------- upper bc check ---------
             # using swiching between flux and head bc as in Dam and Feddes (2000)
             # note: q0<0 infiltration, q0>0 evaporation
-            q0 = Evap - Prec - max(h_pond,0.0) / dt  # potential rate m/s
+            q0 = Evap - Prec - h_pond / dt  # potential rate m/s
             MaxInf = max(-KLh[0]*(h_pond - h_iter[0] - z[0]) / dzu[0], -Ksat[0])  # max infiltration rate to top node
             MaxEva = -KLh[0]*(h_atm - h_iter[0] - z[0]) / dzu[0]  # limited by soil supply [m/s]
             Qin = (q_bot - sum(S*dz) - q0) * dt  # net flow to column
-
+            
+            Airvol = max(0.0, sum((poros - W_old)*dz))  # maximum inflow (m) tolerated by soil column
             if q0 < 0:  # case infiltration
-                Airvol = max(0.0, sum(afp_iter*dz))  # maximum inflow (m) tolerated by soil column
                 if Airvol <= eps:  # initially saturated profile
                     if Qin >= 0: #and Airvol / sum(poros*dz) < 1.0e-3:  # inflow exceeds outflow, matrix stays saturated
-                        print 'saturated soil column, ponding water'
-                        h_sur = Qin
+                        print 'saturated soil column, ponding water, h_sur = ' + str(min(Qin, maxPond)) + ' h = ' + str(h_iter[0])  + ' W = ' + str(W_old[0])
+                        h_sur = min(Qin, maxPond)
                         ubc_flag = 'head'
 
                     else:  # outflow exceeds inflow
-                        print 'outflow exceeds inflow' + ' q0 = ' + str(q0) + ' Qin = ' + str(Qin) + ' h_pond = ' + str(h_pond)
-#                        h_sur = - q0 * dt
-#                        ubc_flag = 'head'
+                        print 'outflow exceeds inflow' + ' q0 = ' + str(q0) + ' Qin = ' + str(Qin) + ' h_pond = ' + str(h_pond) 
                         q_sur = q0
                         ubc_flag = 'flux'
+                        if iterNo ==1:
+                            h_iter -= dz
+                            W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl)
 
                 else:  # initially unsaturated profile
                     if Qin >= Airvol:  # only part fits into profile
-                        print 'only part fits into profile'
-                        h_sur = Qin - Airvol
+                        print 'only part fits into profile, h_sur = ' + str(min(Qin - Airvol, maxPond)) + ' h = ' + str(h_iter[0])  + ' W = ' + str(W_old[0])
+                        h_sur = min(Qin - Airvol, maxPond)
                         ubc_flag = 'head'
                         
                     else:  # all fits into profile
-                        print 'all fits into profile'
+                        print 'all fits into profile, q0 = ' + str(q0) + ' Airvol = ' + str(Airvol)  + ' h_pond = ' + str(h_pond)+ ' MaxInf = ' + str(MaxInf)
+                        if iterNo ==1 and Airvol < 1e-3:
+                            h_iter -= dz
+                            W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl)
                         if q0 < MaxInf:
                             h_sur = h_pond
                             ubc_flag = 'head'
@@ -455,17 +495,27 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
                             ubc_flag = 'flux'
 
             else:  # case evaporation
+                if iterNo ==1 and Airvol < 1e-3:
+                    h_iter -= dz
+                    W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl)
                 if q0 > MaxEva:
-                    print 'case evaporation, limited by atm demand'
+                    print 'case evaporation, limited by atm demand, q0 = ' + str(q0) + ' MaxEva = ' + str(MaxEva)  + ' h_pond = ' + str(h_pond)
                     h_sur = h_atm
                     ubc_flag = 'head'
                 else:
-                    print 'case evaporation, no limit ' + 'h_pond = ' + str(h_pond)
+                    print 'case evaporation, no limit ' + 'h_pond = ' + str(h_pond)+ ' Qin = ' + str(Qin)+ ' Airvol= ' + str(Airvol) + ' q0 = ' + str(q0) + ' dt= ' + str(dt)
                     q_sur = q0
                     ubc_flag = 'flux'
 
+                    
+                    
+            if Qin >= Airvol:
+                Conv_crit2 = 1e-8
+            else:
+                Conv_crit2 = 1e-6
+
             # ----------------------------------------------
-            C = diff_capa(pF, h_iter)  # differential water capacity
+            C = diff_wcapa(pF,h_iter,dzu,dzl)  #diff_capa(pF, h_iter)  # differential water capacity
 
             # set up tridiagonal matrix
             a = np.zeros(N)  # sub diagonal
@@ -520,14 +570,29 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
             # print h_iter
             # find GWL
             _, gwl = get_gwl(h_iter, z) 
-            W_iter = wrc(pF, x=h_iter)
+            W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl) #wrc(pF, x=h_iter)
             afp_iter = poros - W_iter
 
+            if any(abs(h_iter - h_iterold) > 1.0):
+                print 'break'
+                print (a)
+                print (b)
+                print (g)
+                print (f)
+                print (C)
+                print (h)
+                print (h_iter)
+                break
             if iterNo == 20:
                 dt = dt / 3.0
-                iterNo = 0
-                print 'More than 20 iterations, new dt = ' + str(dt)            # Add break at some point? Otherwise keeps on forever..
-                continue  # re-try with smaller timestep
+                if dt < 10:
+                    dt = max(dt,30)
+                    iterNo = 0
+                    print 'More than 20 iterations, new dt = ' + str(dt)
+                    continue  # re-try with smaller timestep
+                else:
+                    break
+                    print 'Problem with solution'
             elif pass_flag is False or any(np.isnan(h_iter)):
                 #print pass_flag,  ', dt: ' + str(dt) + ' qsur = ' + str(q_sur) + ' qbot = ' + str(q_bot)
                 if any(np.isnan(h_iter)):
@@ -536,12 +601,13 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
 
             err1 = max(abs(W_iter - W_iterold))
             err2 = max(abs(h_iter - h_iterold))
+            print 'err1 = ' + str(err1) + ' err2 = ' + str(err2)
 
         # ------- ending iteration loop -------
         # print 'Pass: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo)
         # new state at t
         h = h_iter.copy()
-        W = wrc(pF, x=h) 
+        W = h_to_cellmoist(pF,h_iter,dzu,dzl)  #wrc(pF, x=h_iter)
         # calculate q_sur and q_bot in case of head boundaries
         if ubc_flag == 'head':
             q_sur = -KLh[0] * (h_sur - h[0]) / dzu[0] - KLh[0]
@@ -554,13 +620,16 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
             #h_pond = max(0, h_pond)                                                # Voiko jättää???
             rr = max(0, h_pond - maxPond)  # create runoff if h_pond>maxpond
             h_pond -= rr
-            h -= rr                         #????
             C_roff += rr        
             del rr
             C_inf += (q_sur - Evap)*dt
             C_eva += Evap*dt
         else:
-            C_eva += (q_sur + Prec)*dt
+            C_eva += (q_sur + Prec)*dt + h_pond
+            h_pond = 0.0
+        
+#        if abs(h_pond) < eps:
+#            h_pond = 0.0
 
         C_dra += -q_bot*dt + sum(HM*dz)*dt  # drainage + net lateral flow
         C_trans += sum(R*dz)*dt
@@ -571,12 +640,12 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
         
         dt_old = dt
         
-        if iterNo < 4:
+        if iterNo <= 2:
             dt = dt * 1.25
-        elif iterNo > 6:
+        elif iterNo > 4:
             dt = dt / 1.25
         
-        dt = max(dt,30)
+        dt = max(dt,360)#30)
 
         if dt_old == t_final or t_final > t:
             dto = min(dt, t_final)
@@ -585,7 +654,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
         
 
     # ----- at t = t_final: ending while loop & compute outputs
-
+                
     # vertical fluxes
     KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
     #KLh = spatial_average(KLh, method='arithmetic')
@@ -593,6 +662,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'i
     Fliq = nodal_fluxes(z, h, KLh)  # ms-1
 
     # mass balance error [m]
+ #   mbe = Prec*t_final + (h_to_colmoist(pF,h0,dzu,dzl) - h_to_colmoist(pF,h,dzu,dzl)) + (pond_ini - h_pond) - C_dra - C_trans - C_roff - C_eva
     mbe = Prec*t_final + (sum(W_ini*dz) - sum(W*dz)) + (pond_ini - h_pond) - C_dra - C_trans - C_roff - C_eva
     # print 'mbe:' +str(mbe)
 
@@ -652,7 +722,6 @@ def thomas(a, b, C, D):
         x[i] = U[i] - G[i] * x[i + 1]
     return x
 
-
 def diff_capa(pF, head):
     """
     Derivative of vGenuchten soil water retention curve [m-1]
@@ -663,7 +732,7 @@ def diff_capa(pF, head):
         x (array): dW/dhead, derivative of vGenuchten soil water retention curve for given heads [m-1]
     """
 
-    head = -100.0*head  # cm
+    h = -100.0*head  # cm
     ts = pF['ThetaS']
     tr = pF['ThetaR']
     n = pF['n']
@@ -671,8 +740,8 @@ def diff_capa(pF, head):
     alfa = pF['alpha']
 
     # print ts, tr, n, m, alfa                                                  # for x <= 0 "RuntimeWarning: invalid value encountered in power"
-    x = 100.0*(ts - tr)*(n - 1.0)*alfa**n*head**(n - 1.0) / ( (1.0 + (alfa*head)**n)**(m + 1.0))
-    x[head <= 0.0] = 0.0
+    x = 100.0*(ts - tr)*(n - 1.0)*alfa**n*h**(n - 1.0) / ( (1.0 + (alfa*h)**n)**(m + 1.0))
+    x[h <= 0.0] = 0.0
     return x
 
 

@@ -7,11 +7,11 @@ Created on Fri Dec 29 14:05:24 2017
 import numpy as np
 
 para = {
-        'z': np.arange(-0.02, -2.0, -0.04),
+        'z': np.arange(-0.01, -2.0, -0.02),
         'pF': {
                 'ThetaS': 0.88, 
                 'ThetaR': 0.093, 
-                'alpha': 0.029, 
+                'alpha': 0.029,     # 1/cm
                 'n': 1.34
                 },                  # (dict): vanGenuchten water retention parameters; scalars or arrays of len(z)
         'Ksat': 1e-5,               # (float/array): saturated vertical hydraulic conductivity [ms-1]
