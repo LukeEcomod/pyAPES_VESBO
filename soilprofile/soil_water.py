@@ -120,45 +120,80 @@ def wrc(pF, x=None, var=None):
 
     return y
 
-def h_to_cellmoist(pF,h,dzu,dzl):
-    
+def h_to_cellmoist(pF, h, dzu, dzl):
+    """
+    Cell moisture based on vanGenuchten-Mualem soil water retention model. 
+    Partly saturated cells calculated as thickness weigthed average of 
+    saturated and unsaturated parts.
+
+    Args:
+        pF (dict of np.arrays):
+            0. 'ThetaS' saturated water content [m3 m-3]
+            1. 'ThetaR' residual water content [m3 m-3]
+            2. 'alpha' air entry suction [cm-1]
+            3. 'n' pore size distribution [-]
+        h (np.array): pressure head [m]
+        dzu, dzl (np.arrays): distance to upper and lower neighboring node [m]
+    Returns:
+        theta (np.array): volumetric water content of cell [m3 m-3]
+
+    Kersti Haahti, Luke 8/1/2018
+    """
+
+    # distance to cell top and bottom
     dzu = dzu / 2
     dzl = dzl / 2
-    dzu[0] = dzu[0] * 2
-    dzl[-1] = dzl[-1] * 2
-    
-    # Ts, Tr, alfa, n = pF['ThetaS'], pF['ThetaR'], pF['alpha'], pF['n']
+    dzu[0] = dzu[0] * 2  # distance to soil surface
+    dzl[-1] = dzl[-1] * 2  # distance to prodfile bottom
+
+    # water retention parameters
     Ts = np.array(pF['ThetaS'])
     Tr = np.array(pF['ThetaR'])
     alfa = np.array(pF['alpha'])
     n = np.array(pF['n'])
     m = 1.0 - np.divide(1.0, n)
-    
-    # Theta based on cell center h
+
+    # moisture based on cell center h
     x = np.minimum(h, 0)
-    theta = Tr + (Ts - Tr) / (1 + abs(alfa*100*x)**n)**m    
-    
-    # Correct moisture of partly unsatrurated cells
-    ix1 = np.where(h < dzu )
+    theta = Tr + (Ts - Tr) / (1 + abs(alfa * 100 * x)**n)**m
+
+    # correct moisture of partly saturated cells
+    ix1 = np.where(h < dzu)
     ix2 = np.where(h > -dzl)
     ix = np.intersect1d(ix1, ix2)
     del ix1, ix2
     # moisture of unsaturated part
     x[ix] = (dzu[ix] - h[ix]) / 2
-    theta[ix] = Tr[ix] + (Ts[ix] - Tr[ix]) / (1 + abs(alfa[ix]*100*x[ix])**n[ix])**m[ix]
-    # total moisture
-    theta[ix] = (theta[ix] * (dzu[ix] - h[ix]) + Ts[ix] * (dzl[ix] + h[ix]))/(dzu[ix] + dzl[ix])
-    
+    theta[ix] = Tr[ix] + (Ts[ix] - Tr[ix]) / (1 + abs(alfa[ix] * 100 * x[ix])**n[ix])**m[ix]
+    # total moisture as weighted average
+    theta[ix] = (theta[ix] * (dzu[ix] - h[ix]) + Ts[ix] * (dzl[ix] + h[ix])) / (dzu[ix] + dzl[ix])
+
     return theta
 
-def diff_wcapa(pF,h,dzu,dzl):
+def diff_wcapa(pF, h, dzu, dzl):
+    """
+    Differential water capacity calculated numerically.
+
+    Args:
+        pF (dict of np.arrays):
+            0. 'ThetaS' saturated water content [m3 m-3]
+            1. 'ThetaR' residual water content [m3 m-3]
+            2. 'alpha' air entry suction [cm-1]
+            3. 'n' pore size distribution [-]
+        h (np.array): pressure head [m]
+        dzu, dzl (np.arrays): distance to upper and lower neighboring node [m]
+    Returns:
+        dwcapa (np.array): differential water capacity dTheta/dhead [m-1]
+
+    Kersti Haahti, Luke 8/1/2018
+    """
 
     dh = 1e-5
     theta_plus = h_to_cellmoist(pF,h + dh,dzu,dzl)
     theta_minus = h_to_cellmoist(pF,h - dh,dzu,dzl)
 
     dwcapa = (theta_plus - theta_minus) / (2 * dh)
-    
+
     return dwcapa
 
 def effSat(pF, x, var=None):
@@ -265,7 +300,7 @@ def hydraulic_conductivity(pF, x=None, var=None, Ksat=1):
     if x is not None and var is 'Th':
         x = wrc(pF, x=x, var='Th')
 
-    Kh = Ksat*relcond(100.0*np.minimum(x, 0))                                   # x includes heads > 0
+    Kh = Ksat*relcond(100.0*np.minimum(x, 0))
 
     return Kh
 
@@ -313,388 +348,403 @@ Water flow in soils in 1D
 """
 
 
-def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0, lbc={'type': 'impermeable', 'value': None},
-                Wice0=0.0, maxPond=0.0, pond0=0.0, cosalfa=1.0, h_atm=-1000.0, steps=10):
+def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
+                lbc={'type': 'impermeable', 'value': None}, Wice0=0.0,
+                maxPond=0.0, pond0=0.0, cosalfa=1.0, h_atm=-1000.0, steps=10):
     """
-    Solves soil water flow in 1-D using implicit, backward finite difference solution of Richard's
-    equation.
+    Solves soil water flow in 1-D using implicit, backward finite difference
+    solution of Richard's equation.
 
     Args:
         t_final (float): solution timestep [s]
-        z (array): grid,<0 (soil surface = 0), monotonically decreasing [m] 
+        z (array): grid, < 0 (soil surface = 0), monotonically decreasing [m]
                     (all the nodes, also top and bottom node, are in the centre of the soil compartments)
-        h0 (array): initial hydraulic head [m]
-        pF (dict): dict of vanGenuchten soil pF-parameters; pF.keys()=['ThetaR', 'ThetaS', 'n', 'alpha']
-        Ksat (array): saturated hydr. cond. [ms-1]
-        Prec (float): potential top boundary flux, >0 [m s-1]                   # Eritelty sateeksi ja haihdunnaksi koska vain toinen näistä potentiaalista
-        Evap (float): potential evaporation from surface, >0 [m s-1]
-        R (array): local sink/source array due root uptake & well [s-1], >0 for sink
-        HM (array): net lateral flux array, e.g. to ditches [s-1], >0 for net outflow
-        lbc: lower bc {'type': 'impermeable', 'flux', 'free_drain', 'head', and 'value'; give for 'head' and 'flux'}, head [m], flux [m s-1] <0 for outflow
-        Wice0 (array): vol. ice content [m3m-3] - not needed now; could be used to scale hydr.conductivity
-        maxPond (float): maximum allowed pond depth at surface [m]
+        h0 (array): initial pressure head [m]
+        pF (dict): vanGenuchten soil pF-parameters; pF.keys()=['ThetaR', 'ThetaS', 'n', 'alpha']
+        Ksat (array): saturated hydraulic conductivity [m s-1]
+        Prec (float): precipitation as flux, > 0 [m s-1]
+        Evap (float): potential evaporation from surface, > 0 [m s-1]
+                    (may become limited by h_atm)
+        R (array): local sink/source array due e.g. root water uptake, > 0 for sink [s-1]
+        HM (array): net lateral flux array e.g. to ditches , > 0 for net outflow [s-1]
+        lbc (dict): lower bc
+                *'type': 'impermeable', 'flux', 'free_drain', 'head'
+                *'value': give for 'head' [m] and 'flux' [m s-1], < 0 for outflow
+        Wice0 (array): volumetric ice content [m3 m-3] - not needed now; could be used to scale hydr.conductivity
+        maxPond (float): maximum depth allowed ponding at surface [m]
         pond0 (float): initial pond depth [m]
-        cosalfa - 1 for vertical water flow, 0 for horizontal transport
-        h_atm - hydraulic head [m] in equilibrium with air humidity - used to compute soil evaporation supply  # Ei vakio?
-        steps (int): initial number of subtimesteps used to proceed to 't_final'
+        cosalfa (float): - 1 for vertical water flow, 0 for horizontal transport
+        h_atm (float): pressure head in equilibrium with the prevailing air relative humidity [m]
+                    (limits evaporation from soil surface in dry conditions)
+        steps (int or float): initial number of subtimesteps used to proceed to 't_final'
     Returns:
-        h (array): new hydraulic head [m]
-        W (array): new total water content [m3m-3]
+        h (array): new pressure head [m]
+        W (array): new volumetric water content [m3 m-3]
         h_pond (float): new ponding depth [m]
-        C_inf (float): total infiltration [m], <=0
-        C_eva (float): total evaporation [m],>=0
-        C_dra (float): total drainage (to ditches and through bottom) [m], >=0 from profile
-        C_trans (float): total root uptake [m], >=0 from profile
+        C_inf (float): total infiltration, < 0 [m]
+        C_eva (float): total evaporation from soil surface, > 0 [m]
+        C_dra (float): total drainage (caused by HM and lbc), > 0 from profile [m]
+        C_trans (float): total root uptake (caused by R), > 0 from profile [m]
         C_roff (float): total surface runoff [m]
-        Fliq (array): vertical water fluxes [ms-1] at t_final
-        gwl (float): ground water level [m]; if not in computational layer then assumed hydrostatic equilibrium with node -1
-        Kv (array): hydraulic conductivity [ms-1]
+        Fliq (array): vertical water fluxes at t_final [m s-1]
+        gwl (float): ground water level [m]; if not within profile assumes hydrostatic equilibrium
+        KLh (array): hydraulic conductivity [m s-1]
         mbe (float): total mass balance error [m]
+        dto (float): timestep used for solving [s]
     REFERENCES:
         vanDam & Feddes (2000): Numerical simulation of infiltration, evaporation and shallow
         groundwater levels with the Richards equation, J.Hydrol 233, 72-85.
     CODE:
         Samuli Launiainen, Luke 8.4.2016. Converted from Matlab (APES SoilProfile.WaterFlow)
         Kersti Haahti, 29.12.2017: 
-            - Upper bc switching between head and flux as in vanDam & Feddes (2000) 
-            - small fixes (dz, dzu, dzl, KLh (spatial_average, hydraulic_conductivity: saturated cells = Ksat), get_gwl, output, inputs)
-            - adjustments to selecting dt: minimally 30s, iterNo can reach 20, still neads checking..
-            - lbc options checked, adjustments of heads in get_gwl removed
+            - Work on upper bc, switching between head and flux as in vanDam & Feddes (2000)
     NOTE:
         (8.4.2016): upper bc restriction checks needs to be tested
         (   -"-  ): include macropore adjustment as in APES-code?
-        (29.12.2017): What is Fliq used for? Calculation migth need checking..
     """
 
-    Conv_crit = 1.0e-5
-    S = R + HM  # net imposed sink/source term (root uptake + lateral flow, e.g drainage)
+    # net sink/source term
+    S = R + HM  # root uptake + lateral flow (e.g. by ditches)
 
-    # -------------Get computation grid -------------
-    N = len(z)  # nr of nodal points, 0 is top
-
-    dz = np.empty(N)
-    dzu = np.empty(N)
-    dzl = np.empty(N)
-
-    # distances between grid points: dzu is between point i-1 and i, dzl between point i and i+1
-    dzu[1:] = z[:-1] - z[1:]
-    dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
-    dzl[:-1] = z[:-1] - z[1:]
-    dzl[-1] = (z[-2] - z[-1]) / 2.0 #  from last node to bottom surface
-    # compartment thickness
-    dz = (dzu + dzl) / 2.0
-    dz[0] = dzu[0] + dzl[0] / 2.0
-    dz[-1] = dzu[-1] / 2.0 + dzl[-1] 
-    
-    # ----soil variables and save intial conditions--
-    if type(Ksat) is float:
-        Ksat = np.zeros(N) + Ksat
-
-    poros = pF['ThetaS']
-    W_ini = h_to_cellmoist(pF,h0,dzu,dzl) #wrc(pF, x=h0)  # m3m-3
-    # h_ini = h0
-    pond_ini = pond0
-
-    # these change during solution
-    W = W_ini.copy()
-    h = h0.copy()
-    h_pond = pond0
-
-    # -------- find solution at t_final --------
-
-    dto = t_final / steps  # initial time step [s]
-    t = 0.0  # running time
-    dt = dto
-    
-    # cumulative boundary fluxes
+    # cumulative boundary fluxes for 0...t_final
     C_inf = 0.0
     C_eva = 0.0
     C_dra = 0.0
     C_trans = 0.0
     C_roff = 0.0
-    # Rsink = sum(S*dz)
 
-    while t < t_final:  # loop until solution timestep
-        # these will stay constant during iteration over time step "dt"
+    # ------------------- computation grid -----------------------
+
+    # number of nodal points
+    N = len(z)
+    # compartment thickness
+    dz = np.empty(N)
+    # distances between grid points
+    dzu = np.empty(N)  # between i-1 and i
+    dzl = np.empty(N)  # dzl between i and i+1
+
+    dzu[1:] = z[:-1] - z[1:]
+    dzu[0] = -z[0]  # from soil surface to first node
+    dzl[:-1] = z[:-1] - z[1:]
+    dzl[-1] = (z[-2] - z[-1]) / 2.0  # from last node to bottom surface
+
+    dz = (dzu + dzl) / 2.0
+    dz[0] = dzu[0] + dzl[0] / 2.0
+    dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+
+    # -------- soil variables and intial conditions --------------
+
+    # soil hydraulic conductivity and porosity
+    if type(Ksat) is float:
+        Ksat = np.zeros(N) + Ksat
+    poros = pF['ThetaS']
+
+    # initial water storage
+    W_ini = h_to_cellmoist(pF, h0, dzu, dzl)
+    pond_ini = pond0
+
+    # variables updated during solution
+    W = W_ini.copy()
+    h = h0.copy()
+    h_pond = pond0
+
+    # ---------- specifications for iterative solution ----------
+
+    # running time [s]
+    t = 0.0
+    # initial and computational time step [s]
+    dto = t_final / steps
+    dt = dto  # adjusted during solution
+    # convergence criteria
+    Conv_crit = 1.0e-5  # for soil moisture
+    Conv_crit2 = 1.0e-6  # for pressure head, decreased to 1.0e-8 when profile saturated
+
+    # ------------- solve water flow for 0...t_final -------------
+
+    while t < t_final:
+        # old state variables, solution of previous times step
         h_old = h.copy()
         W_old = W.copy()
 
-        # these change during iteration
+        # state variables updated during iteration of time step dt
         h_iter = h.copy()
         W_iter = W.copy()
-        afp_iter = poros - W_iter  # air filled prosity [m3m-3]
-        
-        KLh = hydraulic_conductivity(pF, x=h_iter, Ksat=Ksat)  # [m s-1]
-        KLh = spatial_average(KLh, method='arithmetic')                     # Returns K at i-1/2
 
+        # hydraulic condictivity based on previous time step
+        KLh = hydraulic_conductivity(pF, x=h_iter, Ksat=Ksat)
+        # get KLh at i-1/2, note len(KLh) = N + 1
+        KLh = spatial_average(KLh, method='arithmetic')
+
+        # initiate iteration
         err1 = 999.0
         err2 = 999.0
         iterNo = 0
 
-        Conv_crit2 = 1.0
+        # ---------- iterative solution of time step dt ------------
 
-        # start iterative solution of Richards equation
-        pass_flag = True
-        while (err1 > Conv_crit or err2 > Conv_crit2):  # and pass_flag is False:
-            # print pass_flag
+        while (err1 > Conv_crit or err2 > Conv_crit2):
+
             iterNo += 1
 
-            # ------ lower bc check -------
+            # ------------- lower boundary condition -------------
+
             if lbc['type'] == 'free_drain':
                 q_bot = -KLh[-1]*cosalfa
-                # if h_iter(N)<-1, q_bot=0; end % allow free drainage until field capacity
             elif lbc['type'] == 'impermeable':
                 q_bot = 0.0
             elif lbc['type'] == 'flux':
-                q_bot = max(lbc['value'], -KLh[-1]*cosalfa)
-
+                q_bot = max(lbc['value'], -KLh[-1] * cosalfa)
             elif lbc['type'] == 'head':
                 h_bot = lbc['value']
-                q_bot = -KLh[-1]*(h_iter[-1] - h_bot) / dzl[-1] - KLh[-1]*cosalfa # note, this is approximation for output
+                # approximate flux to calculate Qin
+                q_bot = -KLh[-1] * (h_iter[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
 
-            # ------- upper bc check ---------
-            # using swiching between flux and head bc as in Dam and Feddes (2000)
-            # note: q0<0 infiltration, q0>0 evaporation
-            q0 = Evap - Prec - h_pond / dt  # potential rate m/s
-            MaxInf = max(-KLh[0]*(h_pond - h_iter[0] - z[0]) / dzu[0], -Ksat[0])  # max infiltration rate to top node
-            MaxEva = -KLh[0]*(h_atm - h_iter[0] - z[0]) / dzu[0]  # limited by soil supply [m/s]
-            Qin = (q_bot - sum(S*dz) - q0) * dt  # net flow to column
-            
-            Airvol = max(0.0, sum((poros - W_old)*dz))  # maximum inflow (m) tolerated by soil column
+            # ------------- upper boundary condition -------------
+
+            # swiching between flux and head as in Dam and Feddes (2000)
+
+            # potential flux at the soil surface (< 0 infiltration)
+            q0 = Evap - Prec - h_pond / dt
+            # maximum infiltration and evaporation rates
+            MaxInf = max(-KLh[0]*(h_pond - h_iter[0] - z[0]) / dzu[0], -Ksat[0])
+            MaxEva = -KLh[0]*(h_atm - h_iter[0] - z[0]) / dzu[0]
+            # net flow to soil profile during dt
+            Qin = (q_bot - sum(S * dz) - q0) * dt
+            # airvolume available in soil profile after previous time step
+            Airvol = max(0.0, sum((poros - W_old) * dz))
+
             if q0 < 0:  # case infiltration
                 if Airvol <= eps:  # initially saturated profile
-                    if Qin >= 0: #and Airvol / sum(poros*dz) < 1.0e-3:  # inflow exceeds outflow, matrix stays saturated
-                        print 'saturated soil column, ponding water, h_sur = ' + str(min(Qin, maxPond)) + ' h = ' + str(h_iter[0])  + ' W = ' + str(W_old[0])
+                    if Qin >= 0:  # inflow exceeds outflow
                         h_sur = min(Qin, maxPond)
                         ubc_flag = 'head'
-
+                        print 'saturated soil ponding water, h_sur = ' + str(h_sur) + ' h = ' + str(h_iter[0])
                     else:  # outflow exceeds inflow
-                        print 'outflow exceeds inflow' + ' q0 = ' + str(q0) + ' Qin = ' + str(Qin) + ' h_pond = ' + str(h_pond) 
                         q_sur = q0
                         ubc_flag = 'flux'
-                        if iterNo ==1:
+                        print 'outflow exceeds inflow' + ' q_sur = ' + str(q0) + ' h_pond = ' + str(h_pond)
+                        # saturated soil draining, set better initial guess
+                        if iterNo == 1:
                             h_iter -= dz
-                            W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl)
-
+                            W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
                 else:  # initially unsaturated profile
-                    if Qin >= Airvol:  # only part fits into profile
-                        print 'only part fits into profile, h_sur = ' + str(min(Qin - Airvol, maxPond)) + ' h = ' + str(h_iter[0])  + ' W = ' + str(W_old[0])
+                    if Qin >= Airvol:  # only part of inflow fits into profile
                         h_sur = min(Qin - Airvol, maxPond)
                         ubc_flag = 'head'
-                        
+                        print 'only part fits into profile, h_sur = ' + str(h_sur) + ' h = ' + str(h_iter[0])
                     else:  # all fits into profile
-                        print 'all fits into profile, q0 = ' + str(q0) + ' Airvol = ' + str(Airvol)  + ' h_pond = ' + str(h_pond)+ ' MaxInf = ' + str(MaxInf)
+                        
+                        # set better initial guess, was this need here?
                         if iterNo ==1 and Airvol < 1e-3:
                             h_iter -= dz
-                            W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl)
-                        if q0 < MaxInf:
+                            W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
+                        if q0 < MaxInf:  # limited by maximum infiltration
                             h_sur = h_pond
                             ubc_flag = 'head'
+                            print 'all fits into profile, h_sur = ' + str(h_sur) + ' MaxInf = ' + str(MaxInf)
                         else:
                             q_sur = q0
                             ubc_flag = 'flux'
+                            print 'all fits into profile, q_sur = ' + str(q_sur) + ' Airvol = ' + str(Airvol)
 
             else:  # case evaporation
-                if iterNo ==1 and Airvol < 1e-3:
+                # if saturated soil draining, set better initial guess
+                if iterNo == 1 and Airvol < 1e-3:
                     h_iter -= dz
-                    W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl)
+                    W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
                 if q0 > MaxEva:
-                    print 'case evaporation, limited by atm demand, q0 = ' + str(q0) + ' MaxEva = ' + str(MaxEva)  + ' h_pond = ' + str(h_pond)
                     h_sur = h_atm
                     ubc_flag = 'head'
+                    print 'case evaporation, limited by atm demand, q0 = ' + str(q0) + ' MaxEva = ' + str(MaxEva)
                 else:
-                    print 'case evaporation, no limit ' + 'h_pond = ' + str(h_pond)+ ' Qin = ' + str(Qin)+ ' Airvol= ' + str(Airvol) + ' q0 = ' + str(q0) + ' dt= ' + str(dt)
                     q_sur = q0
                     ubc_flag = 'flux'
+                    print 'case evaporation, no limit, q_sur = ' + str(q_sur) + ' Airvol = ' + str(Airvol)
 
-                    
-                    
+            # ---------------------------------------------------
+
+            # strickter convergence criterion for saturated profile
             if Qin >= Airvol:
                 Conv_crit2 = 1e-8
             else:
                 Conv_crit2 = 1e-6
 
-            # ----------------------------------------------
-            C = diff_wcapa(pF,h_iter,dzu,dzl)  #diff_capa(pF, h_iter)  # differential water capacity
+            # differential water capacity [m-1]
+            C = diff_wcapa(pF, h_iter, dzu, dzl)
 
-            # set up tridiagonal matrix
+            # ------------ set up tridiagonal matrix ------------
+
             a = np.zeros(N)  # sub diagonal
             b = np.zeros(N)  # diagonal
             g = np.zeros(N)  # super diag
             f = np.zeros(N)  # rhs
 
-            # ------ intermediate nodes for j in range(1,N-1):
+            # intermediate nodes i=1...N-1
             b[1:-1] = C[1:-1] + dt / dz[1:-1] * (KLh[1:N-1] / dzu[1:-1] + KLh[2:N] / dzl[1:-1])
             a[1:-1] = - dt / (dz[1:-1] * dzu[1:-1]) * KLh[1:N-1]
             g[1:-1] = - dt / (dz[1:-1] * dzl[1:-1]) * KLh[2:N]
-
             f[1:-1] = C[1:-1] * h_iter[1:-1] - (W_iter[1:-1] - W_old[1:-1]) + dt / dz[1:-1]\
-                      * (KLh[1:N-1] - KLh[2:N]) * cosalfa - S[1:-1] * dt
+                        * (KLh[1:N-1] - KLh[2:N]) * cosalfa - S[1:-1] * dt
 
-            # ---------- top node (j=0) ---------
+            # top node i=0
             if ubc_flag != 'head':  # flux bc
                 b[0] = C[0] + dt / (dz[0] * dzl[0]) * KLh[1]
                 a[0] = 0.0
                 g[0] = -dt / (dz[0] * dzl[0]) * KLh[1]
-
-                f[0] = C[0] * h_iter[0] - (W_iter[0] - W_old[0]) + dt / dz[0] * (-q_sur - KLh[1] * cosalfa) - S[0] * dt
-            
+                f[0] = C[0] * h_iter[0] - (W_iter[0] - W_old[0]) + dt / dz[0]\
+                        * (-q_sur - KLh[1] * cosalfa) - S[0] * dt
             else:  # head boundary
-                b[0] = C[0] + dt / dz[0] *(KLh[0] / dzu[0] + KLh[1] / dzl[0])
-                a[0] = 0;
-                g[0] = -dt / (dz[0] * dzl[0]) * KLh[1];
-                f[0] = C[0] * h_iter[0] - (W_iter[0] - W_old[0])  + dt / dz[0] * ((KLh[0] - KLh[1]) * cosalfa + KLh[0] / dzu[0] * h_sur) - S[0]*dt;
+                b[0] = C[0] + dt / dz[0] * (KLh[0] / dzu[0] + KLh[1] / dzl[0])
+                a[0] = 0
+                g[0] = -dt / (dz[0] * dzl[0]) * KLh[1]
+                f[0] = C[0] * h_iter[0] - (W_iter[0] - W_old[0]) + dt / dz[0]\
+                        * ((KLh[0] - KLh[1]) * cosalfa + KLh[0] / dzu[0] * h_sur) - S[0] * dt
 
-            # ------ bottom node (j=N) ---------
+            # bottom node i=N
             if lbc['type'] != 'head':  # flux bc
                 b[-1] = C[-1] + dt / (dz[-1] * dzu[-1]) * KLh[N-1]
-                a[-1] = -dt / (dz[-1] * dzu[-1]) * KLh[N-1]  # -dt/(dz[-1]*dzu[-1])*KLh[-2]
+                a[-1] = -dt / (dz[-1] * dzu[-1]) * KLh[N-1]
                 g[-1] = 0.0
-
-                f[-1] = C[-1] * h_iter[-1] - (W_iter[-1] - W_old[-1])\
-                        + dt / dz[-1] * (KLh[N-1] * cosalfa + q_bot) - S[-1] * dt
-
-            else:  # head boundary, fixed head "at node N+1"
-                b[-1] = C[-1] + dt / dz[-1] *(KLh[N-1] / dzu[-1] +  KLh[N] / dzl[-1])
+                f[-1] = C[-1] * h_iter[-1] - (W_iter[-1] - W_old[-1]) + dt / dz[-1]\
+                        * (KLh[N-1] * cosalfa + q_bot) - S[-1] * dt
+            else:  # head boundary
+                b[-1] = C[-1] + dt / dz[-1] * (KLh[N-1] / dzu[-1] + KLh[N] / dzl[-1])
                 a[-1] = - dt / (dz[-1] * dzu[-1]) * KLh[N-1]
                 g[-1] = 0.0
+                f[-1] = C[-1] * h_iter[-1] - (W_iter[-1] - W_old[-1]) + dt / dz[-1]\
+                        * ((KLh[N-1] - KLh[N]) * cosalfa + KLh[N] / dzl[-1] * h_bot) - S[-1] * dt
 
-                f[-1] =  C[-1] * h_iter[-1] - (W_iter[-1] - W_old[-1]) + dt / dz[-1] * ((KLh[N-1] - KLh[N]) * cosalfa + KLh[N] / dzl[-1] * h_bot) - S[-1] * dt
+            # ---------------------------------------------------
 
-            # ---------save old and update iteration values
+            # save old iteration values
             h_iterold = h_iter.copy()
             W_iterold = W_iter.copy()
 
-            h_iter = thomas(a,b,g,f)
-            # h_iter[h_iter>0]=0.0
-            # print h_iter
-            # find GWL
-            _, gwl = get_gwl(h_iter, z) 
-            W_iter = h_to_cellmoist(pF,h_iter,dzu,dzl) #wrc(pF, x=h_iter)
-            afp_iter = poros - W_iter
+            # solve new pressure head and corresponding moisture
+            h_iter = thomas(a, b, g, f)
+            W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
 
-            if any(abs(h_iter - h_iterold) > 1.0):
-                print 'break'
-                print (a)
-                print (b)
-                print (g)
-                print (f)
-                print (C)
-                print (h)
-                print (h_iter)
+            # check solution, if problem break
+            if any(abs(h_iter - h_iterold) > 1.0) or any(np.isnan(h_iter)):
+                print 'Solution blowing up, break'
+                # print (a) print (b) print (g) print (f) print (h)
                 break
+
+            # if problems reaching convergence devide time step and retry
             if iterNo == 20:
                 dt = dt / 3.0
-                if dt < 10:
-                    dt = max(dt,30)
+                if dt > 10:
+                    dt = max(dt, 30)
                     iterNo = 0
                     print 'More than 20 iterations, new dt = ' + str(dt)
-                    continue  # re-try with smaller timestep
-                else:
+                    continue
+                else:  # convergence not reached with dt=30s, break
                     break
                     print 'Problem with solution'
-            elif pass_flag is False or any(np.isnan(h_iter)):
-                #print pass_flag,  ', dt: ' + str(dt) + ' qsur = ' + str(q_sur) + ' qbot = ' + str(q_bot)
-                if any(np.isnan(h_iter)):
-                    print 'nan found'
-                    break  # break while loop
 
+            # errors for determining convergence
             err1 = max(abs(W_iter - W_iterold))
             err2 = max(abs(h_iter - h_iterold))
             print 'err1 = ' + str(err1) + ' err2 = ' + str(err2)
 
-        # ------- ending iteration loop -------
-        # print 'Pass: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo)
+        # --------------- ending iteration loop ------------------
+
         # new state at t
         h = h_iter.copy()
-        W = h_to_cellmoist(pF,h_iter,dzu,dzl)  #wrc(pF, x=h_iter)
+        W = W_iter.copy()
+
         # calculate q_sur and q_bot in case of head boundaries
         if ubc_flag == 'head':
             q_sur = -KLh[0] * (h_sur - h[0]) / dzu[0] - KLh[0]
         if lbc['type'] == 'head':
-            q_bot = -KLh[-1]*(h[-1] - h_bot) / dzl[-1] - KLh[-1]*cosalfa
-            
-        # ---- update cumulative Infiltration, evaporation, drainage and h_pond [m] ----
-        if q_sur <= eps:        
-            h_pond -= (-Prec + Evap - q_sur)*dt
-            #h_pond = max(0, h_pond)                                                # Voiko jättää???
-            rr = max(0, h_pond - maxPond)  # create runoff if h_pond>maxpond
+            q_bot = -KLh[-1] * (h[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
+
+        # ------------ cumulative fluxes and h_pond -------------
+
+        if q_sur <= eps:  # infiltration dominates, evaporation at potential rate
+            h_pond -= (-Prec + Evap - q_sur) * dt
+            rr = max(0, h_pond - maxPond)  # surface runoff if h_pond > maxpond
             h_pond -= rr
-            C_roff += rr        
+            C_roff += rr
             del rr
-            C_inf += (q_sur - Evap)*dt
-            C_eva += Evap*dt
-        else:
-            C_eva += (q_sur + Prec)*dt + h_pond
+            C_inf += (q_sur - Evap) * dt
+            C_eva += Evap * dt
+        else:  # evaporation dominates
+            C_eva += (q_sur + Prec) * dt + h_pond
             h_pond = 0.0
-        
-#        if abs(h_pond) < eps:
-#            h_pond = 0.0
 
-        C_dra += -q_bot*dt + sum(HM*dz)*dt  # drainage + net lateral flow
-        C_trans += sum(R*dz)*dt
+        if abs(h_pond) < eps:  # eliminate h_pond caused by numerical innaccuracy (?)
+            h_pond = 0.0
 
-        t += dt  # solution time & new initial timestep
-        
+        C_dra += -q_bot * dt + sum(HM * dz) * dt  # flux through bottom + net lateral flow
+        C_trans += sum(R * dz) * dt  # root water uptake
+
+        # ----------- solution time and new timestep ------------
+
+        t += dt
         print 't = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo)
-        
-        dt_old = dt
-        
+
+        dt_old = dt  # save temporarily
+
+        # select new time step based on convergence
         if iterNo <= 2:
             dt = dt * 1.25
         elif iterNo > 4:
             dt = dt / 1.25
-        
-        dt = max(dt,360)#30)
 
+        # limit to minimum of 30s
+        dt = max(dt, 30)
+
+        # save dto for output to be used in next run of waterflow1D()
         if dt_old == t_final or t_final > t:
             dto = min(dt, t_final)
-        
-        dt = min(dt, t_final-t)
-        
 
-    # ----- at t = t_final: ending while loop & compute outputs
-                
+        # limit by time left to solve
+        dt = min(dt, t_final-t)
+
+    # ------------------ t_final reached -----------------------
+
+    # get ground water depth
+    _, gwl = get_gwl(h, z)
+
     # vertical fluxes
     KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
-    #KLh = spatial_average(KLh, method='arithmetic')
-
-    Fliq = nodal_fluxes(z, h, KLh)  # ms-1
+    # KLh = spatial_average(KLh, method='arithmetic')
+    Fliq = nodal_fluxes(z, h, KLh)  # [m s-1]
 
     # mass balance error [m]
- #   mbe = Prec*t_final + (h_to_colmoist(pF,h0,dzu,dzl) - h_to_colmoist(pF,h,dzu,dzl)) + (pond_ini - h_pond) - C_dra - C_trans - C_roff - C_eva
-    mbe = Prec*t_final + (sum(W_ini*dz) - sum(W*dz)) + (pond_ini - h_pond) - C_dra - C_trans - C_roff - C_eva
-    # print 'mbe:' +str(mbe)
+    mbe = Prec * t_final + (sum(W_ini*dz) - sum(W*dz)) + (pond_ini - h_pond)\
+            - C_dra - C_trans - C_roff - C_eva
 
     return h, W, h_pond, C_inf, C_eva, C_dra, C_trans, C_roff, Fliq, gwl, KLh, mbe, dto
 
 
 """ Utility functions """
 
-def get_gwl(head, x):
+def get_gwl(head, x):  # returning h unnecessary? Adjustment of h below gwl removed!
     """
-    finds ground water level and adjusts head in saturated nodes by adding hydrostatic pressure
+    Finds ground water level based on pressure head.
     Args:
         head (array): heads in nodes [m]
-        x (array): grid,<0, monotonically decreasing [m]                                      
+        x (array): grid, < 0, monotonically decreasing [m]
     Returns:
         head (array): adjusted heads [m]
         gwl (float): ground water level in column [m]
     """
-    sid = find_index(head, lambda x: x >= 0)  # returns indices of heads >=0
-    if len(sid) > 0:
-        if sid[0] > 0:  # gwl below first node
-            gwl = x[sid[0]-1] + head[sid[0]-1]
-        else:
-            gwl = x[sid[0]] + head[sid[0]]  # gwl in first node, limited to ground surface (at z = 0)
+    sid = find_index(head, lambda x: x <= 0)
 
-        #head[sid] = gwl - x[sid]  # m, >0                                      # Messes up calculation when using other tah impermeable lower boundary 
+    if len(sid) < len(head):
+        # gwl above profile bottom
+        if len(sid) > 0:  # gwl below first node
+            # finding head from bottom to top to avoid returning perched gwl
+            gwl = x[sid[-1]+1] + head[sid[-1]+1]
+        else:  # gwl in or above first node
+            gwl = x[0] + head[0]
     else:
-        gwl = head[-1] + x[-1]  # if gwl not in profile, assume hydr.
-                                # equilibrium between last node and gwl
+        # gwl not in profile, assume hydr. equilibrium between last node and gwl
+        gwl = head[-1] + x[-1]
 
     return head, gwl
-
 
 def thomas(a, b, C, D):
     """
