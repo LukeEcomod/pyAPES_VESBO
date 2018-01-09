@@ -228,16 +228,23 @@ class SoilModel():
                             'vOrg': vOrg, 'vSand': vSand, 'vSilt': vSilt, 'vClay': vClay,
                             'bedrockL': bedrock['Lambda']
                             } 
-        
-        # drainage equation
-        if 'drainage_equation' in para:
-            self.drainage_equation = para['drainage_equation']
-        else:
-            self.drainage_equation = {'type': None}
-            
-        # Keep track of dt used in solving water
-        self.dt_water = None
-                
+
+        if self.solve_water:
+            # if using equilibrium approach save WstoToGwl
+            if 'solve_water_type' in para:
+                if para['solve_water_type'] == 'Equilibrium':
+                    self.solve_water_type = 'Equilibrium'
+                    self.WstoToGwl = gwl_Wsto(self.z, self.pF)
+
+            # drainage equation
+            if 'drainage_equation' in para:
+                self.drainage_equation = para['drainage_equation']
+            else:
+                self.drainage_equation = {'type': None}
+
+            # Keep track of dt used in solving water
+            self.dt_water = None
+
 
     def _run(self, dt, ubc_water, ubc_heat, h_atm=-1000.0, water_sink=None, heat_sink=None, 
                       lbc_water=None, lbc_heat=None):
@@ -284,35 +291,53 @@ class SoilModel():
         if self.solve_water:
             # drainage to ditches
             if self.drainage_equation['type'] == 'Hooghoudt':  # Hooghoudt's drainage
-                _, q_drain = wf.drainage_hooghoud(self.z[ix], 
-                                              self.Ksat[ix], 
-                                              self.gwl, 
-                                              self.drainage_equation['depth'], 
-                                              self.drainage_equation['spacing'], 
+                _, q_drain = wf.drainage_hooghoud(self.z[ix],
+                                              self.Khsat[ix],
+                                              self.gwl,
+                                              self.drainage_equation['depth'],
+                                              self.drainage_equation['spacing'],
                                               self.drainage_equation['width'])
             else:
                 q_drain = np.zeros(len(self.z[ix]))  # no drainage
             if self.dt_water == None:
                 self.dt_water = dt
-            
-            # solve water flow in domain of ix layers
-            h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe, self.dt_water = \
-                wf.waterFlow1D(t_final=dt,
-                               z=self.z[ix],
-                               h0=self.h[ix],
-                               pF=pFpara,
-                               Ksat=self.Ksat[ix],
-                               Prec=ubc_water['Prec'],  # flux-based precipitation >0 [m s-1]
-                               Evap=ubc_water['Evap'],  # flux-based evaporation >0 [m s-1]
-                               R=water_sink[ix],  # total water sink (root etc.)
-                               HM=q_drain,  # lateral flow 
-                               lbc=self.lbc_water,  # lower boundary condition {'type': xx, 'value': yy}
-                               Wice0=self.Wice[ix],
-                               maxPond=self.max_pond,
-                               pond0=self.pond,
-                               cosalfa=1.0,
-                               h_atm=h_atm,  # atmospheric pressure head [m]; for soil evap. controls
-                               steps=dt / self.dt_water)
+            # solve water balance in domain of ix layers
+            if self.solve_water_type == 'Equilibrium':  # solving based on equilibrium
+                h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe = \
+                    wf.waterStorage1D(t_final=dt,
+                                      z=self.z[ix],
+                                      h0=self.h[ix],
+                                      pF=pFpara,
+                                      Ksat=self.Ksat[ix],
+                                      Prec=ubc_water['Prec'],  # flux-based precipitation >0 [m s-1]
+                                      Evap=ubc_water['Evap'],  # flux-based evaporation >0 [m s-1]
+                                      R=water_sink[ix],  # total water sink (root etc.)
+                                      WstoToGwl=self.WstoToGwl,
+                                      HM=q_drain,  # lateral flow 
+                                      lbc=self.lbc_water,  # lower boundary condition {'type': xx, 'value': yy}
+                                      Wice0=self.Wice[ix],
+                                      maxPond=self.max_pond,
+                                      pond0=self.pond,
+                                      cosalfa=1.0,
+                                      h_atm=h_atm)  # atmospheric pressure head [m]; for soil evap. controls
+            else:  # Richards equation for solving water flow
+                h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe, self.dt_water = \
+                    wf.waterFlow1D(t_final=dt,
+                                   z=self.z[ix],
+                                   h0=self.h[ix],
+                                   pF=pFpara,
+                                   Ksat=self.Ksat[ix],
+                                   Prec=ubc_water['Prec'],  # flux-based precipitation >0 [m s-1]
+                                   Evap=ubc_water['Evap'],  # flux-based evaporation >0 [m s-1]
+                                   R=water_sink[ix],  # total water sink (root etc.)
+                                   HM=q_drain,  # lateral flow
+                                   lbc=self.lbc_water,  # lower boundary condition {'type': xx, 'value': yy}
+                                   Wice0=self.Wice[ix],
+                                   maxPond=self.max_pond,
+                                   pond0=self.pond,
+                                   cosalfa=1.0,
+                                   h_atm=h_atm,  # atmospheric pressure head [m]; for soil evap. controls
+                                   steps=dt / self.dt_water)
             self.h[ix] = h.copy()
             self.Wliq[ix] = Wliq.copy()
             self.Kv[ix] = Kv.copy()

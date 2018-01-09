@@ -8,6 +8,7 @@ Created on Wed Apr 06 08:16:37 2016
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 eps = np.finfo(float).eps  # machine epsilon
 
 """
@@ -719,7 +720,225 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
     return h, W, h_pond, C_inf, C_eva, C_dra, C_trans, C_roff, Fliq, gwl, KLh, mbe, dto
 
 
+def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
+                HM=0.0, lbc={'type': 'impermeable', 'value': None}, Wice0=0.0,
+                maxPond=0.0, pond0=0.0, cosalfa=1.0, h_atm=-1000.0):
+    """
+    Solves soil water storage in column assuming hydrostatic equilibrium.
+
+    Args:
+        t_final (float): solution timestep [s]
+        z (array): grid, < 0 (soil surface = 0), monotonically decreasing [m]
+                    (all the nodes, also top and bottom node, are in the centre of the soil compartments)
+        h0 (array): initial pressure head [m]
+        pF (dict): vanGenuchten soil pF-parameters; pF.keys()=['ThetaR', 'ThetaS', 'n', 'alpha']
+        Ksat (array): saturated hydraulic conductivity [m s-1]
+        Prec (float): precipitation as flux, > 0 [m s-1]
+        Evap (float): potential evaporation from surface, > 0 [m s-1]
+                    (may become limited by h_atm)
+        R (array): local sink/source array due e.g. root water uptake, > 0 for sink [s-1]
+        WstoToGwl: interpolation function for gwl(Wsto), solved using gwl_Wsto(z, pF)
+        HM (array): net lateral flux array e.g. to ditches , > 0 for net outflow [s-1]
+        lbc (dict): lower bc
+                *'type': 'impermeable', 'flux', 'free_drain', 'head'
+                *'value': give for 'head' [m] and 'flux' [m s-1], < 0 for outflow
+        Wice0 (array): volumetric ice content [m3 m-3] - not needed now; could be used to scale hydr.conductivity
+        maxPond (float): maximum depth allowed ponding at surface [m]
+        pond0 (float): initial pond depth [m]
+        cosalfa (float): - 1 for vertical water flow, 0 for horizontal transport
+        h_atm (float): pressure head in equilibrium with the prevailing air relative humidity [m]
+                    (limits evaporation from soil surface in dry conditions)
+    Returns:
+        h (array): new pressure head [m]
+        W (array): new volumetric water content [m3 m-3]
+        h_pond (float): new ponding depth [m]
+        C_inf (float): total infiltration, < 0 [m]
+        C_eva (float): total evaporation from soil surface, > 0 [m]
+        C_dra (float): total drainage (caused by HM and lbc), > 0 from profile [m]
+        C_trans (float): total root uptake (caused by R), > 0 from profile [m]
+        C_roff (float): total surface runoff [m]
+        Fliq (array): vertical water fluxes at t_final [m s-1]
+        gwl (float): ground water level [m]; if not within profile assumes hydrostatic equilibrium
+        KLh (array): hydraulic conductivity [m s-1]
+        mbe (float): total mass balance error [m]
+    REFERENCES:
+
+    CODE:
+        Kersti Haahti, Luke 9.1.2018
+    NOTE:
+
+    """
+
+    # net sink/source term
+    S = R + HM  # root uptake + lateral flow (e.g. by ditches)
+
+    # cumulative boundary fluxes for 0...t_final
+    C_inf = 0.0
+    C_eva = 0.0
+    C_dra = 0.0
+    C_trans = 0.0
+    C_roff = 0.0
+
+    # ------------------- computation grid -----------------------
+
+    # number of nodal points
+    N = len(z)
+
+    # distances between grid points
+    dzu = np.empty(N)  # between i-1 and i
+    dzl = np.empty(N)  # dzl between i and i+1
+    dzu[1:] = z[:-1] - z[1:]
+    dzu[0] = -z[0]  # from soil surface to first node
+    dzl[:-1] = z[:-1] - z[1:]
+    dzl[-1] = (z[-2] - z[-1]) / 2.0  # from last node to bottom surface
+
+    # compartment thickness
+    dz = np.empty(N)
+    dz = (dzu + dzl) / 2.0
+    dz[0] = dzu[0] + dzl[0] / 2.0
+    dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+
+    # -------- soil variables and intial conditions --------------
+
+    # soil hydraulic conductivity and porosity
+    if type(Ksat) is float:
+        Ksat = np.zeros(N) + Ksat
+    poros = pF['ThetaS']
+
+    # initial water storage
+    W_ini = h_to_cellmoist(pF, h0, dzu, dzl)
+    Wsto_ini = sum(W_ini * dz)
+    h_pond = pond0
+
+    # hydraulic condictivity, only used at boundaries at i=-1/2 and i=N+1/2
+    KLh = hydraulic_conductivity(pF, x=h0, Ksat=Ksat)
+    # get KLh at i-1/2, note len(KLh) = N + 1
+    KLh = spatial_average(KLh, method='arithmetic')
+
+    # time step
+    dt = t_final
+
+    # ------------- lower boundary condition -------------
+
+    if lbc['type'] == 'free_drain':
+        q_bot = -KLh[-1]*cosalfa
+    elif lbc['type'] == 'impermeable':
+        q_bot = 0.0
+    elif lbc['type'] == 'flux':
+        q_bot = max(lbc['value'], -KLh[-1] * cosalfa)
+    elif lbc['type'] == 'head':
+        h_bot = lbc['value']
+        # flux through bottom
+        q_bot = -KLh[-1] * (h0[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
+
+    # ------------- soil column water balance -------------
+
+    # potential flux at the soil surface (< 0 infiltration)
+    q0 = Evap - Prec - h_pond / dt
+    # maximum infiltration and evaporation rates
+    MaxInf = max(-KLh[0]*(h_pond - h0[0] - z[0]) / dzu[0], -Ksat[0])
+    MaxEva = -KLh[0]*(h_atm - h0[0] - z[0]) / dzu[0]
+    # limit flux at the soil surface: MaxInf < q_sur < MaxEvap
+    q_sur = min(max(MaxInf, q0), MaxEva)
+
+    # net flow to soil profile during dt
+    Qin = (q_bot - sum(S * dz) - q_sur) * dt
+    # airvolume available in soil profile after previous time step
+    Airvol = max(0.0, sum((poros - W_ini) * dz))
+
+    if Qin >= Airvol:  # net inflow does not fit into profile
+        Wsto = Wsto_ini + Airvol
+        q_sur = - Airvol / dt + q_bot - sum(S * dz)
+    else:
+        Wsto = Wsto_ini + Qin
+
+    # ------------------------------------------------------
+
+    # ground water depth corresponding to Wsto
+    gwl = WstoToGwl(Wsto)
+
+    # new state variables
+    h = gwl - z
+    W = h_to_cellmoist(pF, h, dzu, dzl)
+
+    # ------------ cumulative fluxes and h_pond -------------
+    
+    # Infitration, evaporation, surface runoff and h_pond
+    if q_sur <= eps:  # infiltration dominates, evaporation at potential rate
+        h_pond -= (-Prec + Evap - q_sur) * dt
+        rr = max(0, h_pond - maxPond)  # surface runoff if h_pond > maxpond
+        h_pond -= rr
+        C_roff += rr
+        del rr
+        C_inf += (q_sur - Evap) * dt
+        C_eva += Evap * dt
+    else:  # evaporation dominates
+        C_eva += (q_sur + Prec) * dt + h_pond
+        h_pond = 0.0
+
+#    if abs(h_pond) < eps:  # eliminate h_pond caused by numerical innaccuracy (?)
+#        h_pond = 0.0
+
+    C_dra += -q_bot * dt + sum(HM * dz) * dt  # flux through bottom + net lateral flow
+    C_trans += sum(R * dz) * dt  # root water uptake
+
+    # ------------------------------------------------------
+
+    # vertical fluxes
+    KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
+    # KLh = spatial_average(KLh, method='arithmetic')
+    Fliq = nodal_fluxes(z, h, KLh)  # [m s-1]
+
+    # mass balance error [m]
+    mbe = Prec * t_final + (sum(W_ini * dz) - sum(W * dz)) + (pond0 - h_pond)\
+            - C_dra - C_trans - C_roff - C_eva
+
+    return h, W, h_pond, C_inf, C_eva, C_dra, C_trans, C_roff, Fliq, gwl, KLh, mbe
+
 """ Utility functions """
+
+def gwl_Wsto(z, pF):
+    """
+    Forms interpolated function for soil column ground water dpeth, < 0 [m], as a 
+    function of water storage [m]
+    Args:
+        pF (dict of np.arrays):
+            0. 'ThetaS' saturated water content [m3 m-3]
+            1. 'ThetaR' residual water content [m3 m-3]
+            2. 'alpha' air entry suction [cm-1]
+            3. 'n' pore size distribution [-]
+        z (array): grid, < 0 (soil surface = 0), monotonically decreasing [m]
+    Returns:
+        WstoToGwl: interpolated function for Wsto(gwl)
+    """
+
+    # -------------------- computational grid ---------------------
+    # number of nodal points
+    N = len(z)
+    # distances between grid points
+    dzu = np.empty(N)  # between i-1 and i
+    dzl = np.empty(N)  # dzl between i and i+1
+    dzu[1:] = z[:-1] - z[1:]
+    dzu[0] = -z[0]  # from soil surface to first node
+    dzl[:-1] = z[:-1] - z[1:]
+    dzl[-1] = (z[-2] - z[-1]) / 2.0  # from last node to bottom surface
+    # compartment thickness
+    dz = np.empty(N)
+    dz = (dzu + dzl) / 2.0
+    dz[0] = dzu[0] + dzl[0] / 2.0
+    dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+
+    # --------- connection between gwl and water storage------------
+    # gwl from ground surface gwl = 0 to gwl = -10
+    gwl = np.arange(0.0, -5, -1e-3)
+    # solve water storage corresponding to gwls
+    Wsto = [sum(h_to_cellmoist(pF, g - z, dzu, dzl) * dz) for g in gwl]
+    # interpolate function
+    WstoToGwl = interp1d(np.array(Wsto), np.array(gwl), fill_value='extrapolate')
+
+    del gwl, Wsto, dzu, dzl, dz
+
+    return WstoToGwl
 
 def get_gwl(head, x):  # returning h unnecessary? Adjustment of h below gwl removed!
     """
@@ -1240,7 +1459,7 @@ def drainage_hooghoud(zs, Ksat, GWL, DitchDepth, DitchSpacing, DitchWidth, Zbot=
     i.e. accounts only drainage from saturated layers above and below ditch bottom
     Args:
        zs (array): grid,<0, monotonically decreasing [m]
-       Ksat (array): saturated hydr. cond. [ms-1]
+       Ksat (array): horizontal saturated hydr. cond. [ms-1]
        GWL (float): ground water level below surface, <0 [m]
        DitchDepth (float): depth of drainage ditch bottom, >0 [m]
        DitchSpacing (float): horizontal spacing of drainage ditches [m]
