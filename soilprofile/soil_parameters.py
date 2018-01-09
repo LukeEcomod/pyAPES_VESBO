@@ -38,7 +38,7 @@ para = {
         'solve_heat': False,        # (boolean): True solves heatflow
         'solve_water': True,        # (boolean): True solves waterflow
         'solve_water': True,        # (boolean): True solves waterflow
-        'solve_water_type': 'Equilibrium',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
+        'solve_water_type': '',  # 'Equilibrium',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
         'Bedrock': {
                 'Cv': 2160000.0,
                 'Lambda': 3.0

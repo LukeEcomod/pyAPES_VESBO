@@ -232,9 +232,11 @@ class SoilModel():
         if self.solve_water:
             # if using equilibrium approach save WstoToGwl
             if 'solve_water_type' in para:
-                if para['solve_water_type'] == 'Equilibrium':
-                    self.solve_water_type = 'Equilibrium'
+                self.solve_water_type = para['solve_water_type']
+                if self.solve_water_type == 'Equilibrium':
                     self.WstoToGwl = gwl_Wsto(self.z, self.pF)
+            else:
+                self.solve_water_type = None
 
             # drainage equation
             if 'drainage_equation' in para:
