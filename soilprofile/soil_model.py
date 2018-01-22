@@ -80,15 +80,18 @@ class SoilModel():
         dzu = np.empty(N)
         dzl = np.empty(N)
 
-        # distances between grid points: dzu is between point i-1 and i, dzl between point i and i+1
+        # distances between grid points i-1 and i
         dzu[1:] = z[:-1] - z[1:]
         dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
+
+        # compartment thickness (nodes in cell center!! Would be easier to input thicknessess not z)
+        dz[0] = 2 * dzu[0]
+        for k in range(1, N):
+            dz[k] = 2 * dzu[k] - dz[k-1]
+
+        # distances between grid points i and i+1
         dzl[:-1] = z[:-1] - z[1:]
-        dzl[-1] = (z[-2] - z[-1]) / 2.0 #  from last node to bottom surface
-        # compartment thickness
-        dz = (dzu + dzl) / 2.0
-        dz[0] = dzu[0] + dzl[0] / 2.0
-        dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+        dzl[-1] = dz[-1] / 2.0 #  from last node to bottom surface
 
         self.z = z                          # vertical grid [m], <0
         self.dz = dz                        # layer thickness [m]
@@ -122,7 +125,7 @@ class SoilModel():
         # layer above horizon bottom given in para['zh']
         else:
             Nhor = len(para['zh'])
-            keys = ['Ksat', 'Khsat', 'Cv_dry', 'fp', 'vOrg', 'vSand', 'vSilt', 'vClay']
+            keys = ['Ksat', 'Khsat', 'Csv', 'fp', 'vOrg', 'vSand', 'vSilt', 'vClay']
             lpara = {key: np.ones(N)*np.NaN for key in keys}
             lpara['pF'] = {key: np.ones(N)*np.NaN for key in para['pF'].keys()}
 
@@ -154,7 +157,7 @@ class SoilModel():
             # silt vol. fraction of solids [-]
             vClay = lpara['vClay']
             # dry soil vol. heat capacity [J m-3 K-1]
-            Csv = lpara['Cv_dry']
+            Csv = lpara['Csv']
 
         bedrock = para['Bedrock']
         max_pond = para['max_pond']
@@ -168,10 +171,10 @@ class SoilModel():
         if 'h' in ini_cond:
             h = np.ones(N)*ini_cond['h']
             # vol. water content [-]
-            Wtot = wf.wrc(self.pF, x=h)
+            Wtot = wf.h_to_cellmoist(self.pF, h, self.dz)
         elif 'gwl' in ini_cond:
             h = np.ones(N)*(ini_cond['gwl']-z)
-            Wtot = wf.wrc(self.pF, x=h)
+            Wtot = wf.h_to_cellmoist(self.pF, h, self.dz)
         else:
             Wtot = np.ones(N)*ini_cond['Wtot']
 
@@ -188,15 +191,13 @@ class SoilModel():
         self.Wair = self.porosity - self.Wliq - self.Wice
 
         # ground water level [m]
-        _, gwl = wf.get_gwl(self.h, self.z)
+        gwl = wf.get_gwl(self.h, self.z)
         self.gwl = gwl
         # print(self.z, self.Wliq, self.T, self.h, self.Wice, self.Ls)
 
         # vertical & horizontal hydraulic conductivities [ms-1]
-        K = wf.hydraulic_conductivity(self.pF, x=self.Wliq, var='Th')
-        K = wf.spatial_average(K, self.z, method='arithmetic')                  # Miksi tässä?
-        self.Kv = K
-        self.Kh = 10*K
+        self.Kv = wf.hydraulic_conductivity(self.pF, x=self.h, Ksat=self.Ksat)
+        self.Kh = wf.hydraulic_conductivity(self.pF, x=self.h, Ksat=self.Khsat)
 
         # thermal conductivity [Wm-1K-1]
         self.Lambda = hf.thermal_conductivity(
@@ -234,7 +235,7 @@ class SoilModel():
             if 'solve_water_type' in para:
                 self.solve_water_type = para['solve_water_type']
                 if self.solve_water_type == 'Equilibrium':
-                    self.WstoToGwl = gwl_Wsto(self.z, self.pF)
+                    self.WstoToGwl, self.GwlToWsto = wf.gwl_Wsto(self.dz, self.pF)
             else:
                 self.solve_water_type = None
 
@@ -315,6 +316,7 @@ class SoilModel():
                                       Evap=ubc_water['Evap'],  # flux-based evaporation >0 [m s-1]
                                       R=water_sink[ix],  # total water sink (root etc.)
                                       WstoToGwl=self.WstoToGwl,
+                                      GwlToWsto=self.GwlToWsto,
                                       HM=q_drain,  # lateral flow 
                                       lbc=self.lbc_water,  # lower boundary condition {'type': xx, 'value': yy}
                                       Wice0=self.Wice[ix],
@@ -422,7 +424,9 @@ def test_soilmodel(forcfile, start_time, end_time):
     forcfile = 'C:\\Users\\L1656\\Documents\\Git_repos\\CCFPeat\\bryo_microclimate_LAI4.5.csv'
     
     from soil_parameters import para
-    
+    import time
+    running_time = time.time()
+
     # --- read forcing
 
     dat = pd.read_csv(forcfile, sep=',', header='infer', na_values=-999)
@@ -491,16 +495,16 @@ def test_soilmodel(forcfile, start_time, end_time):
         if res['gwl'][-1] > 0.05 or any(np.isnan(res['h'][-1])) or res['h_pond'][-1] < 0.0 or abs(res['Mbew'][-1]) >1e-5:
             break
 
-    plt.figure(1)
+    plt.figure(2)
     plt.plot(res['gwl'])
     plt.title('Ground water level (m)', fontsize=14)
-    plt.figure(2)
+    plt.figure(3)
     plt.plot(res['Mbew'])
     plt.title('Water model mass balance error (m)', fontsize=14)
-    plt.figure(3)
+    plt.figure(4)
     plt.plot(1000 * np.add(res['Drain'], res['Roff']) / dt0 * 3600)
     plt.title('Total runoff (mm/h)', fontsize=14)
-    
+
     print 'Water balance:'
     print('Precipition:\t %.2f mm (%.1f)' % (sum(res['Prec'])*1000, 100*sum(res['Prec'])/sum(res['Prec'])))
     print('Evaporation:\t %.2f mm (%.1f)' % (sum(res['Evap'])*1000, 100*sum(res['Evap'])/sum(res['Prec'])))
@@ -508,7 +512,9 @@ def test_soilmodel(forcfile, start_time, end_time):
     print('Drainage:\t %.2f mm (%.1f)' % (sum(res['Drain'])*1000, 100*sum(res['Drain'])/sum(res['Prec'])))
     print('Surface runoff:\t %.2f mm (%.1f)' % (sum(res['Roff'])*1000, 100*sum(res['Roff'])/sum(res['Prec'])))
     print('Storage change:\t %.2f mm (%.1f)' % ((res['WSto'][-1]-res['WSto'][0])*1000, 100*(res['WSto'][-1]-res['WSto'][0])/sum(res['Prec'])))
-    
+
+    print('--- running time %.2f seconds ---' % (time.time() - running_time))
+
     return res, model, Forc
 
 #def create_soilmodel():
@@ -645,8 +651,7 @@ class SoilProfile():
         # air volume [-]
         self.Wair = self.porosity - self.Wliq - self.Wice
         # ground water level [m]
-        _, Gwl = wf.get_gwl(self.h, self.z)
-        self.Gwl = Gwl
+        self.Gwl = wf.get_gwl(self.h, self.z)
 
         print(self.z, self.Wliq, self.T, self.h, self.Wice, self.Ls)
         # thermal conductivity [Wm-1K-1]

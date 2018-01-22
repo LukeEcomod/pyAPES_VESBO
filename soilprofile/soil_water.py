@@ -121,31 +121,25 @@ def wrc(pF, x=None, var=None):
 
     return y
 
-def h_to_cellmoist(pF, h, dzu, dzl):
+def h_to_cellmoist(pF, h, dz):
     """
     Cell moisture based on vanGenuchten-Mualem soil water retention model. 
     Partly saturated cells calculated as thickness weigthed average of 
     saturated and unsaturated parts.
 
     Args:
-        pF (dict of np.arrays):
-            0. 'ThetaS' saturated water content [m3 m-3]
-            1. 'ThetaR' residual water content [m3 m-3]
-            2. 'alpha' air entry suction [cm-1]
-            3. 'n' pore size distribution [-]
+        pF (dict of arrays):
+            'ThetaS' saturated water content [m\ :sup:`3` m\ :sup:`-3`\ ]
+            'ThetaR' residual water content [m\ :sup:`3` m\ :sup:`-3`\ ]
+            'alpha' air entry suction [cm\ :sup:`-1`]
+            'n' pore size distribution [-]
         h (np.array): pressure head [m]
-        dzu, dzl (np.arrays): distance to upper and lower neighboring node [m]
+        dz (np.arrays): soil conpartment thichness, node in center [m]
     Returns:
-        theta (np.array): volumetric water content of cell [m3 m-3]
+        theta (np.array): volumetric water content of cell [m\ :sup:`3` m\ :sup:`-3`\ ]
 
     Kersti Haahti, Luke 8/1/2018
     """
-
-    # distance to cell top and bottom
-    dzu = dzu / 2
-    dzl = dzl / 2
-    dzu[0] = dzu[0] * 2  # distance to soil surface
-    dzl[-1] = dzl[-1] * 2  # distance to prodfile bottom
 
     # water retention parameters
     Ts = np.array(pF['ThetaS'])
@@ -154,45 +148,43 @@ def h_to_cellmoist(pF, h, dzu, dzl):
     n = np.array(pF['n'])
     m = 1.0 - np.divide(1.0, n)
 
-    # moisture based on cell center h
+    # moisture based on cell center head
     x = np.minimum(h, 0)
     theta = Tr + (Ts - Tr) / (1 + abs(alfa * 100 * x)**n)**m
 
     # correct moisture of partly saturated cells
-    ix1 = np.where(h < dzu)
-    ix2 = np.where(h > -dzl)
-    ix = np.intersect1d(ix1, ix2)
-    del ix1, ix2
+    ix = np.where(abs(h) < dz/2)
     # moisture of unsaturated part
-    x[ix] = (dzu[ix] - h[ix]) / 2
+    x[ix] = -(dz[ix]/2 - h[ix]) / 2
     theta[ix] = Tr[ix] + (Ts[ix] - Tr[ix]) / (1 + abs(alfa[ix] * 100 * x[ix])**n[ix])**m[ix]
     # total moisture as weighted average
-    theta[ix] = (theta[ix] * (dzu[ix] - h[ix]) + Ts[ix] * (dzl[ix] + h[ix])) / (dzu[ix] + dzl[ix])
+    theta[ix] = (theta[ix] * (dz[ix]/2 - h[ix]) + Ts[ix] * (dz[ix]/2 + h[ix])) / (dz[ix])
 
     return theta
 
-def diff_wcapa(pF, h, dzu, dzl):
+def diff_wcapa(pF, h, dz):
     """
     Differential water capacity calculated numerically.
 
     Args:
         pF (dict of np.arrays):
-            0. 'ThetaS' saturated water content [m3 m-3]
-            1. 'ThetaR' residual water content [m3 m-3]
-            2. 'alpha' air entry suction [cm-1]
-            3. 'n' pore size distribution [-]
+            'ThetaS' saturated water content [m\ :sup:`3` m\ :sup:`-3`\ ]
+            'ThetaR' residual water content [m\ :sup:`3` m\ :sup:`-3`\ ]
+            'alpha' air entry suction [cm\ :sup:`-1`]
+            'n' pore size distribution [-]
         h (np.array): pressure head [m]
-        dzu, dzl (np.arrays): distance to upper and lower neighboring node [m]
+        dz (np.arrays): soil conpartment thichness, node in center [m]
     Returns:
-        dwcapa (np.array): differential water capacity dTheta/dhead [m-1]
+        dwcapa (np.array): differential water capacity dTheta/dhead [m\ :sup:`-1`]
 
     Kersti Haahti, Luke 8/1/2018
     """
 
     dh = 1e-5
-    theta_plus = h_to_cellmoist(pF,h + dh,dzu,dzl)
-    theta_minus = h_to_cellmoist(pF,h - dh,dzu,dzl)
+    theta_plus = h_to_cellmoist(pF, h + dh, dz)
+    theta_minus = h_to_cellmoist(pF, h - dh, dz)
 
+    # differential water capacity
     dwcapa = (theta_plus - theta_minus) / (2 * dh)
 
     return dwcapa
@@ -231,8 +223,6 @@ def effSat(pF, x, var=None):
     if var is not None or var is 'Th':  # x=Th
         s = np.minimum((x - Tr) / (Ts - Tr + eps), 1.0)
     else:
-        #x = 100*np.minimum(x, 0)  # cm                                         #Turha toistaa?
-        #x = Tr + (Ts - Tr) / (1.0 + abs(alfa*x)**n)**(1.0 - 1.0 / n)           #Turha toistaa?
         s = np.minimum((wrc(pF, x=x) - Tr) / (Ts - Tr + eps), 1.0)
 
     return s
@@ -240,12 +230,13 @@ def effSat(pF, x, var=None):
 
 def hydraulic_conductivity(pF, x=None, var=None, Ksat=1):
     """
-    Hydraulic conductivity following vanGenuchten-Mualem -model. Sole input 'pF'
-    draws relative conductivity curve.
+    Hydraulic conductivity following vanGenuchten-Mualem -model.
+    Sole input 'pF' draws relative conductivity curve.
+
     Args:
         pF (dict/list):
-            0. 'ThetaS' saturated water content [m\ :sup:`3` m :sup:`-3`\ ]
-            1. 'ThetaR' residual water content [m\ :sup:`3` m :sup:`-3`\ ]
+            0. 'ThetaS' saturated water content [m\ :sup:`3` m\ :sup:`-3`\ ]
+            1. 'ThetaR' residual water content [m\ :sup:`3` m\ :sup:`-3`\ ]
             2. 'alpha' air entry suction [cm\ :sup:`-1`]
             3. 'n' pore size distribution [-]
         x (float or np.array):
@@ -256,7 +247,7 @@ def hydraulic_conductivity(pF, x=None, var=None, Ksat=1):
             * None for water potential
         Ksat (float or np.array): saturated hydraulic conductivity [units]
     Returns:
-        Kh - hydraulic conductivity (if Ksat ~=1 then in [units], else relative [-])
+        Kh (float or np.array): hydraulic conductivity (if Ksat ~=1 then in [units], else relative [-])
     """
 
     if type(pF) is dict:  # dict input
@@ -416,22 +407,25 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
 
     # ------------------- computation grid -----------------------
 
-    # number of nodal points
     N = len(z)
-    # compartment thickness
+
+    # grid
     dz = np.empty(N)
-    # distances between grid points
-    dzu = np.empty(N)  # between i-1 and i
-    dzl = np.empty(N)  # dzl between i and i+1
+    dzu = np.empty(N)
+    dzl = np.empty(N)
 
+    # distances between grid points i-1 and i
     dzu[1:] = z[:-1] - z[1:]
-    dzu[0] = -z[0]  # from soil surface to first node
-    dzl[:-1] = z[:-1] - z[1:]
-    dzl[-1] = (z[-2] - z[-1]) / 2.0  # from last node to bottom surface
+    dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
 
-    dz = (dzu + dzl) / 2.0
-    dz[0] = dzu[0] + dzl[0] / 2.0
-    dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+    # compartment thickness (nodes in cell center!! Would be easier to input thicknessess not z)
+    dz[0] = 2 * dzu[0]
+    for k in range(1, N):
+        dz[k] = 2 * dzu[k] - dz[k-1]
+
+    # distances between grid points i and i+1
+    dzl[:-1] = z[:-1] - z[1:]
+    dzl[-1] = dz[-1] / 2.0 #  from last node to bottom surface
 
     # -------- soil variables and intial conditions --------------
 
@@ -441,7 +435,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
     poros = pF['ThetaS']
 
     # initial water storage
-    W_ini = h_to_cellmoist(pF, h0, dzu, dzl)
+    W_ini = h_to_cellmoist(pF, h0, dz)
     pond_ini = pond0
 
     # variables updated during solution
@@ -457,8 +451,8 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
     dto = t_final / steps
     dt = dto  # adjusted during solution
     # convergence criteria
-    Conv_crit = 1.0e-5  # for soil moisture
-    Conv_crit2 = 1.0e-6  # for pressure head, decreased to 1.0e-8 when profile saturated
+    Conv_crit = 1.0e-12  # for soil moisture 
+    Conv_crit2 = 1.0e-10  # for pressure head, decreased to 1.0e-8 when profile saturated
 
     # ------------- solve water flow for 0...t_final -------------
 
@@ -527,7 +521,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                         # saturated soil draining, set better initial guess
                         if iterNo == 1:
                             h_iter -= dz
-                            W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
+                            W_iter = h_to_cellmoist(pF, h_iter, dz)
                 else:  # initially unsaturated profile
                     if Qin >= Airvol:  # only part of inflow fits into profile
                         h_sur = min(Qin - Airvol, maxPond)
@@ -538,7 +532,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                         # set better initial guess, was this need here?
                         if iterNo ==1 and Airvol < 1e-3:
                             h_iter -= dz
-                            W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
+                            W_iter = h_to_cellmoist(pF, h_iter, dz)
                         if q0 < MaxInf:  # limited by maximum infiltration
                             h_sur = h_pond
                             ubc_flag = 'head'
@@ -552,7 +546,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                 # if saturated soil draining, set better initial guess
                 if iterNo == 1 and Airvol < 1e-3:
                     h_iter -= dz
-                    W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
+                    W_iter = h_to_cellmoist(pF, h_iter, dz)
                 if q0 > MaxEva:
                     h_sur = h_atm
                     ubc_flag = 'head'
@@ -564,14 +558,14 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
 
             # ---------------------------------------------------
 
-            # strickter convergence criterion for saturated profile
-            if Qin >= Airvol:
-                Conv_crit2 = 1e-8
-            else:
-                Conv_crit2 = 1e-6
+#            # strickter convergence criterion for saturated profile
+#            if Qin >= Airvol:
+#                Conv_crit2 = 1e-8
+#            else:
+#                Conv_crit2 = 1e-6
 
             # differential water capacity [m-1]
-            C = diff_wcapa(pF, h_iter, dzu, dzl)
+            C = diff_wcapa(pF, h_iter, dz)
 
             # ------------ set up tridiagonal matrix ------------
 
@@ -623,11 +617,21 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
 
             # solve new pressure head and corresponding moisture
             h_iter = thomas(a, b, g, f)
-            W_iter = h_to_cellmoist(pF, h_iter, dzu, dzl)
+            W_iter = h_to_cellmoist(pF, h_iter, dz)
 
-            # check solution, if problem break
+            # check solution, if problem continues break
             if any(abs(h_iter - h_iterold) > 1.0) or any(np.isnan(h_iter)):
-                print 'Solution blowing up, break'
+                dt = dt / 3.0
+                if dt > 10:
+                    dt = max(dt, 30)
+                    iterNo = 0
+                    h_iter = h_iterold.copy()
+                    W_iter = W_iterold.copy()
+                    print 'Solution blowing up, new dt = ' + str(dt)
+                    continue
+                else:  # convergence not reached with dt=30s, break
+                    break
+                    print 'Problem with solution, blow up'
                 # print (a) print (b) print (g) print (f) print (h)
                 break
 
@@ -644,7 +648,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                     print 'Problem with solution'
 
             # errors for determining convergence
-            err1 = max(abs(W_iter - W_iterold))
+            err1 = sum(abs(W_iter - W_iterold)*dz)
             err2 = max(abs(h_iter - h_iterold))
             print 'err1 = ' + str(err1) + ' err2 = ' + str(err2)
 
@@ -688,9 +692,9 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
         dt_old = dt  # save temporarily
 
         # select new time step based on convergence
-        if iterNo <= 2:
+        if iterNo <= 3:
             dt = dt * 1.25
-        elif iterNo > 4:
+        elif iterNo >= 6:
             dt = dt / 1.25
 
         # limit to minimum of 30s
@@ -706,7 +710,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
     # ------------------ t_final reached -----------------------
 
     # get ground water depth
-    _, gwl = get_gwl(h, z)
+    gwl = get_gwl(h, z)
 
     # vertical fluxes
     KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
@@ -720,7 +724,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
     return h, W, h_pond, C_inf, C_eva, C_dra, C_trans, C_roff, Fliq, gwl, KLh, mbe, dto
 
 
-def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
+def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl, GwlToWsto,
                 HM=0.0, lbc={'type': 'impermeable', 'value': None}, Wice0=0.0,
                 maxPond=0.0, pond0=0.0, cosalfa=1.0, h_atm=-1000.0):
     """
@@ -738,6 +742,7 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
                     (may become limited by h_atm)
         R (array): local sink/source array due e.g. root water uptake, > 0 for sink [s-1]
         WstoToGwl: interpolation function for gwl(Wsto), solved using gwl_Wsto(z, pF)
+        GwlToWsto: interpolation function for Wtso(gwl), solved using gwl_Wsto(z, pF)
         HM (array): net lateral flux array e.g. to ditches , > 0 for net outflow [s-1]
         lbc (dict): lower bc
                 *'type': 'impermeable', 'flux', 'free_drain', 'head'
@@ -781,22 +786,25 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
 
     # ------------------- computation grid -----------------------
 
-    # number of nodal points
     N = len(z)
 
-    # distances between grid points
-    dzu = np.empty(N)  # between i-1 and i
-    dzl = np.empty(N)  # dzl between i and i+1
-    dzu[1:] = z[:-1] - z[1:]
-    dzu[0] = -z[0]  # from soil surface to first node
-    dzl[:-1] = z[:-1] - z[1:]
-    dzl[-1] = (z[-2] - z[-1]) / 2.0  # from last node to bottom surface
-
-    # compartment thickness
+    # grid
     dz = np.empty(N)
-    dz = (dzu + dzl) / 2.0
-    dz[0] = dzu[0] + dzl[0] / 2.0
-    dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+    dzu = np.empty(N)
+    dzl = np.empty(N)
+
+    # distances between grid points i-1 and i
+    dzu[1:] = z[:-1] - z[1:]
+    dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
+
+    # compartment thickness (nodes in cell center!! Would be easier to input thicknessess not z)
+    dz[0] = 2 * dzu[0]
+    for k in range(1, N):
+        dz[k] = 2 * dzu[k] - dz[k-1]
+
+    # distances between grid points i and i+1
+    dzl[:-1] = z[:-1] - z[1:]
+    dzl[-1] = dz[-1] / 2.0 #  from last node to bottom surface
 
     # -------- soil variables and intial conditions --------------
 
@@ -806,8 +814,8 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
     poros = pF['ThetaS']
 
     # initial water storage
-    W_ini = h_to_cellmoist(pF, h0, dzu, dzl)
-    Wsto_ini = sum(W_ini * dz)
+    gwl = get_gwl(h0, z)
+    Wsto_ini = GwlToWsto(gwl)  # this way as GwlToWsto(gwl) not exactly equal to sum(W_ini * dz)
     h_pond = pond0
 
     # hydraulic condictivity, only used at boundaries at i=-1/2 and i=N+1/2
@@ -844,7 +852,7 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
     # net flow to soil profile during dt
     Qin = (q_bot - sum(S * dz) - q_sur) * dt
     # airvolume available in soil profile after previous time step
-    Airvol = max(0.0, sum((poros - W_ini) * dz))
+    Airvol = max(0.0, sum(poros  * dz) - Wsto_ini)
 
     if Qin >= Airvol:  # net inflow does not fit into profile
         Wsto = Wsto_ini + Airvol
@@ -859,7 +867,7 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
 
     # new state variables
     h = gwl - z
-    W = h_to_cellmoist(pF, h, dzu, dzl)
+    W = h_to_cellmoist(pF, h, dz)
 
     # ------------ cumulative fluxes and h_pond -------------
     
@@ -876,8 +884,8 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
         C_eva += (q_sur + Prec) * dt + h_pond
         h_pond = 0.0
 
-#    if abs(h_pond) < eps:  # eliminate h_pond caused by numerical innaccuracy (?)
-#        h_pond = 0.0
+    if abs(h_pond) < eps:  # eliminate h_pond caused by numerical innaccuracy (?)
+        h_pond = 0.0
 
     C_dra += -q_bot * dt + sum(HM * dz) * dt  # flux through bottom + net lateral flow
     C_trans += sum(R * dz) * dt  # root water uptake
@@ -890,67 +898,57 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl,
     Fliq = nodal_fluxes(z, h, KLh)  # [m s-1]
 
     # mass balance error [m]
-    mbe = Prec * t_final + (sum(W_ini * dz) - sum(W * dz)) + (pond0 - h_pond)\
+    mbe = Prec * t_final + (Wsto_ini - Wsto) + (pond0 - h_pond)\
             - C_dra - C_trans - C_roff - C_eva
 
     return h, W, h_pond, C_inf, C_eva, C_dra, C_trans, C_roff, Fliq, gwl, KLh, mbe
 
 """ Utility functions """
 
-def gwl_Wsto(z, pF):
+def gwl_Wsto(dz, pF):
     """
     Forms interpolated function for soil column ground water dpeth, < 0 [m], as a 
-    function of water storage [m]
+    function of water storage [m] and vice versa
     Args:
-        pF (dict of np.arrays):
-            0. 'ThetaS' saturated water content [m3 m-3]
-            1. 'ThetaR' residual water content [m3 m-3]
-            2. 'alpha' air entry suction [cm-1]
-            3. 'n' pore size distribution [-]
-        z (array): grid, < 0 (soil surface = 0), monotonically decreasing [m]
+        pF (dict of arrays):
+            'ThetaS' saturated water content [m\ :sup:`3` m\ :sup:`-3`\ ]
+            'ThetaR' residual water content [m\ :sup:`3` m\ :sup:`-3`\ ]
+            'alpha' air entry suction [cm\ :sup:`-1`]
+            'n' pore size distribution [-]
+        dz (np.arrays): soil conpartment thichness, node in center [m]
     Returns:
-        WstoToGwl: interpolated function for Wsto(gwl)
+        WstoToGwl: interpolated function for gwl(Wsto)
+        GwlToWsto: interpolated function for Wsto(gwl)
     """
 
-    # -------------------- computational grid ---------------------
-    # number of nodal points
-    N = len(z)
-    # distances between grid points
-    dzu = np.empty(N)  # between i-1 and i
-    dzl = np.empty(N)  # dzl between i and i+1
-    dzu[1:] = z[:-1] - z[1:]
-    dzu[0] = -z[0]  # from soil surface to first node
-    dzl[:-1] = z[:-1] - z[1:]
-    dzl[-1] = (z[-2] - z[-1]) / 2.0  # from last node to bottom surface
-    # compartment thickness
-    dz = np.empty(N)
-    dz = (dzu + dzl) / 2.0
-    dz[0] = dzu[0] + dzl[0] / 2.0
-    dz[-1] = dzu[-1] / 2.0 + dzl[-1]
+    z = dz / 2 - np.cumsum(dz)
 
     # --------- connection between gwl and water storage------------
-    # gwl from ground surface gwl = 0 to gwl = -10
+    # gwl from ground surface gwl = 0 to gwl = -5
     gwl = np.arange(0.0, -5, -1e-3)
     # solve water storage corresponding to gwls
-    Wsto = [sum(h_to_cellmoist(pF, g - z, dzu, dzl) * dz) for g in gwl]
-    # interpolate function
+    Wsto = [sum(h_to_cellmoist(pF, g - z, dz) * dz) for g in gwl]
+
+    # interpolate functions
     WstoToGwl = interp1d(np.array(Wsto), np.array(gwl), fill_value='extrapolate')
+    GwlToWsto = interp1d(np.array(gwl), np.array(Wsto), fill_value='extrapolate')
 
-    del gwl, Wsto, dzu, dzl, dz
+    del gwl, Wsto
 
-    return WstoToGwl
+    return WstoToGwl, GwlToWsto
 
-def get_gwl(head, x):  # returning h unnecessary? Adjustment of h below gwl removed!
+def get_gwl(head, x):
     """
     Finds ground water level based on pressure head.
+
     Args:
         head (array): heads in nodes [m]
         x (array): grid, < 0, monotonically decreasing [m]
     Returns:
-        head (array): adjusted heads [m]
         gwl (float): ground water level in column [m]
     """
-    sid = find_index(head, lambda x: x <= 0)
+    # indices of unsaturatd nodes
+    sid = np.where(head <= 0)[0]
 
     if len(sid) < len(head):
         # gwl above profile bottom
@@ -963,7 +961,7 @@ def get_gwl(head, x):  # returning h unnecessary? Adjustment of h below gwl remo
         # gwl not in profile, assume hydr. equilibrium between last node and gwl
         gwl = head[-1] + x[-1]
 
-    return head, gwl
+    return gwl
 
 def thomas(a, b, C, D):
     """
@@ -1008,7 +1006,7 @@ def diff_capa(pF, head):
     m = 1.0 - np.divide(1, n)
     alfa = pF['alpha']
 
-    # print ts, tr, n, m, alfa                                                  # for x <= 0 "RuntimeWarning: invalid value encountered in power"
+    # print ts, tr, n, m, alfa
     x = 100.0*(ts - tr)*(n - 1.0)*alfa**n*h**(n - 1.0) / ( (1.0 + (alfa*h)**n)**(m + 1.0))
     x[h <= 0.0] = 0.0
     return x
