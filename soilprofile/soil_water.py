@@ -844,10 +844,11 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl, GwlToWsto
     # potential flux at the soil surface (< 0 infiltration)
     q0 = Evap - Prec - h_pond / dt
     # maximum infiltration and evaporation rates
-    MaxInf = max(-KLh[0]*(h_pond - h0[0] - z[0]) / dzu[0], -Ksat[0])
+    MaxInf = -Ksat[0]  #max(-KLh[0]*(h_pond - h0[0] - z[0]) / dzu[0], -Ksat[0])
     MaxEva = -KLh[0]*(h_atm - h0[0] - z[0]) / dzu[0]
     # limit flux at the soil surface: MaxInf < q_sur < MaxEvap
     q_sur = min(max(MaxInf, q0), MaxEva)
+    #print 'q_sur = ' + str(q_sur) + ' MaxInf = ' + str(MaxInf) + ' MaxEvap = ' + str(MaxEva) + ' KLh = ' + str(KLh[0])
 
     # net flow to soil profile during dt
     Qin = (q_bot - sum(S * dz) - q_sur) * dt
@@ -932,6 +933,8 @@ def gwl_Wsto(dz, pF):
     # interpolate functions
     WstoToGwl = interp1d(np.array(Wsto), np.array(gwl), fill_value='extrapolate')
     GwlToWsto = interp1d(np.array(gwl), np.array(Wsto), fill_value='extrapolate')
+    plt.figure(1)
+    plt.plot(WstoToGwl(Wsto), Wsto)
 
     del gwl, Wsto
 

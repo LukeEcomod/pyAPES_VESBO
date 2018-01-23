@@ -495,14 +495,15 @@ def test_soilmodel(forcfile, start_time, end_time):
         if res['gwl'][-1] > 0.05 or any(np.isnan(res['h'][-1])) or res['h_pond'][-1] < 0.0 or abs(res['Mbew'][-1]) >1e-5:
             break
 
+    days = np.arange(0, Nsteps) * dt0 / 3600 /24
     plt.figure(2)
-    plt.plot(res['gwl'])
+    plt.plot(days, res['gwl'])
     plt.title('Ground water level (m)', fontsize=14)
     plt.figure(3)
-    plt.plot(res['Mbew'])
+    plt.plot(days, res['Mbew'])
     plt.title('Water model mass balance error (m)', fontsize=14)
     plt.figure(4)
-    plt.plot(1000 * np.add(res['Drain'], res['Roff']) / dt0 * 3600)
+    plt.plot(days, 1000 * np.add(res['Drain'], res['Roff']) / dt0 * 3600)
     plt.title('Total runoff (mm/h)', fontsize=14)
 
     print 'Water balance:'
