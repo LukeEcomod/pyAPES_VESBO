@@ -520,7 +520,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                         print 'outflow exceeds inflow' + ' q_sur = ' + str(q0) + ' h_pond = ' + str(h_pond)
                         # saturated soil draining, set better initial guess
                         if iterNo == 1:
-                            h_iter -= dz
+                            h_iter -= dz[0]
                             W_iter = h_to_cellmoist(pF, h_iter, dz)
                 else:  # initially unsaturated profile
                     if Qin >= Airvol:  # only part of inflow fits into profile
@@ -531,7 +531,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                         
                         # set better initial guess, was this need here?
                         if iterNo ==1 and Airvol < 1e-3:
-                            h_iter -= dz
+                            h_iter -= dz[0]
                             W_iter = h_to_cellmoist(pF, h_iter, dz)
                         if q0 < MaxInf:  # limited by maximum infiltration
                             h_sur = h_pond
@@ -540,12 +540,12 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                         else:
                             q_sur = q0
                             ubc_flag = 'flux'
-                            print 'all fits into profile, q_sur = ' + str(q_sur) + ' Airvol = ' + str(Airvol)
+                            print 'all fits into profile, q_sur = ' + str(q_sur) + ' Airvol = ' + str(Airvol) + ' MaxInf = ' + str(MaxInf) + ' h = ' + str(h_iter[0]) + ' hpond = ' + str(h_pond)
 
             else:  # case evaporation
                 # if saturated soil draining, set better initial guess
                 if iterNo == 1 and Airvol < 1e-3:
-                    h_iter -= dz
+                    h_iter -= dz[0]
                     W_iter = h_to_cellmoist(pF, h_iter, dz)
                 if q0 > MaxEva:
                     h_sur = h_atm
@@ -625,15 +625,15 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                 if dt > 10:
                     dt = max(dt, 30)
                     iterNo = 0
-                    h_iter = h_iterold.copy()
-                    W_iter = W_iterold.copy()
+                    h_iter = h_old.copy()  #h_iterold.copy()
+                    W_iter = W_old.copy()  #W_iterold.copy()
                     print 'Solution blowing up, new dt = ' + str(dt)
                     continue
                 else:  # convergence not reached with dt=30s, break
                     break
                     print 'Problem with solution, blow up'
                 # print (a) print (b) print (g) print (f) print (h)
-                break
+                # break
 
             # if problems reaching convergence devide time step and retry
             if iterNo == 20:
@@ -853,7 +853,7 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl, GwlToWsto
     # net flow to soil profile during dt
     Qin = (q_bot - sum(S * dz) - q_sur) * dt
     # airvolume available in soil profile after previous time step
-    Airvol = max(0.0, sum(poros  * dz) - Wsto_ini)
+    Airvol = max(0.0, GwlToWsto(0.0) - Wsto_ini)
 
     if Qin >= Airvol:  # net inflow does not fit into profile
         Wsto = Wsto_ini + Airvol
@@ -871,7 +871,7 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl, GwlToWsto
     W = h_to_cellmoist(pF, h, dz)
 
     # ------------ cumulative fluxes and h_pond -------------
-    
+
     # Infitration, evaporation, surface runoff and h_pond
     if q_sur <= eps:  # infiltration dominates, evaporation at potential rate
         h_pond -= (-Prec + Evap - q_sur) * dt
@@ -933,8 +933,8 @@ def gwl_Wsto(dz, pF):
     # interpolate functions
     WstoToGwl = interp1d(np.array(Wsto), np.array(gwl), fill_value='extrapolate')
     GwlToWsto = interp1d(np.array(gwl), np.array(Wsto), fill_value='extrapolate')
-    plt.figure(1)
-    plt.plot(WstoToGwl(Wsto), Wsto)
+#    plt.figure(1)
+#    plt.plot(WstoToGwl(Wsto), Wsto)
 
     del gwl, Wsto
 
@@ -1454,14 +1454,14 @@ def drainage_linear(zs, Ksat, GWL, DitchDepth, DitchSpacing):
     return Q, Qz_drain
 
 
-def drainage_hooghoud(zs, Ksat, GWL, DitchDepth, DitchSpacing, DitchWidth, Zbot=None):
+def drainage_hooghoud(dz, Ksat, gwl, DitchDepth, DitchSpacing, DitchWidth, Zbot=None):
     """
     Calculates drainage to ditch using Hooghoud's drainage equation,
     i.e. accounts only drainage from saturated layers above and below ditch bottom
     Args:
-       zs (array): grid,<0, monotonically decreasing [m]
+       dz (array):  soil conpartment thichness, node in center [m]
        Ksat (array): horizontal saturated hydr. cond. [ms-1]
-       GWL (float): ground water level below surface, <0 [m]
+       gwl (float): ground water level below surface, <0 [m]
        DitchDepth (float): depth of drainage ditch bottom, >0 [m]
        DitchSpacing (float): horizontal spacing of drainage ditches [m]
        DitchWidth (float): ditch bottom width [m]
@@ -1476,51 +1476,46 @@ def drainage_hooghoud(zs, Ksat, GWL, DitchDepth, DitchSpacing, DitchWidth, Zbot=
     Samuli Launiainen, Metla 3.11.2014.; converted to Python 14.9.2016
     Kersti Haahti, 29.12.2017. Code checked, small corrections
     """
-    
-    N = len(zs)
+    z = dz / 2 - np.cumsum(dz)
+    N = len(z)
     Qz_drain = np.zeros(N)
     Qa = 0.0
     Qb = 0.0
 
-    dz = np.empty(N)  # Depth of soil compartment
-    dz[1:-1] = (zs[0:-2] - zs[1:-1]) / 2 + (zs[1:-1] - zs[2:]) / 2 # m
-    dz[0] = -2*zs[0]
-    dz[-1] = zs[-2] - zs[-1]
-    
     if Zbot is None or Zbot > sum(dz):  # Can't be lower than soil profile bottom
         Zbot = sum(dz)
 
-    Hdr = np.maximum(0, GWL + DitchDepth)  # depth of saturated layer above ditch bottom
-    Hdr = min(Hdr, DitchDepth)
-    
-    # print Hdr
+    Hdr = min(max(0, gwl + DitchDepth), DitchDepth)  # depth of saturated layer above ditch bottom
+
     if Hdr > 0:
-        Trans = Ksat[:]*dz  # transmissivity of layer, m2s-1
+        # saturated layer thickness [m]
+        dz_sat = np.minimum(np.maximum(gwl - (z - dz / 2), 0), dz)
+        # transmissivity of layers  [m2 s-1]
+        Trans = Ksat * dz_sat
 
         # -------- drainage from saturated layers above ditch base
-        
+
         # layers above ditch bottom where drainage is possible
-        ix = np.intersect1d(np.where((zs - GWL) < 0), np.where(zs > -DitchDepth))  
+        ix = np.intersect1d(np.where((z - dz / 2)- gwl < 0), np.where(z > -DitchDepth))
 
         if ix.size > 0:
-            Ka = sum(Trans[ix]) / sum(dz[ix])  # effective hydraulic conductivity ms-1
+            Ka = sum(Trans[ix]) / sum(dz_sat[ix])  # effective hydraulic conductivity ms-1
             Qa = 4 * Ka * Hdr**2 / (DitchSpacing**2)  # m s-1, total drainage above ditches
-            # sink term s-1, rel=Trans(dra)/sum(Trans(dra)) partitions Qa by relative transmissivity of layer
-            Qz_drain[ix] = Qa*Trans[ix] / sum(Trans[ix]) / dz[ix]
+            # sink term s-1, partitions Qa by relative transmissivity of layer
+            Qz_drain[ix] = Qa * Trans[ix] / sum(Trans[ix]) / dz[ix]
             del ix
 
         # -----drainage from saturated layers below ditch base
 
         # layers below ditch bottom where drainage is possible
-        ix = np.intersect1d(np.where(zs <= -DitchDepth), np.where((zs - GWL) < 0))
+        ix = np.where(z <= -DitchDepth)
 
-        Kb = sum(Trans[ix]) / sum(dz[ix])  # effective hydraulic conductivity ms-1
+        Kb = sum(Trans[ix]) / sum(dz_sat[ix])  # effective hydraulic conductivity ms-1
 
         # compute equivalent depth Deq
         Dbt = Zbot - DitchDepth  # distance from impermeable layer to ditch bottom
         A = 3.55 - 1.6 * Dbt / DitchSpacing + 2 * (2.0 / DitchSpacing)**2.0
         Reff = DitchWidth / 2.0  # effective radius of ditch
-        
 
         if Dbt / DitchSpacing <= 0.3:
             Deq = Dbt / (1.0 + Dbt / DitchSpacing * (8 / np.pi * np.log(Dbt / Reff) - A))  # m
@@ -1532,10 +1527,7 @@ def drainage_hooghoud(zs, Ksat, GWL, DitchDepth, DitchSpacing, DitchWidth, Zbot=
         del ix
 
     Q = Qa + Qb  # total drainage m s-1, positive is outflow to ditch
-    # print Hdr, Qa, Qb, Q
-        # plt.figure(1)
-    # plt.subplot(121); plt.plot([0 1],[GWL GWL],'r-',[0 1],[-DitchDepth -DitchDepth],'k-')
-    # plt.subplot(122); plt.plot(Qz_drain,zs,'r-'); ylabel('zs'); xlabel('Drainage profile s-1')
+
     return Q, Qz_drain
 
 

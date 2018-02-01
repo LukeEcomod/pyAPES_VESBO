@@ -15,8 +15,8 @@ def fit_pF(head, watcont, fig=False):
 
     if fig:
         plt.figure()
-    colors = ['r', 'b', 'g', 'm', 'c']
-    c = 0
+        colors = ['r', 'b', 'g', 'm', 'c']
+        c = 0
     head = np.array(head)
     head = head * 10  # kPa -> cm
     vg_ini=(0.88,	 0.09, 0.03, 1.3)

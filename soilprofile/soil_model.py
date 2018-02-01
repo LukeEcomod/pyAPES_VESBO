@@ -294,7 +294,7 @@ class SoilModel():
         if self.solve_water:
             # drainage to ditches
             if self.drainage_equation['type'] == 'Hooghoudt':  # Hooghoudt's drainage
-                _, q_drain = wf.drainage_hooghoud(self.z[ix],
+                _, q_drain = wf.drainage_hooghoud(self.dz[ix],
                                               self.Khsat[ix],
                                               self.gwl,
                                               self.drainage_equation['depth'],
@@ -411,112 +411,6 @@ def update_steady_state(h, T, Wtot, fp, porosity):
 
     return Wliq, Wice, Wair
 
-"""
-Main program for testing soil water and heatflow solutions
-
-"""
-
-def test_soilmodel(forcfile, start_time, end_time):
-    dt0 = 1800.0
-    start_time = "2005-06-01"
-    end_time = "2005-08-31"
-
-    forcfile = 'C:\\Users\\L1656\\Documents\\Git_repos\\CCFPeat\\bryo_microclimate_LAI4.5.csv'
-    
-    from soil_parameters import para
-    import time
-    running_time = time.time()
-
-    # --- read forcing
-
-    dat = pd.read_csv(forcfile, sep=',', header='infer', na_values=-999)
-    # parse first columns to datetime
-    N = len(dat)
-    t = []
-    for k in range(N):
-        t.append(
-            datetime(dat['yyyy'].iloc[k],
-                     dat['mo'].iloc[k],
-                     dat['dd'].iloc[k],
-                     dat['hh'].iloc[k],
-                     dat['mm'].iloc[k]))
-    # set to dataframe index
-    dat.index = t
-    dat['Trfall'] = dat['Trfall'] / 1000  # [mm/s --> m/s]
-    Forc = dat[['Par', 'Nir', 'LWdn', 'U', 'H2O', 'CO2', 'Trfall', 'G']]
-    Forc = Forc[(Forc.index >= start_time) & (Forc.index <= end_time)]
-    Nsteps = len(Forc)
-    del dat, t, N
-
-    model = SoilModel(para['z'], para)
-
-    # -- create results dictionary
-    res = {
-        'gwl': [],
-        'h': [],
-        'Wliq': [],
-        'h_pond': [],
-        'Prec': [],
-        'Infil': [],
-        'Evap': [],
-        'Trans': [],
-        'Drain': [],
-        'Roff': [],
-        'WSto': [],
-        'Mbew': [],
-        }
-
-    for k in range(0, Nsteps):
-        print 'k = ' + str(k)
-        Prec = 2 * Forc['Trfall'].iloc[k]  
-        ubc_w = {'Prec': Prec, 'Evap': 1e-8}
-        # Rootsink = np.zeros(N)
-
-        ubc_T = {'type': 'flux', 'value': 0.0}
-        #ubc_T = {'type': 'temperature', 'value': 20.0}
-
-        # solve water and heatflow
-        flx, state = model._run(dt=dt0, ubc_water=ubc_w, ubc_heat=ubc_T)
-
-        # -- update results
-        res['gwl'].append(model.gwl.copy())
-        res['h'].append(model.h.copy())
-        res['Wliq'].append(model.Wliq.copy())
-        res['h_pond'].append(model.pond)
-        res['Prec'].append(Prec * dt0)
-        res['Infil'].append(flx['infiltration'])
-        res['Evap'].append(flx['evaporation'])
-        res['Trans'].append(flx['transpiration'])
-        res['Drain'].append(flx['drainage'])
-        res['Roff'].append(flx['runoff'])
-        res['WSto'].append(state['column_water_content'])
-        res['Mbew'].append(flx['water_closure'])
-        
-        if res['gwl'][-1] > 0.05 or any(np.isnan(res['h'][-1])) or res['h_pond'][-1] < 0.0 or abs(res['Mbew'][-1]) >1e-5:
-            break
-
-    days = np.arange(0, Nsteps) * dt0 / 3600 /24
-    plt.figure(2)
-    plt.plot(days, res['gwl'])
-    plt.title('Ground water level (m)', fontsize=14)
-    plt.figure(3)
-    plt.plot(days, res['Mbew'])
-    plt.title('Water model mass balance error (m)', fontsize=14)
-    plt.figure(4)
-    plt.plot(days, 1000 * np.add(res['Drain'], res['Roff']) / dt0 * 3600)
-    plt.title('Total runoff (mm/h)', fontsize=14)
-
-    print 'Water balance:'
-    print('Precipition:\t %.2f mm (%.1f)' % (sum(res['Prec'])*1000, 100*sum(res['Prec'])/sum(res['Prec'])))
-    print('Evaporation:\t %.2f mm (%.1f)' % (sum(res['Evap'])*1000, 100*sum(res['Evap'])/sum(res['Prec'])))
-    print('Transpition:\t %.2f mm (%.1f)' % (sum(res['Trans'])*1000, 100*sum(res['Trans'])/sum(res['Prec'])))
-    print('Drainage:\t %.2f mm (%.1f)' % (sum(res['Drain'])*1000, 100*sum(res['Drain'])/sum(res['Prec'])))
-    print('Surface runoff:\t %.2f mm (%.1f)' % (sum(res['Roff'])*1000, 100*sum(res['Roff'])/sum(res['Prec'])))
-    print('Storage change:\t %.2f mm (%.1f)' % ((res['WSto'][-1]-res['WSto'][0])*1000, 100*(res['WSto'][-1]-res['WSto'][0])/sum(res['Prec'])))
-
-    print('--- running time %.2f seconds ---' % (time.time() - running_time))
-
-    return res, model, Forc
 
 #def create_soilmodel():
 #    # define grid

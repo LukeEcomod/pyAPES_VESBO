@@ -1,15 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Dec 29 14:05:24 2017
-
-@author: L1656
+SOIL DISCRETIZATION AND PARAMETERS
 """
 import numpy as np
 from parameter_utils import fit_pF
 
+# thickness of layers with different characteristics
 thickness = [0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 1.0]
+# number of nodes in each layer
 nodes = [10, 5, 5, 2, 2, 5, 5]
+
+# ---- Layer characteristics ----
+
 # Water retention
+## PÄIVÄNEN SEDGE SATTUMANVARAISESTI
+#watcont = [[94.3, 68, 47.9, 35.5, 22, 18.4, 16.7, 12.6, 7.9, 6.3, -999],
+#           [91.7, 82.9, 61.8, 35.9, 31.7, 25.2, 23.4, 19.2, 17.3, 14.4, -999],
+#           [90.6, 86.2, 56.4, 36.4, 33.4, 29.8, 26.8, 23.5, 20.2, 16.4, -999],
+#           [89.7, 85, 74.5, 53.4, 36, 29, 24.7, 22.1, 17.6, 14.7, -999],
+#           [87.3, 85.4, 77.8, 64, 41.4, 28.8, 23.4, 22.7, 21.9, 17, -999],
+#           [89.3, 86.5, 80.7, 52.5, 45.6, 35.4, 32, 25.1, 20.6, 18.4, -999],
+#           [91, 89.9, 84.7, 60, -999, 33.8, 27.2, 29.3, -999, 17.2, 12.9]]
+#head = [0.0001, 1, 3.2, 10, 20, 60, 100, 200, 500, 1000, 1500]
+# ------------ LAIHO 2015 ------------
 watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54],
            [91.41, 66.26, 56.98, 45.58, 41.44, 39.32, 37.89],
            [89.12, -999, 72.83, 63.97, 54.40, 50.15, 48.80],
@@ -18,12 +31,13 @@ watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54],
            [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
            [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53]]
 head = [0.0001, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
+# -------------------------------------
 # Fit water retention parameters
 pF_para = fit_pF(head, watcont, fig=False)
 
 # Hydraulic conductivity
-Kvsat = [2e-4, 2e-5, 5e-6, 3e-6, 5e-6, 3e-6, 1e-6]  #[1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5]  #
-Khmult = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+Kvsat = [2e-4, 2e-5, 5e-5, 3e-6, 5e-6, 1e-6, 1e-7]  # vertical
+Khmult = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # horizontal
 
 # Save to arrays
 z = np.array([])
@@ -48,7 +62,7 @@ for k in range(0, len(thickness)):
 zh = -zh[1:]
 
 # Soil model parameters
-para = {
+spara = {
         'z': z,
         'zh':zh,
         'pF': {
@@ -65,9 +79,9 @@ para = {
         'vSilt': -np.ones(len(zh)),              # (float(array): silt fraction of solid volume [-]
         'vClay': -np.ones(len(zh)),              # (float(array): clay fraction of solid volume [-]
         'fp': -np.ones(len(zh)),                 # (float/array): freezing curve parameter
-        'max_pond': 0.01,           # (float) maximum pond depth [m]
+        'max_pond': 0.0,           # (float) maximum pond depth [m]
         'ini_cond': {               # (dict): inputs are floats or arrays of len(z)
-                'gwl': -0.2,        # (float) [m] or (float/array) Wtot', vol. water content [-] or 'h', matrix water potential [m]
+                'gwl': -0.1,        # (float) [m] or (float/array) Wtot', vol. water content [-] or 'h', matrix water potential [m]
                 'T': -1.0,          # soil temperature [degC]
                 'pond': 0.0
                 },                  # [m] initial pond depth at surface
@@ -94,7 +108,7 @@ para = {
         }
 
 """
-para = {
+spara = {
         'z': z, # np.arange(-0.005, -2.0, -0.01),
         'pF': {
                 'ThetaS': 0.88, 
