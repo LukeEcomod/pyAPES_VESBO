@@ -1,1 +1,8 @@
+# operating system and editors
+.spyproject/
+.ipnyb_checkpoints/
+ipython_config.py
+
+# Build -files
 *.pyc
+*.pyo
