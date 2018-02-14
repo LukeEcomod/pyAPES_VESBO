@@ -367,7 +367,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
         pond0 (float): initial pond depth [m]
         cosalfa (float): - 1 for vertical water flow, 0 for horizontal transport
         h_atm (float): pressure head in equilibrium with the prevailing air relative humidity [m]
-                    (limits evaporation from soil surface in dry conditions)
+                    (limits evaporation from soil surface in dry (?) conditions)
         steps (int or float): initial number of subtimesteps used to proceed to 't_final'
     Returns:
         h (array): new pressure head [m]

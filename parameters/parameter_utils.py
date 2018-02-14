@@ -50,6 +50,6 @@ def fit_pF(head, watcont, fig=False):
         plt.ylabel('$-h$ $(cm)$', fontsize=14)
         plt.ylim(xx[0], xx[-1])
         plt.xlim(0.0, 1.0)
-        plt.legend()  #(bbox_to_anchor=(1.05, 0.5), loc="center left")
+        plt.legend()
 
     return vgen_all
