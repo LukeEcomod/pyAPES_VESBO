@@ -22,7 +22,7 @@ eps = np.finfo(float).eps
 
 
 class CanopyModel():
-    def __init__(self, cpara, lai_conif=None, lai_decid=None, cf=None, hc=None,  cmask=np.ones(1), outputs=False):
+    def __init__(self, cpara, lai_conif=None, lai_decid=None, cf=None, hc=None,  cmask=np.ones(1)):
         """
         initializes CanopyModel -object
 
@@ -64,7 +64,6 @@ class CanopyModel():
             SWEl - snow water as liquid [m]
             ddsum - degree-day sum [degC]
         """
-        epsi = eps  #0.01  --- Miksi olit näin suuri?
 
         self.Lat = cpara['lat']
         self.Lon = cpara['lon']
@@ -86,16 +85,16 @@ class CanopyModel():
 
         if lai_conif is not None:
             # print '**** CanopyModel - stands from lai data *******'
-            self._LAIconif = lai_conif + epsi  # m2m-2
+            self._LAIconif = lai_conif + eps  # m2m-2
 
             if lai_decid is not None:
-                self._LAIdecid_max = lai_decid + epsi
+                self._LAIdecid_max = lai_decid + eps
             else:
-                self._LAIdecid_max = np.zeros(np.shape(lai_conif)) + epsi
+                self._LAIdecid_max = np.zeros(np.shape(lai_conif)) + eps
 
-            self.hc = hc + epsi
-            self.cf = cf + epsi
-            # self.cf = 0.1939 * ba / (0.1939 * ba + 1.69) + epsi
+            self.hc = hc + eps
+            self.cf = cf + eps
+            # self.cf = 0.1939 * ba / (0.1939 * ba + 1.69) + eps
             # canopy closure [-] as function of basal area ba m2ha-1;
             # fitted to Korhonen et al. 2007 Silva Fennica Fig.2
 
@@ -122,10 +121,7 @@ class CanopyModel():
 
         ix = np.max(np.where(dl > self.phenopara['sdl']))
         self.phenopara['sso'] = doy[ix]  # this is onset date for senescence
-        del ix
 
-        # self.cpara = cpara  # added new parameters self.cpara['kmt'],
-        # self.cpara['kmr'] here for testing radiation-based snow melt model
         # snow
         self.snowpara = {'wmax': cpara['wmax'], 'wmaxsnow': cpara['wmaxsnow'],
                          'kmelt': cpara['kmelt'], 'kfreeze': cpara['kfreeze'],
@@ -147,33 +143,46 @@ class CanopyModel():
                     'SWEl': np.zeros(gridshape)}
         self.DDsum = 0.0
 
-        # create dictionary of empty lists for saving results
-        if outputs:
-            self.results = {'PotInf': [], 'Trfall': [], 'Interc': [], 'Evap': [], 'ET': [],
-                            'Transpi': [], 'Efloor': [], 'SWE': [], 'LAI': [],
-                            'LAIfract': [], 'Mbe': [], 'LAIdecid': [], 'erate': [], 'Unload': [],
-                            'fact': []}
-
-    def _run(self, doy, dt, Ta, Prec, Rg, Par, VPD, U=2.0, CO2=380.0, Rew=1.0, beta=1.0, P=101300.0):  # Tänne forcing niinkuin bryotypessä
+    def _run(self, dt, forcing, Rew=1.0, beta=1.0):
         """
         Runs CanopyModel instance for one timestep
-        IN:
-            doy - day of year
-            dt - timestep [s]
-            Ta - air temperature  [degC], scalar or (n x m) -matrix
-            prec - precipitatation rate [m s-1]
-            Rg - global radiation [W m-2], scalar or matrix
-            Par - photos. act. radiation [W m-2], scalar or matrix
-            VPD - vapor pressure deficit [kPa], scalar or matrix
-            U - mean wind speed at ref. height above canopy top [m s-1], scalar or matrix
-            CO2 - atm. CO2 mixing ratio [ppm]
+        Args:
+            dt: timestep [s]
+            forcing (dataframe): meteorological forcing data
+                'doy': day of year [days]
+                'Prec': precipitation rate [m s-1]
+                'Tair': air temperature [degC]
+                'Rg': global radiation [W m-2]
+                'vpd': vapor pressure deficit [kPa]
+                'Par': fotosynthetically active radiation [W m-2]
+                'U': wind speed [m s-1] - if not given U = 2.0
+                'CO2': atm. CO2 mixing ratio [ppm] - if not given C02 = 380
+                'P': pressure [Pa] - if not given P = 101300.0
             Rew - relative extractable water [-], scalar or matrix
             beta - term for soil evaporation resistance (Wliq/FC) [-]
-            P - pressure [Pa], scalar or matrix
-        OUT:
-            updated CanopyModel instance state variables
-            flux grids PotInf, Trfall, Interc, Evap, ET, MBE [m]
+        Returns:
+            fluxes (dict):
+            state (dict):
         """
+
+        Ta = forcing['Tair']
+        Prec = forcing['Prec']
+        Rg = forcing['Rg']
+        Par = forcing['Par']
+        VPD = forcing['vpd']
+        doy = forcing['doy']
+        if 'U' in forcing: 
+            U = forcing['U']
+        else:
+            U = 2.0
+        if 'P' in forcing:
+            P = forcing['P']
+        else:
+            P = 101300.0
+        if 'CO2' in forcing:
+            CO2 = forcing['CO2']
+        else:
+            CO2 = 380.0
 
         # Rn = 0.7 * Rg #net radiation
         Rn = np.maximum(2.57 * self.LAI / (2.57 * self.LAI + 0.57) - 0.2,
@@ -212,9 +221,9 @@ class CanopyModel():
                                  AE=Rn,
                                  VPD=VPD,
                                  Ra=Ra,
-                                 U=2.0)
+                                 U=U)
 
-        """--- dry-canopy evapotranspiration [mm s-1] --- """
+        """--- dry-canopy evapotranspiration [m s-1] --- """
         Transpi, Efloor, Gc = cu.dry_canopy_et(LAI=self.LAI,
                                                LAIconif=self._LAIconif,
                                                LAIdecid=self._LAIdecid,
@@ -236,37 +245,20 @@ class CanopyModel():
         Efloor = Efloor * dt
         ET = Transpi + Efloor
 
-        # append results to lists; use only for testing small grids!
-        if hasattr(self, 'results'):
-            self.results['PotInf'].append(PotInf)
-            self.results['Trfall'].append(Trfall)
-            self.results['Interc'].append(Interc)
-            self.results['Evap'].append(Evap)
-            self.results['ET'].append(ET)
-            self.results['Transpi'].append(Transpi)
-            self.results['Efloor'].append(Efloor)
-            self.results['SWE'].append(self.SWE['SWE'])
-            self.results['LAI'].append(self.LAI)
-            self.results['LAIfract'].append(laifract)
-            self.results['Mbe'].append(np.nanmax(MBE))
-            self.results['LAIdecid'].append(self._LAIdecid)
-            self.results['erate'].append(erate)
-            self.results['Unload'].append(unload)
-            self.results['fact'].append(fact)
-
-        # return state and fluxes in dictionary
-        state = {"SWE": self.SWE['SWE'],
-                 "LAI": self.LAI,
-                 "LAIdecid": self._LAIdecid,
-                 }
-        fluxes = {'PotInf': PotInf,
-                  'Trfall': Trfall,
-                  'Interc': Interc,
-                  'CanEvap': Evap,
-                  'Transp': Transpi, 
-                  'Efloor': Efloor,
-                  'MBE': np.nanmax(MBE)
-                  }
+        # return state and fluxes in dictionary when calculating singel cell
+        if self.cf.size == 1:
+            state = {"SWE": self.SWE['SWE'][0],
+                     "LAI": self.LAI[0],
+                     "LAIdecid": self._LAIdecid[0],
+                     }
+            fluxes = {'PotInf': PotInf[0],
+                      'Trfall': Trfall[0],
+                      'Interc': Interc[0],
+                      'CanEvap': Evap[0],
+                      'Transp': Transpi[0], 
+                      'Efloor': Efloor[0],
+                      'MBE': MBE[0]
+                      }
 
         return fluxes, state
 

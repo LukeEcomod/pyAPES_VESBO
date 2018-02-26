@@ -29,7 +29,7 @@ def canopy_water_snow(W, SWE, LAI, cf, snowpara, dt, T, Prec, AE, VPD, Ra=25.0, 
         LAI: leaf area index [m\ :sup:`2`\ m\ :sup:`-2`\]
         dt: timestep [s]
         T: air temperature [degC]
-        Prec: precipitation rate during [m s\ :sup:`-1`\]
+        Prec: precipitation rate [m s\ :sup:`-1`\]
         AE: available energy (~net radiation) [W m\ :sup:`-2`\]
         VPD: vapor pressure deficit [kPa]
         Ra: canopy aerodynamic resistance [s m\ :sup:`-1`\]

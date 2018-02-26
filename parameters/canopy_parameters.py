@@ -46,12 +46,6 @@ cpara = {
         'swe': 0.0  # snow water equivalent [m]
         }
 
-#        PARAMETREIHIN MYÖS??
-
-#        SATEEN LAATU
-#        Tmin = 0.0  # 'C, below all is snow
-#        Tmax = 1.0  # 'C, above all is water
-#        Tmelt = 0.0  # 'C, T when melting starts
 
 #        SADANNAN KORJAUSKERTOIMET?
 

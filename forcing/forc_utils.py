@@ -6,17 +6,19 @@ UTILITIES FOR READING AND EDITING FORCING DATA
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import sys
 
-def read_forcing(forc_filename, start_time, end_time):  # cols=None jos on määritelty lukee inputit muuten määritellyt columnit??
+def read_forcing(forc_filename, start_time, end_time, cols=None, dt=None):
     """
     Reads forcing data
     Args:
-        forc_filename
-        start_time
-        end_time
+        forc_filename (str): forcing file name with comma separator
+        start_time (str): stranting time [yyyy-mm-dd]
+        end_time (str): ending time [yyyy-mm-dd]
+        cols (list): header names to read from file, if none reads input data
+        dt (float): time step [s], if given checks that dt in file is equal to this
     Returns:
-        Forc
-        Nsteps   # tarviiko?
+        Forc (dataframe): dataframe with datetime as index and cols read from file
     """
 
     # filepath
@@ -32,28 +34,43 @@ def read_forcing(forc_filename, start_time, end_time):  # cols=None jos on mää
 
     dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
 
+    # read inputs if cols is not defined
+    if cols is None:
+        cols = [
+                'Prec',  # Precipitation [mm/dt]
+                'Tair',  # Air temperature [degC]
+                'U',  # Wind speed 10 min avg. [m/s]
+                'RH',  # Relative humidity [%]
+                'Rg'  # Global radiation [W/m2]
+                ]
+
     # Forc dataframe from necessary variables
-    Forc = dat[['Prec', 'Tair', 'U', 'RH', 'Rg', 'SnowD']]  # yksiköt!
+    Forc = dat[cols]
 
-    # Calculate forcings needed by model
-    Forc = edit_forcing(Forc)
+    # Check time step if specified
+    if dt is not None:
+        if len(set(Forc.index[1:]-Forc.index[:-1])) > 1:
+            sys.exit("Forcing file does not have constant time step")
+        if (Forc.index[1] - Forc.index[0]).total_seconds() != dt:
+            sys.exit("Forcing file time step differs from dt given in general parameters")
 
-    # number of timesteps to simulate
-    Nsteps = len(Forc)
+    if cols[0] == 'Prec':
+        # Calculate forcings needed by model
+        Forc = edit_forcing(Forc)
 
-    return Forc, Nsteps
+    return Forc
 
 def edit_forcing(Forc):
     """
     Calculate forcings needed by model from given meteorology
     Args:
-        Forc
+        Forc (dataframe)
     Returns:
-        Forc
-            doy
-            Prec in m/s
-            vpd
-            Par
+        Forc (dataframe) with edited and new attributes:
+            'doy': day of year [days]
+            'Prec': converts units to [m s-1]
+            'vpd': vapor pressure deficit [kPa]
+            'Par': fotosynthetically active radiation [W m-2]
     """
 
     # day of year
