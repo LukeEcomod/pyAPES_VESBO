@@ -19,5 +19,5 @@ Simple schemes for computing water flows and storages within vegetation canopy a
 Included for Lettosuo (from FMI Jokioinen) and Hyytiälä + evaluation data 
 
 ### Todos..
-Writing results to file (netCDF?)
-Checking units in "documentation"
+* Writing results to file (netCDF?)
+* Checking units in "documentation"
