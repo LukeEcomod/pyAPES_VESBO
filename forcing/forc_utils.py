@@ -69,6 +69,7 @@ def edit_forcing(Forc):
         Forc (dataframe) with edited and new attributes:
             'doy': day of year [days]
             'Prec': converts units to [m s-1]
+            'Tdaily': daily temperature as rolling mean [degC]
             'vpd': vapor pressure deficit [kPa]
             'Par': fotosynthetically active radiation [W m-2]
     """
@@ -79,6 +80,9 @@ def edit_forcing(Forc):
     # precipitaion unit from [mm/dt] to [m/s]
     dt = (Forc.index[1] - Forc.index[0]).total_seconds()
     Forc.loc[:,'Prec'] = Forc.loc[:,'Prec'] / 1000.0 / dt
+
+    # daily temperature
+    Forc.loc[:,'Tdaily'] = pd.rolling_mean(Forc['Tair'], int((24*3600)/dt), 1)
 
     # vapor pressure deficit [kPa]
     esat = 0.6112 * np.exp((17.67 * Forc.loc[:,'Tair']) / (Forc.loc[:,'Tair'] + 273.16 - 29.66))  # [kPa]

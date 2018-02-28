@@ -18,116 +18,91 @@ last edit: 1.11.2017: Added CO2-response to dry_canopy_et
 """
 import numpy as np
 import canopy_utils as cu
+import phenology as pheno
 eps = np.finfo(float).eps
 
 
 class CanopyModel():
-    def __init__(self, cpara, lai_conif=None, lai_decid=None, cf=None, hc=None,  cmask=np.ones(1)):
+    def __init__(self, cpara):
         """
         initializes CanopyModel -object
 
         Args:
-            cpara - parameter dict:
-                {'spatial': no, 'wmaxsnow': 1.0, 'lon': 24.21, 'cf': 0.7,
-                'wmax': 0.5, 'albedo': 0.1, 'swe': 40.0,pmax': 20.0,
-                'q50': 30.0, 'lai': 4.0, 'kfreeze': 5.79e-06, 'elev': 100.0,
-                'lat': 60.38, 'hc': 22.0, 'dt': 86400.0, 'kmelt': 2.8934e-05,
-                'ka': 0.6, 'f': 0.4, 'emi': 0.98, 'kp': 0.6, 'gsref': 0.0018,
-                'w': 0.0, 'clump': 0.7}
-            lai - (conifer) leaf area index grid; if spatial: yes
-            lai_decid - (deciduous) leaf area index grid
-            cf - canopy closure grid
-            hc - canopy height grid
-            cmask - catchment mask (when lai=None)
-            outputs - True saves output grids to list at each timestep
-
+            cpara (dict): see canopy_parameters.py
         Returns:
-            self - object
-        self.
-            LAI - leaf area index [m2 m-2]
-            hc - canopy heigth [m]
-            cf - closure [-]
-            physpara - physiologic parameters dict
-            phenopara - phenology param. dict
-            cpara - copy of inputs, for testing snow model
-            Wmax - maximum water storage capacity [m]
-            WmaxSnow -  maximum snow storage capacity [m]
-            Kmelt - degree day snowmelt factor [m degC-1 s-1]
-            Kfreeze - degree day freezing factor [m degC-1 s-1]
-            R - snow water retention coeff [-]
-
-            State variables:
-            X - 'phenological state', i.e. delayed temperature [degC]
-            W - canopy water or snow storage [m]
-            SWE - snow water equivalent [m]
-            SWEi - snow water as ice [m]
-            SWEl - snow water as liquid [m]
-            ddsum - degree-day sum [degC]
+            self (object):
+                parameters:
+                    LAI - leaf area index [m2 m-2]
+                    hc - canopy heigth [m]
+                    cf - closure [-]
+                    physpara - physiologic parameters dict
+                    phenopara - phenology param. dict
+                    cpara - copy of inputs, for testing snow model
+                    Wmax - maximum water storage capacity [m]
+                    WmaxSnow -  maximum snow storage capacity [m]
+                    Kmelt - degree day snowmelt factor [m degC-1 s-1]
+                    Kfreeze - degree day freezing factor [m degC-1 s-1]
+                    R - snow water retention coeff [-]
+                state variables:
+                    X - 'phenological state', i.e. delayed temperature [degC]
+                    W - canopy water or snow storage [m]
+                    SWE - snow water equivalent [m]
+                    SWEi - snow water as ice [m]
+                    SWEl - snow water as liquid [m]
+                    ddsum - degree-day sum [degC]
         """
 
-        self.Lat = cpara['lat']
-        self.Lon = cpara['lon']
+        # --- control switches ---
+        self.Switch_MLM = cpara['ctr']['multilayer_model']
 
-        # physiology: transpi + floor evap
-        self.physpara = {'q50': cpara['q50'],
-                         'gsref_conif': cpara['gsref_conif'],
-                         'gsref_decid': cpara['gsref_decid'],
-                         'kp': cpara['kp'],
-                         'f': cpara['f'], 'rw': cpara['rw'],
-                         'rwmin': cpara['rwmin'], 'ga': cpara['ga']}
+        # --- site location ---
+        self.Lat = cpara['loc']['lat']
+        self.Lon = cpara['loc']['lon']
 
-        # phenology
-        self.phenopara = {'Smax': cpara['smax'], 'Xo': cpara['xo'],
-                          'tau': cpara['tau'], 'fmin': cpara['fmin'],
-                          'ddo': cpara['ddo'], 'ddur': cpara['ddur'],
-                          'sdl': cpara['sdl'], 'sdur': cpara['sdur'],
-                          'lai_decid_min': cpara['lai_min']}
+        # --- grid ---
+        if self.Switch_MLM:
+            self.Nlayers = cpara['grid']['Nlayers']  # number of layers
+            self.z = np.linspace(0, cpara['grid']['zmax'], self.Nlayers)  # grid [m] above ground
+            self.dz = self.z[1] - self.z[0]  # gridsize [m]
+        else:
+            self.z = None
 
-        if lai_conif is not None:
-            # print '**** CanopyModel - stands from lai data *******'
-            self._LAIconif = lai_conif + eps  # m2m-2
+        # --- create PlantTypes ----
+        ptypes = []
+        stand_lai, stand_lad = 0.0, 0.0
+        # para = [pinep, shrubp]
+        for k in range(len(cpara['plant_types'])):
+            p = cpara['plant_types'][k]
+            for n in range(len(p['LAImax'])):
+                pp = p.copy()
+                pp['LAImax'] = p['LAImax'][n]
+                if self.Switch_MLM:
+                    pp['lad'] = p['lad'][:, n]
+                else:
+                    pp['lad'] = 0.0
+                ptypes.append(PlantType(self.z, pp,
+                                        Switch_pheno=cpara['ctr']['pheno_cylcle'],
+                                        Switch_lai=cpara['ctr']['seasonal_LAI']))
+                stand_lai += pp['LAImax']
+                stand_lad += pp['lad']
+        self.Ptypes = ptypes
+        del p, pp, k, ptypes
 
-            if lai_decid is not None:
-                self._LAIdecid_max = lai_decid + eps
-            else:
-                self._LAIdecid_max = np.zeros(np.shape(lai_conif)) + eps
+        # --- stand characteristics ---
+        self.LAI = stand_lai  # canopy total 1-sided leaf area index [m2m-2]
+        self.lad = stand_lad  # canopy total 1-sided leaf area density [m2m-3]
+        if self.Switch_MLM:
+            f = np.where(self.lad > 0)[0][-1]
+            self.hc = self.z[f].copy()  # canopy height [m]
+        else:
+            self.hc = cpara['canopy_para']['hc']  # canopy height [m]
+            self.cf = cpara['canopy_para']['cf']  # canopy closure [-]
 
-            self.hc = hc + eps
-            self.cf = cf + eps
-            # self.cf = 0.1939 * ba / (0.1939 * ba + 1.69) + eps
-            # canopy closure [-] as function of basal area ba m2ha-1;
-            # fitted to Korhonen et al. 2007 Silva Fennica Fig.2
+        self.physpara = cpara['phys_para']
 
-        else:  # spatially constant properties are used, given in cpara
-            # print '**** CanopyModel - stands with constant values *******'
-            self._LAIconif = cpara['lai_conif'] * cmask
-            self._LAIdecid_max = cpara['lai_decid'] * cmask
-            self.hc = cpara['hc'] * cmask
-            self.cf = cpara['cf'] * cmask
-
-        # current deciduous and total LAI
-        self._LAIdecid = self.phenopara['lai_decid_min'] * self._LAIdecid_max
-        self.LAI = self._LAIconif + self._LAIdecid
-
-        gridshape = np.shape(self.LAI)
-        # self.cf = np.ones(gridshape)*0.9
-        # deciduous leaf growth stage
-        self._growth_stage = 0.0
-        self._senesc_stage = 0.0
-
-        # senescence starts at first doy when daylength < self.phenopara['sdl']
-        doy = np.arange(1, 366)
-        dl = cu.daylength(self.Lat, self.Lon, doy)
-
-        ix = np.max(np.where(dl > self.phenopara['sdl']))
-        self.phenopara['sso'] = doy[ix]  # this is onset date for senescence
-
-        # snow
-        self.snowpara = {'wmax': cpara['wmax'], 'wmaxsnow': cpara['wmaxsnow'],
-                         'kmelt': cpara['kmelt'], 'kfreeze': cpara['kfreeze'],
-                         'retention': cpara['retention'], 'Tmin': cpara['Tmin'],
-                         'Tmax': cpara['Tmax'], 'Tmelt': cpara['Tmelt'],
-                         'kp': cpara['kp']}
+        # interception and snow model parameters
+        self.snowpara = cpara['interc_snow']
+        self.snowpara.update({'kp': self.physpara['kp']})
 
         # --- for computing aerodynamic resistances
         self.zmeas = 2.0
@@ -137,19 +112,42 @@ class CanopyModel():
 
         # --- state variables
         self.X = 0.0
-        self.W = np.minimum(cpara['w'], cpara['wmax'] * self.LAI)
-        self.SWE = {'SWE': cpara['swe'] * np.zeros(gridshape),
-                    'SWEi': cpara['swe'] * np.zeros(gridshape),
-                    'SWEl': np.zeros(gridshape)}
-        self.DDsum = 0.0
+        self.W = np.minimum(cpara['interc_snow']['w_ini'], cpara['interc_snow']['wmax'] * self.LAI)
+        self.SWE = {'SWE': cpara['interc_snow']['swe_ini'],
+                    'SWEi': cpara['interc_snow']['swe_ini'],
+                    'SWEl': 0.0}
 
-    def _run(self, dt, forcing, Rew=1.0, beta=1.0):
+    def _run_daily(self, doy, Ta, PsiL=0.0):
+        """
+        Computatations done at daily timestep. Updates 
+        LAI and phenology
+        Args:
+            doy: day of year [days]
+            Ta: mean daily air temperature [degC]
+            PsiL: leaf water potential [MPa]
+        Returns:
+            None
+        """
+
+        """ update physiology and leaf area of planttypes & canopy"""
+        stand_lai, stand_lad, gsref, pheno_state = 0.0, 0.0, 0.0, 0.0
+        for pt in self.Ptypes:
+            pt._update_daily(doy, Ta, PsiL=PsiL)  # updates pt properties
+            stand_lad += pt.lad
+            stand_lai += pt.LAI
+            gsref += pt.LAI * pt.gsref
+            pheno_state += pt.LAI * pt.pheno_state
+        self.lad = stand_lad
+        self.LAI = stand_lai
+        self.gsref = gsref / stand_lai
+        self.pheno_state = pheno_state / stand_lai
+
+    def _run_timestep(self, dt, forcing, Rew=1.0, beta=1.0):
         """
         Runs CanopyModel instance for one timestep
         Args:
             dt: timestep [s]
             forcing (dataframe): meteorological forcing data
-                'doy': day of year [days]
                 'Prec': precipitation rate [m s-1]
                 'Tair': air temperature [degC]
                 'Rg': global radiation [W m-2]
@@ -164,13 +162,11 @@ class CanopyModel():
             fluxes (dict):
             state (dict):
         """
-
         Ta = forcing['Tair']
         Prec = forcing['Prec']
         Rg = forcing['Rg']
         Par = forcing['Par']
         VPD = forcing['vpd']
-        doy = forcing['doy']
         if 'U' in forcing: 
             U = forcing['U']
         else:
@@ -188,16 +184,10 @@ class CanopyModel():
         Rn = np.maximum(2.57 * self.LAI / (2.57 * self.LAI + 0.57) - 0.2,
                         0.55) * Rg  # Launiainen et al. 2016 GCB, fit to Fig 2a
 
-
-        f = self.physpara['f'] * np.ones(np.shape(self.SWE['SWE']))
-        f[self.SWE['SWE'] > 0] = eps  # in case of snow, neglect forest floor evap
-
-        """ --- update phenology: self.ddsum & self.X ---"""
-        self._degreeDays(Ta, doy)
-        fPheno = self._photoacclim(Ta)
-
-        """ --- update deciduous leaf area index --- """
-        laifract = self._lai_dynamics(doy)
+        if self.SWE['SWE'] > 0.0:  # in case of snow, neglect forest floor evap
+            f = 0.0
+        else:
+            f = self.physpara['f']
 
         """ --- aerodynamic conductances --- """
         Ra, Rb, Ras, ustar, Uh, Ug = cu.aerodynamics(self.LAI,
@@ -225,8 +215,7 @@ class CanopyModel():
 
         """--- dry-canopy evapotranspiration [m s-1] --- """
         Transpi, Efloor, Gc = cu.dry_canopy_et(LAI=self.LAI,
-                                               LAIconif=self._LAIconif,
-                                               LAIdecid=self._LAIdecid,
+                                               gsref=self.gsref,
                                                physpara=self.physpara,
                                                soilrp=self.soilrp,
                                                D=VPD,
@@ -239,95 +228,122 @@ class CanopyModel():
                                                f=f,
                                                Rew=Rew,
                                                beta=beta,
-                                               fPheno=fPheno)
+                                               fPheno=self.pheno_state)
 
         Transpi = Transpi * dt
         Efloor = Efloor * dt
         ET = Transpi + Efloor
 
-        # return state and fluxes in dictionary when calculating singel cell
-        if self.cf.size == 1:
-            state = {"SWE": self.SWE['SWE'][0],
-                     "LAI": self.LAI[0],
-                     "LAIdecid": self._LAIdecid[0],
-                     }
-            fluxes = {'PotInf': PotInf[0],
-                      'Trfall': Trfall[0],
-                      'Interc': Interc[0],
-                      'CanEvap': Evap[0],
-                      'Transp': Transpi[0], 
-                      'Efloor': Efloor[0],
-                      'MBE': MBE[0]
-                      }
+        # return state and fluxes in dictionary
+        state = {"SWE": self.SWE['SWE'],
+                 "LAI": self.LAI,
+                 "Phenof": self.pheno_state
+                 }
+        fluxes = {'PotInf': PotInf,
+                  'Trfall': Trfall,
+                  'Interc': Interc,
+                  'CanEvap': Evap,
+                  'Transp': Transpi, 
+                  'Efloor': Efloor,
+                  'MBE': MBE
+                  }
 
         return fluxes, state
 
-    def _degreeDays(self, T, doy):
-        """
-        Calculates and updates degree-day sum from the current mean Tair.
-        INPUT:
-            T - daily mean temperature (degC)
-            doy - day of year 1...366 (integer)
-        """
-        To = 5.0  # threshold temperature
-        if doy == 1:  # reset in the beginning of the year
-            self.DDsum = 0.
-        else:
-            self.DDsum += np.maximum(0.0, T - To)
+class PlantType():
+    """
+    PlantType -class.
+    Contains plant-specific properties, state variables and phenology functions
+    """
 
-    def _photoacclim(self, T):
+    def __init__(self, z, p, Switch_pheno=True, Switch_lai=True, Switch_WaterStress=True):
         """
-        computes new stage of temperature acclimation and phenology modifier.
-        Peltoniemi et al. 2015 Bor.Env.Res.
-        IN: object, T = daily mean air temperature
-        OUT: fPheno - phenology modifier [0...1], updates object state
-        """
-
-        self.X = self.X + 1.0 / self.phenopara['tau'] * (T - self.X)  # degC
-        S = np.maximum(self.X - self.phenopara['Xo'], 0.0)
-        fPheno = np.maximum(self.phenopara['fmin'],
-                            np.minimum(S / self.phenopara['Smax'], 1.0))
-        return fPheno
-
-    def _lai_dynamics(self, doy):
-        """
-        Seasonal cycle of deciduous leaf area
-
+        Creates PlantType
         Args:
-            self - object
-            doy - day of year
-
+            z - grid, evenly spaced, np.array
+            p - parameters (dict)
+            Switch_x - controls
         Returns:
-            none, updates state variables self.LAIdecid, self._growth_stage,
-            self._senec_stage
+            PlantType instance
         """
-        lai_min = self.phenopara['lai_decid_min']
-        ddo = self.phenopara['ddo']
-        ddur = self.phenopara['ddur']
-        sso = self.phenopara['sso']
-        sdur = self.phenopara['sdur']
+        self.Switch_pheno = Switch_pheno  # include phenology
+        self.Switch_lai = Switch_lai  # seasonal LAI
+        self.Switch_WaterStress = Switch_WaterStress  # water stress affects stomata
 
-        # growth phase
-        if self.DDsum <= ddo:
-            f = lai_min
-            self._growth_stage = 0.
-            self._senesc_stage = 0.
-        elif self.DDsum > ddo:
-            self._growth_stage += 1.0 / ddur
-            f = np. minimum(1.0, lai_min + (1.0 - lai_min) * self._growth_stage)
+        self.z = z  # grid [m]
 
-        # senescence phase
-        if doy > sso:
-            self._growth_stage = 0.
-            self._senesc_stage += 1.0 / sdur
-            f = 1.0 - (1.0 - lai_min) * np.minimum(1.0, self._senesc_stage)
+        # phenology model
+        if self.Switch_pheno:
+            self.Pheno_Model = pheno.Photo_cycle(p['phenop'])  # phenology model instance
+            self.pheno_state = self.Pheno_Model.f  # phenology state [0...1]
+        else:
+            self.pheno_state = 1.0
 
-        # update self.LAIdecid and total LAI
-        self._LAIdecid = self._LAIdecid_max * f
-        self.LAI = self._LAIconif + self._LAIdecid
-        return f
+        # dynamic LAI model
+        if self.Switch_lai:
+            # seasonality of leaf area
+            self.LAI_Model = pheno.LAI_cycle(p['laip'])  # LAI model instance
+            self.relative_LAI = self.LAI_Model.f  # LAI relative to annual maximum [..1]
+        else:         
+            self.relative_LAI = 1.0
 
+        # physical structure
+        self.LAImax = p['LAImax']  # maximum annual 1-sided LAI [m2m-2]
+        self.LAI = self.LAImax * self.relative_LAI  # current LAI
+        self.lad_normed = p['lad']  # normalized leaf-area density [m-1]
+        self.lad = self.LAI * self.lad_normed  # current leaf-area density [m2m-3]
 
+        if z != None:
+            # plant height [m]
+            f = np.where(self.lad_normed > 0)[0][-1]
+            self.hc = z[f]
+            # leaf gas-exchange parameters
+            self.photop0 = p['photop']   # A-gs parameters at pheno_state = 1.0 (dict)
+            self.photop = self.photop0.copy()  # current A-gs parameters (dict)
+            # leaf properties
+            self.leafp = p['leafp']  # leaf properties (dict)
+            self.gsref = 0.0
+        else:
+            self.gsref = p['gsref']
+ 
+    def _update_daily(self, doy, T, PsiL=0.0):
+        """
+        Updates PlantType pheno_state, gas-exchange parameters, LAI & lad
+        Args:
+            doy - day of year
+            T - daily air temperature [degC]
+            Psi_leaf - leaf (or soil) water potential, <0 [MPa]
+        NOTE: CALL ONCE PER DAY
+        """
+        PsiL = np.minimum(-1e-5, PsiL)
 
+        if self.Switch_pheno:
+            self.pheno_state = self.Pheno_Model._run(T, out=True)
 
+        if self.Switch_lai:
+            self.relative_LAI =self.LAI_Model._run(doy, T,  out=True)
+            self.LAI = self.relative_LAI * self.LAImax
+            self.lad = self.lad_normed * self.LAI
+        """
+        # scale photosynthetic capacity using vertical N gradient
+        f = 1.0
+        if 'kn' in self.photop0:
+            kn = self.photop0['kn']
+            Lc = np.flipud(np.cumsum(np.flipud(self.lad*self.dz)))
+            Lc = Lc / Lc[0]
+            f = np.exp(-kn*Lc)
+            # print f
+            # plt.plot(f, z, 'k', Lc, z, 'g-')
+        # preserve proportionality of Jmax and Rd to Vcmax
+        self.photop['Vcmax'] = f * self.pheno_state * self.photop0['Vcmax']
+        self.photop['Jmax'] =  f * self.pheno_state * self.photop0['Jmax']
+        self.photop['Rd'] =  f * self.pheno_state * self.photop0['Rd']
 
+        if self.Switch_WaterStress:
+            b = self.photop0['drp']
+            if 'La' in self.photop0:
+                # lambda increases with decreasing Psi as in Manzoni et al., 2011 Funct. Ecol.
+                self.photop['La'] = self.photop0['La'] * np.exp(-b*PsiL)
+            if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
+                self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
+        """

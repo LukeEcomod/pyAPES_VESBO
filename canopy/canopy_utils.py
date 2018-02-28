@@ -16,6 +16,8 @@ RHO_AIR = 1.25
 DEG_TO_KELVIN = 273.15
 #: [kg mol\ :sup:`-1`\ ], molar mass of H\ :sub:`2`\ O
 MOLAR_MASS_H2O = 18.015e-3
+#: degrees to radians
+DEG_TO_RAD =  np.pi / 180.0
 
 def canopy_water_snow(W, SWE, LAI, cf, snowpara, dt, T, Prec, AE, VPD, Ra=25.0, U=2.0):
     """
@@ -67,125 +69,89 @@ def canopy_water_snow(W, SWE, LAI, cf, snowpara, dt, T, Prec, AE, VPD, Ra=25.0, 
     kp = snowpara['kp']
     tau = np.exp(-kp * LAI)
 
-    # inputs to arrays, needed for indexing later in the code
-    gridshape = np.shape(LAI)  # rows, cols
-
-    if np.shape(T) != gridshape:
-        T = np.ones(gridshape) * T
-        Prec = np.ones(gridshape) * Prec
-        AE = np.ones(gridshape) * AE
-        VPD = np.ones(gridshape) * VPD
-        Ra = np.ones(gridshape) * Ra
-
     Prec = Prec * dt  # [m/s] -> [m]
 
     # latent heat of vaporization (Lv) and sublimation (Ls) [J/kg]
     Lv = 1e3 * (3147.5 - 2.37 * (T + DEG_TO_KELVIN))
     Ls = Lv + 3.3e5
 
-    # compute 'potential' evaporation and sublimation rates for each grid cell  #### Onko GS ja GA näissä oikeinpäin?
-    erate = np.zeros(gridshape)
-    ixs = np.where((Prec == 0) & (T <= Tmin))
-    ixr = np.where((Prec == 0) & (T > Tmin))
+    # 'potential' evaporation and sublimation rates  # Onko GS ja GA näissä oikeinpäin?
     Ga = 1. / Ra  # aerodynamic conductance [m/s]
+    if (Prec == 0) & (T <= Tmin):  # sublimation case
+        Ce = 0.01 * ((W + eps) / Wmaxsnow)**(-0.4)  # exposure coeff [-]
+        Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
+        gi = Sh * W * 1000 * Ce / 7.68 + eps # [m/s]
+        erate = dt / Ls / RHO_WATER * penman_monteith((1.0 - tau)*AE, 1e3*VPD, T, Ga, gi, units='W')
+    elif (Prec == 0) & (T > Tmin):  # evaporation case
+        gs = 1e6
+        erate = dt / Lv / RHO_WATER * penman_monteith((1.0 - tau)*AE, 1e3*VPD, T, Ga, gs, units='W')
+    else:  # negelect evaporation during precipitation events
+        erate = 0.0
 
-    # resistance for snow sublimation adopted from:
-    # Pomeroy et al. 1998 Hydrol proc; Essery et al. 2003 J. Climate;
-    # Best et al. 2011 Geosci. Mod. Dev.
-    # ri = (2/3*rhoi*r**2/Dw) / (Ce*Sh*W) == 7.68 / (Ce*Sh*W
+    # state of precipitation [fraction as water (fW) or as snow(fS)]
+    if T >= Tmax:
+        fW = 1.0
+    elif T <= Tmin:
+        fW = 0.0
+    else:
+        fW = (T - Tmin) / (Tmax - Tmin)
+    fS = 1.0 - fW
 
-    Ce = 0.01 * ((W + eps) / Wmaxsnow)**(-0.4)  # exposure coeff [-]
-    Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
-    gi = Sh * W * 1000 * Ce / 7.68 + eps # [m/s]
-
-    erate[ixs] = dt / Ls[ixs] / RHO_WATER * penman_monteith((1.0 - tau[ixs])*AE[ixs], 1e3*VPD[ixs], T[ixs], Ga[ixs], gi[ixs], units='W')
-#        print('gi', gi, 'Ce', Ce, 'Sh', Sh)
-
-    # evaporation of intercepted water, mm
-    gs = 1e6
-    erate[ixr] = dt / Lv[ixr] / RHO_WATER * penman_monteith((1.0 - tau[ixr])*AE[ixr], 1e3*VPD[ixr], T[ixr], Ga[ixr], gs, units='W')
-    
-    # print('erate', erate)
-
-    # ---state of precipitation [as water (fW) or as snow(fS)]
-    fW = np.zeros(gridshape)
-    fS = np.zeros(gridshape)
-
-    fW[T >= Tmax] = 1.0
-    fS[T <= Tmin] = 1.0
-
-    ix = np.where((T > Tmin) & (T < Tmax))
-    fW[ix] = (T[ix] - Tmin) / (Tmax - Tmin)
-    fS[ix] = 1.0 - fW[ix]
-    del ix
-
-    # --- Local fluxes (mm)
-    Unload = np.zeros(gridshape)  # snow unloading
-    Interc = np.zeros(gridshape)  # interception
-    Melt = np.zeros(gridshape)   # melting
-    Freeze = np.zeros(gridshape)  # freezing
-    Evap = np.zeros(gridshape)
+    # local fluxes (m)
+    Unload, Interc, Melt, Freeze, Evap = 0.0, 0.0, 0.0, 0.0, 0.0
 
     """ --- initial conditions for calculating mass balance error --"""
     Wo = W  # canopy storage
     SWEo = SWE['SWE']  # Snow water equivalent m
 
     """ --------- Canopy water storage change -----"""
-    # snow unloading from canopy, ensures also that seasonal LAI development does
-    # not mess up computations
-    ix = (T >= Tmax)
-    Unload[ix] = np.maximum(W[ix] - Wmax[ix], 0.0)
+    # snow unloading from canopy, ensures also that seasonal 
+    # LAI development does not mess up computations
+    if T >= Tmax:
+        Unload = np.maximum(W - Wmax, 0.0)
     W = W - Unload
-    del ix
     dW = W - Wo
 
     # Interception of rain or snow: asymptotic approach of saturation.
     # Hedstrom & Pomeroy 1998. Hydrol. Proc 12, 1611-1625;
     # Koivusalo & Kokkonen 2002 J.Hydrol. 262, 145-164.
-    ix = (T < Tmin)
-    Interc[ix] = (Wmaxsnow[ix] - W[ix]) \
-                * (1.0 - np.exp(-(cf[ix] / Wmaxsnow[ix]) * Prec[ix]))
-    del ix
-    
-    # above Tmin, interception capacity equals that of liquid precip
-    ix = (T >= Tmin)
-    Interc[ix] = np.maximum(0.0, (Wmax[ix] - W[ix]))\
-                * (1.0 - np.exp(-(cf[ix] / Wmax[ix]) * Prec[ix]))
-    del ix
-    W = W + Interc  # new canopy storage, mm
+    if T < Tmin:
+        Interc = (Wmaxsnow - W) * (1.0 - np.exp(-(cf / Wmaxsnow) * Prec))
+    else:  # above Tmin, interception capacity equals that of liquid precip
+        Interc = np.maximum(0.0, (Wmax - W))\
+                * (1.0 - np.exp(-(cf / Wmax) * Prec))
+    W = W + Interc  # new canopy storage, m
 
     Trfall = Prec + Unload - Interc  # Throughfall to field layer or snowpack
 
     # evaporate from canopy and update storage
-    Evap = np.minimum(erate, W)  # mm
+    Evap = np.minimum(erate, W)  # m
     W = W - Evap
 
     """ Snowpack (in case no snow, all Trfall routed to floor) """
-    ix = np.where(T >= Tmelt)
-    Melt[ix] = np.minimum(swei[ix], Kmelt[ix] * dt * (T[ix] - Tmelt))  # mm
-    del ix
-    ix = np.where(T < Tmelt)
-    Freeze[ix] = np.minimum(swel[ix], Kfreeze * dt * (Tmelt - T[ix]))  # mm
-    del ix
+    if T >= Tmelt:
+        Melt = np.minimum(swei, Kmelt * dt * (T - Tmelt))  # m
+    else:
+        Freeze = np.minimum(swel, Kfreeze * dt * (Tmelt - T))  # m
 
     # amount of water as ice and liquid in snowpack
     Sice = np.maximum(0.0, swei + fS * Trfall + Freeze - Melt)
     Sliq = np.maximum(0.0, swel + fW * Trfall - Freeze + Melt)
 
-    PotInf = np.maximum(0.0, Sliq - Sice * snowpara['retention'])  # mm
-    Sliq = np.maximum(0.0, Sliq - PotInf)  # mm, liquid water in snow
+    PotInf = np.maximum(0.0, Sliq - Sice * snowpara['retention'])  # m
+    Sliq = np.maximum(0.0, Sliq - PotInf)  # m, liquid water in snow
 
     # update Snowpack state variables
     SWE['SWEl'] = Sliq
     SWE['SWEi'] = Sice
     SWE['SWE'] = swel + swei
-    
+
     # mass-balance error mm
     MBE = (W + SWE['SWE']) - (Wo + SWEo) - (Prec - Evap - PotInf)
 
     return W, SWE, PotInf, Trfall, Evap, Interc, MBE, erate, Unload, fS + fW
 
-def dry_canopy_et(LAI, LAIconif, LAIdecid, physpara, soilrp, D, Qp, AE, Ta, \
+def dry_canopy_et(LAI, gsref, physpara, soilrp, D, Qp, AE, Ta, \
                   Ra=25.0, Ras=250.0, CO2=380.0, f=1.0, Rew=1.0, beta=1.0, fPheno=1.0):
     """
     Computes ET from 2-layer canopy in absense of intercepted preciptiation, i.e. in dry-canopy conditions
@@ -220,10 +186,6 @@ def dry_canopy_et(LAI, LAIconif, LAIdecid, physpara, soilrp, D, Qp, AE, Ta, \
     Last edit: 12 / 2017
     """
 
-    # --- gsref as LAI -weighted average of conifers and decid.
-    gsref = 1.0 /LAI * (LAIconif * physpara['gsref_conif']
-            + LAIdecid * physpara['gsref_decid'])
-
     kp = physpara['kp']  # (-) attenuation coefficient for PAR
     q50 = physpara['q50']  # Wm-2, half-sat. of leaf light response
     rw = physpara['rw']  # rew parameter
@@ -252,11 +214,11 @@ def dry_canopy_et(LAI, LAIconif, LAIdecid, physpara, soilrp, D, Qp, AE, Ta, \
     fCO2 = 1.0 - 0.387 * np.log(CO2 / 380.0)
 
     Gc = 1000 * gsref * fQ * fD * fRew * fCO2 * fPheno
-    Gc[np.isnan(Gc)] = eps
+    if np.isnan(Gc):
+        Gc = eps
 
     """ --- transpiration rate --- """
-    Tr = penman_monteith((1.-tau)*AE, 1e3*D, Ta, Gc, 1./Ra, units='m')
-    Tr[Tr < 0] = 0.0
+    Tr = np.maximum(0.0, penman_monteith((1.-tau)*AE, 1e3*D, Ta, Gc, 1./Ra, units='m'))
 
     """--- forest floor evaporation rate--- """
     # soil conductance is function of relative water availability
@@ -265,11 +227,12 @@ def dry_canopy_et(LAI, LAIconif, LAIdecid, physpara, soilrp, D, Qp, AE, Ta, \
     # beta = Wliq / FC; Best et al., 2011 Geosci. Model. Dev. JULES
 
     Efloor = penman_monteith(tau * f * AE, 1e3*D, Ta, gcs, 1./Ras, units='m')
-    Efloor[f==0] = 0.0  # snow on ground restricts Efloor
-    
+    if f==0:
+        Efloor = 0.0  # snow on ground restricts Efloor
+
     return Tr, Efloor, Gc  # , fQ, fD, fRew
 
-def daylength(LAT, LON, DOY):
+def daylength(lat, lon, doy):
     """
     Computes daylength from location and day of year.
 
@@ -280,20 +243,19 @@ def daylength(LAT, LON, DOY):
     Returns:
         dl - daylength (hours), float or arrays of floats
     """
-    CF = np.pi / 180.0  # conversion deg -->rad
 
-    LAT = LAT*CF
-    LON = LON*CF
+    lat = lat * DEG_TO_RAD
+    lon = lon * DEG_TO_RAD
 
     # ---> compute declination angle
-    xx = 278.97 + 0.9856*DOY + 1.9165*np.sin((356.6 + 0.9856*DOY)*CF)
-    DECL = np.arcsin(0.39785*np.sin(xx*CF))
-    del xx
+    xx = 278.97 + 0.9856 * doy + 1.9165 * np.sin((356.6 + 0.9856 * doy) * DEG_TO_RAD)
+    decl = np.arcsin(0.39785 * np.sin(xx * DEG_TO_RAD))
 
     # --- compute day length, the period when sun is above horizon
     # i.e. neglects civil twilight conditions
     cosZEN = 0.0
-    dl = 2.0*np.arccos(cosZEN - np.sin(LAT)*np.sin(DECL) / (np.cos(LAT)*np.cos(DECL))) / CF / 15.0  # hours
+    dl = 2.0 * np.arccos(cosZEN - np.sin(lat) * np.sin(decl)\
+        / (np.cos(lat)* np.cos(decl))) / DEG_TO_RAD / 15.0  # hours
 
     return dl
 
@@ -326,10 +288,10 @@ def aerodynamics(LAI, hc, Uo, w=0.01, zm=2.0, zg=0.5, zos=0.01):
     kv = 0.4  # von Karman constant (-)
     beta = 285.0  # s/m, from Campbell & Norman eq. (7.33) x 42.0 molm-3
     alpha = LAI / 2.0  # wind attenuation coeff (Yi, 2008 eq. 23)
-    d = 0.66*hc  # m
-    zom = 0.123*hc  # m
-    zov = 0.1*zom
-    zosv = 0.1*zos
+    d = 0.66 * hc  # m
+    zom = 0.123 * hc  # m
+    zov = 0.1 * zom
+    zosv = 0.1 * zos
 
     # solve ustar and U(hc) from log-profile above canopy
     ustar = Uo * kv / np.log((zm - d) / zom) 
@@ -337,7 +299,7 @@ def aerodynamics(LAI, hc, Uo, w=0.01, zm=2.0, zg=0.5, zos=0.01):
     
     # U(zg) from exponential wind profile
     zn = np.minimum(zg / hc, 1.0)  # zground can't be above canopy top
-    Ug = Uh * np.exp(alpha*(zn - 1.0))
+    Ug = Uh * np.exp(alpha * (zn - 1.0))
 
     # canopy aerodynamic & boundary-layer resistances (sm-1). Magnani et al. 1998 PCE eq. B1 & B5
     #ra = 1. / (kv*ustar) * np.log((zm - d) / zom)

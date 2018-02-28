@@ -58,11 +58,12 @@ res = {
     'Transp': [],
     'SWE': [],
     'LAI': [],
-    'LAIdecid': [],
-    'Mbec': []
+    'Mbec': [],
+    'Phenof': [],
     }
 
 """ RUN MODELS """
+
 for k in range(0, len(Forc)):
     print 'k = ' + str(k)
 
@@ -71,11 +72,14 @@ for k in range(0, len(Forc)):
     beta = 1.0  # smodel.Wliq / smodel.poros??
 
     """ Canopy and Snow """
-    # run canopy model
-    cm_flx, cm_state = cmodel._run(dt=dt0,
-                                   forcing=Forc.iloc[k],
-                                   beta=beta,
-                                   Rew=Rew)
+    # run daily loop (phenology and seasonal LAI)
+    if Forc['doy'].iloc[k] != Forc['doy'].iloc[k-1]:
+        cmodel._run_daily(Forc['doy'].iloc[k], Forc['Tdaily'].iloc[k])
+    # run timestep loop
+    cm_flx, cm_state = cmodel._run_timestep(dt=dt0,
+                                            forcing=Forc.iloc[k],
+                                            beta=beta,
+                                            Rew=Rew)
 
     """ Water and Heat """
     # potential infiltration and evaporation from ground surface
@@ -98,7 +102,6 @@ for k in range(0, len(Forc)):
     res['Transp'].append(cm_flx['Transp'])
     res['SWE'].append(cm_state['SWE'])
     res['LAI'].append(cm_state['LAI'])
-    res['LAIdecid'].append(cm_state['LAIdecid'])
     res['Mbec'].append(cm_flx['MBE'])
     res['gwl'].append(sm_state['ground_water_level'])
     res['h_pond'].append(sm_state['pond_storage'])
@@ -108,6 +111,7 @@ for k in range(0, len(Forc)):
     res['Drain'].append(sm_flx['drainage'])
     res['Roff'].append(sm_flx['runoff'])
     res['Mbew'].append(sm_flx['water_closure'])
+    res['Phenof'].append(cm_state['Phenof'])
 
 #    if res['gwl'][-1] > 0.05 or any(np.isnan(res['h'][-1])) or res['h_pond'][-1] < 0.0 or abs(res['Mbew'][-1]) >1e-5:
 #        break
