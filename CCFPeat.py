@@ -8,8 +8,8 @@ Main program for running CCFPeat
 import numpy as np
 from matplotlib import pyplot as plt
 from forcing.forc_utils import read_forcing
-import canopy.canopy_model as cm
-import soilprofile.soil_model as sm
+from canopy.canopy_model import CanopyModel
+from soilprofile.soil_model import SoilModel
 import time  # For keeping track of computational time
 running_time = time.time()
 
@@ -32,9 +32,9 @@ Forc = read_forcing(gpara['forc_filename'],
 
 """ INITIALIZE MODELS """
 # Initialize canopy model
-cmodel = cm.CanopyModel(cpara)
+cmodel = CanopyModel(cpara)
 # Initialize soil model
-smodel = sm.SoilModel(spara['z'], spara)
+smodel = SoilModel(spara['z'], spara)
 
 # Create results dictionary (not here?)
 res = {
@@ -58,7 +58,8 @@ res = {
     'Transp': [],
     'SWE': [],
     'LAI': [],
-    'Mbec': [],
+    'Mbe_interc': [],
+    'Mbe_snow': [],
     'Phenof': [],
     }
 
@@ -102,7 +103,8 @@ for k in range(0, len(Forc)):
     res['Transp'].append(cm_flx['Transp'])
     res['SWE'].append(cm_state['SWE'])
     res['LAI'].append(cm_state['LAI'])
-    res['Mbec'].append(cm_flx['MBE'])
+    res['Mbe_interc'].append(cm_flx['MBE_interc'])
+    res['Mbe_snow'].append(cm_flx['MBE_snow'])
     res['gwl'].append(sm_state['ground_water_level'])
     res['h_pond'].append(sm_state['pond_storage'])
     res['Infil'].append(sm_flx['infiltration'])

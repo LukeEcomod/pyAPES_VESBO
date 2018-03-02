@@ -17,6 +17,13 @@ loc = {'lat': 61.4,  # latitude
        'lon': 23.7  # longitude
        }
 
+# --- aerodynamics ---
+aero = {'w': 0.01,  # leaf length scale [m]
+        'zmeas': 2.0,  # wind speed measurement height above canopy [m]
+        'zg': 0.5,  # height above ground where Ug is computed [m]
+        'zos': 0.01  # forest floor roughness length [m]
+        }
+
 # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
 interc_snow = {'wmax': 0.0005,  # maximum interception storage capacity for rain [m per unit of LAI]
                'wmaxsnow': 0.004,  # maximum interception storage capacity for snow [m per unit of LAI]
@@ -87,7 +94,8 @@ else:
      """parameters for multilayer model"""
     # define shrubs, 'photop', 'leafp', 'lad', grid
 
-cpara.update({'ctr': ctr, 'loc': loc, 'interc_snow': interc_snow, 'plant_types': plant_types})
+cpara.update({'ctr': ctr, 'loc': loc, 'aero': aero,
+              'interc_snow': interc_snow, 'plant_types': plant_types})
 
 #        for computing aerodynamic resistances  -- yksiköt?
 #        self.zmeas = 2.0

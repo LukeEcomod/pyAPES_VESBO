@@ -18,7 +18,6 @@ last edit: 1.11.2017: Added CO2-response to dry_canopy_et
 """
 import numpy as np
 import canopy_utils as cu
-import phenology as pheno
 eps = np.finfo(float).eps
 
 
@@ -51,6 +50,11 @@ class CanopyModel():
                     SWEl - snow water as liquid [m]
                     ddsum - degree-day sum [degC]
         """
+
+        from micromet import Aerodynamics
+        from interception import Interception
+        from evapotranspiration import Canopy_Transpiration
+        from snow import Snowpack
 
         # --- control switches ---
         self.Switch_MLM = cpara['ctr']['multilayer_model']
@@ -97,25 +101,23 @@ class CanopyModel():
         else:
             self.hc = cpara['canopy_para']['hc']  # canopy height [m]
             self.cf = cpara['canopy_para']['cf']  # canopy closure [-]
+            # --- initialize canopy evapotranspiration computation ---
+            self.Canopy_Tr = Canopy_Transpiration(cpara['phys_para'])
 
-        self.physpara = cpara['phys_para']
+        # --- radiation ---
+        self.kp = cpara['phys_para']['kp']
 
-        # interception and snow model parameters
-        self.snowpara = cpara['interc_snow']
-        self.snowpara.update({'kp': self.physpara['kp']})
+        # --- initialize aerodynamic resistances computation ---
+        self.Aero_Model = Aerodynamics(cpara['aero'])
 
-        # --- for computing aerodynamic resistances
-        self.zmeas = 2.0
-        self.zground = 0.5
-        self.zo_ground = 0.01
-        self.soilrp = 300.0
+        # --- interception ---
+        self.Interc_Model = Interception(cpara['interc_snow'], self.LAI)
 
-        # --- state variables
-        self.X = 0.0
-        self.W = np.minimum(cpara['interc_snow']['w_ini'], cpara['interc_snow']['wmax'] * self.LAI)
-        self.SWE = {'SWE': cpara['interc_snow']['swe_ini'],
-                    'SWEi': cpara['interc_snow']['swe_ini'],
-                    'SWEl': 0.0}
+        # --- snow model ---
+        self.Snow_Model = Snowpack(cpara['interc_snow'], self.cf)
+
+        # --- forest floor ---
+        self.ForestFloor = ForestFloor({'soilrp': 300.0, 'f': cpara['phys_para']['f']})  ### --- soilrp to parameters?
 
     def _run_daily(self, doy, Ta, PsiL=0.0):
         """
@@ -180,72 +182,77 @@ class CanopyModel():
         else:
             CO2 = 380.0
 
+        """ --- radiation --- """
         # Rn = 0.7 * Rg #net radiation
         Rn = np.maximum(2.57 * self.LAI / (2.57 * self.LAI + 0.57) - 0.2,
                         0.55) * Rg  # Launiainen et al. 2016 GCB, fit to Fig 2a
-
-        if self.SWE['SWE'] > 0.0:  # in case of snow, neglect forest floor evap
-            f = 0.0
-        else:
-            f = self.physpara['f']
+        # fraction of Rn at ground
+        tau = np.exp(-self.kp*self.LAI)
 
         """ --- aerodynamic conductances --- """
-        Ra, Rb, Ras, ustar, Uh, Ug = cu.aerodynamics(self.LAI,
-                                                     self.hc,
-                                                     U,
-                                                     w=0.01,
-                                                     zm=self.zmeas,
-                                                     zg=self.zground,
-                                                     zos=self.zo_ground)
+        ra, rb, ras, ustar, Uh, Ug = self.Aero_Model._run(
+                LAI=self.LAI,
+                hc=self.hc,
+                Uo=U)
 
-        """ --- interception, evaporation and snowpack --- """
-        self.W, self.SWE, PotInf, Trfall, Evap, Interc, MBE, erate, unload, fact = \
-            cu.canopy_water_snow(W=self.W,
-                                 SWE=self.SWE,
-                                 LAI=self.LAI,
-                                 cf=self.cf,
-                                 snowpara=self.snowpara,
-                                 dt=dt,
-                                 T=Ta,
-                                 Prec=Prec,
-                                 AE=Rn,
-                                 VPD=VPD,
-                                 Ra=Ra,
-                                 U=U)
+        """ --- interception and interception storage evaporation --- """
+        Trfall_rain, Trfall_snow, Interc, Evap, MBE_interc = self.Interc_Model._run(
+                dt=dt,
+                LAI=self.LAI,
+                cf=self.cf,
+                T=Ta,
+                Prec=Prec,
+                AE=(1. - tau) * Rn,
+                VPD=VPD,
+                Ra=ra,
+                U=Uh)
 
-        """--- dry-canopy evapotranspiration [m s-1] --- """
-        Transpi, Efloor, Gc = cu.dry_canopy_et(LAI=self.LAI,
-                                               gsref=self.gsref,
-                                               physpara=self.physpara,
-                                               soilrp=self.soilrp,
-                                               D=VPD,
-                                               Qp=Par,
-                                               AE=Rn,
-                                               Ta=Ta,
-                                               Ra=Ra,
-                                               Ras=Ras,
-                                               CO2=CO2,
-                                               f=f,
-                                               Rew=Rew,
-                                               beta=beta,
-                                               fPheno=self.pheno_state)
+        """--- snowpack ---"""
+        PotInf, MBE_snow = self.Snow_Model._run(
+                dt=dt,
+                T=Ta,
+                Trfall_rain=Trfall_rain,
+                Trfall_snow=Trfall_snow)
 
-        Transpi = Transpi * dt
-        Efloor = Efloor * dt
-        ET = Transpi + Efloor
+        """--- canopy transpiration --- """  # DRY ??
+        Transpi = self.Canopy_Tr._run(
+                dt=dt,
+                LAI=self.LAI,
+                gsref=self.gsref,
+                T=Ta,
+                AE=(1. - tau) * Rn,
+                Qp=Par,
+                VPD=VPD,
+                Ra=ra,
+                CO2=CO2,
+                fPheno=self.pheno_state,
+                Rew=Rew)
+
+        """ --- forest floor (only in absence of snowpack) --- """
+        if self.Snow_Model.swe <= eps:
+            Efloor = self.ForestFloor._run(
+                    dt=dt,
+                    T=Ta,
+                    AE=tau * Rn,
+                    VPD=VPD,
+                    Ra=ras,
+                    beta=beta)
+        else:
+            Efloor = 0.0
 
         # return state and fluxes in dictionary
-        state = {"SWE": self.SWE['SWE'],
+        state = {"SWE": self.Snow_Model.swe,
                  "LAI": self.LAI,
                  "Phenof": self.pheno_state
                  }
         fluxes = {'PotInf': PotInf,
-                  'Trfall': Trfall,
+                  'Trfall': Trfall_rain + Trfall_snow,
                   'Interc': Interc,
                   'CanEvap': Evap,
-                  'Transp': Transpi, 
+                  'Transp': Transpi,
                   'Efloor': Efloor,
-                  'MBE': MBE
+                  'MBE_interc': MBE_interc,
+                  'MBE_snow': MBE_snow
                   }
 
         return fluxes, state
@@ -266,6 +273,9 @@ class PlantType():
         Returns:
             PlantType instance
         """
+
+        from phenology import Photo_cycle, LAI_cycle
+
         self.Switch_pheno = Switch_pheno  # include phenology
         self.Switch_lai = Switch_lai  # seasonal LAI
         self.Switch_WaterStress = Switch_WaterStress  # water stress affects stomata
@@ -274,7 +284,7 @@ class PlantType():
 
         # phenology model
         if self.Switch_pheno:
-            self.Pheno_Model = pheno.Photo_cycle(p['phenop'])  # phenology model instance
+            self.Pheno_Model = Photo_cycle(p['phenop'])  # phenology model instance
             self.pheno_state = self.Pheno_Model.f  # phenology state [0...1]
         else:
             self.pheno_state = 1.0
@@ -282,9 +292,9 @@ class PlantType():
         # dynamic LAI model
         if self.Switch_lai:
             # seasonality of leaf area
-            self.LAI_Model = pheno.LAI_cycle(p['laip'])  # LAI model instance
+            self.LAI_Model = LAI_cycle(p['laip'])  # LAI model instance
             self.relative_LAI = self.LAI_Model.f  # LAI relative to annual maximum [..1]
-        else:         
+        else:
             self.relative_LAI = 1.0
 
         # physical structure
@@ -347,3 +357,31 @@ class PlantType():
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
         """
+
+class ForestFloor():
+    """
+    Forest floor
+    """
+    def __init__(self, p):
+
+        from evapotranspiration import ForestFloor_Evap
+
+        self.Evap = ForestFloor_Evap(p)
+
+    def _run(self, dt, T, AE, VPD, Ra, beta):
+        """
+        Args:
+            T: air temperature [degC]
+            AE: available energy at forest floor [W m-2]
+            VPD: vapor pressure deficit in [kPa]
+            Ra: soil aerodynamic resistance [s m-1]
+            beta: 
+        Returns:
+            Efloor: forest floor evaporation [m]
+        """
+
+        Efloor = self.Evap._run(dt, T, AE, VPD, Ra, beta)
+
+        # Interception?
+
+        return Efloor
