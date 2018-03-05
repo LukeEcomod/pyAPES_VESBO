@@ -2,6 +2,8 @@
 """
 CANOPY MODEL PARAMETERS
 """
+from copy import deepcopy
+from parameter_utils import lad_profiles
 
 # initialize dictionary to store parameters
 cpara = {}
@@ -37,7 +39,7 @@ interc_snow = {'wmax': 0.0005,  # maximum interception storage capacity for rain
                'swe_ini': 0.0  # initial snow water equivalent [m]
                }
 
-# --- default values for plant phenological cycle and lai seasonality ---
+# --- default values for plant characteristics ---
 plant_default = {'phenop': {  # --- seasonal cycle of phenology ---
                             'Xo': 0.0,  # initial delayed temperature [degC]
                             'fmin': 0.01,  # minimum photocapacity [-]
@@ -54,9 +56,35 @@ plant_default = {'phenop': {  # --- seasonal cycle of phenology ---
                          'ddur': 23.0,  # duration of recovery period [days]
                          'sso': 240.0,  # start doy of decrease, based on daylength
                          'sdur': 30.0, # duration of decreasing period [days]
-                         }
+                         },
+                'photop': {  # --- leaf gas-exchange parameters ---
+                        'Vcmax': None,  # maximum carboxylation velocity [umolm-2s-1]
+                        'Jmax': None,  # maximum rate of electron transport [umolm-2s-1]
+                        'Rd': None,  # dark respiration rate [umolm-2s-1]
+                        'alpha': 0.16,  # quantum yield parameter [mol/mol]
+                        'theta': 0.7,  # co-limitation parameter of Farquhar-model
+                        'La':None,  # stomatal parameter (Lambda, m, ...) depending on model
+                        'm':None,
+                        'g0': 1.0e-3,  # residual conductance for CO2 [molm-2s-1]
+                        'kn': 0.6,
+                        'beta': 0.95,  # co-limitation parameter of Farquhar-model
+                        'drp': 0.7,
+                        'tresp': {  # --- temperature sensitivity parameters ---
+                                'Vcmax': [],  # [Ha, Hd, Topt]; activation energy [kJmol-1], deactivation energy [kJmol-1], optimum temperature [degC]
+                                'Jmax': [],  # [Ha, Hd, Topt];
+                                'Rd': [33.0]}  #[Ha]; activation energy [kJmol-1)]
+                        },
+                'leafp': {  # --- leaf properties ---
+                        'lt': 0.02,  # leaf lengthscale [m]
+                        'par_alb': 0.12,  # leaf Par albedo [-]
+                        'nir_alb': 0.55,  # leaf Nir albedo [-]
+                        'emi': 0.98  # leaf emissivity [-]
+                        },
                 }
-pine, spruce, decid = plant_default, plant_default, plant_default  # initialize with default
+pine = deepcopy(plant_default)  # initialize with default
+spruce = deepcopy(plant_default)
+decid = deepcopy(plant_default)
+shrubs = deepcopy(plant_default)
 
 # --- stand characteristics ---
 # specify name and maximum leaf-area index, LAImax [m2/m2], and 
@@ -70,6 +98,9 @@ spruce['phenop'].update({'fmin': 0.1})
 spruce['laip'].update({'lai_min': 0.8})
 
 decid.update({'name': 'decid', 'LAImax': [1.0]})
+
+shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
+shrubs['laip'].update({'lai_min': 0.5})
 
 if ctr['multilayer_model'] is False:
     """parameters for simple (not multilayer) model"""
@@ -87,12 +118,40 @@ if ctr['multilayer_model'] is False:
     canopy_para = {'hc': 16.0,  # canopy height [m]
                    'cf': 0.6}  # canopy closure [-]
     # add to parameter dictionary
-    cpara.update({'phys_para':phys_para,'canopy_para':canopy_para})
+    cpara.update({'phys_para': phys_para, 'canopy_para': canopy_para})
     # plant types to list
-    plant_types = [pine, spruce, decid]
+    plant_types = [pine, spruce, decid]  # shrubs?? hs?
 else:
-     """parameters for multilayer model"""
-    # define shrubs, 'photop', 'leafp', 'lad', grid
+    """parameters for multilayer model"""
+    # grid
+    grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
+            'Nlayers': 200  # number of layers in grid [-]
+            }
+    # normed leaf area density profiles
+    dbhfile = "hyde_runkolukusarjat.txt"  # filepath to dbhfile (pine, spruce, decid)
+    quantiles = [1.0]  # quantiles used in creating species stand lad profiles
+    hs = 0.5  # height of understory shrubs [m]
+    pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'] = lad_profiles(
+            grid, dbhfile, quantiles, hs, plot=True)
+    # adjust leaf gas-exchange parameters
+    gfact = 1.2  # coefficient for adjusting (?)
+    pine['photop'].update({'Vcmax': 55.0, 'Jmax': 104.0, 'Rd': 1.3,
+                           'La': 1600.0, 'm': gfact*2.5})
+    pine['photop']['tresp'].update({'Vcmax': [78, 200.0, 650.0],
+                                    'Jmax': [56, 200.0, 647.0]})
+    spruce['photop'].update({'Vcmax': 70.0, 'Jmax': 133.0, 'Rd': 1.6,
+                             'La': 1600.0, 'm': gfact*2.5})
+    spruce['photop']['tresp'].update({'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
+                                      'Jmax': [38.4, 202.0, 655.8]})
+    decid['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.3,
+                            'La': 600.0, 'm': gfact*4.5})
+    decid['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
+                                     'Jmax': [42.8, 200.0, 637.0]})
+    shrubs['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.3,
+                            'La': 600.0, 'm': gfact*4.5, 'kn': 0.3})
+    shrubs['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],
+                                     'Jmax': [42.8, 200.0, 637.0]})
+    plant_types = [pine, spruce, decid, shrubs]
 
 cpara.update({'ctr': ctr, 'loc': loc, 'aero': aero,
               'interc_snow': interc_snow, 'plant_types': plant_types})

@@ -17,7 +17,6 @@ last edit: 1.11.2017: Added CO2-response to dry_canopy_et
 
 """
 import numpy as np
-import canopy_utils as cu
 eps = np.finfo(float).eps
 
 
@@ -241,9 +240,9 @@ class CanopyModel():
             Efloor = 0.0
 
         # return state and fluxes in dictionary
-        state = {"SWE": self.Snow_Model.swe,
-                 "LAI": self.LAI,
-                 "Phenof": self.pheno_state
+        state = {'SWE': self.Snow_Model.swe,
+                 'LAI': self.LAI,
+                 'Phenof': self.pheno_state
                  }
         fluxes = {'PotInf': PotInf,
                   'Trfall': Trfall_rain + Trfall_snow,
@@ -331,7 +330,7 @@ class PlantType():
             self.pheno_state = self.Pheno_Model._run(T, out=True)
 
         if self.Switch_lai:
-            self.relative_LAI =self.LAI_Model._run(doy, T,  out=True)
+            self.relative_LAI =self.LAI_Model._run(doy, T, out=True)
             self.LAI = self.relative_LAI * self.LAImax
             self.lad = self.lad_normed * self.LAI
         """

@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2016-12-31",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-12-31",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Hyde_2010_2016.csv"  #"FMI_jokioinen.csv"  ## forcing data file*
         }
 
