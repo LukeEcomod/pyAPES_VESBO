@@ -30,7 +30,6 @@ class Interception():
         Returns:
             Interception -object
         """
-
         # parameters:
         # maximum storage capacities [m per unit of LAI]
         self.wmax = p['wmax']  # for rainfall
@@ -41,7 +40,7 @@ class Interception():
         self.Tmelt = p['Tmelt']
 
         # state variables
-        self.W = np.minimum(p['w_ini'], p['wmax'] * LAI)  # interception storage [m]
+        self.W = np.minimum(p['w_ini'], p['wmax'] * LAI) # interception storage [m]
 
     def _run(self, dt, LAI, cf, T, Prec, AE, VPD, Ra=25.0, U=2.0):
         """

@@ -23,18 +23,21 @@ from parameters.canopy_parameters import cpara
 # Import soil model parameters
 from parameters.soil_parameters import spara
 
-""" FORCING DATA """
-# Read forcing
-Forc = read_forcing(gpara['forc_filename'],
-                    gpara['start_time'],
-                    gpara['end_time'],
-                    dt=dt0)
-
 """ INITIALIZE MODELS """
 # Initialize canopy model
 cmodel = CanopyModel(cpara)
 # Initialize soil model
 smodel = SoilModel(spara['z'], spara)
+del cpara, spara
+
+""" FORCING DATA """
+# Read forcing
+Forc = read_forcing(gpara['forc_filename'],
+                    gpara['start_time'],
+                    gpara['end_time'],
+                    MLM=cmodel.Switch_MLM,
+                    loc=cmodel.location,
+                    dt=dt0)
 
 # Create results dictionary (not here?)
 res = {
@@ -66,7 +69,7 @@ res = {
 """ RUN MODELS """
 
 for k in range(0, len(Forc)):
-    print 'k = ' + str(k)
+    #print 'k = ' + str(k)
 
     # Soil moisture forcing for canopy model--- ROOTING ZONE???
     Rew = 1.0  # np.minimum((smodel.Wliq - smodel.Wp) / (smodel.Fc - smodel.Wp + eps), 1.0)???

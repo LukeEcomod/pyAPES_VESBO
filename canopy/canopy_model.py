@@ -29,38 +29,35 @@ class CanopyModel():
             cpara (dict): see canopy_parameters.py
         Returns:
             self (object):
-                parameters:
-                    LAI - leaf area index [m2 m-2]
-                    hc - canopy heigth [m]
-                    cf - closure [-]
-                    physpara - physiologic parameters dict
-                    phenopara - phenology param. dict
-                    cpara - copy of inputs, for testing snow model
-                    Wmax - maximum water storage capacity [m]
-                    WmaxSnow -  maximum snow storage capacity [m]
-                    Kmelt - degree day snowmelt factor [m degC-1 s-1]
-                    Kfreeze - degree day freezing factor [m degC-1 s-1]
-                    R - snow water retention coeff [-]
-                state variables:
-                    X - 'phenological state', i.e. delayed temperature [degC]
-                    W - canopy water or snow storage [m]
-                    SWE - snow water equivalent [m]
-                    SWEi - snow water as ice [m]
-                    SWEl - snow water as liquid [m]
-                    ddsum - degree-day sum [degC]
+                parameters/state variables:
+                    Switch_MLM (boolean): control for multilayer computation
+                    location (dict): 
+                        'lat'(float): latitude
+                        'lon'(float): longitude
+                    LAI (float): total leaf area index [m2 m-2]
+                    lad (float): total leaf area density [m2 m-3]
+                    hc (float): canopy heigth [m]
+                    cf (float): canopy closure [-]
+                    gsref (float): LAI-weigthed average gsref of canopy [m s-1]
+                    pheno_state (float): LAI-weigthed average phenological state of canopy (0..1)
+                grid (only for multilayer computation):
+                    z, dz, Nlayers (floats)
+                objects:
+                    Ptypes (.Pheno_Model, .LAI_model), Forestfloor (.Evap_Model, ...)
+                    Radi_Model, Aero_Model, Interc_model, Canopy_Tr, Snow_Model
         """
 
+        from radiation import Radiation
         from micromet import Aerodynamics
         from interception import Interception
         from evapotranspiration import Canopy_Transpiration
         from snow import Snowpack
 
         # --- control switches ---
-        self.Switch_MLM = cpara['ctr']['multilayer_model']
+        self.Switch_MLM = cpara['ctr']['multilayer_model']['ON']
 
         # --- site location ---
-        self.Lat = cpara['loc']['lat']
-        self.Lon = cpara['loc']['lon']
+        self.location = cpara['loc']
 
         # --- grid ---
         if self.Switch_MLM:
@@ -70,7 +67,7 @@ class CanopyModel():
         else:
             self.z = None
 
-        # --- create PlantTypes ----
+        # --- Plant types (with phenoligical models) ---
         ptypes = []
         stand_lai, stand_lad = 0.0, 0.0
         # para = [pinep, shrubp]
@@ -100,22 +97,23 @@ class CanopyModel():
         else:
             self.hc = cpara['canopy_para']['hc']  # canopy height [m]
             self.cf = cpara['canopy_para']['cf']  # canopy closure [-]
+
             # --- initialize canopy evapotranspiration computation ---
             self.Canopy_Tr = Canopy_Transpiration(cpara['phys_para'])
 
-        # --- radiation ---
-        self.kp = cpara['phys_para']['kp']
+        # --- initialize radiation model ---
+        self.Radi_Model = Radiation(cpara['radi'])
 
         # --- initialize aerodynamic resistances computation ---
         self.Aero_Model = Aerodynamics(cpara['aero'])
 
-        # --- interception ---
+        # --- initialize interception model---
         self.Interc_Model = Interception(cpara['interc_snow'], self.LAI)
 
-        # --- snow model ---
+        # --- initialize snow model ---
         self.Snow_Model = Snowpack(cpara['interc_snow'], self.cf)
 
-        # --- forest floor ---
+        # --- forest floor (models for evaporation...)---
         self.ForestFloor = ForestFloor({'soilrp': 300.0, 'f': cpara['phys_para']['f']})  ### --- soilrp to parameters?
 
     def _run_daily(self, doy, Ta, PsiL=0.0):
@@ -154,39 +152,33 @@ class CanopyModel():
                 'Rg': global radiation [W m-2]
                 'vpd': vapor pressure deficit [kPa]
                 'Par': fotosynthetically active radiation [W m-2]
-                'U': wind speed [m s-1] - if not given U = 2.0
-                'CO2': atm. CO2 mixing ratio [ppm] - if not given C02 = 380
-                'P': pressure [Pa] - if not given P = 101300.0
+                'U': wind speed [m s-1]
+                'CO2': atm. CO2 mixing ratio [ppm]
+                'P': pressure [Pa]
             Rew - relative extractable water [-], scalar or matrix
             beta - term for soil evaporation resistance (Wliq/FC) [-]
         Returns:
             fluxes (dict):
             state (dict):
         """
+
         Ta = forcing['Tair']
         Prec = forcing['Prec']
         Rg = forcing['Rg']
         Par = forcing['Par']
         VPD = forcing['vpd']
-        if 'U' in forcing: 
-            U = forcing['U']
-        else:
-            U = 2.0
-        if 'P' in forcing:
-            P = forcing['P']
-        else:
-            P = 101300.0
-        if 'CO2' in forcing:
-            CO2 = forcing['CO2']
-        else:
-            CO2 = 380.0
+        U = forcing['U']
+        P = forcing['P']
+        CO2 = forcing['CO2']
 
         """ --- radiation --- """
-        # Rn = 0.7 * Rg #net radiation
-        Rn = np.maximum(2.57 * self.LAI / (2.57 * self.LAI + 0.57) - 0.2,
-                        0.55) * Rg  # Launiainen et al. 2016 GCB, fit to Fig 2a
-        # fraction of Rn at ground
-        tau = np.exp(-self.kp*self.LAI)
+        # estimate net radiation based on global radiation [W/m2]
+        # Launiainen et al. 2016 GCB, fit to Fig 2a
+        Rn = np.maximum(2.57 * self.LAI / (2.57 * self.LAI + 0.57) - 0.2, 0.55) * Rg
+        # Rnet available at canopy and ground [W/m2]
+        Rnet_c, Rnet_gr = self.Radi_Model.layerwise_Rnet(
+                LAI=self.LAI,
+                Rnet=Rn)
 
         """ --- aerodynamic conductances --- """
         ra, rb, ras, ustar, Uh, Ug = self.Aero_Model._run(
@@ -201,7 +193,7 @@ class CanopyModel():
                 cf=self.cf,
                 T=Ta,
                 Prec=Prec,
-                AE=(1. - tau) * Rn,
+                AE=Rnet_c,
                 VPD=VPD,
                 Ra=ra,
                 U=Uh)
@@ -219,7 +211,7 @@ class CanopyModel():
                 LAI=self.LAI,
                 gsref=self.gsref,
                 T=Ta,
-                AE=(1. - tau) * Rn,
+                AE=Rnet_c,
                 Qp=Par,
                 VPD=VPD,
                 Ra=ra,
@@ -232,7 +224,7 @@ class CanopyModel():
             Efloor = self.ForestFloor._run(
                     dt=dt,
                     T=Ta,
-                    AE=tau * Rn,
+                    AE=Rnet_gr,
                     VPD=VPD,
                     Ra=ras,
                     beta=beta)

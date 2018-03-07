@@ -9,7 +9,9 @@ from parameter_utils import lad_profiles
 cpara = {}
 
 # --- control flags ---
-ctr = {'multilayer_model': False,  # compute in multilayer mode
+ctr = {'multilayer_model': {'ON': False,  # compute in multilayer mode
+                            # In case ON:
+                            'Eflow': True},
        'seasonal_LAI': True,  # account for seasonal LAI dynamics
        'pheno_cylcle': True  # account for phenological cycle
        }
@@ -25,6 +27,10 @@ aero = {'w': 0.01,  # leaf length scale [m]
         'zg': 0.5,  # height above ground where Ug is computed [m]
         'zos': 0.01  # forest floor roughness length [m]
         }
+
+# --- radiation ---
+radi = {'clump': 0.7,
+        'kd': 0.78}
 
 # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
 interc_snow = {'wmax': 0.0005,  # maximum interception storage capacity for rain [m per unit of LAI]
@@ -102,7 +108,7 @@ decid.update({'name': 'decid', 'LAImax': [1.0]})
 shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
 shrubs['laip'].update({'lai_min': 0.5})
 
-if ctr['multilayer_model'] is False:
+if ctr['multilayer_model']['ON'] is False:
     """parameters for simple (not multilayer) model"""
     # --- physiology for calculation of transpiration and Efloor---
     phys_para = {'ga': 40.0,  # [m s-1]          MISSÄ KÄYTETÄÄN?
@@ -111,7 +117,8 @@ if ctr['multilayer_model'] is False:
                  'f': 0.8,  # fraction of local Rnet available for evaporation at ground [-]
                  'rw': 0.20,  # transpiration moisture response parameter
                  'rwmin': 0.02}  # transpiration moisture response parameter
-    pine['gsref'] = 1.6e-6  # [m s-1]
+    # the light-saturated leaf-level stomatal conductances at vpd = 1 kPa [m s-1]
+    pine['gsref'] = 1.6e-6
     spruce['gsref'] = 1.6e-6
     decid['gsref'] = 2.6e-6
     # --- parameters describing canopy ---
@@ -128,7 +135,7 @@ else:
             'Nlayers': 200  # number of layers in grid [-]
             }
     # normed leaf area density profiles
-    dbhfile = "hyde_runkolukusarjat.txt"  # filepath to dbhfile (pine, spruce, decid)
+    dbhfile = "parameters\hyde_runkolukusarjat.txt"  # filepath to dbhfile (pine, spruce, decid)
     quantiles = [1.0]  # quantiles used in creating species stand lad profiles
     hs = 0.5  # height of understory shrubs [m]
     pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'] = lad_profiles(
@@ -153,7 +160,7 @@ else:
                                      'Jmax': [42.8, 200.0, 637.0]})
     plant_types = [pine, spruce, decid, shrubs]
 
-cpara.update({'ctr': ctr, 'loc': loc, 'aero': aero,
+cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero,
               'interc_snow': interc_snow, 'plant_types': plant_types})
 
 #        for computing aerodynamic resistances  -- yksiköt?
