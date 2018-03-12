@@ -54,6 +54,7 @@ def read_forcing(forc_filename, start_time, end_time, MLM=False, loc=None, cols=
         else:  # read inputs needed by multilayer canopy description
             cols = ['Prec',  # Precipitation [mm/dt]
                     'Tair',  # Air temperature [degC]
+                    'RH',  # Relative humidity [%]  (to compute VPD)
                     'P',  # Athmospheric pressure [kPa]
                     'U',  # Wind speed 10 min avg. [m/s]
                     'Ustar',  # friction velocity [m/s]
@@ -108,7 +109,7 @@ def edit_forcing(Forc, MLM, loc):
     jday = Forc.index.dayofyear + Forc.index.hour / 24.0 + Forc.index.minute / 1440.0
 
     # zenith angle
-    Forc.loc[:,'zen'], _, _, _, _, _ = solar_angles(loc['lat'], loc['lon'], jday, timezone=+2.0)
+    Forc.loc[:,'Zen'], _, _, _, _, _ = solar_angles(loc['lat'], loc['lon'], jday, timezone=+2.0)
 
     # default values for P, CO2, and U if not in inputs
     if 'P' not in Forc:  Forc.loc[:,'P'] = 101.3  # [kPa]
@@ -124,12 +125,14 @@ def edit_forcing(Forc, MLM, loc):
     # daily temperature
     Forc.loc[:,'Tdaily'] = pd.rolling_mean(Forc['Tair'], int((24*3600)/dt), 1)
 
+    # vapor pressure deficit [kPa]
+    esat, _, _ = e_sat(Forc.loc[:,'Tair'],Forc.loc[:,'P'])  # [Pa]
+    Forc.loc[:,'vpd'] = (1 - Forc.loc[:,'RH'] / 100.0) * esat * 1e-3  # [kPa]
+
     if MLM is False:
         # estimate Par [Wm-2] if not in inputs
         if 'Par' not in Forc: Forc.loc[:,'Par'] = 0.5 * Forc.loc[:,'Rg']
-        # vapor pressure deficit [kPa]
-        esat, _, _ = e_sat(Forc.loc[:,'Tair'],Forc.loc[:,'P'])  # [Pa]
-        Forc.loc[:,'vpd'] = (1 - Forc.loc[:,'RH'] / 100.0) * esat * 1e-3  # [kPa]
+
     else:
         # H2O mixing ratio [ppth] -> [mol/mol]
         Forc.loc[:,'H2O'] = 1e-3 * Forc.loc[:,'H2O']

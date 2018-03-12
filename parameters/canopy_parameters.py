@@ -8,10 +8,13 @@ from parameter_utils import lad_profiles
 # initialize dictionary to store parameters
 cpara = {}
 
-# --- control flags ---
-ctr = {'multilayer_model': {'ON': False,  # compute in multilayer mode
+# --- control flags (True/False) ---
+ctr = {'multilayer_model': {'ON': True,  # compute in multilayer mode
                             # In case ON:
-                            'Eflow': True},
+                            'Eflow': True,  # ensemble flow
+                            'WMA': True,  # well-mixed assumption
+                            'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
+                            'Ebal': False},  # computes leaf temperature by solving energy balance (not supported yet)
        'seasonal_LAI': True,  # account for seasonal LAI dynamics
        'pheno_cylcle': True  # account for phenological cycle
        }
@@ -25,12 +28,23 @@ loc = {'lat': 61.4,  # latitude
 aero = {'w': 0.01,  # leaf length scale [m]
         'zmeas': 2.0,  # wind speed measurement height above canopy [m]
         'zg': 0.5,  # height above ground where Ug is computed [m]
-        'zos': 0.01  # forest floor roughness length [m]
+        'zos': 0.01,  # forest floor roughness length [m]
+        # multilayer model (1rst order canopy closure model)
+        'dPdx': 0.01,  # horizontal pressure gradient
+        'Cd': 0.15,  # drag coefficient
+        'Utop': 5.0,  # ensemble U/ustar
+        'Ubot': 0.0,  # lower boundary
+        'Sc': {'T': 2.0, 'H2O': 2.0, 'CO2': 2.0}  # Schmidt numbers
         }
 
 # --- radiation ---
-radi = {'clump': 0.7,
-        'kd': 0.78}
+radi = {'clump': 0.7,  # clumping index [-]
+        'kd': 0.78,
+        # additional parameters necessary for multilayer model
+        'leaf_angle': 1.0,  # leaf-angle distribution [-]
+        'Par_alb': 0.12,  # shoot Par-albedo [-]
+        'soil_Par_alb': 0.05  # soil (moss) Par-albedo [-]
+        }
 
 # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
 interc_snow = {'wmax': 0.0005,  # maximum interception storage capacity for rain [m per unit of LAI]
@@ -42,7 +56,8 @@ interc_snow = {'wmax': 0.0005,  # maximum interception storage capacity for rain
                'Tmax': 1.0,  # temperature above which all is water [degC]
                'Tmelt': 0.0,  # temperature when melting starts [degC]
                'w_ini': 0.0,  # initial canopy storage [m]
-               'swe_ini': 0.0  # initial snow water equivalent [m]
+               'swe_ini': 0.0,  # initial snow water equivalent [m]
+               'cf': 0.6  # canopy closure [-]
                }
 
 # --- default values for plant characteristics ---
@@ -108,13 +123,16 @@ decid.update({'name': 'decid', 'LAImax': [1.0]})
 shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
 shrubs['laip'].update({'lai_min': 0.5})
 
+# --- forest floor ---
+ffloor = {'f': 0.8,  # fraction of local Rnet available for evaporation at ground [-]
+          'soilrp': 300.0}  # ???
+
 if ctr['multilayer_model']['ON'] is False:
     """parameters for simple (not multilayer) model"""
     # --- physiology for calculation of transpiration and Efloor---
     phys_para = {'ga': 40.0,  # [m s-1]          MISSÄ KÄYTETÄÄN?
                  'q50': 50.0,  # half-sat. of leaf light response [W m-2]
-                 'kp': 0.6,  # parameter to calculate fraction of Rnet at ground [-]
-                 'f': 0.8,  # fraction of local Rnet available for evaporation at ground [-]
+                 'kp': 0.6,  # attenuation coefficient for PAR [-]
                  'rw': 0.20,  # transpiration moisture response parameter
                  'rwmin': 0.02}  # transpiration moisture response parameter
     # the light-saturated leaf-level stomatal conductances at vpd = 1 kPa [m s-1]
@@ -122,8 +140,7 @@ if ctr['multilayer_model']['ON'] is False:
     spruce['gsref'] = 1.6e-6
     decid['gsref'] = 2.6e-6
     # --- parameters describing canopy ---
-    canopy_para = {'hc': 16.0,  # canopy height [m]
-                   'cf': 0.6}  # canopy closure [-]
+    canopy_para = {'hc': 16.0}  # canopy height [m]
     # add to parameter dictionary
     cpara.update({'phys_para': phys_para, 'canopy_para': canopy_para})
     # plant types to list
@@ -132,7 +149,7 @@ else:
     """parameters for multilayer model"""
     # grid
     grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
-            'Nlayers': 200  # number of layers in grid [-]
+            'Nlayers': 100  # number of layers in grid [-]
             }
     # normed leaf area density profiles
     dbhfile = "parameters\hyde_runkolukusarjat.txt"  # filepath to dbhfile (pine, spruce, decid)
@@ -160,8 +177,8 @@ else:
                                      'Jmax': [42.8, 200.0, 637.0]})
     plant_types = [pine, spruce, decid, shrubs]
 
-cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero,
-              'interc_snow': interc_snow, 'plant_types': plant_types})
+cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero, 'grid': grid,
+              'interc_snow': interc_snow, 'plant_types': plant_types, 'ffloor': ffloor})
 
 #        for computing aerodynamic resistances  -- yksiköt?
 #        self.zmeas = 2.0

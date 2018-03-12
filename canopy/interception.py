@@ -38,11 +38,13 @@ class Interception():
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
         self.Tmelt = p['Tmelt']
+        # canopy closure [-]
+        self.cf = p['cf']
 
         # state variables
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAI) # interception storage [m]
 
-    def _run(self, dt, LAI, cf, T, Prec, AE, VPD, Ra=25.0, U=2.0):
+    def _run(self, dt, LAI, T, Prec, AE, VPD, Ra=25.0, U=2.0):
         """
         Args:
             dt: timestep [s]
@@ -105,9 +107,9 @@ class Interception():
         # Hedstrom & Pomeroy 1998. Hydrol. Proc 12, 1611-1625;
         # Koivusalo & Kokkonen 2002 J.Hydrol. 262, 145-164.
         if T < self.Tmin:
-            Interc = (Wmaxsnow - W) * (1.0 - np.exp(-(cf / Wmaxsnow) * Prec))
+            Interc = (Wmaxsnow - W) * (1.0 - np.exp(-(self.cf / Wmaxsnow) * Prec))
         else:  # above Tmin, interception capacity equals that of liquid precip
-            Interc = np.maximum(0.0, (Wmax - W)) * (1.0 - np.exp(-(cf / Wmax) * Prec))
+            Interc = np.maximum(0.0, (Wmax - W)) * (1.0 - np.exp(-(self.cf / Wmax) * Prec))
         # update canopy storage [m]
         W = W + Interc
 
