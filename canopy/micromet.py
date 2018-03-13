@@ -145,7 +145,7 @@ class Aerodynamics():
                                      Ks=self.Km * self.Sc['H2O'],
                                      Source=source['H2O'],
                                      ubc=H2O[-1],
-                                     lbc=['H2O'],
+                                     lbc=lbc['H2O'],
                                      scalar='H2O',
                                      T=T[-1], P=P)
         # relative error
@@ -158,7 +158,7 @@ class Aerodynamics():
                                      Ks=self.Km * self.Sc['CO2'],
                                      Source=source['CO2'],
                                      ubc=CO2[-1],
-                                     lbc=['CO2'],
+                                     lbc=lbc['CO2'],
                                      scalar='CO2',
                                      T=T[-1], P=P)
         # relative error

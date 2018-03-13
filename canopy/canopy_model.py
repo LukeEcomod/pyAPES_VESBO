@@ -121,8 +121,8 @@ class CanopyModel():
         # --- initialize snow model ---
         self.Snow_Model = Snowpack(cpara['interc_snow'], self.Interc_Model.cf)
 
-        # --- forest floor (models for evaporation...)---
-        self.ForestFloor = ForestFloor(cpara['ffloor'])  ### --- soilrp to parameters?
+        # --- forest floor (incl. moss layer) ---
+        self.ForestFloor = ForestFloor(cpara['ffloor'], self.Switch_MLM)
 
     def _run_daily(self, doy, Ta, PsiL=0.0):
         """
@@ -271,7 +271,7 @@ class CanopyModel():
                 """ --- compute leaf gas-exchange at each layer and for each PlantType """
                 # here assume Tleaf = T
                 for pt in self.Ptypes:
-                    # --- sunlit leaves
+                    # --- sunlit and shaded leaves
                     pt_stats_i, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
                             f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1,
                             SWabs_sl=0.0, SWabs_sh=0.0, LWl=np.zeros(self.Nlayers)) # only used if Ebal=True
@@ -299,19 +299,27 @@ class CanopyModel():
                         Rew=Rew)
 
             """ --- forest floor --- """
+            # Water balance at forest floor (interception and evaporation of moss layer)
+            E_gr, Trfall_gr, MBE_moss = self.ForestFloor._run_waterbalance(
+                    dt=dt,
+                    Rn=Rnet_gr,
+                    Prec=PotInf*1e3,  # mm!!
+                    U=U[1],  # MIKSI [1]??
+                    T=T[1],
+                    H2O=H2O[1],
+                    P=P,
+                    SWE=self.Snow_Model.swe)
+            LE_gr = E_gr * L_MOLAR  # W m-2
+            # CO2 flux at forest floor
             if self.Switch_MLM:
-                E_gr, LE_gr, An_gr, R_gr, trfall_gr = 0.0, 0.0, 0.0, 0.0, 0.0
-                # CO2 flux at forest floor
-                Fc_gr = An_gr + R_gr
-            else:
-                Efloor = self.ForestFloor._run(
+                An_gr, R_gr = self.ForestFloor._run_CO2(
                         dt=dt,
-                        T=T[0],
-                        AE=Rnet_gr,
-                        VPD=VPD,
-                        Ra=ra[0],
-                        beta=beta,
+                        Par=Par_gr,
+                        T=T[1],
+                        Ts=forcing['Tsa'],
+                        Ws=forcing['Wa'],
                         SWE=self.Snow_Model.swe)
+                Fc_gr = An_gr + R_gr
 
             """  --- solve scalar profiles (H2O, CO2) """
             # we need to add here T-profile as well
@@ -340,8 +348,10 @@ class CanopyModel():
             GPP = - NEE + Reco
             # stand transpiration [m/dt]
             Tr = (LE[-1] - LE_gr) / L_MOLAR * MH2O * dt * 1e-3
-            # evaporation from moss layer [m/dt]
-            Efloor = E_gr * MH2O * dt * 1e-3   # on jo HIAHTUNUT? Ei haihduteta maasta..?
+
+        # evaporation from moss layer [m/dt]
+        Efloor = E_gr * MH2O * dt * 1e-3   # on jo HIAHTUNUT? Ei haihduteta maasta..?
+        PotInf = Trfall_gr * 1e-3  # m!!
 
         # return state and fluxes in dictionary
         state = {'SWE': self.Snow_Model.swe,
@@ -355,7 +365,8 @@ class CanopyModel():
                   'Transp': Tr,
                   'Efloor': Efloor,
                   'MBE_interc': MBE_interc,
-                  'MBE_snow': MBE_snow
+                  'MBE_snow': MBE_snow,
+                  'MBE_moss': MBE_moss
                   }
 
         return fluxes, state
@@ -520,29 +531,96 @@ class ForestFloor():
     """
     Forest floor
     """
-    def __init__(self, p):
+    def __init__(self, p, MLM):
 
-        from evapotranspiration import ForestFloor_Evap
+        from mosslayer import MossLayer
 
-        self.Evap = ForestFloor_Evap(p)
+        self.moss = MossLayer(p['mossp'])
 
-    def _run(self, dt, T, AE, VPD, Ra, beta, SWE):
+        if MLM:
+            self.R10 = p['soilp']['R10']
+            self.Q10 = p['soilp']['Q10']
+            self.poros = p['soilp']['poros']
+            self.limitpara = p['soilp']['limitpara']
+
+    def _run_waterbalance(self, dt, Rn, Prec, U, T, H2O, P, SWE):
         """
+        Moss layer interception and evaporation
         Args:
-            T: air temperature [degC]
-            AE: available energy at forest floor [W m-2]
-            VPD: vapor pressure deficit in [kPa]
-            Ra: soil aerodynamic resistance [s m-1]
-            beta: 
+            dt - timestep [s]
+            Rn - net radiation at forest floor
+            Prec - precipitation rate [mm s-1]
+            U - wind speed [m s-1]
+            T - air temperature [degC]
+            H2O - mixing ratio [mol mol-1]
+            P - ambient pressure [Pa]
         Returns:
-            Efloor: forest floor evaporation [m]
+            Evap - evaporation rate [mol m-2 s-1]
+            Trfall - trfall rate below moss layer [mm s-1]
         """
-        
+
         if SWE > 0:  # snow on the ground
-            Efloor = 0.0
+            Evap = 0.0
+            Trfall = Prec
+            MBE = 0.0
         else:
-            Efloor = self.Evap._run(dt, T, AE, VPD, Ra, beta)
+            Evap, Trfall, MBE = self.moss.waterbalance(dt, Rn, Prec, U, T, H2O, P=P)
+            Evap = Evap / MH2O  # mol m-2 s-1
 
-        # Interception?
+        return Evap, Trfall, MBE
 
-        return Efloor
+    def _run_CO2(self, dt, Par, T, Ts, Ws, SWE):
+        """
+        run forest floor model for one timestep
+        Args:
+            dt - timestep [s]
+            Par - incident Par [umolm-2s-1]
+            T - air temperture [degC]
+            Ts - soil temperature [degC]
+            Ws - soil vol. moisture [m3m-3]
+            SWE - snow water equivalent, >0 sets E and An to zero
+        Returns:
+            An - moss net CO2 exchange [umolm-2s-1]
+            Rsoil - soil respiration rate [umolm-2s-1]
+        """
+        # moss CO2 exchange when not covered by snow
+        if SWE > 0:
+            An = 0.0
+        else:
+            An = self.moss.co2_exchange(Par, T)
+
+        # soil respiration
+        Rsoil, fm = self.soil_respiration(Ts, Ws)
+
+        return An, Rsoil
+
+    def soil_respiration(self, Ts, Wliq):
+        """
+        computes heterotrophic respiration rate (CO2-flux) based on
+        Pumpanen et al. (2003) Soil.Sci.Soc.Am
+        Restricts respiration by soil moisuture as in
+        Skopp et al. (1990), Soil.Sci.Soc.Am
+        Args:
+            Ts - soil temperature [degC]
+            Wliq - soil vol. moisture content [m3m-3]
+        Returns:
+            rsoil - soil respiration rate [umolm-2s-1]
+            fm - relative modifier (Skopp et al.)
+        """
+        # Skopp limitparam [a,b,d,g] for two soil types
+        # sp = {'Yolo':[3.83, 4.43, 1.25, 0.854], 'Valentine': [1.65,6.15,0.385,1.03]}
+        Wliq = np.minimum(self.poros, Wliq)        
+        afp = self.poros - Wliq +eps # air filled porosity
+
+        p = self.limitpara
+
+        # unrestricted respiration rate
+        rs0 = self.R10 * np.power(self.Q10, (Ts - 10.0) / 10.0)
+
+        # moisture response (substrate diffusion, oxygen limitation)
+        fm = np.minimum(p[0]*Wliq**p[2], p[1]*afp**p[3])  # ]0...1]
+        fm = np.minimum(fm, 1.0)
+        # fm = 1.0
+        rsoil = rs0 * fm
+
+        return rsoil, fm

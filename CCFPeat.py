@@ -63,7 +63,9 @@ res = {
     'LAI': [],
     'Mbe_interc': [],
     'Mbe_snow': [],
+    'Mbe_moss': [],
     'Phenof': [],
+    'Soil_Wsto': []
     }
 
 """ RUN MODELS """
@@ -75,7 +77,7 @@ for k in range(0, len(Forc)):
     Rew = 1.0  # np.minimum((smodel.Wliq - smodel.Wp) / (smodel.Fc - smodel.Wp + eps), 1.0)???
     beta = 1.0  # smodel.Wliq / smodel.poros??
 
-    """ Canopy and Snow """
+    """ Canopy, moss and Snow """
     # run daily loop (phenology and seasonal LAI)
     if Forc['doy'].iloc[k] != Forc['doy'].iloc[k-1]:
         cmodel._run_daily(Forc['doy'].iloc[k], Forc['Tdaily'].iloc[k])
@@ -85,9 +87,9 @@ for k in range(0, len(Forc)):
                                             beta=beta,
                                             Rew=Rew)
 
-    """ Water and Heat """
+    """ Water and Heat in soil """
     # potential infiltration and evaporation from ground surface
-    ubc_w = {'Prec': cm_flx['PotInf'] / dt0, 'Evap': cm_flx['Efloor'] / dt0}
+    ubc_w = {'Prec': cm_flx['PotInf'] / dt0, 'Evap': 0.0}  # cm_flx['Efloor'] / dt0}
     # transpiration sink
     rootsink = np.zeros(smodel.Nlayers)
     rootsink[0] = cm_flx['Transp'] / dt0 / smodel.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
@@ -108,8 +110,10 @@ for k in range(0, len(Forc)):
     res['LAI'].append(cm_state['LAI'])
     res['Mbe_interc'].append(cm_flx['MBE_interc'])
     res['Mbe_snow'].append(cm_flx['MBE_snow'])
+    res['Mbe_moss'].append(cm_flx['MBE_moss'])
     res['gwl'].append(sm_state['ground_water_level'])
     res['h_pond'].append(sm_state['pond_storage'])
+    res['Soil_Wsto'].append(sm_state['column_water_content'])
     res['Infil'].append(sm_flx['infiltration'])
     res['Efloorw'].append(sm_flx['evaporation'])
     res['Transw'].append(sm_flx['transpiration'])

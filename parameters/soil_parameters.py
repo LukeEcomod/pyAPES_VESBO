@@ -81,7 +81,7 @@ spara = {
         'fp': -np.ones(len(zh)),                 # (float/array): freezing curve parameter
         'max_pond': 0.0,           # (float) maximum pond depth [m]
         'ini_cond': {               # (dict): inputs are floats or arrays of len(z)
-                'gwl': -0.1,        # (float) [m] or (float/array) Wtot', vol. water content [-] or 'h', matrix water potential [m]
+                'gwl': -0.2,        # (float) [m] or (float/array) Wtot', vol. water content [-] or 'h', matrix water potential [m]
                 'T': -1.0,          # soil temperature [degC]
                 'pond': 0.0
                 },                  # [m] initial pond depth at surface

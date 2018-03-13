@@ -12,7 +12,7 @@ cpara = {}
 ctr = {'multilayer_model': {'ON': True,  # compute in multilayer mode
                             # In case ON:
                             'Eflow': True,  # ensemble flow
-                            'WMA': True,  # well-mixed assumption
+                            'WMA': False,  # well-mixed assumption
                             'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
                             'Ebal': False},  # computes leaf temperature by solving energy balance (not supported yet)
        'seasonal_LAI': True,  # account for seasonal LAI dynamics
@@ -124,8 +124,24 @@ shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
 shrubs['laip'].update({'lai_min': 0.5})
 
 # --- forest floor ---
-ffloor = {'f': 0.8,  # fraction of local Rnet available for evaporation at ground [-]
-          'soilrp': 300.0}  # ???
+mossp = {'Wmax': 20.0,  # 
+         'Wmin': 1.5,  # 
+         'zr': 0.01,  # roughness height [m]
+         'Mdry': 0.060,  # 
+         # --- parameters to compute moss co2 exchange (only in MLM) ---
+         'LAI': 1.0,  # leaf area index [m2m-2]
+         'Amax': 1.8,  # max photo rate [umolm-2s-1]
+         'Q10': 2.0,  # temperature sensitivity [-]
+         'R10': 0.03,  # base respiration at 10degC [umolm-2s-1]
+         'qeff': 0.015  # 
+         }
+soilp = {# --- parameters to compute soil respiration (only in MLM) ---
+        'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
+        'Q10': 2.0,  # temperature sensitivity [-]
+        'poros': 0.4,  # porosity [m3m-3]    ----> vesimallista?
+        'limitpara': [3.83, 4.43, 1.25, 0.854]  #Skopp respiration function param [a ,b, d, g]
+        }
+ffloor = {'mossp': mossp, 'soilp': soilp}
 
 if ctr['multilayer_model']['ON'] is False:
     """parameters for simple (not multilayer) model"""

@@ -96,40 +96,6 @@ class Canopy_Transpiration():
 
         return Tr
 
-class ForestFloor_Evap():
-    def __init__(self, p):
-        """
-        Args:
-            p parameter dict
-                'soilrp':
-                'f': fraction of local Rnet available for evaporation at ground [-]
-        Returns:
-            ForestFloor_Evap instance
-        """
-        self.soilrp = p['soilrp']
-        self.f = p['f']
-
-    def _run(self, dt, T, AE, VPD, Ra, beta):
-        """
-        Computes forest floor evaporation
-        Args:
-            T: air temperature [degC]
-            AE: available energy at forest floor [W m-2]
-            VPD: vapor pressure deficit in [kPa]
-            Ra: soil aerodynamic resistance [s m-1]
-            beta: 
-        Returns:
-            Efloor: forest floor evaporation [m]
-        """
-        # soil conductance is function of relative water availability
-        gcs = 1.0 / self.soilrp * beta**2.0
-        # forest floor evaporation [m]
-        Efloor = penman_monteith(self.f * AE, 1e3*VPD, T, gcs, 1./Ra, units='m') * dt
-
-        return Efloor
-
-
-
 def penman_monteith(AE, D, T, Gs, Ga, P=101300.0, units='W', type='evaporation'):
     """
     Computes latent heat flux LE (W m-2) i.e evapotranspiration rate ET (m s-1)
