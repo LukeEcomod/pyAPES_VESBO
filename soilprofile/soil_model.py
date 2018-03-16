@@ -350,10 +350,10 @@ class SoilModel():
             fluxes.update({'infiltration': infil,
                            'evaporation': evapo,
                            'transpiration': trans,
-                           'drainage': drainage,
-                           'runoff': roff, 
+                           'subsurface_drainage': drainage,
+                           'surface_runoff': roff, 
                            'vertical_water_flux': fliq,
-                           'water_closure': mbe
+                           'MBE': mbe
                           })
         else:
             self.gwl = self.para['ground_water_level']
@@ -379,7 +379,7 @@ class SoilModel():
         # return state in dictionary
         state = {"water_potential": self.h,
                  "volumetric_water_content": self.Wliq,
-                 "column_water_content": sum(self.Wliq*self.dz),
+                 "column_water_storage": sum(self.Wliq*self.dz),
                  "ice_content": self.Wice,
                  "pond_storage": self.pond,
                  "ground_water_level": self.gwl,

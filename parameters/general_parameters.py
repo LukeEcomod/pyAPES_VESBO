@@ -7,7 +7,37 @@ gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
         'end_time' : "2010-12-31",  # end time of simulation [yyyy-mm-dd]
-        'forc_filename' : "Hyde_2010_2016.csv"  #"FMI_jokioinen.csv"  ## forcing data file*
+        'forc_filename' : "Hyde_2010_2016.csv",  #"FMI_jokioinen.csv"  ## forcing data file*
+        'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
+                      ['forcing_precipitation', 'precipitation [mm s-1]', ('date', 'simulation')],
+                      ['forcing_h2o','H2O concentration [mol mol-1]', ('date', 'simulation')],
+                      ['forcing_co2','CO2 concentration [ppm]', ('date', 'simulation')],
+                      ['forcing_wind_speed','wind speed [m s-1]', ('date', 'simulation')],
+                      ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
+                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
+                      ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
+                      ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
+                      ['canopy_interception', 'canopy interception [m]', ('date', 'simulation')],
+                      ['canopy_evaporation', 'evaporation from interception storage [m]', ('date', 'simulation')],
+                      ['canopy_transpiration','transpiration [m]', ('date', 'simulation')],
+                      ['canopy_throughfall', 'throughfall to moss or snow [m]', ('date', 'simulation')],
+                      ['canopy_potential_infiltration', 'potential infiltration to soil [m]', ('date', 'simulation')],
+                      ['canopy_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
+                      ['canopy_moss_evaporation', 'evaporation from moss layer [m]', ('date', 'simulation')],
+                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
+                      ['soil_pond_storage', 'pond storage [m]', ('date', 'simulation')],
+                      ['soil_ground_water_level', 'ground water level [m]', ('date', 'simulation')],
+                      ['soil_infiltration', 'infiltration [m]', ('date', 'simulation')],
+                      ['soil_surface_runoff', 'surface runoff [m]', ('date', 'simulation')],
+                      ['soil_evaporation', 'evaporation from soil surface [m]', ('date', 'simulation')],
+                      ['soil_subsurface_drainage', 'subsurface drainage [m]', ('date', 'simulation')],
+                      ['canopy_MBE1', 'interception model mass balance error [m]', ('date', 'simulation')],
+                      ['canopy_MBE2', 'snow model mass balance error [m]', ('date', 'simulation')],
+                      ['canopy_MBE3', 'moss model mass balance error [m]', ('date', 'simulation')],
+                      ['soil_MBE', 'soil mass balance error [m]', ('date', 'simulation')],
+                      ['canopy_z', 'canopy model grid node elevations [m]', ('simulation', 'canopy')],
+                      ['soil_z', 'soil model grid node elevations [m]', ('simulation', 'soil')]
+                      ]
         }
 
 

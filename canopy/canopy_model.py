@@ -354,20 +354,32 @@ class CanopyModel():
         PotInf = Trfall_gr * 1e-3  # m!!
 
         # return state and fluxes in dictionary
-        state = {'SWE': self.Snow_Model.swe,
+        state = {'snow_water_equivalent': self.Snow_Model.swe,
                  'LAI': self.LAI,
                  'Phenof': self.pheno_state
                  }
-        fluxes = {'PotInf': PotInf,
-                  'Trfall': Trfall_rain + Trfall_snow,
-                  'Interc': Interc,
-                  'CanEvap': Evap,
-                  'Transp': Tr,
-                  'Efloor': Efloor,
-                  'MBE_interc': MBE_interc,
-                  'MBE_snow': MBE_snow,
-                  'MBE_moss': MBE_moss
+        fluxes = {'potential_infiltration': PotInf,
+                  'throughfall': Trfall_rain + Trfall_snow,
+                  'interception': Interc,
+                  'evaporation': Evap,
+                  'transpiration': Tr,
+                  'moss_evaporation': Efloor,
+                  'MBE1': MBE_interc,
+                  'MBE2': MBE_snow,
+                  'MBE3': MBE_moss
                   }
+        if self.Switch_MLM:
+            fluxes.update({'NEE': NEE,
+                           'GPP': GPP,
+                           'Reco': Reco,
+                           'Rsoil': R_gr,
+                           'LE': LE[-1],
+                           'LEgr': LE_gr,
+                           'GPPgr': -An_gr})
+            state.update({'wind_speed': U})
+            if self.Switch_WMA is False:
+                state.update({'h2o': H2O,
+                              'co2': CO2})
 
         return fluxes, state
 

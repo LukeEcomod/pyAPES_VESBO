@@ -16,14 +16,14 @@ class MossLayer():
         """
         Moss layer interception, evaporation and CO2 exchange model
         """
-        self.LAI = para['LAI']                  # leaf area index
-        self.Amax = para['Amax']                # max photo rate [umolm-2s-1]
-        self.b = self.Amax / (2.0 * para['qeff']) # half-saturation par
-        self.R10 = para['R10']                  # base respiration at 10degC
-        self.Q10 = para['Q10']                  # temperature sensitivity [-]
+        self.LAI = para['LAI']  # leaf area index
+        self.Amax = para['Amax']  # max photo rate [umolm-2s-1]
+        self.b = self.Amax / (2.0 * para['qeff'])  # half-saturation par
+        self.R10 = para['R10']  # base respiration at 10degC
+        self.Q10 = para['Q10']  # temperature sensitivity [-]
         
-        self.zr = para['zr']                    # roughness height m
-        self.Mdry = para['Mdry']        
+        self.zr = para['zr']  # roughness height m
+        self.Mdry = para['Mdry']
         self.Wmax = para['Mdry']*para['Wmax']
         self.Wmin = para['Mdry']*para['Wmin']
 

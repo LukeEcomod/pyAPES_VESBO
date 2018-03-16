@@ -6,3 +6,9 @@ ipython_config.py
 # Build -files
 *.pyc
 *.pyo
+
+# Results directory
+./results/
+
+# Testing
+sandbox*.py
