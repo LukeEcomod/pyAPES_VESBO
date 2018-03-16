@@ -7,8 +7,9 @@ ipython_config.py
 *.pyc
 *.pyo
 
-# Results directory
-./results/
+# Directories
+results/
+old_codes/
 
 # Testing
 sandbox*.py
