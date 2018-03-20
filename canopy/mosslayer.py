@@ -34,7 +34,7 @@ class MossLayer():
         Moss layer interception, evaporation and water balance.
         Args:
             dt - timestep [s]
-            Prec - precipitation rate [mm]
+            Prec - precipitation [mm]
             U - wind speed [m s-1]
             T - air temperature [degC]
             H2O - mixing ratio [mol mol-1]
@@ -45,7 +45,7 @@ class MossLayer():
             updates self.W
         """
         # VPD at air temperature; neglect condensation conditions
-        es, _, _ = e_sat(T, P)
+        es, _, _ = e_sat(T)
         D = np.maximum(0.0, es / P - H2O)  # mol / mol
 
         # initial water content

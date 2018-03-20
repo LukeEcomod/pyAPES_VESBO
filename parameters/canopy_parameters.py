@@ -155,18 +155,20 @@ if ctr['multilayer_model']['ON'] is False:
     pine['gsref'] = 1.6e-6
     spruce['gsref'] = 1.6e-6
     decid['gsref'] = 2.6e-6
+    shrubs['gsref'] = 2.6e-6
     # --- parameters describing canopy ---
     canopy_para = {'hc': 16.0}  # canopy height [m]
     # add to parameter dictionary
     cpara.update({'phys_para': phys_para, 'canopy_para': canopy_para})
     # plant types to list
-    plant_types = [pine, spruce, decid]  # shrubs?? hs?
+    plant_types = [pine, spruce, decid, shrubs]  # shrubs?? hs?
 else:
     """parameters for multilayer model"""
     # grid
     grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
             'Nlayers': 100  # number of layers in grid [-]
             }
+    cpara.update({'grid': grid})
     # normed leaf area density profiles
     dbhfile = "parameters\hyde_runkolukusarjat.txt"  # filepath to dbhfile (pine, spruce, decid)
     quantiles = [1.0]  # quantiles used in creating species stand lad profiles
@@ -193,7 +195,7 @@ else:
                                      'Jmax': [42.8, 200.0, 637.0]})
     plant_types = [pine, spruce, decid, shrubs]
 
-cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero, 'grid': grid,
+cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero,
               'interc_snow': interc_snow, 'plant_types': plant_types, 'ffloor': ffloor})
 
 #        for computing aerodynamic resistances  -- yksiköt?

@@ -351,7 +351,8 @@ class SoilModel():
                            'evaporation': evapo,
                            'transpiration': trans,
                            'subsurface_drainage': drainage,
-                           'surface_runoff': roff, 
+                           'surface_runoff': roff,
+                           'total_runoff': drainage + roff,
                            'vertical_water_flux': fliq,
                            'MBE': mbe
                           })

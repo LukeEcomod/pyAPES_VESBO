@@ -176,7 +176,7 @@ class CanopyModel():
 
         T = np.array([forcing['Tair']])
         U = np.array([forcing['U']])
-        VPD = np.array([forcing['vpd']])  # in multilayer model from H2O somehow?
+        H2O = np.array([forcing['H2O']])  # in multilayer model from H2O somehow?
         CO2 = np.array([forcing['CO2']])
         P = forcing['P']
 
@@ -227,7 +227,8 @@ class CanopyModel():
                 T=T[-1],
                 Prec=forcing['Prec'],
                 AE=Rnet_c,
-                VPD=VPD,
+                H2O=H2O[-1],
+                P=P,
                 Ra=ra[-1],
                 U=U[-1])
 
@@ -292,7 +293,8 @@ class CanopyModel():
                         T=T[-1],
                         AE=Rnet_c,
                         Qp=forcing['Par'],
-                        VPD=VPD,
+                        H2O=H2O[-1],
+                        P=P,
                         Ra=ra[-1],
                         CO2=CO2[-1],
                         fPheno=self.pheno_state,
@@ -304,9 +306,9 @@ class CanopyModel():
                     dt=dt,
                     Rn=Rnet_gr,
                     Prec=PotInf*1e3,  # mm!!
-                    U=U[1],  # MIKSI [1]??
-                    T=T[1],
-                    H2O=H2O[1],
+                    U=U[0],  # MIKSI oli [1]??
+                    T=T[0],
+                    H2O=H2O[0],
                     P=P,
                     SWE=self.Snow_Model.swe)
             LE_gr = E_gr * L_MOLAR  # W m-2
@@ -356,7 +358,7 @@ class CanopyModel():
         # return state and fluxes in dictionary
         state = {'snow_water_equivalent': self.Snow_Model.swe,
                  'LAI': self.LAI,
-                 'Phenof': self.pheno_state
+                 'phenostate': self.pheno_state
                  }
         fluxes = {'potential_infiltration': PotInf,
                   'throughfall': Trfall_rain + Trfall_snow,
@@ -364,6 +366,9 @@ class CanopyModel():
                   'evaporation': Evap,
                   'transpiration': Tr,
                   'moss_evaporation': Efloor,
+                  'Rnet': Rn,
+                  'Rnet_ground': Rnet_gr,
+                  'U_ground': U[0],
                   'MBE1': MBE_interc,
                   'MBE2': MBE_snow,
                   'MBE3': MBE_moss
@@ -402,6 +407,7 @@ class PlantType():
 
         from phenology import Photo_cycle, LAI_cycle
 
+        self.Switch_MLM = MLM_ctr['ON']
         self.Switch_pheno = Switch_pheno  # include phenology
         self.Switch_lai = Switch_lai  # seasonal LAI
         self.Switch_WaterStress = Switch_WaterStress  # water stress affects stomata
@@ -427,7 +433,7 @@ class PlantType():
         self.lad_normed = p['lad']  # normalized leaf-area density [m-1]
         self.lad = self.LAI * self.lad_normed  # current leaf-area density [m2m-3]
 
-        if MLM_ctr['ON']:
+        if self.Switch_MLM:
             self.dz = z[1] - z[0]
             # plant height [m]
             f = np.where(self.lad_normed > 0)[0][-1]
@@ -461,20 +467,19 @@ class PlantType():
             self.relative_LAI =self.LAI_Model._run(doy, T, out=True)
             self.LAI = self.relative_LAI * self.LAImax
             self.lad = self.lad_normed * self.LAI
-        """
-        # scale photosynthetic capacity using vertical N gradient
-        f = 1.0
-        if 'kn' in self.photop0:
-            kn = self.photop0['kn']
-            Lc = np.flipud(np.cumsum(np.flipud(self.lad*self.dz)))
-            Lc = Lc / Lc[0]
-            f = np.exp(-kn*Lc)
-            # print f
-            # plt.plot(f, z, 'k', Lc, z, 'g-')
-        # preserve proportionality of Jmax and Rd to Vcmax
-        self.photop['Vcmax'] = f * self.pheno_state * self.photop0['Vcmax']
-        self.photop['Jmax'] =  f * self.pheno_state * self.photop0['Jmax']
-        self.photop['Rd'] =  f * self.pheno_state * self.photop0['Rd']
+
+        if self.Switch_MLM:
+            # scale photosynthetic capacity using vertical N gradient
+            f = 1.0
+            if 'kn' in self.photop0:
+                kn = self.photop0['kn']
+                Lc = np.flipud(np.cumsum(np.flipud(self.lad*self.dz)))
+                Lc = Lc / Lc[0]
+                f = np.exp(-kn*Lc)
+            # preserve proportionality of Jmax and Rd to Vcmax
+            self.photop['Vcmax'] = f * self.pheno_state * self.photop0['Vcmax']
+            self.photop['Jmax'] =  f * self.pheno_state * self.photop0['Jmax']
+            self.photop['Rd'] =  f * self.pheno_state * self.photop0['Rd']
 
         if self.Switch_WaterStress:
             b = self.photop0['drp']
@@ -483,7 +488,6 @@ class PlantType():
                 self.photop['La'] = self.photop0['La'] * np.exp(-b*PsiL)
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
-        """
 
     def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl):
         """

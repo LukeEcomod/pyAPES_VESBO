@@ -42,7 +42,7 @@ class Canopy_Transpiration():
         self.rw = p['rw']
         self.rwmin = p['rwmin']
 
-    def _run(self, dt, LAI, gsref, T, AE, Qp, VPD, Ra, CO2, fPheno, Rew):
+    def _run(self, dt, LAI, gsref, T, AE, Qp, H2O, P, Ra, CO2, fPheno, Rew):
         """
         Computes ET from 2-layer canopy in absense of intercepted preciptiation,
         i.e. in dry-canopy conditions
@@ -52,7 +52,8 @@ class Canopy_Transpiration():
            LAI: canopy leaf area index [m2/m2]
            gsref: canopy ...
            T: air temperature [degC]
-           VPD: vapor pressure deficit in [kPa]
+           H2O: mixing ratio [mol/mol]
+           P: ambient pressure [Pa]
            AE: available energy at canopy heigth [W m-2]
            Qp: PAR in [Wm-2]
            Ra: canopy aerodynamic resistance [s m-1]
@@ -75,12 +76,16 @@ class Canopy_Transpiration():
         Last edit: 12 / 2017
         """
 
+    # vapor pressure deficit [Pa]
+        esat, _, _ = e_sat(T)  # [Pa]
+        VPD = max(0.0, esat - H2O * P)
+
         """--- canopy conductance Gc (integrated stomatal conductance)----- """
         # fQ: Saugier & Katerji, 1991 Agric. For. Met., eq. 4. Leaf light response = Qp / (Qp + q50)
         fQ = 1.0 / self.kp * np.log((self.kp * Qp + self.q50) / (self.kp \
               * Qp * np.exp(-self.kp * LAI) + self.q50 + eps))
         # VPD -response
-        fD = 1.0 / (np.sqrt(VPD) + eps)
+        fD = 1.0 / (np.sqrt(1e-3 * VPD) + eps)
         # soil moisture response: Lagergren & Lindroth, xxxx"""
         fRew = np.minimum(1.0, np.maximum(Rew / self.rw, self.rwmin))
         # CO2 -response of canopy conductance, derived from APES-simulations
@@ -92,7 +97,7 @@ class Canopy_Transpiration():
             Gc = eps
 
         """ --- transpiration rate [m] --- """
-        Tr = np.maximum(0.0, penman_monteith(AE, 1e3*VPD, T, Gc, 1./Ra, units='m')) * dt
+        Tr = np.maximum(0.0, penman_monteith(AE, VPD, T, Gc, 1./Ra, units='m')) * dt
 
         return Tr
 

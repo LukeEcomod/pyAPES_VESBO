@@ -7,7 +7,7 @@ Created on Thu Mar 01 13:21:29 2018
 
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from evapotranspiration import penman_monteith
+from evapotranspiration import penman_monteith, e_sat
 
 class Interception():
     """
@@ -44,7 +44,7 @@ class Interception():
         # state variables
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAI) # interception storage [m]
 
-    def _run(self, dt, LAI, T, Prec, AE, VPD, Ra=25.0, U=2.0):
+    def _run(self, dt, LAI, T, Prec, AE, H2O, P, Ra=25.0, U=2.0):
         """
         Args:
             dt: timestep [s]
@@ -53,7 +53,8 @@ class Interception():
             T: air temperature [degC]
             Prec: precipitation rate [m s\ :sup:`-1`\]
             AE: available energy at canopy level  [W m\ :sup:`-2`\]
-            VPD: vapor pressure deficit [kPa]
+            H2O: mixing ratio [mol/mol]
+            P: ambient pressure [Pa]
             Ra: canopy aerodynamic resistance [s m\ :sup:`-1`\]
             U: wind speed  at hc [m/s] ----------------------------------------------- ???
         Returns:
@@ -64,6 +65,10 @@ class Interception():
             Evap: evaporation from canopy store [m]
             MBE: mass balance error
         """
+        # vapor pressure deficit [Pa]
+        esat, _, _ = e_sat(T)  # [Pa]
+        VPD = max(0.0, esat - H2O * P)
+        
         # interception storage capacities [m]
         Wmax = self.wmax * LAI
         Wmaxsnow = self.wmaxsnow * LAI
@@ -75,10 +80,10 @@ class Interception():
             Ce = 0.01 * ((self.W + eps) / Wmaxsnow)**(-0.4)  # exposure coeff [-]
             Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
             gi = Sh * self.W * 1000 * Ce / 7.68 + eps # [m/s]
-            erate = penman_monteith(AE, 1e3*VPD, T, gi, 1./Ra,  units='m', type='sublimation') * dt
+            erate = penman_monteith(AE, VPD, T, gi, 1./Ra,  units='m', type='sublimation') * dt
         elif (Prec == 0) & (T > self.Tmin):  # evaporation case
             gs = 1e6
-            erate = penman_monteith(AE, 1e3*VPD, T, gs, 1./Ra, units='m', type='evaporation') * dt
+            erate = penman_monteith(AE, VPD, T, gs, 1./Ra, units='m', type='evaporation') * dt
         else:  # negelect evaporation during precipitation events
             erate = 0.0
     

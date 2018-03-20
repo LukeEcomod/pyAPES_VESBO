@@ -90,7 +90,7 @@ class Model():
         if canopy_para['ctr']['multilayer_model']['ON']:
             self.Ncanopy_nodes = canopy_para['grid']['Nlayers']
         else:
-            self.Ncanopy_nodes = 0
+            self.Ncanopy_nodes = 1
 
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para)
@@ -148,7 +148,7 @@ class Model():
             forcing_state = {
                     'wind_speed': self.forcing['U'].iloc[k],
                     'air_temperature': self.forcing['Tair'].iloc[k],
-                    'precipitation': self.forcing['Prec'].iloc[k],
+                    'precipitation': self.forcing['Prec'].iloc[k] * self.dt,
                     'h2o': self.forcing['H2O'].iloc[k],
                     'co2': self.forcing['CO2'].iloc[k]}
 
@@ -215,34 +215,6 @@ def _append_results(group, step, step_results, results):
 
     return results
 
-def _result_writer(queue, ncf_param):
-    """ Reads simulation results from the queue
-    """
-
-    ncf, output_file = initialize_netcdf(
-            ncf_param['variables'],
-            ncf_param['Nsim'],
-            ncf_param['Nsoil_nodes'],
-            ncf_param['Ncanopy_nodes'],
-            ncf_param['forcing'],
-            filename=ncf_param['filename'])
-
-    print(" Queue consumer is listening")
-
-    while True:
-
-        results = queue.get()
-
-        if results['data'] == 'DONE':
-            print('Writing of results is DONE!')
-            break
-
-        print(' Processing simulation number: {}'.format(results['Nsim']))
-        _write_ncf(nsim=results['Nsim'], results=results['data'], ncf=ncf)
-
-    ncf.close()
-
-
 def _write_ncf(nsim=None, results=None, ncf=None):
     """ Writes model simultaion results in netCDF4-file
 
@@ -263,7 +235,8 @@ def _write_ncf(nsim=None, results=None, ncf=None):
             if length > 1:
                 ncf[key][:, nsim, :] = results[key]
             elif key == 'soil_z' or key == 'canopy_z':
-                ncf[key][nsim, :] = results[key]
+                if nsim == 0:
+                    ncf[key][:] = results[key]
             else:
                 ncf[key][:, nsim] = results[key]
 
