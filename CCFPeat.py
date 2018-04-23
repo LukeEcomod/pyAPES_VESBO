@@ -117,7 +117,7 @@ class Model():
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
-            if self.forcing['doy'].iloc[k] != self.forcing['doy'].iloc[k-1]:
+            if self.forcing['doy'].iloc[k] != self.forcing['doy'].iloc[k-1] or k == 0:
                 self.canopy_model._run_daily(
                         self.forcing['doy'].iloc[k],
                         self.forcing['Tdaily'].iloc[k])

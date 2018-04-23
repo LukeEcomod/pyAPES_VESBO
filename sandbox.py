@@ -107,7 +107,7 @@ plot_columns(lettosuo_data,[33,34,1])
 plot_columns(lettosuo_data,[15,36])
 
 # lad profile test
-lad_p, lad_s, lad_d, _, _, _ = model_trees(z, quantiles, normed=False,
+lad_p, lad_s, lad_d, _, _, _, _, _, _ = model_trees(z, quantiles, normed=False,
     dbhfile=r"C:\Users\L1656\Documents\Git_repos\CCFPeat\parameters\runkolukusarjat\letto2014.txt",
     plot=True)
 

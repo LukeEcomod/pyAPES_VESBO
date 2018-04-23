@@ -111,15 +111,15 @@ shrubs = deepcopy(plant_default)
 # --- stand characteristics ---
 # specify name and maximum leaf-area index, LAImax [m2/m2], and 
 # adjust values of 'phenop' and 'laip' if default values not suitable
-pine.update({'name': 'pine', 'LAImax': [2.1]})
+pine.update({'name': 'pine', 'LAImax': []})
 pine['phenop'].update({'fmin': 0.1})
 pine['laip'].update({'lai_min': 0.8})
 
-spruce.update({'name': 'spruce', 'LAImax': [1.0]})
+spruce.update({'name': 'spruce', 'LAImax': []})
 spruce['phenop'].update({'fmin': 0.1})
 spruce['laip'].update({'lai_min': 0.8})
 
-decid.update({'name': 'decid', 'LAImax': [1.0]})
+decid.update({'name': 'decid', 'LAImax': []})
 
 shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
 shrubs['laip'].update({'lai_min': 0.5})
@@ -171,11 +171,17 @@ else:
             }
     cpara.update({'grid': grid})
     # normed leaf area density profiles
-    dbhfile = r"parameters\runkolukusarjat\letto2016_partial.txt"  # filepath to dbhfile (pine, spruce, decid)
+    dbhfile = r"parameters\runkolukusarjat\letto2014.txt"  # filepath to dbhfile (pine, spruce, decid)
     quantiles = [1.0]  # quantiles used in creating species stand lad profiles
     hs = 0.5  # height of understory shrubs [m]
-    pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'] = lad_profiles(
-            grid, dbhfile, quantiles, hs, plot=True)
+    pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'], lai_p, lai_s, lai_d = lad_profiles(
+            grid, dbhfile, quantiles, hs, plot=False)
+    if pine['LAImax'] == []:
+        pine['LAImax'] = lai_p
+    if spruce['LAImax'] == []:
+        spruce['LAImax'] = lai_s
+    if decid['LAImax'] == []:
+        decid['LAImax'] = lai_d
     # adjust leaf gas-exchange parameters
     gfact = 1.2  # coefficient for adjusting (?)
     pine['photop'].update({'Vcmax': 55.0, 'Jmax': 104.0, 'Rd': 1.3,

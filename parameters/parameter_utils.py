@@ -73,13 +73,13 @@ def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
     # grid [m]
     z = np.linspace(0, grid['zmax'], grid['Nlayers'])
     # tress species lad profiles
-    lad_p, lad_s, lad_d, _, _, _ = model_trees(z, quantiles, normed=True, dbhfile=dbhfile, plot=plot)
+    lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles, normed=True, dbhfile=dbhfile, plot=plot)
     # understory shrubs
     lad_g = np.ones([len(z), 1])
     lad_g[z > hs] = 0.0
     lad_g = lad_g / sum(lad_g * z[1])
 
-    return lad_p, lad_s, lad_d, lad_g
+    return lad_p, lad_s, lad_d, lad_g, lai_p, lai_s, lai_d
 
 def model_trees(z, quantiles, normed=False,
                 dbhfile='c:\\projects\\MLM_Hyde\\Data\\hyde_runkolukusarjat.txt',
@@ -110,10 +110,12 @@ def model_trees(z, quantiles, normed=False,
     m = 0.0
     lad_p = np.zeros([len(z), M])
     n_p = np.zeros(M)
+    lai_p = np.zeros(M)
     for k in range(M):
         f = np.where((c > m) & (c <= quantiles[k]))[0]
         lad_p[:, k] = np.sum(a[:, f], axis=1)
         n_p[k] = np.sum(n[f])
+        lai_p[k] = sum(dz*lad_p[:,k])
         m = quantiles[k]
         if normed:
             lad_p[:, k] = lad_p[:, k] / np.sum(lad_p[:, k] * dz)
@@ -125,10 +127,12 @@ def model_trees(z, quantiles, normed=False,
     m = 0.0
     lad_s = np.zeros([len(z), M])
     n_s = np.zeros(M)
+    lai_s = np.zeros(M)
     for k in range(M):
         f = np.where((c > m) & (c <= quantiles[k]))[0]
         lad_s[:, k] = np.sum(a[:, f], axis=1)
         n_s[k] = np.sum(n[f])
+        lai_s[k] = sum(dz*lad_s[:,k])
         m = quantiles[k]
         if normed:
             lad_s[:, k] = lad_s[:, k] / np.sum(lad_s[:, k] * dz)
@@ -140,10 +144,12 @@ def model_trees(z, quantiles, normed=False,
     m = 0.0
     lad_d = np.zeros([len(z), M])
     n_d = np.zeros(M)
+    lai_d = np.zeros(M)
     for k in range(M):
         f = np.where((c > m) & (c <= quantiles[k]))[0]
         lad_d[:, k] = np.sum(a[:, f], axis=1)
         n_d[k] = np.sum(n[f])
+        lai_d[k] = sum(dz*lad_d[:,k])
         m = quantiles[k]
         if normed:
             lad_d[:, k] = lad_d[:, k] / np.sum(lad_d[:, k] * dz)
@@ -158,11 +164,11 @@ def model_trees(z, quantiles, normed=False,
             plt.xlabel('normalized lad (-)')
         else:
             plt.xlabel('lad (m2/m3)')
-            plt.legend(['pine, LAI = %.2f m$^2$m$^{-2}$' % (sum(dz*lad_p)[0]),
-                        'spruce, LAI = %.2f m$^2$m$^{-2}$' % (sum(dz*lad_s)[0]),
-                        'decid, LAI = %.2f m$^2$m$^{-2}$' % (sum(dz*lad_d)[0])])
+            plt.legend(['pine, LAI = %.2f m$^2$m$^{-2}$' % lai_p[0],
+                        'spruce, LAI = %.2f m$^2$m$^{-2}$' % lai_s[0],
+                        'decid, LAI = %.2f m$^2$m$^{-2}$' % lai_d[0]])
 
-    return lad_p, lad_s, lad_d, n_p, n_s, n_d
+    return lad_p, lad_s, lad_d, n_p, n_s, n_d, lai_p, lai_s, lai_d
 
 def profiles_hyde(data, species, z):
     # height h model based on Näslund equation parameterized using Hyytiälä stand inventory from 2008
