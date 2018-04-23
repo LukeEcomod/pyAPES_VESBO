@@ -46,17 +46,19 @@ def diurnal_cycle(data, ap='hour'):
     if isinstance(data, pd.Series):
         data = data.to_frame()
     
-    if isinstance(data, pd.DataFrame):        
+    if isinstance(data, pd.DataFrame):
         r, c = np.shape(data)  # rows, cols
         hr = data.index.hour
         mn = data.index.minute
         hour = np.unique(hr)
         minu = np.unique(mn)
         cols = data.columns
-        print '********** computing diurnal cycles *********'
+        
+
     else:
         print('diurnal_cycle: data must be pd.DataFrame or pd.Series')
 
+    print '********** computing diurnal cycles *********'
     res = {}
     for k in range(0, c):
         if ap.lower() == 'hour':

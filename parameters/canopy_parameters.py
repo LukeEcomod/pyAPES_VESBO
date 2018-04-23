@@ -11,8 +11,9 @@ cpara = {}
 # --- control flags (True/False) ---
 ctr = {'multilayer_model': {'ON': True,  # compute in multilayer mode
                             # In case ON:
+                            'MLinterception': False,  # multilayer scheme for interception
                             'Eflow': True,  # ensemble flow
-                            'WMA': False,  # well-mixed assumption
+                            'WMA': True,  # well-mixed assumption
                             'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
                             'Ebal': False},  # computes leaf temperature by solving energy balance (not supported yet)
        'seasonal_LAI': True,  # account for seasonal LAI dynamics
@@ -170,7 +171,7 @@ else:
             }
     cpara.update({'grid': grid})
     # normed leaf area density profiles
-    dbhfile = "parameters\hyde_runkolukusarjat.txt"  # filepath to dbhfile (pine, spruce, decid)
+    dbhfile = r"parameters\runkolukusarjat\letto2016_partial.txt"  # filepath to dbhfile (pine, spruce, decid)
     quantiles = [1.0]  # quantiles used in creating species stand lad profiles
     hs = 0.5  # height of understory shrubs [m]
     pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'] = lad_profiles(

@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2016-12-31",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-01-02",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Hyde_2010_2016.csv",  #"FMI_jokioinen.csv"  ## forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m]', ('date', 'simulation')],
@@ -19,12 +19,16 @@ gpara = {
                       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
                       ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
                       ['canopy_interception', 'canopy interception [m]', ('date', 'simulation')],
+                      ['canopy_interception_storage', 'canopy interception storage [m]', ('date', 'simulation', 'canopy')],
                       ['canopy_evaporation', 'evaporation from interception storage [m]', ('date', 'simulation')],
                       ['canopy_transpiration','transpiration [m]', ('date', 'simulation')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m]', ('date', 'simulation')],
                       ['canopy_potential_infiltration', 'potential infiltration to soil [m]', ('date', 'simulation')],
                       ['canopy_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
                       ['canopy_moss_evaporation', 'evaporation from moss layer [m]', ('date', 'simulation')],
+                      ['canopy_LE', 'latent heat flux [W m-2]]', ('date', 'simulation')],
+                      ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
+                      ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
 #                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
                       ['soil_pond_storage', 'pond storage [m]', ('date', 'simulation')],
                       ['soil_ground_water_level', 'ground water level [m]', ('date', 'simulation')],

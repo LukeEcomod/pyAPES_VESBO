@@ -43,6 +43,8 @@ class Snowpack():
         self.swe_liq = 0.0  # liquid water storage in snowpack [m]
         self.swe = self.swe_liq + self.swe_ice  # snow water equivalent [m]
 
+        self._update()
+
     def _run(self, dt, T, Trfall_rain, Trfall_snow):
         """
         Args:
@@ -58,19 +60,19 @@ class Snowpack():
         """
 
         """ --- initial conditions for calculating mass balance error --"""
-        swe = self.swe  # initial state m
+        self.swe = self.oldswe  # initial state m
 
         """ --- melting and freezing in snopack --- """
         if T >= self.Tmelt:
-            Melt = np.minimum(self.swe_ice, self.kmelt * dt * (T - self.Tmelt))  # m
+            Melt = np.minimum(self.oldswe_ice, self.kmelt * dt * (T - self.Tmelt))  # m
             Freeze = 0.0
         else:
             Melt = 0.0
-            Freeze = np.minimum(self.swe_liq, self.kfreeze * dt * (self.Tmelt - T))  # m
+            Freeze = np.minimum(self.oldswe_liq, self.kfreeze * dt * (self.Tmelt - T))  # m
 
         """ --- update state of snowpack and compute potential infiltration --- """
-        swei = np.maximum(0.0, self.swe_ice + Trfall_snow + Freeze - Melt)
-        swel = np.maximum(0.0, self.swe_liq + Trfall_rain - Freeze + Melt)
+        swei = np.maximum(0.0, self.oldswe_ice + Trfall_snow + Freeze - Melt)
+        swel = np.maximum(0.0, self.oldswe_liq + Trfall_rain - Freeze + Melt)
         # potential infiltration [m]
         PotInf = np.maximum(0.0, swel - swei * self.reten)
         # liquid water and ice in snow, and snow water equivalent [m]
@@ -79,6 +81,12 @@ class Snowpack():
         self.swe = self.swe_liq + self.swe_ice
 
         # mass-balance error mm
-        MBE = (self.swe - swe) - (Trfall_rain + Trfall_snow - PotInf)
+        MBE = (self.swe - self.oldswe) - (Trfall_rain + Trfall_snow - PotInf)
 
         return PotInf, MBE
+
+    def _update(self):
+
+        self.oldswe_ice = self.swe_ice
+        self.oldswe_liq = self.swe_liq
+        self.oldswe =  self.swe

@@ -7,7 +7,13 @@ Created on Thu Mar 01 13:21:29 2018
 
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from evapotranspiration import penman_monteith, e_sat
+from evapotranspiration import penman_monteith, e_sat, latent_heat
+from micromet import leaf_boundary_layer_conductance
+
+#: [kg m-3], Density of water
+RHO_WATER = 1000.0
+#: [kg mol\ :sup:`-1`\ ], molar mass of H\ :sub:`2`\ O
+MOLAR_MASS_H2O = 18.015e-3
 
 class Interception():
     """
@@ -17,7 +23,7 @@ class Interception():
     But for simplicity let's first start with assumption that Tleaf == Tair and neglect
     leaf energy budget.
     """
-    def __init__(self, p, LAI):
+    def __init__(self, p, LAI, MLinterception, LAIz):
         """
         Args:
             dt: timestep [s]
@@ -43,8 +49,12 @@ class Interception():
 
         # state variables
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAI) # interception storage [m]
+        if MLinterception: # compute with multilayer scheme
+            self.W = self.W * LAIz
 
-    def _run(self, dt, LAI, T, Prec, AE, H2O, P, Ra=25.0, U=2.0):
+        self._update()
+
+    def _big_leaf(self, dt, LAI, T, Prec, AE, H2O, P, Ra=25.0, U=2.0):
         """
         Args:
             dt: timestep [s]
@@ -75,18 +85,6 @@ class Interception():
 
         Prec = Prec * dt  # [m/s] -> [m]
 
-        """ 'potential' evaporation and sublimation rates """
-        if (Prec == 0) & (T <= self.Tmin):  # sublimation case
-            Ce = 0.01 * ((self.W + eps) / Wmaxsnow)**(-0.4)  # exposure coeff [-]
-            Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
-            gi = Sh * self.W * 1000 * Ce / 7.68 + eps # [m/s]
-            erate = penman_monteith(AE, VPD, T, gi, 1./Ra,  units='m', type='sublimation') * dt
-        elif (Prec == 0) & (T > self.Tmin):  # evaporation case
-            gs = 1e6
-            erate = penman_monteith(AE, VPD, T, gs, 1./Ra, units='m', type='evaporation') * dt
-        else:  # negelect evaporation during precipitation events
-            erate = 0.0
-    
         """ --- state of precipitation --- """
         # fraction as water [-]
         if T >= self.Tmax:
@@ -96,8 +94,20 @@ class Interception():
         else:
             fW = (T - self.Tmin) / (self.Tmax - self.Tmin)
 
+        """ 'potential' evaporation and sublimation rates """
+        if (Prec == 0) & (T <= self.Tmin):  # sublimation case
+            Ce = 0.01 * ((self.oldW + eps) / Wmaxsnow)**(-0.4)  # exposure coeff [-]
+            Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
+            gi = Sh * self.oldW * 1000 * Ce / 7.68 + eps # [m/s]
+            erate = penman_monteith(AE, VPD, T, gi, 1./Ra,  units='m', type='sublimation') * dt
+        elif (Prec == 0) & (T > self.Tmin):  # evaporation case
+            gs = 1e6
+            erate = penman_monteith(AE, VPD, T, gs, 1./Ra, units='m', type='evaporation') * dt
+        else:  # negelect evaporation during precipitation events
+            erate = 0.0
+
         """ --- canopy water storage change --- """
-        W = self.W  # initiate
+        W = self.oldW  # initiate
 
         # snow unloading from canopy, ensures also that seasonal
         # LAI development does not mess up computations
@@ -127,10 +137,146 @@ class Interception():
         Evap = np.minimum(erate, W)
         W = W - Evap
 
+        # update state variables
+        self.W = W
+
         # mass-balance error [m] ! self.W is old storage
-        MBE = (W - self.W) - (Prec - Evap - (Trfall_rain + Trfall_snow))
+        MBE = (self.W - self.oldW) - (Prec - Evap - (Trfall_rain + Trfall_snow))
+
+        return Trfall_rain, Trfall_snow, Interc, Evap, MBE
+
+    def _multi_layer(self, dt, lt, LAIz, H2O, U, T, Prec, P):
+        """
+        updates canopy liquid water storage by partitioning precipitation (Prec) to
+        interception and throughfall (rain and snow separately) at each layer
+        until soil surface or depth of snow. 
+        T_leaf assumed equal to T_air.
+        boundary layer conductances for heat and H2O are calculated from U(z) 
+        and leaf dimensions.
+        Rate of change of water stored at each layer (W) is as in 
+        Watanabe & Mizutani (1996) Agric. For. Meteorol. 80, 195-214 
+        Tanaka, 2002 Ecol. Mod. 147: 85-104
+            (1) dW(z)/dt = F(1-W(z)/Wmax(z))I(z) - (W(z)/Wmax(z))E(z), I(z)=dPrec/dz=Fa(z)dz(1-W(z)/Wmax(z))Prec(z+dz) when E>0 (evaporation)
+            (2) dW(z)/dt = (1-W(z)/Wmax(z))(FI(z)-E(z)), I(z)=dPrec/dz=Fa(z)dz(1-W(z)/Wmax(z))Prec(z+dz) + a(z)dz(W(z)/Wmax(z))E(z) when E<0(condensation)
+        a(z) is one-sided plant area density (m2m-3), F fraction of leaf area (0-1)
+        perpendicular to Prec and Wmax(z) maximum water storage (mm) at each layer.
+
+        Args:
+            dt: timestep [s]
+            lt: leaf length scale for aerodynamic resistance [m]
+                NOTE: seems that lt order of 1-10 cm is appropriate for pine evaporation
+            LAIz (array): leaf area index per canopy layer [m\ :sup:`2`\ m\ :sup:`-2`\]
+            H2O (array): mixing ratio for each layer [mol/mol]
+            U (array): wind speed for each layer [m s-1]
+            T (array): air temperature for each layer [degC]
+            Prec (float): precipitation rate above canopy [m s\ :sup:`-1`\]
+            P (float): ambient pressure [Pa]
+        Returns:
+            updates sate self.W (array)
+            LEwc: latent heat flux from wet fraction [W m-2], sum gives canopy value
+            df: fraction of dry leaves per layer [-]
+            Trfall_rain: throughfall as rainfall [m]
+            Trfall_snow: throughfall as snowfall [m]
+            Interc: interception [m]
+            Evap: evaporation from canopy store [m]
+            MBE: mass balance error
+        
+        sources: APES WetLeaf_Module2()
+        """
+
+        # number of canopy layers
+        N = len(LAIz)
+
+        # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
+        F = 1.0
+
+        """ --- state of precipitation (uses fW[-1] in end of code)--- """
+        # fraction as water [-]
+        fW = np.ones(N)
+        ix = np.where(T < self.Tmin)
+        fW[ix] = 0.0
+        ix = np.where((T >= self.Tmin) & (T <= self.Tmax))
+        fW[ix] = (T[ix] - self.Tmin) / (self.Tmax - self.Tmin)
+
+        # maximum interception storage capacities layerwise [m]
+        Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
+
+        """ --- rate of evaporation/condensation --- """ ##### or sublimation/deposition ?????????
+        # boundary layer conductances for H2O [mol m-2 s-1]
+        _, gb_v, _, _ = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)
+        # vapor pressure difference between leaf and air [mol/mol]
+        # assumption Tleaf = T
+        es, _, _ = e_sat(T)
+        Dleaf = np.maximum(0.0, es / P - H2O)  # [mol/mol]
+        # latent heat of vaporization at temperature T [J/mol]
+        L = latent_heat(T) * MOLAR_MASS_H2O
+        # rate as latent heat flux [W m-2] per unit wet/dry leaf area
+        LEw = L * gb_v * Dleaf
+        # evaporation rate from wet leaf [m/s]
+        Ep = gb_v * Dleaf * MOLAR_MASS_H2O / RHO_WATER
+
+        """ --- canopy water storage change --- """
+        W = self.oldW  # layerwise canopy storage [m]
+
+        # Unloading in canopy, ensures also that seasonal
+        # LAI development does not mess up computations
+        for n in reversed(range(0, N)):  # start from highest grid point
+            Unload = max(W[n] - Wmax[n], 0.0)  # unloading from layer n
+            W[n] -= Unload  # update storage of layer n
+            if n != 0:
+                W[n-1] += Unload  # unloading added to layer below (if not lower layer)
+        # unload = unloading below canopy [m]
+
+        # wetness ratio at each layer (-), assumes leafs are either totally wet or totally dry
+        wfo = W / Wmax
+
+        # Within-canopy throughfall + condensation drip [m/s]
+        P = np.zeros(N+1)
+        Evap = np.zeros(N)  # evaporation/condesation [m]
+        Interc = np.zeros(N)  # interception [m]
+        P[-1] = Prec  # above canopy equals precipitation rate [m/s]
+        for n in reversed(range(0, N)):  # start from highest grid point
+            Interc[n] = F * (1 - wfo[n]) * LAIz[n] * P[n+1]  # interception rate in layer
+            P[n] = P[n+1] - Interc[n]
+            if Ep[n] >= 0:  # evaporation case
+                Evap[n] = wfo[n] * LAIz[n] * Ep[n]  # evaporation rate in layer (only from wet part)
+            else:  # condensation case
+                Evap[n] = LAIz[n] * Ep[n]  # condensation rate in layer
+                P[n] -= wfo[n] * LAIz[n] * Ep[n]  # condensation to wet leaf part drips (increases P[n])
+
+        # timestep subdivision to calculate change in canopy water store
+        Nsteps = 100  # number of subtimesteps
+        subdt = dt/100  # [s]
+        dW = np.zeros(N)  # [m]
+        for t in range(0, Nsteps):
+            ix = np.where(Ep >= 0)  # evaporation case
+            dW[ix] = (F * P[ix] / (F * P[ix] + Ep[ix] + eps) * Wmax[ix] - W[ix]) \
+                        * (1 - np.exp(-(F * P[ix] + Ep[ix]) * LAIz[ix] * subdt / Wmax[ix]))
+            ix = np.where(Ep < 0)  # condensation case
+            dW[ix]= (Wmax[ix] - W[ix]) * (1 - np.exp(-(F * P[ix] - Ep[ix]) * LAIz[ix] * subdt / Wmax[ix]))
+            # update storage [m]
+            W += dW
+
+        # dry canopy fraction
+        df = 1 - W / Wmax
+
+        # evaporation/condensation and interception during dt
+        Evap *= dt  # [m]
+        Interc *= dt  # [m]
+
+        # throughfall to field layer or snowpack
+        Trfall = P[0] * dt + Unload
+        Trfall_rain = fW[-1] * Trfall  # accoording to above canopy temperature
+        Trfall_snow = (1 - fW[-1]) * Trfall
 
         # update state variables
         self.W = W
 
-        return Trfall_rain, Trfall_snow, Interc, Evap, MBE
+        # mass-balance error [m] ! self.W is old storage
+        MBE = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - (Trfall_rain + Trfall_snow))
+
+        return df, Trfall_rain, Trfall_snow, sum(Interc), sum(Evap), MBE
+
+    def _update(self):
+
+        self.oldW = self.W

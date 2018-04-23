@@ -405,3 +405,68 @@ def mixing_length(z, h, d, l_min=None):
     l_mix = l_mix + l_min
 
     return l_mix
+
+def leaf_boundary_layer_conductance(u, d, Ta, dT, P=101300.):
+    """
+    Computes 2-sided leaf boundary layer conductance assuming mixed forced and free
+    convection form two parallel pathways for transport through leaf boundary layer.
+    INPUT: u - mean velocity (m/s)
+           d - characteristic dimension of the leaf (m)
+           Ta - ambient temperature (degC)
+           dT - leaf-air temperature difference (degC)
+           P - pressure(Pa)
+    OUTPUT: boundary-layer conductances (mol m-2 s-1)
+        gb_h - heat (mol m-2 s-1)
+        gb_c- CO2 (mol m-2 s-1)
+        gb_v - H2O (mol m-2 s-1)
+        r - ratio of free/forced convection
+    Reference: Campbell, S.C., and J.M. Norman (1998),
+    An introduction to Environmental Biophysics, Springer, 2nd edition, Ch. 7
+    Gaby Katul & Samuli Launiainen
+    Note: the factor of 1.4 is adopted for outdoor environment, see Campbell and Norman, 1998, p. 89, 101.
+    """
+    
+    # print('U', u, 'd', d, 'Ta', Ta, 'P', P)
+    factor1 = 1.4*2  # forced conv. both sides, 1.4 is correction for turbulent flow
+    factor2 = 1.5  # free conv.; 0.5 comes from cooler surface up or warmer down
+    
+    Da_v = 2.4e-5  # Molecular diffusivity of "water vapor" in air at STP (20C and 11kPa) [m2/s]
+    Da_c = 1.57e-5  # Molecular diffusivity of "CO2" in air at STP [m2/s]
+    Da_T = 2.14e-5  # Molecular diffusivity of "heat" in air at STP [m2/s]
+    va = 1.51e-5  # air viscosity at STP [m2/s]
+    g = 9.81  # gravitational constant [m/s2]
+
+    # -- Adjust diffusivity, viscosity, and air density to pressure/temp.
+    t_adj = (101300.0 / P)*((Ta + 273.15) / 293.16)**1.75
+    Da_v = Da_v*t_adj
+    Da_c = Da_c*t_adj
+    Da_T = Da_T*t_adj
+    va = va*t_adj
+    rho_air = 44.6*(P / 101300.0)*(273.15 / (Ta + 273.13))  # [mol/m3]
+
+    # ----- Compute the leaf-level dimensionless groups
+    Re = u*d / va  # Reynolds number
+    Sc_v = va / Da_v  # Schmid numbers for water
+    Sc_c = va / Da_c  # Schmid numbers for CO2
+    Pr = va / Da_T  # Prandtl number
+    Gr = g*(d**3)*abs(dT) / (Ta + 273.15) / (va**2)  # Grashoff number
+
+    # ----- aerodynamic conductance for "forced convection"
+    gb_T = (0.664*rho_air*Da_T*Re**0.5*(Pr)**0.33) / d  # [mol/m2/s]
+    gb_c=(0.664*rho_air*Da_c*Re**0.5*(Sc_c)**0.33) / d  # [mol/m2/s]
+    gb_v=(0.664*rho_air*Da_v*Re**0.5*(Sc_v)**0.33) / d  # [mol/m2/s]
+
+    # ----- Compute the aerodynamic conductance for "free convection"
+    gbf_T = (0.54*rho_air*Da_T*(Gr*Pr)**0.25) / d  # [mol/m2/s]
+    gbf_c = 0.75*gbf_T  # [mol/m2/s]
+    gbf_v = 1.09*gbf_T  # [mol/m2/s]
+
+    # --- aerodynamic conductance: "forced convection"+"free convection"
+    gb_h = factor1*gb_T + factor2*gbf_T
+    gb_c = factor1*gb_c + factor2*gbf_c
+    gb_v = factor1*gb_v + factor2*gbf_v
+    # gb_o3=factor1*gb_o3+factor2*gbf_o3
+
+    r = Gr / (Re**2)  # ratio of free/forced convection
+
+    return gb_h, gb_c, gb_v, r

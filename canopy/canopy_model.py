@@ -72,8 +72,11 @@ class CanopyModel():
             self.dz = self.z[1] - self.z[0]  # gridsize [m]
             self.Switch_Eflow = cpara['ctr']['multilayer_model']['Eflow']
             self.Switch_WMA = cpara['ctr']['multilayer_model']['WMA']
+            self.Switch_Interc = cpara['ctr']['multilayer_model']['MLinterception']
         else:
             self.z = np.array([-1])
+            self.dz = np.array([-1])
+            self.Switch_Interc = False
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
@@ -116,7 +119,8 @@ class CanopyModel():
         self.Aero_Model = Aerodynamics(self.z, self.lad, self.hc, cpara['aero'], self.Switch_MLM)
 
         # --- initialize interception model---
-        self.Interc_Model = Interception(cpara['interc_snow'], self.LAI)
+        self.Interc_Model = Interception(cpara['interc_snow'], self.LAI, 
+                                         self.Switch_Interc, self.lad * self.dz)
 
         # --- initialize snow model ---
         self.Snow_Model = Snowpack(cpara['interc_snow'], self.Interc_Model.cf)
@@ -178,6 +182,7 @@ class CanopyModel():
         U = np.array([forcing['U']])
         H2O = np.array([forcing['H2O']])  # in multilayer model from H2O somehow?
         CO2 = np.array([forcing['CO2']])
+        Prec = forcing['Prec']
         P = forcing['P']
 
         """ --- radiation --- """
@@ -220,25 +225,6 @@ class CanopyModel():
                     hc=self.hc,
                     Uo=U[-1])
 
-        """ --- interception and interception storage evaporation --- """
-        Trfall_rain, Trfall_snow, Interc, Evap, MBE_interc = self.Interc_Model._run(
-                dt=dt,
-                LAI=self.LAI,
-                T=T[-1],
-                Prec=forcing['Prec'],
-                AE=Rnet_c,
-                H2O=H2O[-1],
-                P=P,
-                Ra=ra[-1],
-                U=U[-1])
-
-        """ --- snowpack ---"""
-        PotInf, MBE_snow = self.Snow_Model._run(
-                dt=dt,
-                T=T[0],
-                Trfall_rain=Trfall_rain,
-                Trfall_snow=Trfall_snow)
-
         """ --- compute Par profiles with canopy --- """
         if self.Switch_MLM:
             Q_sl1, Q_sh1, f_sl, Par_gr = self.Radi_Model.PAR_profiles(
@@ -261,6 +247,20 @@ class CanopyModel():
         iter_no = 1
 
         while (err_h2o > max_err or err_co2 > max_err) and iter_no < max_iter:
+
+            if self.Switch_Interc is False and iter_no == 1:
+                """ --- big leaf interception and interception evaporation --- """
+                Trfall_rain, Trfall_snow, Interc, Evap, MBE_interc = self.Interc_Model._big_leaf(
+                        dt=dt,
+                        LAI=self.LAI,
+                        T=T[-1],
+                        Prec=Prec,
+                        AE=Rnet_c,
+                        H2O=H2O[-1],
+                        P=P,
+                        Ra=ra[-1],
+                        U=U[-1])
+
             if self.Switch_MLM:
                 # --- h2o and co2 sink/source terms
                 qsource = np.zeros(self.Nlayers)
@@ -269,7 +269,21 @@ class CanopyModel():
                 Rstand = 0.0
                 # PlantType results, create empty list to append
                 pt_stats = []
-                """ --- compute leaf gas-exchange at each layer and for each PlantType """
+
+                if self.Switch_Interc:
+                    """ --- multilayer interception and interception evaporation --- """
+                    # here assume Tleaf = T
+                    df, Trfall_rain, Trfall_snow, Interc, Evap, MBE_interc = self.Interc_Model._multi_layer(
+                            dt=dt,
+                            lt=0.1,  ############ to inputs!!!
+                            LAIz=self.lad * self.dz,
+                            H2O=H2O,
+                            U=U,
+                            T=T,
+                            Prec=Prec,
+                            P=P)
+
+                """ --- leaf gas-exchange at each layer and for each PlantType --- """
                 # here assume Tleaf = T
                 for pt in self.Ptypes:
                     # --- sunlit and shaded leaves
@@ -300,11 +314,18 @@ class CanopyModel():
                         fPheno=self.pheno_state,
                         Rew=Rew)
 
+            """ --- snowpack ---"""   ### H2O source???
+            PotInf, MBE_snow = self.Snow_Model._run(
+                    dt=dt,
+                    T=T[0],
+                    Trfall_rain=Trfall_rain,
+                    Trfall_snow=Trfall_snow)
+
             """ --- forest floor --- """
             # Water balance at forest floor (interception and evaporation of moss layer)
             E_gr, Trfall_gr, MBE_moss = self.ForestFloor._run_waterbalance(
                     dt=dt,
-                    Rn=Rnet_gr,
+                    Rn=Rnet_gr,  ## EI KÄYTÄ??
                     Prec=PotInf*1e3,  # mm!!
                     U=U[0],  # MIKSI oli [1]??
                     T=T[0],
@@ -336,6 +357,10 @@ class CanopyModel():
                     iter_no = 1
             else:
                 err_h2o, err_co2 = 0.0, 0.0
+
+        """ --- update state variables --- """
+        self.Snow_Model._update()  # snow water equivalent SWE, SWEi, SWEl
+        self.Interc_Model._update()  # interception storage
 
         if self.Switch_MLM:
             # ecosystem fluxes
@@ -385,6 +410,8 @@ class CanopyModel():
             if self.Switch_WMA is False:
                 state.update({'h2o': H2O,
                               'co2': CO2})
+            if self.Switch_Interc:
+                state.update({'interception_storage': self.Interc_Model.W})
 
         return fluxes, state
 

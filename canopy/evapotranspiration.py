@@ -156,7 +156,7 @@ def latent_heat(T, type='evaporation'):
     Computes latent heat of vaporization or sublimation [J/kg]
     Args:
         T: ambient air temperature [degC]
-        type: 'evaporation' or 'sublimation' (only when 'm' or 'mol')
+        type: 'evaporation' or 'sublimation'
     Returns:
         L: latent heat of vaporization or sublimation depending on 'type'[J/kg]
     """

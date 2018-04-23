@@ -73,20 +73,17 @@ def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
     # grid [m]
     z = np.linspace(0, grid['zmax'], grid['Nlayers'])
     # tress species lad profiles
-    lad_p, lad_s, lad_d, _, _, _ = model_trees(z, quantiles, normed=True, dbhfile=dbhfile)
+    lad_p, lad_s, lad_d, _, _, _ = model_trees(z, quantiles, normed=True, dbhfile=dbhfile, plot=plot)
     # understory shrubs
     lad_g = np.ones([len(z), 1])
     lad_g[z > hs] = 0.0
     lad_g = lad_g / sum(lad_g * z[1])
 
-    if plot:
-        plt.plot(lad_p,z,lad_s,z,lad_d,z,lad_g,z)
-
-
     return lad_p, lad_s, lad_d, lad_g
 
 def model_trees(z, quantiles, normed=False,
-                dbhfile='c:\\projects\\MLM_Hyde\\Data\\hyde_runkolukusarjat.txt'):
+                dbhfile='c:\\projects\\MLM_Hyde\\Data\\hyde_runkolukusarjat.txt',
+                plot=False):
     """
     reads runkolukusarjat from Hyde and creates lad-profiles for pine, spruce and decid.
     Args:
@@ -102,9 +99,9 @@ def model_trees(z, quantiles, normed=False,
 
     M = len(quantiles)
     # year 2008 data
-    pine = dat[:, [0, 2]]
-    spruce = dat[:, [0, 4]]
-    decid = dat[:, [0, 6]]
+    pine = dat[:, [0, 1]]
+    spruce = dat[:, [0, 2]]
+    decid = dat[:, [0, 3]]
 
     # pines
     h, hb, mleaf, L, a = profiles_hyde(pine, 'pine', z)
@@ -150,6 +147,20 @@ def model_trees(z, quantiles, normed=False,
         m = quantiles[k]
         if normed:
             lad_d[:, k] = lad_d[:, k] / np.sum(lad_d[:, k] * dz)
+
+    if plot:
+        plt.figure()
+        plt.plot(lad_p,z,lad_s,z,lad_d,z)#,lad_g,z)
+        plt.legend(['pine','spruce','decid'])
+        plt.title(dbhfile.split("\\")[-1])
+        plt.ylabel('height [m]')
+        if normed:
+            plt.xlabel('normalized lad (-)')
+        else:
+            plt.xlabel('lad (m2/m3)')
+            plt.legend(['pine, LAI = %.2f m$^2$m$^{-2}$' % (sum(dz*lad_p)[0]),
+                        'spruce, LAI = %.2f m$^2$m$^{-2}$' % (sum(dz*lad_s)[0]),
+                        'decid, LAI = %.2f m$^2$m$^{-2}$' % (sum(dz*lad_d)[0])])
 
     return lad_p, lad_s, lad_d, n_p, n_s, n_d
 
