@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2011-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2016-12-31",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Hyde_2010_2016.csv",  #"FMI_jokioinen.csv"  ## forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m]', ('date', 'simulation')],
@@ -19,7 +19,7 @@ gpara = {
                       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
                       ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
                       ['canopy_interception', 'canopy interception [m]', ('date', 'simulation')],
-                      ['canopy_interception_storage', 'canopy interception storage [m]', ('date', 'simulation', 'canopy')],
+                      ['canopy_interception_storage', 'canopy interception storage [m]', ('date', 'simulation')],
                       ['canopy_evaporation', 'evaporation from interception storage [m]', ('date', 'simulation')],
                       ['canopy_transpiration','transpiration [m]', ('date', 'simulation')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m]', ('date', 'simulation')],

@@ -35,7 +35,7 @@ head = [0.0001, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
 # Fit water retention parameters
 pF_para = fit_pF(head, watcont, fig=False)
 
-# Hydraulic conductivity
+# Hydraulic conductivity [m s-1]
 Kvsat = [2e-4, 2e-5, 5e-5, 3e-6, 5e-6, 1e-6, 1e-7]  # vertical
 Khmult = [10.0, 10.0, 10.0, 10.0, 10.0, 1.0, 1.0]  # horizontal
 

@@ -11,7 +11,7 @@ cpara = {}
 # --- control flags (True/False) ---
 ctr = {'multilayer_model': {'ON': True,  # compute in multilayer mode
                             # In case ON:
-                            'MLinterception': False,  # multilayer scheme for interception
+                            'MLinterception': True,  # multilayer scheme for interception
                             'Eflow': True,  # ensemble flow
                             'WMA': True,  # well-mixed assumption
                             'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
@@ -48,8 +48,8 @@ radi = {'clump': 0.7,  # clumping index [-]
         }
 
 # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
-interc_snow = {'wmax': 0.0005,  # maximum interception storage capacity for rain [m per unit of LAI]
-               'wmaxsnow': 0.004,  # maximum interception storage capacity for snow [m per unit of LAI]
+interc_snow = {'wmax': 0.15e-03, #0.5e-03,  # maximum interception storage capacity for rain [m per unit of LAI]
+               'wmaxsnow': 1.2e-03, #4.0e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
                'kmelt': 2.8934e-08,  # Melting coefficient [m degC-1 s-1]
                'kfreeze': 5.79e-09,  # Freezing  coefficient [m degC-1 s-1]
                'retention': 0.05,  # max fraction of liquid water in snow [-]
@@ -111,15 +111,15 @@ shrubs = deepcopy(plant_default)
 # --- stand characteristics ---
 # specify name and maximum leaf-area index, LAImax [m2/m2], and 
 # adjust values of 'phenop' and 'laip' if default values not suitable
-pine.update({'name': 'pine', 'LAImax': []})
+pine.update({'name': 'pine', 'LAImax': [2.1]})
 pine['phenop'].update({'fmin': 0.1})
 pine['laip'].update({'lai_min': 0.8})
 
-spruce.update({'name': 'spruce', 'LAImax': []})
+spruce.update({'name': 'spruce', 'LAImax': [1.0]})
 spruce['phenop'].update({'fmin': 0.1})
 spruce['laip'].update({'lai_min': 0.8})
 
-decid.update({'name': 'decid', 'LAImax': []})
+decid.update({'name': 'decid', 'LAImax': [1.0]})
 
 shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
 shrubs['laip'].update({'lai_min': 0.5})

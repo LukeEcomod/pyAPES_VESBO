@@ -107,7 +107,7 @@ class Interception():
             erate = 0.0
 
         """ --- canopy water storage change --- """
-        W = self.oldW  # initiate
+        W = self.oldW.copy()  # initiate
 
         # snow unloading from canopy, ensures also that seasonal
         # LAI development does not mess up computations
@@ -188,7 +188,7 @@ class Interception():
         N = len(LAIz)
 
         # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
-        F = 1.0
+        F = 1.0  # other than 1.0 migth not work!
 
         """ --- state of precipitation (uses fW[-1] in end of code)--- """
         # fraction as water [-]
@@ -215,8 +215,12 @@ class Interception():
         # evaporation rate from wet leaf [m/s]
         Ep = gb_v * Dleaf * MOLAR_MASS_H2O / RHO_WATER
 
+        # Assume no evaporation during rain (CHANGE when energy balance added)
+        if Prec > 0.0:
+            Ep = np.zeros(N)
+
         """ --- canopy water storage change --- """
-        W = self.oldW  # layerwise canopy storage [m]
+        W = self.oldW.copy()  # layerwise canopy storage [m]
 
         # Unloading in canopy, ensures also that seasonal
         # LAI development does not mess up computations
@@ -225,58 +229,83 @@ class Interception():
             W[n] -= Unload  # update storage of layer n
             if n != 0:
                 W[n-1] += Unload  # unloading added to layer below (if not lower layer)
-        # unload = unloading below canopy [m]
-
-        # wetness ratio at each layer (-), assumes leafs are either totally wet or totally dry
-        wfo = W / Wmax
-
-        # Within-canopy throughfall + condensation drip [m/s]
-        P = np.zeros(N+1)
-        Evap = np.zeros(N)  # evaporation/condesation [m]
-        Interc = np.zeros(N)  # interception [m]
-        P[-1] = Prec  # above canopy equals precipitation rate [m/s]
-        for n in reversed(range(0, N)):  # start from highest grid point
-            Interc[n] = F * (1 - wfo[n]) * LAIz[n] * P[n+1]  # interception rate in layer
-            P[n] = P[n+1] - Interc[n]
-            if Ep[n] >= 0:  # evaporation case
-                Evap[n] = wfo[n] * LAIz[n] * Ep[n]  # evaporation rate in layer (only from wet part)
-            else:  # condensation case
-                Evap[n] = LAIz[n] * Ep[n]  # condensation rate in layer
-                P[n] -= wfo[n] * LAIz[n] * Ep[n]  # condensation to wet leaf part drips (increases P[n])
+        # Unload = unloading below canopy [m]
 
         # timestep subdivision to calculate change in canopy water store
-        Nsteps = 100  # number of subtimesteps
-        subdt = dt/100  # [s]
-        dW = np.zeros(N)  # [m]
-        for t in range(0, Nsteps):
-            ix = np.where(Ep >= 0)  # evaporation case
-            dW[ix] = (F * P[ix] / (F * P[ix] + Ep[ix] + eps) * Wmax[ix] - W[ix]) \
-                        * (1 - np.exp(-(F * P[ix] + Ep[ix]) * LAIz[ix] * subdt / Wmax[ix]))
-            ix = np.where(Ep < 0)  # condensation case
-            dW[ix]= (Wmax[ix] - W[ix]) * (1 - np.exp(-(F * P[ix] - Ep[ix]) * LAIz[ix] * subdt / Wmax[ix]))
-            # update storage [m]
-            W += dW
+        Nsteps = 10  # number of subtimesteps
+        subdt = dt / Nsteps  # [s]
+
+        # initiate cumulative variables
+        Interc = np.zeros(N)  # interception [m]
+        Evap = np.zeros(N)  # evaporation [m]
+        Cond = np.zeros(N)  # condesation [m]
+        Trfall = 0.0  # throughfall below canopy [m]
+
+        if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
+            for t in range(0, Nsteps):
+                Ir = np.zeros(N)  # interception rate [m/s]
+                dW = np.zeros(N)  # change in storage [m]
+                P = np.zeros(N+1)  # precipitation rate to layer [m/s]
+                P[-1] = Prec  # above canopy equals precipitation rate [m/s]
+                for n in reversed(range(0, N)):  # start from highest grid point
+                    if Ep[n] >= 0:  # evaporation case
+                        # change in storage [m]
+                        dW[n] = (F * P[n+1] / (F * P[n+1] + Ep[n] + eps) * Wmax[n] - W[n]) \
+                                * (1.0 - np.exp(-(F * P[n+1] + Ep[n]) * LAIz[n] * subdt / Wmax[n]))
+                        # wetness ration in layer
+                        if LAIz[n] > 0 and P[n+1] + Ep[n] > 0:
+                            wf = (F * P[n+1] - dW[n] / (LAIz[n] * subdt)) / (F * P[n+1] + Ep[n])
+                        else:
+                            wf = 0.0
+                        # interception rate in layer [m/s]
+                        Ir[n] = F * (1 - wf) * LAIz[n] * P[n+1]
+                        # drainage rate from layer [m/s]
+                        P[n] = P[n+1] - Ir[n]
+                        # evaporation from layer [m]
+                        Evap[n] += wf * LAIz[n] * Ep[n] * subdt
+                    else:  # condensation case
+                        # change in storage [m]
+                        dW[n] = (Wmax[n] - W[n]) \
+                                * (1.0 - np.exp(-(F * P[n+1] - Ep[n]) * LAIz[n] * subdt / Wmax[n]))
+                        # wetness ration in layer
+                        if LAIz[n] > 0 and P[n+1] - Ep[n] > 0:
+                            wf = (F * P[n+1] - Ep[n] - dW[n] / (LAIz[n] * subdt)) / (F * P[n+1] - Ep[n])
+                        else:
+                            wf = 0.0
+                        # interception rate in layer [m/s]
+                        Ir[n] = F * (1 - wf) * LAIz[n] * P[n+1]
+                        # drainage rate from layer [m/s] (incl. increase by condensation drip)
+                        P[n] = P[n+1] - Ir[n] - wf[n] * LAIz[n] * Ep[n]
+                        # Condensation [m] (incl. condenstation to dry leaf and drip from wet leaf)
+                        Cond[n] += LAIz[n] * Ep[n] * subdt
+                # update storage [m]
+                W += dW
+                # interception and throughfall [m]
+                Interc += Ir * subdt
+                Trfall += P[0] * subdt
+
+        # throughfall to field layer or snowpack
+        Trfall = Trfall + Unload
+        Trfall_rain = fW[-1] * Trfall  # accoording to above canopy temperature
+        Trfall_snow = (1 - fW[-1]) * Trfall
+
+        if sum(W) < eps:
+            W *= 0.0
 
         # dry canopy fraction
         df = 1 - W / Wmax
 
-        # evaporation/condensation and interception during dt
-        Evap *= dt  # [m]
-        Interc *= dt  # [m]
-
-        # throughfall to field layer or snowpack
-        Trfall = P[0] * dt + Unload
-        Trfall_rain = fW[-1] * Trfall  # accoording to above canopy temperature
-        Trfall_snow = (1 - fW[-1]) * Trfall
-
         # update state variables
         self.W = W
 
+#        if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
+#            print " W " + str(sum(W)) + " Prec " + str(Prec * dt) +" Evap " + str(sum(Evap)) + " Tr " + str((Trfall_rain + Trfall_snow))
+
         # mass-balance error [m] ! self.W is old storage
-        MBE = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - (Trfall_rain + Trfall_snow))
+        MBE = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - sum(Cond) - (Trfall_rain + Trfall_snow))
 
         return df, Trfall_rain, Trfall_snow, sum(Interc), sum(Evap), MBE
 
     def _update(self):
 
-        self.oldW = self.W
+        self.oldW = self.W.copy()

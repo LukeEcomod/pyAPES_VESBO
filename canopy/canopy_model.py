@@ -411,7 +411,7 @@ class CanopyModel():
                 state.update({'h2o': H2O,
                               'co2': CO2})
             if self.Switch_Interc:
-                state.update({'interception_storage': self.Interc_Model.W})
+                state.update({'interception_storage': sum(self.Interc_Model.W)})
 
         return fluxes, state
 

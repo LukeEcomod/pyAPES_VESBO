@@ -3,7 +3,7 @@
 Created on Thu Mar 15 12:40:57 2018
 
 @author: L1656
-"""
+    """
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from plotting import plotresults, plotxarray, plotresultsMLM
 
 #outputfile=driver(create_ncf=True)
-#outputfile = 'results/201803201103_CCFPeat_results.nc'
+#outputfile = 'results/201804241836_CCFPeat_results.nc'
 
 filepath='C:/Users/L1656/Documents/Git_repos/CCFPeat/' + outputfile
 results=xr.open_dataset(filepath)
@@ -20,9 +20,18 @@ results.coords['simulation']=results.simulation.values
 results.coords['soil']=results.soil_z.values
 results.coords['canopy']=results.canopy_z.values
 
-plotresults(results)
 
-plotresultsMLM(results)
+#import seaborn as sns
+#pal = sns.color_palette("hls", 6)
+#from parameters.sensitivity_sampling import LAIcombinations
+#for i in range(len(LAIcombinations)):
+#    k=int(sum(LAIcombinations[i]))-1
+#    plotxarray(results.isel(simulation=i), ['soil_ground_water_level'], colors=pal[k:], xticks=True)
+
+
+plotresults(results.isel(simulation=0))
+
+plotresultsMLM(results.isel(simulation=0))
 
 # readind lettosuo data
 # filepaths
@@ -108,8 +117,10 @@ plot_columns(lettosuo_data,[15,36])
 
 # lad profile test
 lad_p, lad_s, lad_d, _, _, _, _, _, _ = model_trees(z, quantiles, normed=False,
-    dbhfile=r"C:\Users\L1656\Documents\Git_repos\CCFPeat\parameters\runkolukusarjat\letto2014.txt",
+    dbhfile=r"C:\Users\L1656\Documents\Git_repos\CCFPeat\parameters\runkolukusarjat\hyde2015.txt",
     plot=True)
+
+
 
 #from canopy.evapotranspiration import e_sat
 #

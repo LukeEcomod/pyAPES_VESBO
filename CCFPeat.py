@@ -13,7 +13,7 @@ from soilprofile.soil_model import SoilModel
 
 from copy import deepcopy
 
-def driver(create_ncf=False):
+def driver(create_ncf=False, LAI_sensitivity=False):
     """
     """
 
@@ -23,7 +23,13 @@ def driver(create_ncf=False):
     from parameters.canopy_parameters import cpara
     # Import soil model parameters
     from parameters.soil_parameters import spara
-    
+
+    if LAI_sensitivity:
+        from parameters.sensitivity_sampling import LAIcombinations
+        Nsim = len(LAIcombinations)
+    else:
+        Nsim = 1
+
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
                         gpara['start_time'],
@@ -33,9 +39,11 @@ def driver(create_ncf=False):
                         dt=gpara['dt'])
 
     tasks = []
-    Nsim = 1
 
     for k in range(Nsim):
+        if LAI_sensitivity:
+            for pt in range(3):
+                cpara['plant_types'][pt].update({'LAImax': [LAIcombinations[k][pt]]})
         tasks.append(Model(gpara, cpara, spara, forcing, nsim=k))
 
     if create_ncf:
@@ -52,7 +60,7 @@ def driver(create_ncf=False):
                 filename=filename)
 
         for task in tasks:
-            print('Running simulation number: {}' .format(k))
+            print('Running simulation number: {}' .format(task.Nsim))
             running_time = time.time()
             results = task._run()
             print('Running time %.2f seconds' % (time.time() - running_time))
