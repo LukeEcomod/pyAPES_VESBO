@@ -78,10 +78,6 @@ class Interception():
         # vapor pressure deficit [Pa]
         esat, _, _ = e_sat(T)  # [Pa]
         VPD = max(0.0, esat - H2O * P)
-        
-        # interception storage capacities [m]
-        Wmax = self.wmax * LAI
-        Wmaxsnow = self.wmaxsnow * LAI
 
         Prec = Prec * dt  # [m/s] -> [m]
 
@@ -94,9 +90,12 @@ class Interception():
         else:
             fW = (T - self.Tmin) / (self.Tmax - self.Tmin)
 
+        # maximum interception storage capacity [m]
+        Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAI
+
         """ 'potential' evaporation and sublimation rates """
         if (Prec == 0) & (T <= self.Tmin):  # sublimation case
-            Ce = 0.01 * ((self.oldW + eps) / Wmaxsnow)**(-0.4)  # exposure coeff [-]
+            Ce = 0.01 * ((self.oldW + eps) / Wmax)**(-0.4)  # exposure coeff [-]
             Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
             gi = Sh * self.oldW * 1000 * Ce / 7.68 + eps # [m/s]
             erate = penman_monteith(AE, VPD, T, gi, 1./Ra,  units='m', type='sublimation') * dt
@@ -111,20 +110,14 @@ class Interception():
 
         # snow unloading from canopy, ensures also that seasonal
         # LAI development does not mess up computations
-        if T >= self.Tmax and W > Wmax:
-            Unload = W - Wmax
-        else:
-            Unload = 0.0
+        Unload = max(0.0, W - Wmax)
         # update canopy storage [m]
         W = W - Unload
 
         # interception of rain or snow: asymptotic approach of saturation.
         # Hedstrom & Pomeroy 1998. Hydrol. Proc 12, 1611-1625;
         # Koivusalo & Kokkonen 2002 J.Hydrol. 262, 145-164.
-        if T < self.Tmin:
-            Interc = (Wmaxsnow - W) * (1.0 - np.exp(-(self.cf / Wmaxsnow) * Prec))
-        else:  # above Tmin, interception capacity equals that of liquid precip
-            Interc = np.maximum(0.0, (Wmax - W)) * (1.0 - np.exp(-(self.cf / Wmax) * Prec))
+        Interc = (Wmax - W) * (1.0 - np.exp(-(self.cf / Wmax) * Prec))
         # update canopy storage [m]
         W = W + Interc
 
@@ -231,8 +224,8 @@ class Interception():
                 W[n-1] += Unload  # unloading added to layer below (if not lower layer)
         # Unload = unloading below canopy [m]
 
-        # timestep subdivision to calculate change in canopy water store
-        Nsteps = 10  # number of subtimesteps
+        # timestep subdivision to calculate change in canopy water store, no impact??
+        Nsteps = 1  # number of subtimesteps
         subdt = dt / Nsteps  # [s]
 
         # initiate cumulative variables
@@ -289,6 +282,9 @@ class Interception():
         Trfall_rain = fW[-1] * Trfall  # accoording to above canopy temperature
         Trfall_snow = (1 - fW[-1]) * Trfall
 
+        # H20 source/sink per ground area due to evaporation and condensation [mol m-2 s-1]
+        dqsource = (Evap + Cond) / dt / MOLAR_MASS_H2O * RHO_WATER
+
         if sum(W) < eps:
             W *= 0.0
 
@@ -304,7 +300,7 @@ class Interception():
         # mass-balance error [m] ! self.W is old storage
         MBE = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - sum(Cond) - (Trfall_rain + Trfall_snow))
 
-        return df, Trfall_rain, Trfall_snow, sum(Interc), sum(Evap), MBE
+        return df, Trfall_rain, Trfall_snow, sum(Interc), sum(Evap), dqsource, MBE
 
     def _update(self):
 

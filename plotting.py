@@ -61,8 +61,8 @@ def plotresults(results):
     plt.ylabel('[mm]')
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
     plt.subplot(8,3,(10,11))
-    plotxarray(results, ['canopy_transpiration', 'canopy_moss_evaporation'],
-               colors=[pal[1]] + [pal[0]], xticks=False, m_to='mmperh')
+    plotxarray(results, ['canopy_transpiration', 'canopy_evaporation', 'canopy_moss_evaporation'],
+               colors=[pal[1]] + [pal[2]] + [pal[0]], xticks=False, m_to='mmperh')
     plt.subplot(8,3,(13,14))
     plotxarray(results, ['soil_total_runoff'],
                colors='k', xticks=False, m_to='mmperh')

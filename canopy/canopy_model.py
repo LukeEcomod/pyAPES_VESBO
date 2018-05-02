@@ -273,7 +273,7 @@ class CanopyModel():
                 if self.Switch_Interc:
                     """ --- multilayer interception and interception evaporation --- """
                     # here assume Tleaf = T
-                    df, Trfall_rain, Trfall_snow, Interc, Evap, MBE_interc = self.Interc_Model._multi_layer(
+                    df, Trfall_rain, Trfall_snow, Interc, Evap, Ew, MBE_interc = self.Interc_Model._multi_layer(
                             dt=dt,
                             lt=0.1,  ############ to inputs!!!
                             LAIz=self.lad * self.dz,
@@ -282,6 +282,9 @@ class CanopyModel():
                             T=T,
                             Prec=Prec,
                             P=P)
+                    # --- update ---
+                    # h2o sink/source terms
+                    qsource += Ew / self.dz  # mol m-3 s-1
 
                 """ --- leaf gas-exchange at each layer and for each PlantType --- """
                 # here assume Tleaf = T
@@ -374,7 +377,9 @@ class CanopyModel():
             # ecosystem GPP umolm-2s-1
             GPP = - NEE + Reco
             # stand transpiration [m/dt]
-            Tr = (LE[-1] - LE_gr) / L_MOLAR * MH2O * dt * 1e-3
+            Tr = ((LE[-1] / L_MOLAR) - E_gr) * MH2O * dt * 1e-3
+            if self.Switch_Interc:
+                Tr -=  sum(Ew) * MH2O * dt * 1e-3
 
         # evaporation from moss layer [m/dt]
         Efloor = E_gr * MH2O * dt * 1e-3   # on jo HIAHTUNUT? Ei haihduteta maasta..?
@@ -412,6 +417,8 @@ class CanopyModel():
                               'co2': CO2})
             if self.Switch_Interc:
                 state.update({'interception_storage': sum(self.Interc_Model.W)})
+            else:
+                state.update({'interception_storage': self.Interc_Model.W})
 
         return fluxes, state
 
