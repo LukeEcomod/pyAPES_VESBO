@@ -11,7 +11,7 @@ cpara = {}
 # --- control flags (True/False) ---
 ctr = {'multilayer_model': {'ON': True,  # compute in multilayer mode
                             # In case ON:
-                            'MLinterception': True,  # multilayer scheme for interception
+                            'MLinterception': False,  # multilayer scheme for interception
                             'Eflow': True,  # ensemble flow
                             'WMA': True,  # well-mixed assumption
                             'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model

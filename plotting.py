@@ -17,7 +17,7 @@ pal = sns.color_palette("hls", 5)
 
 def plotresults(results):
     # Read ET
-    ET_hyde = read_forcing("Hyde_data_2010_2016.csv",
+    ET_hyde = read_forcing("Hyde_data_1997_2016.csv",
                            gpara['start_time'],
                            gpara['end_time'],
                            cols=['ET'])
@@ -108,7 +108,7 @@ def plotxarray(results, variables, colors, xticks=True, m_to=False):
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
 
 def plotresultsMLM(results):
-    Data = read_forcing("Hyde_data_2010_2016.csv",
+    Data = read_forcing("Hyde_data_1997_2016.csv",
                             gpara['start_time'],
                             gpara['end_time'],
                             cols=['NEE','GPP','LE','ET'],

@@ -117,7 +117,8 @@ class Interception():
         # interception of rain or snow: asymptotic approach of saturation.
         # Hedstrom & Pomeroy 1998. Hydrol. Proc 12, 1611-1625;
         # Koivusalo & Kokkonen 2002 J.Hydrol. 262, 145-164.
-        Interc = (Wmax - W) * (1.0 - np.exp(-(self.cf / Wmax) * Prec))
+        Interc = (Wmax - W) * (1.0 - np.exp(-(1.0 / Wmax) * Prec))
+        #Interc = (Wmax - W) * (1.0 - np.exp(-(self.cf / Wmax) * Prec))
         # update canopy storage [m]
         W = W + Interc
 

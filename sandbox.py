@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from plotting import plotresults, plotxarray, plotresultsMLM
 
 #outputfile=driver(create_ncf=True)
-#outputfile = 'results/201804241836_CCFPeat_results.nc'
+#outputfile = 'results/201805031530_CCFPeat_results.nc'
 
 filepath='C:/Users/L1656/Documents/Git_repos/CCFPeat/' + outputfile
 results=xr.open_dataset(filepath)
@@ -117,7 +117,7 @@ plot_columns(lettosuo_data,[15,36])
 
 # lad profile test
 lad_p, lad_s, lad_d, _, _, _, _, _, _ = model_trees(z, quantiles, normed=False,
-    dbhfile=r"C:\Users\L1656\Documents\Git_repos\CCFPeat\parameters\runkolukusarjat\hyde2015.txt",
+    dbhfile=r"C:\Users\L1656\Documents\Git_repos\CCFPeat\parameters\runkolukusarjat\letto2016_partial.txt",
     plot=True)
 
 
@@ -144,3 +144,50 @@ lad_p, lad_s, lad_d, _, _, _, _, _, _ = model_trees(z, quantiles, normed=False,
 #plt.figure()
 #plotxarray(results, ['forcing_h2o'], colors=pal, xticks=False)
 #plotxarray(results1, ['forcing_h2o'], colors=pal[1:], xticks=False)
+
+def create_hyde_forcingfile():
+
+    """ read files in format Forcing_YYYY.dat """
+    direc = "H:/Samulilta/Hyde/Forcing_corrected/"
+    frames = []
+    columns =['U','ust','Ta','RH','CO2','H2O','Prec','P',
+              'dirPar','diffPar','dirNir','diffNir','Rnet',
+              'LWin','LWout','LWnet','Tsh','Tsa','Tsc','Wh','Wa']
+    for year in range(1997,2017):
+        forc_fp = direc + "Forcing_" + str(year) + ".dat"
+        dat = pd.read_csv(forc_fp, sep=',', header='infer')
+        index = pd.date_range('01-01-' + str(year),'31-12-' + str(year) + ' 23:59:59',freq='0.5H')
+        if len(index) != len(dat):
+            print "Year " + str(year) + ": Missing values!"
+        else:
+            dat.index = index
+            frames.append(dat[columns])
+
+    hyde_data=pd.concat(frames)
+
+    hyde_data.insert(0,'yyyy',hyde_data.index.year.values)
+    hyde_data.insert(1,'mo',hyde_data.index.month.values)
+    hyde_data.insert(2,'dd',hyde_data.index.day.values)
+    hyde_data.insert(3,'hh',hyde_data.index.hour.values)
+    hyde_data.insert(4,'mm',hyde_data.index.minute.values)
+
+    """ read files in format FIHy_YYYY_pd.csv """
+    direc = "H:/Samulilta/Hyde/FIHy_1997_2016_new/"
+    frames = []
+    columns =['NEE','GPP','LE','ET','fRg']
+    for year in range(1997,2017):
+        forc_fp = direc + "FIHy_" + str(year) + "_pd.csv"
+        dat = pd.read_csv(forc_fp, sep=',', header='infer')
+        index = pd.date_range('01-01-' + str(year),'31-12-' + str(year) + ' 23:59:59',freq='0.5H')
+        if len(index) != len(dat):
+            print "Year " + str(year) + ": Missing values!"
+        else:
+            dat.index = index
+            frames.append(dat[columns])
+
+    df = pd.concat(frames)
+    hyde_data=hyde_data.merge(df, how='outer', left_index=True, right_index=True)
+    hyde_data=hyde_data.rename(columns={'Ta':'Tair', 'ust':'Ustar', 'fRg':'Rg'})
+
+    fp = "C:/Users/L1656/Documents/Git_repos/CCFPeat/forcing/Hyde_data_1997_2016.csv"
+    hyde_data.to_csv(path_or_buf=fp, sep=',', na_rep='NaN',index=False)
