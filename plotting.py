@@ -16,27 +16,29 @@ import seaborn as sns
 pal = sns.color_palette("hls", 5)
 
 def plotresults(results):
+    start_time=results.date.values[0]
+    end_time=results.date.values[-1]
     # Read ET
     ET_hyde = read_forcing("Hyde_data_1997_2016.csv",
-                           gpara['start_time'],
-                           gpara['end_time'],
+                           start_time,
+                           end_time,
                            cols=['ET'])
     ET_hyde.loc[:,'ET'] = ET_hyde.loc[:,'ET'] * 0.0324  # mm/30min
     # Read snow
     snow = read_forcing("FMI_jokioinen.csv",
-                                gpara['start_time'],
-                                gpara['end_time'],
+                                start_time,
+                                end_time,
                                 cols=['SnowD'])
     # Read weir
     weir = read_forcing("Lettosuo_weir.csv",
-                           gpara['start_time'],
-                           gpara['end_time'],
+                           start_time,
+                           end_time,
                            cols=['runf'])
     weir.loc[:,'runf'] = weir.loc[:,'runf'] * 1e-3 *gpara['dt']
     # Read gwl
     gwl_meas = read_forcing("Lettosuo_gwl.csv",
-                               gpara['start_time'],
-                               gpara['end_time'],
+                               start_time,
+                               end_time,
                                cols=['WT_E','WT_N','WT_W','WT_S'])
     
     dates = results.date.values
@@ -57,7 +59,7 @@ def plotresults(results):
     plt.stackplot(dates, 1000 * yearly_cum, labels=variables, colors=pal)
     plt.xlim([results.date.values[0], results.date.values[-1]])
 #    plt.ylim(0,700)
-    plt.plot(dates, yearly_cum_ET[0], 'k', linewidth=1, label='ET_hyde')
+    plt.plot(ET_hyde.index, yearly_cum_ET[0], 'k', linewidth=1, label='ET_hyde')
     plt.ylabel('[mm]')
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
     plt.subplot(8,3,(10,11))
@@ -150,7 +152,7 @@ def plotresultsMLM(results):
     plt.ylabel('LE mod')
     plt.title('y = %.2f + %.2f' % (p[0], p[1]))
     plt.axis('equal')
-    
+
     # water fluxes
     del x, y
     months = results.date.dt.month.values

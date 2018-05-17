@@ -7,7 +7,7 @@ Created on Tue Apr 24 18:05:03 2018
 import numpy as np
 import itertools
 
-# sensitivity sampling for LAI
+# sensitivity sampling for LAI (pine, spruce, decid)
 frac = np.linspace(0,1,5)
 frac = frac.tolist()
 combinations = list(itertools.product(*[frac,frac,frac]))

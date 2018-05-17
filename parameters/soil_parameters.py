@@ -37,7 +37,7 @@ pF_para = fit_pF(head, watcont, fig=False)
 
 # Hydraulic conductivity [m s-1]
 Kvsat = [2e-4, 2e-5, 5e-5, 3e-6, 5e-6, 1e-6, 1e-7]  # vertical
-Khmult = [10.0, 10.0, 10.0, 10.0, 10.0, 1.0, 1.0]  # horizontal
+Khmult = [10.0, 10.0, 5.0, 5.0, 5.0, 1.0, 1.0]  # horizontal
 
 # Save to arrays
 z = np.array([])

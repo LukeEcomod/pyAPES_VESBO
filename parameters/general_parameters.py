@@ -5,9 +5,9 @@ GENERAL PARAMETERS
 
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2011-06-01",  # end time of simulation [yyyy-mm-dd]
-        'forc_filename' : "Hyde_data_1997_2016.csv",  #"FMI_jokioinen.csv"  ## forcing data file*
+        'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2016-01-01",  # end time of simulation [yyyy-mm-dd]
+        'forc_filename' : "Hyde_data_1997_2016.csv",  #"FMI_jokioinen.csv", #"  ## forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m]', ('date', 'simulation')],
                       ['forcing_h2o','H2O concentration [mol mol-1]', ('date', 'simulation')],

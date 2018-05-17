@@ -97,8 +97,8 @@ class Interception():
         if (Prec == 0) & (T <= self.Tmin):  # sublimation case
             Ce = 0.01 * ((self.oldW + eps) / Wmax)**(-0.4)  # exposure coeff [-]
             Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
-            gi = Sh * self.oldW * 1000 * Ce / 7.68 + eps # [m/s]
-            erate = penman_monteith(AE, VPD, T, gi, 1./Ra,  units='m', type='sublimation') * dt
+            gi = Sh * self.oldW * 1000 * Ce / 7.68 + eps # [m/s]  # 7.68 == (2/3*rhoi*r**2/Dw)
+            erate = penman_monteith(AE, VPD, T, 1./Ra, gi, units='m', type='sublimation') * dt
         elif (Prec == 0) & (T > self.Tmin):  # evaporation case
             gs = 1e6
             erate = penman_monteith(AE, VPD, T, gs, 1./Ra, units='m', type='evaporation') * dt
@@ -182,7 +182,7 @@ class Interception():
         N = len(LAIz)
 
         # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
-        F = 1.0  # other than 1.0 migth not work!
+        F = 0.5 # for randomdly oriented leaves
 
         """ --- state of precipitation (uses fW[-1] in end of code)--- """
         # fraction as water [-]
@@ -195,9 +195,9 @@ class Interception():
         # maximum interception storage capacities layerwise [m]
         Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
 
-        """ --- rate of evaporation/condensation --- """ ##### or sublimation/deposition ?????????
+        """ --- rate of evaporation/condensation --- """ ##### or sublimation/deposition ????????? GITHUB SPATHY!!
         # boundary layer conductances for H2O [mol m-2 s-1]
-        _, gb_v, _, _ = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)
+        _, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)
         # vapor pressure difference between leaf and air [mol/mol]
         # assumption Tleaf = T
         es, _, _ = e_sat(T)

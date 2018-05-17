@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from plotting import plotresults, plotxarray, plotresultsMLM
 
 #outputfile=driver(create_ncf=True)
-#outputfile = 'results/201805031530_CCFPeat_results.nc'
+#outputfile = 'results/201804241836_CCFPeat_results.nc'
 
 filepath='C:/Users/L1656/Documents/Git_repos/CCFPeat/' + outputfile
 results=xr.open_dataset(filepath)
@@ -20,18 +20,80 @@ results.coords['simulation']=results.simulation.values
 results.coords['soil']=results.soil_z.values
 results.coords['canopy']=results.canopy_z.values
 
-
-#import seaborn as sns
-#pal = sns.color_palette("hls", 6)
-#from parameters.sensitivity_sampling import LAIcombinations
-#for i in range(len(LAIcombinations)):
-#    k=int(sum(LAIcombinations[i]))-1
-#    plotxarray(results.isel(simulation=i), ['soil_ground_water_level'], colors=pal[k:], xticks=True)
-
-
 plotresults(results.isel(simulation=0))
 
 plotresultsMLM(results.isel(simulation=0))
+
+import seaborn as sns
+pal = sns.color_palette("hls", 6)
+from parameters.sensitivity_sampling import LAIcombinations
+for i in range(len(LAIcombinations)):
+    k=int(sum(LAIcombinations[i]))-1
+    plotxarray(results.isel(simulation=i), ['soil_ground_water_level'], colors=pal[k:], xticks=True)
+
+"""-------- Colormesh plotting --------"""
+
+LAI=np.empty(len(LAIcombinations))
+# pine, spruce, decid
+string='psd'
+species_f=np.empty([len(LAIcombinations),3])
+species= ['('] * len(LAIcombinations)
+for i in range(len(LAIcombinations)):
+    LAI[i] = sum(LAIcombinations[i])
+    species_f[i,:] = LAIcombinations[i]/LAI[i]
+    for j in range(3):
+        species[i] += str(int(species_f[i,j]*100))
+        if j < 2:
+            species[i] += ','
+        else:
+            species[i] += ')'
+#        if species_f[i,j] >= 0.5:
+#            species[i] += string[j].upper()
+#        if species_f[i,j] == 0.25:
+#            species[i] += string[j]
+WTD = -results['soil_ground_water_level'].sel(date=results['date.season']=='JJA').groupby('date.year').mean(dim='date')
+N_years = len(WTD['year'])
+species_uniques = list(set(species))
+LAI_uniques = list(set(LAI))
+
+WTD_mesh = np.empty([len(species_uniques),len(LAI_uniques),N_years])
+for i in range(len(species_uniques)):
+    x = species_uniques[i]
+    for j in range(len(LAI_uniques)):
+        y = LAI_uniques[j]
+        for k in range(len(WTD['simulation'])):
+            if species[k] == x and LAI[k] == y:
+                WTD_mesh[i,j,:]=WTD[:,k]
+
+
+fig=plt.figure(figsize=(15,5))
+for i in range(N_years):
+    ax = plt.subplot(1,N_years+1,i+1)
+    p = ax.pcolormesh(WTD_mesh[:,:,i],cmap=plt.get_cmap('coolwarm'),vmin=WTD.min(), vmax=WTD.max())
+    ax.set_title(str(WTD['year'][i].values))
+    yticks = np.arange(len(species_uniques))+0.5
+    xticks = np.arange(len(LAI_uniques))+0.5
+    ax.set_yticks(yticks)
+    ax.set_xticks(xticks)
+    ax.set_yticklabels([])
+    ax.set_xticklabels(LAI_uniques)
+#    ax.set_aspect('equal')
+    if i == 0:
+        ax.set_yticklabels(species_uniques)
+        ax.set_ylabel('Species composition, share of total LAI (%)\n (pine, spruce, decidious)')
+    if i == int(N_years/2):
+        ax.set_xlabel('Total LAI of tree stand (m$^2$ m$^{-2}$)')
+
+cax = plt.axes([0.94, 0.1, 0.015, 0.85])
+cb = fig.colorbar(p, cax=cax)
+cb.set_label('Mean water table depth during Jun-Aug (m)')
+cb.ax.invert_yaxis()
+fig.subplots_adjust(left=0.08, bottom=0.1, right=1.05, top=0.95, wspace=0.1)
+
+fig.savefig('standstructure_WTD.png')
+
+"""---------------------------------------------"""
+
 
 # readind lettosuo data
 # filepaths

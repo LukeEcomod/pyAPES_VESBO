@@ -430,7 +430,7 @@ def leaf_boundary_layer_conductance(u, d, Ta, dT, P=101300.):
     factor1 = 1.4*2  # forced conv. both sides, 1.4 is correction for turbulent flow
     factor2 = 1.5  # free conv.; 0.5 comes from cooler surface up or warmer down
     
-    Da_v = 2.4e-5  # Molecular diffusivity of "water vapor" in air at STP (20C and 11kPa) [m2/s]
+    Da_v = 2.4e-5  # Molecular diffusivity of "water vapor" in air at STP (20C and 101kPa) [m2/s]
     Da_c = 1.57e-5  # Molecular diffusivity of "CO2" in air at STP [m2/s]
     Da_T = 2.14e-5  # Molecular diffusivity of "heat" in air at STP [m2/s]
     va = 1.51e-5  # air viscosity at STP [m2/s]
@@ -467,6 +467,6 @@ def leaf_boundary_layer_conductance(u, d, Ta, dT, P=101300.):
     gb_v = factor1*gb_v + factor2*gbf_v
     # gb_o3=factor1*gb_o3+factor2*gbf_o3
 
-    r = Gr / (Re**2)  # ratio of free/forced convection
+    #r = Gr / (Re**2)  # ratio of free/forced convection
 
-    return gb_h, gb_c, gb_v, r
+    return gb_h, gb_c, gb_v#, r
