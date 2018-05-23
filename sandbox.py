@@ -8,7 +8,7 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 from matplotlib import pyplot as plt
-from plotting import plotresults, plotxarray, plotresultsMLM
+from plotting import plotresults, plotxarray, plotresultsMLM, plot_columns
 
 #outputfile=driver(create_ncf=True)
 outputfile = 'results/201804241836_CCFPeat_results.nc'
@@ -96,7 +96,7 @@ fig.savefig('standstructure_WTD.png')
 """---------------------------------------------"""
 
 
-# readind lettosuo data
+# readind data
 # filepaths
 forc_fp = ["H:/Lettosuo/Forcing_data/Annalea1/avohakkuu_EC.csv",
            "H:/Lettosuo/Forcing_data/Annalea2/Letto1_EC.csv",
@@ -129,10 +129,8 @@ for fp in forc_fp:
     dat.ix[:,0]=dat.index
     dat = dat.drop_duplicates(subset=dat.columns[0])
     dat = dat.drop(dat.columns[0], axis=1)
-#    dat.plot(kind='line',subplots=True,title=fp)
     dat.columns = fp.split("/")[-1].split(".")[0] + ': ' + dat.columns
     lettosuo_data=lettosuo_data.merge(dat, how='outer', left_index=True, right_index=True)
-    print fp + ": " + str(len(lettosuo_data))
 
 # divide hourly precipitation to half hour
 for i in [89, 107, 108, 109]:
@@ -140,111 +138,27 @@ for i in [89, 107, 108, 109]:
     lettosuo_data.ix[1:-1:2,i]=lettosuo_data.ix[0:-1:2,i].values
     lettosuo_data.ix[:,i]=lettosuo_data.ix[:,i].values/2.0
 
-Prec_data = lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm))',
-                           'jokioinen_meteo: Precipitation amount',
-                           'jokioinen_prec1: Prec [mm h-1]',
-                           'jokioinen_prec2: Prec [mm h-1]',
-                           'somero_prec: Precipitation amount']]
+Prec_data = continuous_prec(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm))',
+                                           'jokioinen_meteo: Precipitation amount',
+                                           'jokioinen_prec1: Prec [mm h-1]',
+                                           'jokioinen_prec2: Prec [mm h-1]',
+                                           'somero_prec: Precipitation amount']])
 
-""" continuous prec timeseries for jokioinen """
-# FMI open data jokioinen + FMI jokioinen gauge 1
-Prec_data['jokioinen_prec'] = Prec_data['jokioinen_meteo: Precipitation amount'].fillna(Prec_data['jokioinen_prec1: Prec [mm h-1]'])
-Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 10.0, 0.0)
-# + FMI jokioinen gauge 2
-Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['jokioinen_prec2: Prec [mm h-1]'])
-Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 20.0, Prec_data['jokioinen_prec_flag'])
-# + FMI open data somero
-Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['somero_prec: Precipitation amount'])
-Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(),30.0, Prec_data['jokioinen_prec_flag'])
-# fill rest with zero
-Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(0)
-# plot
-plot_columns(Prec_data[['jokioinen_prec_flag','jokioinen_prec']])
+frames = []
+frames.append(Prec_data['lettosuo_prec'])
 
-""" continuous prec timeseries for lettosuo """
-Prec_data['lettosuo_prec_flag']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Rain (mm))'].isnull(), 10.0, 0.0)
-# consider prec data unrealiable when Tair < 2C
-Prec_data['lettosuo_prec_flag']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
-         20.0, Prec_data['lettosuo_prec_flag'])
-Prec_data['lettosuo_prec']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
-         np.nan, Prec_data['Letto1_metsanpohja: avg(Rain (mm))'])
-# if rolling 3 day mean prec less than 10% of jokionen rolling mean, remove
-Prec_data_daily = pd.rolling_sum(Prec_data.fillna(0), 3 * 48, 1)
-Prec_data_daily['lettosuo_prec'] = np.where(Prec_data['lettosuo_prec'].isnull(), np.nan, Prec_data_daily['lettosuo_prec'])
-Prec_data['lettosuo_prec_flag']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
-         30.0, Prec_data['lettosuo_prec_flag'])
-Prec_data['lettosuo_prec']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
-         np.nan, Prec_data['lettosuo_prec'])
-# fill gaps with jokioinen data
-Prec_data['lettosuo_prec'] = Prec_data['lettosuo_prec'].fillna(Prec_data['jokioinen_prec'])
-# plot
-plot_columns(Prec_data[['lettosuo_prec_flag','lettosuo_prec']])
-
-plot_columns(Prec_data[['Letto1_metsanpohja: avg(Rain (mm))','jokioinen_prec','lettosuo_prec']])
-
-# readind daily FMI prec
-# filepaths
-forc_fp = ["H:/Lettosuo/Forcing_data/FMI_jokioinen/jokioinen_daily_prec.txt",
-           "H:/Lettosuo/Forcing_data/FMI_jokioinen/somero_daily_prec.txt"]
-
-index=pd.date_range('01-01-2009','01-01-2018',freq='1.0D')
-daily_FMI_prec=pd.DataFrame(index=index, columns=[])
-
-for fp in forc_fp:
-    dat = pd.read_csv(fp, sep=',', header='infer')
-    dat = dat.replace(-1,0)
-    dat.index = pd.to_datetime(dat.ix[:,0], dayfirst=True)
-    dat = dat.drop(dat.columns[0], axis=1)
-    dat.columns = fp.split("/")[-1].split(".")[0] + ': ' + dat.columns
-    daily_FMI_prec=daily_FMI_prec.merge(dat, how='outer', left_index=True, right_index=True)
-
-# append daily series from gapfilled filled hourly data[['jokioinen_prec','lettosuo_prec']]
-Prec_daily = pd.rolling_sum(Prec_data, 48, 1)
-Prec_daily = Prec_daily[Prec_daily.index.hour == 8.0]
-Prec_daily = Prec_daily[Prec_daily.index.minute == 0.0]
-Prec_daily.index = Prec_daily.index - pd.Timedelta(hours=24+8)
-
-Prec_daily=Prec_daily.merge(daily_FMI_prec, how='outer', left_index=True, right_index=True)
-
-plot_columns(Prec_daily,[0,1,2,3,4,5,8,9,10])
-
-plt.figure()
-for i in range(48):
-    plt.plot(Prec_daily_jokioinen[i:-1:48])
-
-plt.figure()
-for i in range(48):
-    plt.subplot(6,8,i+1)
-    plt.plot(Prec_daily_jokioinen[48+i:-10000:48],daily_prec['jokioinen_daily_prec: Precipitation amount'][0:len(Prec_daily_jokioinen[48+i:-10000:48])],
-             'o', alpha=.2,markersize=3)
-    plt.axis('equal')
-    plt.title(Prec_daily_jokioinen.index[i])
-    
-plt.figure()
-for i in range(48):
-    plt.subplot(6,8,i+1)
-    plt.plot(Prec_daily_jokioinen[i:-10000:48],dat['jokioinen_prec'][0:len(Prec_daily_jokioinen[i:-10000:48])],
-             'o', alpha=.2,markersize=3)
-    plt.axis('equal')
-    plt.title(Prec_daily_jokioinen.index[i])
+# Relative humidity
 
 
-def plot_columns(data, col_index=None):
-    col_names=[]
-    if col_index == None:
-        col_index = range(len(data.columns))
-    for i in col_index:
-        col_names.append(data.columns[i])
-    data[col_names].plot(kind='line',marker='o',markersize=1)
-    plt.legend()
-    pd.plotting.scatter_matrix(data[col_names], figsize=(10, 10), alpha=.2)
+
+
 
 # RH
 plot_columns(lettosuo_data,[44,57,63,81,92,100])
+plot_columns(lettosuo_data,[100,44,57,63,81,92])
 
 # Tair
 plot_columns(lettosuo_data,[43,58,69,88,90,101])
-
 
 # Prec
 plot_columns(lettosuo_data,[89,107,108,109,64])
@@ -278,35 +192,151 @@ plot_columns(lettosuo_data,[33,34,1])
 # LE
 plot_columns(lettosuo_data,[15,36])
 
+""" --- inspecting precipitation data ---- """
+# readind daily FMI prec
+# filepaths
+forc_fp = ["H:/Lettosuo/Forcing_data/FMI_jokioinen/jokioinen_daily_prec.txt",
+           "H:/Lettosuo/Forcing_data/FMI_jokioinen/somero_daily_prec.txt"]
+
+index=pd.date_range('01-01-2009','01-01-2018',freq='1.0D')
+daily_FMI_prec=pd.DataFrame(index=index, columns=[])
+
+for fp in forc_fp:
+    dat = pd.read_csv(fp, sep=',', header='infer')
+    dat = dat.replace(-1,0)
+    dat.index = pd.to_datetime(dat.ix[:,0], dayfirst=True)
+    dat = dat.drop(dat.columns[0], axis=1)
+    dat.columns = fp.split("/")[-1].split(".")[0] + ': ' + dat.columns
+    daily_FMI_prec=daily_FMI_prec.merge(dat, how='outer', left_index=True, right_index=True)
+
+# append daily series from gapfilled filled hourly data[['jokioinen_prec','lettosuo_prec']]
+Prec_daily = pd.rolling_sum(Prec_data, 48, 1)
+Prec_daily = Prec_daily[Prec_daily.index.hour == 8.0]
+Prec_daily = Prec_daily[Prec_daily.index.minute == 0.0]
+Prec_daily.index = Prec_daily.index - pd.Timedelta(hours=24+8)
+
+Prec_daily=Prec_daily.merge(daily_FMI_prec, how='outer', left_index=True, right_index=True)
+
+plot_columns(Prec_daily,[0,2,3,4,8,9,10])
+
+from timeseries_tools import yearly_cumulative
+
+var = [#'jokioinen_prec',
+       'lettosuo_prec',
+       'jokioinen_daily_prec: Precipitation amount',
+#       'somero_daily_prec: Precipitation amount',
+       'jokioinen_prec1: Prec [mm h-1]',
+       'jokioinen_prec2: Prec [mm h-1]']
+Prec = Prec_daily.fillna(0)
+Prec_cum = yearly_cumulative(Prec, var)
+
+plt.figure()
+for i in range(len(Prec_cum)):
+    plt.plot(Prec_daily.index, Prec_cum[i,:], label=var[i])
+plt.legend()
+
+def plot_xy(x,y,lim):
+    plt.scatter(x, y, marker='o', alpha=.2)
+    idx = np.isfinite(x) & np.isfinite(y)
+    p = np.polyfit(x[idx], y[idx], 1)
+    corr = np.corrcoef(x[idx], y[idx])
+    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.3, 0.9), xycoords='axes fraction', ha='center', va='center')
+    plt.plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
+    plt.plot(lim, lim, 'k--', linewidth=1)
+    plt.ylim(lim)
+    plt.xlim(lim)
+
+ax1 = plt.subplot(131)
+lim = [0, 45]
+plot_xy(Prec_daily['jokioinen_prec2: Prec [mm h-1]'][Prec_daily.index.year < 2013],
+        Prec_daily['jokioinen_daily_prec: Precipitation amount'][Prec_daily.index.year < 2013],
+        lim)
+ax2 = plt.subplot(132)
+plot_xy(Prec_daily['jokioinen_prec2: Prec [mm h-1]'][Prec_daily.index.year > 2013],
+        Prec_daily['jokioinen_daily_prec: Precipitation amount'][Prec_daily.index.year > 2013],
+        lim)
+ax3 = plt.subplot(133)
+plot_xy(Prec_daily['jokioinen_prec1: Prec [mm h-1]'][Prec_daily.index.year > 2013],
+        Prec_daily['jokioinen_daily_prec: Precipitation amount'][Prec_daily.index.year > 2013],
+        lim)
+
+ax2.set_yticklabels([])
+ax3.set_yticklabels([])
+ax1.set_ylabel('Daily open FMI Jokioinen (mm/d)')
+ax1.set_xlabel('Jokioinen gauge 50 before 2013 (mm/d)')
+ax2.set_xlabel('Jokioinen gauge 50 after 2013 (mm/d)')
+ax3.set_xlabel('Jokioinen gauge 60 after 2013 (mm/d)')
+
+labels=['Lettosuo filled','Daily open FMI Jokioinen','Jokioinen gauge 50','Jokioinen gauge 60']
+plt.figure()
+for i in reversed(range(len(Prec_cum))):
+    if i == 1:
+        plt.plot(Prec_daily.index, Prec_cum[i,:], 'k:', label=labels[i])
+    else:
+        plt.plot(Prec_daily.index, Prec_cum[i,:], label=labels[i])
+plt.legend()
+plt.plot(Prec_daily.index, Prec_cum[1,:], 'k:', label=labels[1])
+
+plt.ylabel('Cumulative precipitation (mm)')
+
+def fill_gaps(df, res_col_name):
+    col_names = list(df.columns.values)
+    for col_name in col_names:
+        if i == 0:
+            df[res_col_name] = df[col_name]
+        else:
+            df[res_col_name] = df[res_col_name].fillna(df[col_name])
+    # HOW TO FILL REST!??
+    return df[[res_col_name]]
+
+def continuous_prec(Prec_data):
+
+    """ --- continuous prec timeseries for jokioinen --- """
+    # FMI open data jokioinen + FMI jokioinen gauge 1
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_meteo: Precipitation amount'].fillna(Prec_data['jokioinen_prec1: Prec [mm h-1]'])
+    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 10.0, 0.0)
+    # + FMI jokioinen gauge 2
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['jokioinen_prec2: Prec [mm h-1]'])
+    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 20.0, Prec_data['jokioinen_prec_flag'])
+    # + FMI open data somero
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['somero_prec: Precipitation amount'])
+    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 30.0, Prec_data['jokioinen_prec_flag'])
+    # fill rest with zero
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(0)
+    # plot
+    #plot_columns(Prec_data[['jokioinen_prec_flag','jokioinen_prec']])
+    
+    """ --- continuous prec timeseries for lettosuo --- """
+    Prec_data['lettosuo_prec_flag']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Rain (mm))'].isnull(), 10.0, 0.0)
+    # consider prec data unrealiable when Tair < 2C
+    Prec_data['lettosuo_prec_flag']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
+             20.0, Prec_data['lettosuo_prec_flag'])
+    Prec_data['lettosuo_prec']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
+             np.nan, Prec_data['Letto1_metsanpohja: avg(Rain (mm))'])
+    # if rolling 3 day mean prec less than 10% of jokionen rolling mean, remove
+    Prec_data_daily = pd.rolling_sum(Prec_data.fillna(0), 3 * 48, 1)
+    Prec_data_daily['lettosuo_prec'] = np.where(Prec_data['lettosuo_prec'].isnull(), np.nan, Prec_data_daily['lettosuo_prec'])
+    Prec_data['lettosuo_prec_flag']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
+             30.0, Prec_data['lettosuo_prec_flag'])
+    Prec_data['lettosuo_prec']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
+             np.nan, Prec_data['lettosuo_prec'])
+    # fill gaps with jokioinen data
+    Prec_data['lettosuo_prec'] = Prec_data['lettosuo_prec'].fillna(Prec_data['jokioinen_prec'])
+    # plot
+    #plot_columns(Prec_data[['lettosuo_prec_flag','lettosuo_prec']])
+
+    return Prec_data
+
 # lad profile test
-lad_p, lad_s, lad_d, _, _, _, _, _, _ = model_trees(z, quantiles, normed=False,
-    dbhfile=r"C:\Users\L1656\Documents\Git_repos\CCFPeat\parameters\runkolukusarjat\letto2016_partial.txt",
-    plot=True)
+from parameters.parameter_utils import model_trees
 
+def plot_lad(filename="letto2016_partial.txt"):
 
-
-#from canopy.evapotranspiration import e_sat
-#
-#esat, _, _ = e_sat(results.forcing_air_temperature.values)  # [Pa]
-#RH = results.forcing_h2o.values * 101300 / esat
-#vpd = (1 - RH) * esat * 1e-3  # [kPa]
-#plt.plot(vpd)
-##plotxarray(results, ['forcing_h2o'], colors=pal, xticks=False)
-#plt.figure()
-#plotxarray(results, ['canopy_Rnet'], colors=pal, xticks=False)
-#plotxarray(results1, ['canopy_Rnet'], colors=pal[1:], xticks=False)
-#
-#plt.figure()
-#plotxarray(results1, ['canopy_Rnet_ground'], colors=pal[1:], xticks=False)
-#plotxarray(results, ['canopy_Rnet_ground'], colors=pal, xticks=False)
-#
-#plt.figure()
-#plotxarray(results1, ['canopy_U_ground'], colors=pal[1:], xticks=False)
-#plotxarray(results, ['canopy_U_ground'], colors=pal, xticks=False)
-#
-#plt.figure()
-#plotxarray(results, ['forcing_h2o'], colors=pal, xticks=False)
-#plotxarray(results1, ['forcing_h2o'], colors=pal[1:], xticks=False)
+    z = np.linspace(0, 30.0, 100)
+    quantiles = [1.0]
+    lad_p, lad_s, lad_d, _, _, _, _, _, _ = model_trees(z, quantiles, normed=False,
+        dbhfile="C:/Users/L1656/Documents/Git_repos/CCFPeat/parameters/runkolukusarjat/" + filename,
+        plot=True)
 
 def create_hyde_forcingfile():
 
