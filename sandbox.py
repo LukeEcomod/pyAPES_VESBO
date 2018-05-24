@@ -9,6 +9,7 @@ import xarray as xr
 import numpy as np
 from matplotlib import pyplot as plt
 from plotting import plotresults, plotxarray, plotresultsMLM, plot_columns
+from timeseries_tools import fill_gaps, continuous_prec
 
 #outputfile=driver(create_ncf=True)
 outputfile = 'results/201804241836_CCFPeat_results.nc'
@@ -138,7 +139,11 @@ for i in [89, 107, 108, 109]:
     lettosuo_data.ix[1:-1:2,i]=lettosuo_data.ix[0:-1:2,i].values
     lettosuo_data.ix[:,i]=lettosuo_data.ix[:,i].values/2.0
 
-Prec_data = continuous_prec(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm))',
+for i in [90,91,92,93,94,95,96]:
+    lettosuo_data.ix[1:-1:2,i]=lettosuo_data.ix[0:-1:2,i].values
+
+Prec_data = continuous_prec(lettosuo_data[['Letto1_metsanpohja: avg(Temp (C))',
+                                           'Letto1_metsanpohja: avg(Rain (mm))',
                                            'jokioinen_meteo: Precipitation amount',
                                            'jokioinen_prec1: Prec [mm h-1]',
                                            'jokioinen_prec2: Prec [mm h-1]',
@@ -148,14 +153,15 @@ frames = []
 frames.append(Prec_data['lettosuo_prec'])
 
 # Relative humidity
-
-
+RH, info = fill_gaps(lettosuo_data[['Letto1_meteo: avg(RH (%))',
+                              'jokioinen_meteo: Relative humidity',
+                              'Letto1_meteo_gapfilled: Paik RH']], 'RH', plot=True)
 
 
 
 # RH
 plot_columns(lettosuo_data,[44,57,63,81,92,100])
-plot_columns(lettosuo_data,[100,44,57,63,81,92])
+plot_columns(lettosuo_data,[100])#,44,57,63,81,92])
 
 # Tair
 plot_columns(lettosuo_data,[43,58,69,88,90,101])
@@ -278,54 +284,6 @@ plt.legend()
 plt.plot(Prec_daily.index, Prec_cum[1,:], 'k:', label=labels[1])
 
 plt.ylabel('Cumulative precipitation (mm)')
-
-def fill_gaps(df, res_col_name):
-    col_names = list(df.columns.values)
-    for col_name in col_names:
-        if i == 0:
-            df[res_col_name] = df[col_name]
-        else:
-            df[res_col_name] = df[res_col_name].fillna(df[col_name])
-    # HOW TO FILL REST!??
-    return df[[res_col_name]]
-
-def continuous_prec(Prec_data):
-
-    """ --- continuous prec timeseries for jokioinen --- """
-    # FMI open data jokioinen + FMI jokioinen gauge 1
-    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_meteo: Precipitation amount'].fillna(Prec_data['jokioinen_prec1: Prec [mm h-1]'])
-    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 10.0, 0.0)
-    # + FMI jokioinen gauge 2
-    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['jokioinen_prec2: Prec [mm h-1]'])
-    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 20.0, Prec_data['jokioinen_prec_flag'])
-    # + FMI open data somero
-    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['somero_prec: Precipitation amount'])
-    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 30.0, Prec_data['jokioinen_prec_flag'])
-    # fill rest with zero
-    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(0)
-    # plot
-    #plot_columns(Prec_data[['jokioinen_prec_flag','jokioinen_prec']])
-    
-    """ --- continuous prec timeseries for lettosuo --- """
-    Prec_data['lettosuo_prec_flag']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Rain (mm))'].isnull(), 10.0, 0.0)
-    # consider prec data unrealiable when Tair < 2C
-    Prec_data['lettosuo_prec_flag']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
-             20.0, Prec_data['lettosuo_prec_flag'])
-    Prec_data['lettosuo_prec']=np.where(lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
-             np.nan, Prec_data['Letto1_metsanpohja: avg(Rain (mm))'])
-    # if rolling 3 day mean prec less than 10% of jokionen rolling mean, remove
-    Prec_data_daily = pd.rolling_sum(Prec_data.fillna(0), 3 * 48, 1)
-    Prec_data_daily['lettosuo_prec'] = np.where(Prec_data['lettosuo_prec'].isnull(), np.nan, Prec_data_daily['lettosuo_prec'])
-    Prec_data['lettosuo_prec_flag']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
-             30.0, Prec_data['lettosuo_prec_flag'])
-    Prec_data['lettosuo_prec']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
-             np.nan, Prec_data['lettosuo_prec'])
-    # fill gaps with jokioinen data
-    Prec_data['lettosuo_prec'] = Prec_data['lettosuo_prec'].fillna(Prec_data['jokioinen_prec'])
-    # plot
-    #plot_columns(Prec_data[['lettosuo_prec_flag','lettosuo_prec']])
-
-    return Prec_data
 
 # lad profile test
 from parameters.parameter_utils import model_trees
