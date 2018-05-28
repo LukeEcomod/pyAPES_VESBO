@@ -217,14 +217,15 @@ def plot_columns(data, col_index=None):
     plt.legend()
     axes = pd.plotting.scatter_matrix(data[col_names], figsize=(10, 10), alpha=.2)
     corr = data[col_names].corr().as_matrix()
-    lim = [0, data[col_names].max().max()]
+    lim = [data[col_names].min().min(), data[col_names].max().max()]
     for i in range(len(col_index)):
         for j in range(len(col_index)):
             if i != j:
                 idx = np.isfinite(data[col_names[i]]) & np.isfinite(data[col_names[j]])
-                p = np.polyfit(data[col_names[j]][idx], data[col_names[i]][idx], 1)
-                axes[i, j].annotate("y = %.2fx + %.2f \n R2 = %.2f" % (p[0], p[1], corr[i,j]**2), (0.3, 0.9), xycoords='axes fraction', ha='center', va='center')
-                axes[i, j].plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
+                if idx.sum() != 0.0:
+                    p = np.polyfit(data[col_names[j]][idx], data[col_names[i]][idx], 1)
+                    axes[i, j].annotate("y = %.2fx + %.2f \n R2 = %.2f" % (p[0], p[1], corr[i,j]**2), (0.3, 0.9), xycoords='axes fraction', ha='center', va='center')
+                    axes[i, j].plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
                 axes[i, j].plot(lim, lim, 'k--', linewidth=1)
             axes[i, j].set_ylim(lim)
             axes[i, j].set_xlim(lim)

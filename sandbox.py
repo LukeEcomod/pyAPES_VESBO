@@ -9,7 +9,7 @@ import xarray as xr
 import numpy as np
 from matplotlib import pyplot as plt
 from plotting import plotresults, plotxarray, plotresultsMLM, plot_columns
-from timeseries_tools import fill_gaps, continuous_prec
+from timeseries_tools import fill_gaps
 
 #outputfile=driver(create_ncf=True)
 outputfile = 'results/201804241836_CCFPeat_results.nc'
@@ -105,12 +105,14 @@ forc_fp = ["H:/Lettosuo/Forcing_data/Annalea1/avohakkuu_EC.csv",
            "H:/Lettosuo/Forcing_data/Annalea1/Letto1_meteo.csv",
            "H:/Lettosuo/Forcing_data/Annalea1/Letto1_metsanpohja.csv",
            "H:/Lettosuo/Forcing_data/Annalea1/Letto2_metsanpohja.csv",
-           "H:/Lettosuo/Forcing_data/FMI_jokioinen/jokioinen_meteo.csv",
-           "H:/Lettosuo/Forcing_data/FMI_jokioinen/jokioinen_rad.csv",
+           "H:/Lettosuo/Forcing_data/FMI/jokioinen_meteo.txt",
+           "H:/Lettosuo/Forcing_data/FMI/jokioinen_rad.txt",
            "H:/Lettosuo/Forcing_data/Annalea2/Letto1_meteo_gapfilled.csv",
-           "H:/Lettosuo/Forcing_data/FMI_jokioinen/jokioinen_prec1.txt",
-           "H:/Lettosuo/Forcing_data/FMI_jokioinen/jokioinen_prec2.txt",
-           "H:/Lettosuo/Forcing_data/FMI_jokioinen/somero_prec.txt"]
+           "H:/Lettosuo/Forcing_data/FMI/jokioinen_prec1.txt",
+           "H:/Lettosuo/Forcing_data/FMI/jokioinen_prec2.txt",
+           "H:/Lettosuo/Forcing_data/FMI/somero_meteo.txt",
+           "H:/Lettosuo/Forcing_data/FMI/hameenlinna_meteo.txt",
+           "H:/Lettosuo/Forcing_data/FMI/salo_kiikala_meteo.txt"]
 
 index=pd.date_range('01-01-2009','06-01-2018',freq='0.5H')
 lettosuo_data=pd.DataFrame(index=index, columns=[])
@@ -123,7 +125,7 @@ for fp in forc_fp:
         dat.index = dat.index - pd.Timedelta(hours=0.5)
     else:
         dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
-    if fp.split("/")[-2] == 'FMI_jokioinen':
+    if fp.split("/")[-2] == 'FMI':
         # UTC -> UTC + 2
         dat.index = dat.index + pd.Timedelta(hours=2)
     dat.index=dat.index.map(lambda x: x.replace(second=0))
@@ -134,54 +136,48 @@ for fp in forc_fp:
     lettosuo_data=lettosuo_data.merge(dat, how='outer', left_index=True, right_index=True)
 
 # divide hourly precipitation to half hour
-for i in [89, 107, 108, 109]:
+for i in [89, 107, 108, 109, 115, 121]:
     lettosuo_data.ix[:,i]=lettosuo_data.ix[:,i].replace(-1,0)
     lettosuo_data.ix[1:-1:2,i]=lettosuo_data.ix[0:-1:2,i].values
     lettosuo_data.ix[:,i]=lettosuo_data.ix[:,i].values/2.0
 
-for i in [90,91,92,93,94,95,96]:
-    lettosuo_data.ix[1:-1:2,i]=lettosuo_data.ix[0:-1:2,i].values
+lettosuo_data = lettosuo_data[(lettosuo_data.index >= '01-01-2010') & 
+                              (lettosuo_data.index <= '01-01-2018')]
 
-Prec_data = continuous_prec(lettosuo_data[['Letto1_metsanpohja: avg(Temp (C))',
-                                           'Letto1_metsanpohja: avg(Rain (mm))',
-                                           'jokioinen_meteo: Precipitation amount',
-                                           'jokioinen_prec1: Prec [mm h-1]',
-                                           'jokioinen_prec2: Prec [mm h-1]',
-                                           'somero_prec: Precipitation amount']])
+gap_fill_lettosuo_meteo(lettosuo_data)
 
-frames = []
-frames.append(Prec_data['lettosuo_prec'])
-
-# Relative humidity
-RH, info = fill_gaps(lettosuo_data[['Letto1_meteo: avg(RH (%))',
-                              'jokioinen_meteo: Relative humidity',
-                              'Letto1_meteo_gapfilled: Paik RH']], 'RH', plot=True)
-
-
+"""plotting timeseries"""
 
 # RH
-plot_columns(lettosuo_data,[44,57,63,81,92,100])
-plot_columns(lettosuo_data,[100])#,44,57,63,81,92])
+plot_columns(lettosuo_data,[44,57,63,81,92,100,112,118,124])
 
 # Tair
-plot_columns(lettosuo_data,[43,58,69,88,90,101])
+plot_columns(lettosuo_data,[43,58,69,88,90,101,110,116,122])
 
 # Prec
-plot_columns(lettosuo_data,[89,107,108,109,64])
+plot_columns(lettosuo_data,[89,107,108,109,64,115,121])
 daily_data=lettosuo_data.resample('24H').sum()
 plot_columns(daily_data,[85,100,101,102,60])
 
 # wind
-plot_columns(lettosuo_data,[19,23,91])
-
+plot_columns(lettosuo_data,[123,127])
+plot_columns(lettosuo_data,[91,111,117,123,19,23])
+plot_columns(lettosuo_data,[19,23,7,24])
 # ustar
 plot_columns(lettosuo_data,[7,24])
 
 # Global radiation
-plot_columns(lettosuo_data,[97,52,95])
+plot_columns(lettosuo_data,[95,97,52])
 
 # Pressure
-plot_columns(lettosuo_data,[59,93])
+plot_columns(lettosuo_data,[59,93,119,125])
+plot_columns(lettosuo_data,[59,-1])
+
+idx = np.isfinite(lettosuo_data['salo_kiikala_meteo: Pressure (msl)']) & np.isfinite(lettosuo_data['Letto1_meteo: avg(Press (hPa))'])
+diff = lettosuo_data['salo_kiikala_meteo: Pressure (msl)'][idx].values - lettosuo_data['Letto1_meteo: avg(Press (hPa))'][idx].values
+plt.figure()
+plt.plot(diff)
+diff.mean()
 
 # Soil moist
 plot_columns(lettosuo_data,[47,48,49,50,65,66,67,68,84,85,86,87])
@@ -199,7 +195,53 @@ plot_columns(lettosuo_data,[33,34,1])
 plot_columns(lettosuo_data,[15,36])
 
 """ --- inspecting precipitation data ---- """
+
+def continuous_prec(Prec_data):
+
+    """ --- continuous prec timeseries for jokioinen --- """
+    # FMI open data jokioinen + FMI jokioinen gauge 1
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_meteo: Precipitation amount'].fillna(Prec_data['jokioinen_prec1: Prec [mm h-1]'])
+    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 10.0, 0.0)
+    # + FMI jokioinen gauge 2
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['jokioinen_prec2: Prec [mm h-1]'])
+    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 20.0, Prec_data['jokioinen_prec_flag'])
+    # + FMI open data somero
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(Prec_data['somero_prec: Precipitation amount'])
+    Prec_data['jokioinen_prec_flag']=np.where(Prec_data['jokioinen_prec'].isnull(), 30.0, Prec_data['jokioinen_prec_flag'])
+    # fill rest with zero
+    Prec_data['jokioinen_prec'] = Prec_data['jokioinen_prec'].fillna(0)
+    # plot
+    #plot_columns(Prec_data[['jokioinen_prec_flag','jokioinen_prec']])
+    
+    """ --- continuous prec timeseries for lettosuo --- """
+    Prec_data['lettosuo_prec_flag']=np.where(Prec_data['Letto1_metsanpohja: avg(Rain (mm))'].isnull(), 10.0, 0.0)
+    # consider prec data unrealiable when Tair < 2C
+    Prec_data['lettosuo_prec_flag']=np.where(Prec_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
+             20.0, Prec_data['lettosuo_prec_flag'])
+    Prec_data['lettosuo_prec']=np.where(Prec_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
+             np.nan, Prec_data['Letto1_metsanpohja: avg(Rain (mm))'])
+    # if rolling 3 day mean prec less than 10% of jokionen rolling mean, remove
+    Prec_data_daily = pd.rolling_sum(Prec_data.fillna(0), 3 * 48, 1)
+    Prec_data_daily['lettosuo_prec'] = np.where(Prec_data['lettosuo_prec'].isnull(), np.nan, Prec_data_daily['lettosuo_prec'])
+    Prec_data['lettosuo_prec_flag']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
+             30.0, Prec_data['lettosuo_prec_flag'])
+    Prec_data['lettosuo_prec']=np.where(Prec_data_daily['lettosuo_prec'] < 0.1 * Prec_data_daily['jokioinen_prec'],
+             np.nan, Prec_data['lettosuo_prec'])
+    # fill gaps with jokioinen data
+    Prec_data['lettosuo_prec'] = Prec_data['lettosuo_prec'].fillna(Prec_data['jokioinen_prec'])
+    # plot
+    #plot_columns(Prec_data[['lettosuo_prec_flag','lettosuo_prec']])
+
+    return Prec_data
+
 # readind daily FMI prec
+Prec_data = continuous_prec(lettosuo_data[['Letto1_metsanpohja: avg(Temp (C))',
+                                           'Letto1_metsanpohja: avg(Rain (mm))',
+                                           'jokioinen_meteo: Precipitation amount',
+                                           'jokioinen_prec1: Prec [mm h-1]',
+                                           'jokioinen_prec2: Prec [mm h-1]',
+                                           'somero_prec: Precipitation amount']])
+
 # filepaths
 forc_fp = ["H:/Lettosuo/Forcing_data/FMI_jokioinen/jokioinen_daily_prec.txt",
            "H:/Lettosuo/Forcing_data/FMI_jokioinen/somero_daily_prec.txt"]
@@ -342,3 +384,114 @@ def create_hyde_forcingfile():
 
     fp = "C:/Users/L1656/Documents/Git_repos/CCFPeat/forcing/Hyde_data_1997_2016.csv"
     hyde_data.to_csv(path_or_buf=fp, sep=',', na_rep='NaN',index=False)
+
+def gap_fill_lettosuo_meteo(lettosuo_data):
+    """ gap filling meteo """
+    frames = []
+    readme = ""
+    plot = False
+    
+    # --- Precipitation --- 
+    # Jokioinen
+    df, info = fill_gaps(lettosuo_data[['jokioinen_prec1: Prec [mm h-1]',
+                                        'jokioinen_prec2: Prec [mm h-1]',
+                                        'somero_meteo: Precipitation amount']],
+                         'Prec_ref', 'Jokioinen gapfilled precipitaion [mm/30min]', 
+                         fill_nan = 0.0, plot=plot)
+    frames.append(df)
+    readme += info
+    
+    # Lettosuo
+    # consider prec data unrealiable when Tair < 2C
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!']=np.where(
+            lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
+            np.nan, lettosuo_data['Letto1_metsanpohja: avg(Rain (mm))'])
+    # if rolling 3 day mean prec less than 10% of jokionen rolling mean, remove
+    Prec_daily_ref = pd.rolling_sum(df[['Prec_ref']], 3 * 48, 1)
+    Prec_daily= pd.rolling_sum(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!']].fillna(0), 3 * 48, 1)
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!']=np.where(
+            Prec_daily['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'] < 0.1 * Prec_daily_ref['Prec_ref'],
+            np.nan, lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'])
+    
+    df, info = fill_gaps(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!',
+                                        'jokioinen_prec1: Prec [mm h-1]',
+                                        'jokioinen_prec2: Prec [mm h-1]',
+                                        'somero_meteo: Precipitation amount']],
+                         'Prec', 'Lettosuo gapfilled precipitaion [mm/30min]',
+                         fill_nan = 0.0, plot=plot)
+    frames.append(df)
+    readme += info
+    
+    # --- Air temperature --- 
+    df, info = fill_gaps(lettosuo_data[['Letto1_meteo: avg(Temp (C))',
+                                        'somero_meteo: Air temperature',
+                                        'jokioinen_meteo: Air temperature',
+                                        'Letto1_meteo_gapfilled: PaikAirT T']],
+                         'Tair', 'Air temperature [degC]', fill_nan = 'linear', plot=plot)
+    frames.append(df)
+    readme += info
+    
+    # --- Relative humidity --- 
+    df, info = fill_gaps(lettosuo_data[['Letto1_meteo: avg(RH (%))',
+                                        'somero_meteo: Relative humidity',
+                                        'jokioinen_meteo: Relative humidity',
+                                        'Letto1_meteo_gapfilled: Paik RH']],
+                         'RH', 'Relative humidity [%]', fill_nan = 'linear', plot=plot)
+    # Check for values greater than 100%
+    df['RH'][df['RH'] > 100.0] = 100.0
+    frames.append(df)
+    readme += info
+    
+    # --- Global radiation --- 
+    df, info = fill_gaps(lettosuo_data[['Letto1_meteo: avg(Glob (W/m2))',
+                                        'Letto1_meteo_gapfilled: PaikGlob2',
+                                        'jokioinen_rad: Global radiation']],
+                         'Rg', 'Global radiation [W/m2]', fill_nan = 'linear', plot=plot)
+    frames.append(df)
+    readme += info
+    
+    # --- Wind speed --- 
+    lettosuo_data['Letto1_EC: wind speed (m/s) !u > 10 removed!']=np.where(
+            lettosuo_data['Letto1_EC: wind speed (m/s)'] > 10.0,
+            np.nan, lettosuo_data['Letto1_EC: wind speed (m/s)'])
+    lettosuo_data['salo_kiikala_meteo: Wind speed'][lettosuo_data['salo_kiikala_meteo: Wind speed'] == 0.0] = np.nan
+    lettosuo_data['Derived from salo_kiikala_meteo: wind speed (0.57*U_ref + 0.55)'] = 0.57 * lettosuo_data['salo_kiikala_meteo: Wind speed'] + 0.55
+    df, info = fill_gaps(lettosuo_data[['Letto1_EC: wind speed (m/s) !u > 10 removed!',
+                                        'somero_meteo: Wind speed',
+                                        'Derived from salo_kiikala_meteo: wind speed (0.57*U_ref + 0.55)']],
+                         'U', 'Wind speed [m/s]', fill_nan = 'linear', plot=plot)
+    frames.append(df)
+    readme += info
+    
+    # --- Friction velocity --- 
+    lettosuo_data['Ustar = 0.2 * U'] = 0.2 * df['U']
+    df, info = fill_gaps(lettosuo_data[['Letto1_EC: friction velocity (m/s)',
+                                        'Ustar = 0.2 * U']],
+                         'Ustar', 'Friction velocity [m/s]', fill_nan = 'linear', plot=plot)
+    frames.append(df)
+    readme += info
+    
+    # --- Ambient pressure --- 
+    lettosuo_data['Derived from salo_kiikala_meteo: Pressure (msl) (P_ref - 16.9)'] = lettosuo_data['salo_kiikala_meteo: Pressure (msl)'] - 16.9
+    df, info = fill_gaps(lettosuo_data[['Letto1_meteo: avg(Press (hPa))',
+                                        'Derived from salo_kiikala_meteo: Pressure (msl) (P_ref - 16.9)']],
+                         'P', 'Ambient pressure [hPa]', fill_nan = 'linear', plot=plot)
+    frames.append(df)
+    readme += info
+    
+    letto_data=pd.concat(frames, axis=1)
+    letto_data[['Prec_ref', 'Prec', 'Tair', 'U', 'Ustar', 'RH', 'P']].plot(subplots=True,kind='line')
+    
+    letto_data.insert(0,'yyyy',letto_data.index.year.values)
+    letto_data.insert(1,'mo',letto_data.index.month.values)
+    letto_data.insert(2,'dd',letto_data.index.day.values)
+    letto_data.insert(3,'hh',letto_data.index.hour.values)
+    letto_data.insert(4,'mm',letto_data.index.minute.values)
+    
+    fp = "C:/Users/L1656/Documents/Git_repos/CCFPeat/forcing/"
+    fn = "Lettosuo_meteo_2010_2016"
+    letto_data.to_csv(path_or_buf=fp + fn + ".csv", sep=',', na_rep='NaN', index=False)
+    readme = "Readme for " + fn + ".csv" + "\nyyyy, mo, dd, hh, mm: datetime [UTC + 2.0]" + readme
+    outF = open(fp + fn + "_readme.txt", "w")
+    print >>outF, readme
+    outF.close()
