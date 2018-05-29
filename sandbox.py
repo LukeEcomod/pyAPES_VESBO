@@ -8,22 +8,42 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 from matplotlib import pyplot as plt
-from plotting import plotresults, plotxarray, plotresultsMLM, plot_columns
+from plotting import plotresults, plotxarray, plotxarray2, plotresultsMLM, plot_columns
 from timeseries_tools import fill_gaps
+import datetime
 
 #outputfile=driver(create_ncf=True)
-outputfile = 'results/201804241836_CCFPeat_results.nc'
+#outputfile = 'results/201804241836_CCFPeat_results.nc'
 
-filepath='C:/Users/L1656/Documents/Git_repos/CCFPeat/' + outputfile
-results=xr.open_dataset(filepath)
-
-results.coords['simulation']=results.simulation.values
-results.coords['soil']=results.soil_z.values
-results.coords['canopy']=results.canopy_z.values
+def read_results(outputfiles):
+    direc='C:/Users/L1656/Documents/Git_repos/CCFPeat/'
+    if type(outputfiles) != list:
+        outputfiles = [outputfiles]
+    results = []
+    for outputfile in outputfiles:
+        fp =direc + outputfile
+        result=xr.open_dataset(fp)
+        result.coords['simulation']=result.simulation.values
+        result.coords['soil']=result.soil_z.values
+        result.coords['canopy']=result.canopy_z.values
+        results.append(result)
+    if len(results) == 1:
+        return results[0]
+    else:
+        return results
 
 plotresults(results.isel(simulation=0))
 
 plotresultsMLM(results.isel(simulation=0))
+
+output_control1 = driver(create_ncf=True, dbhfile="letto2009.txt")
+output_control2 = driver(create_ncf=True, dbhfile="letto2014.txt")
+output_partial = driver(create_ncf=True, dbhfile="letto2016_partial.txt")
+output_clearcut = driver(create_ncf=True, dbhfile="letto2016_clearcut.txt")
+
+results = read_results([output_control1, output_control2, output_partial, output_clearcut])
+pal = sns.color_palette("hls", 5)
+plotxarray2(results, 'soil_ground_water_level', colors=pal, xticks=True)
 
 import seaborn as sns
 pal = sns.color_palette("hls", 6)
@@ -145,6 +165,9 @@ lettosuo_data = lettosuo_data[(lettosuo_data.index >= '01-01-2010') &
                               (lettosuo_data.index <= '01-01-2018')]
 
 gap_fill_lettosuo_meteo(lettosuo_data)
+create_lettosuo_forcingfile()
+
+
 
 """plotting timeseries"""
 
@@ -167,7 +190,7 @@ plot_columns(lettosuo_data,[19,23,7,24])
 plot_columns(lettosuo_data,[7,24])
 
 # Global radiation
-plot_columns(lettosuo_data,[95,97,52])
+plot_columns(lettosuo_data,[95,97,52,53])
 
 # Pressure
 plot_columns(lettosuo_data,[59,93,119,125])
@@ -447,6 +470,7 @@ def gap_fill_lettosuo_meteo(lettosuo_data):
                                         'Letto1_meteo_gapfilled: PaikGlob2',
                                         'jokioinen_rad: Global radiation']],
                          'Rg', 'Global radiation [W/m2]', fill_nan = 'linear', plot=plot)
+    df['Rg'][df['Rg'] < 0.0] = 0.0
     frames.append(df)
     readme += info
     
@@ -480,7 +504,7 @@ def gap_fill_lettosuo_meteo(lettosuo_data):
     readme += info
     
     letto_data=pd.concat(frames, axis=1)
-    letto_data[['Prec_ref', 'Prec', 'Tair', 'U', 'Ustar', 'RH', 'P']].plot(subplots=True,kind='line')
+    letto_data[['Prec_ref', 'Prec', 'Tair', 'Rg', 'U', 'Ustar', 'RH', 'P']].plot(subplots=True,kind='line')
     
     letto_data.insert(0,'yyyy',letto_data.index.year.values)
     letto_data.insert(1,'mo',letto_data.index.month.values)
@@ -489,9 +513,128 @@ def gap_fill_lettosuo_meteo(lettosuo_data):
     letto_data.insert(4,'mm',letto_data.index.minute.values)
     
     fp = "C:/Users/L1656/Documents/Git_repos/CCFPeat/forcing/"
-    fn = "Lettosuo_meteo_2010_2016"
+    fn = "Lettosuo_meteo_2010_2018"
     letto_data.to_csv(path_or_buf=fp + fn + ".csv", sep=',', na_rep='NaN', index=False)
-    readme = "Readme for " + fn + ".csv" + "\nyyyy, mo, dd, hh, mm: datetime [UTC + 2.0]" + readme
+    Readme = "Readme for " + fn + ".csv"
+    Readme += "\n\nKersti Haahti, Luke " + str(datetime.datetime.now().date())
+    Readme += "\n\nyyyy, mo, dd, hh, mm: datetime [UTC + 2.0]" + readme
     outF = open(fp + fn + "_readme.txt", "w")
-    print >>outF, readme
+    print >>outF, Readme
+    outF.close()
+
+from canopy.radiation import solar_angles, compute_clouds_rad
+from canopy.evapotranspiration import e_sat
+
+def create_lettosuo_forcingfile():
+    """ Lettosuo forcing file from meteo"""
+
+    fpar = 0.45
+    lat = 60.63
+    lon = 23.95
+
+    forc_fp ="C:/Users/L1656/Documents/Git_repos/CCFPeat/forcing/"
+    fn_meteo = "Lettosuo_meteo_2010_2018.csv"
+    dat = pd.read_csv(forc_fp + fn_meteo, sep=',', header='infer')
+
+    # set to dataframe index
+    dat.index = pd.to_datetime({'year': dat['yyyy'],
+                                'month': dat['mo'],
+                                'day': dat['dd'],
+                                'hour': dat['hh'],
+                                'minute': dat['mm']})
+
+    readme = "\n\nyyyy, mo, dd, hh, mm: datetime [UTC + 2.0]"
+    cols = ['yyyy','mo','dd','hh','mm']
+
+    # day of year
+    dat['doy'] = dat.index.dayofyear
+    cols.append('doy')
+    readme += "\ndoy: Day of year [days]"
+
+    # precipitaion unit from [mm/dt] to [m/s]
+    dt = (dat.index[1] - dat.index[0]).total_seconds()
+    dat['Prec'] = dat['Prec'] * 1e-3 / dt
+    cols.append('Prec')
+    readme += "\nPrec: Precipitation [m/s]"
+
+    # atm. pressure unit from [hPa] to [Pa]
+    dat['P'] = dat['P'] * 1e2
+    cols.append('P')
+    readme += "\nP: Ambient pressure [Pa]"
+
+    # air temperature: instant and daily [degC]
+    cols.append('Tair')
+    readme += "\nTair: Air temperature [degC]"
+    dat['Tdaily'] = pd.rolling_mean(dat['Tair'], int((24*3600)/dt), 1)
+    cols.append('Tdaily')
+    readme += "\nTdaily: Daily air temperature [degC]"
+
+    # wind speend and friction velocity
+    cols.append('U')
+    readme += "\nU: Wind speed [m/s]"
+    cols.append('Ustar')
+    readme += "\nUstar: Friction velocity [m/s]"
+
+    # ambient H2O [mol/mol] from RH
+    esat, _, _ = e_sat(dat['Tair'])
+    dat['H2O'] = (dat['RH'] / 100.0) * esat / dat['P']
+    cols.append('H2O')
+    readme += "\nH2O: Ambient H2O [mol/mol]"
+
+    # ambient CO2 [ppm]
+    dat['CO2'] = 380.0
+    cols.append('CO2')
+    readme += "\nCO2: Ambient CO2 [ppm] - set constant!"
+
+    # zenith angle
+    jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0
+    dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=+2.0)
+    cols.append('Zen')
+    readme += "\nZen: Zenith angle [rad]"
+
+    # radiation components
+
+    # global radiation
+    cols.append('Rg')
+    readme += "\nRg: Global radiation [W/m2]"
+
+    # estimated long wave budget
+    f_cloud, f_diff, emi_sky = compute_clouds_rad(dat['doy'].values,
+                                                  dat['Zen'].values,
+                                                  dat['Rg'].values,
+                                                  dat['H2O'].values * dat['P'].values)
+    b = 5.6697e-8  # Stefan-Boltzman constant (W m-2 K-4)
+    dat['LWin'] = 0.98 * emi_sky * b *(dat['Tair'] + 273.15)**4 # Wm-2 downwelling LW
+    dat['LWout'] = 0.98 * b * (dat['Tair'] + 273.15)**4  # Wm-2 upwelling LW
+    cols.extend(('LWin', 'LWout'))
+    readme += "\nLWin: Downwelling long wave radiation [W/m2]"
+    readme += "\nLWout: Upwelling long wave radiation [W/m2]"
+
+    # Short wave radiation; separate direct and diffuse PAR & NIR
+    dat['diffPar'] = f_diff * fpar * dat['Rg']
+    dat['dirPar'] = (1 - f_diff) * fpar * dat['Rg']
+    dat['diffNir'] = f_diff * (1 - fpar) * dat['Rg']
+    dat['dirNir'] = (1 - f_diff) * (1 - fpar) * dat['Rg']
+    cols.extend(('diffPar', 'dirPar', 'diffNir', 'dirNir'))
+    readme += "\ndiffPar: Diffuse PAR [W/m2] \ndirPar: Direct PAR [W/m2]"
+    readme += "\ndiffNir: Diffuse NIR [W/m2] \ndirNir: Direct NIR [W/m2]"
+
+    # approximate net radiation [W/m2]
+    dat['Rnet'] = (1.0 - 0.08) * (dat['dirPar'] + dat['diffPar'] \
+                   + dat['dirNir'] + dat['diffNir']) \
+                   + dat['LWin'] - dat['LWout']
+    cols.append('Rnet')
+    readme += "\nRnet: Net radiation [W/m2]"
+
+    dat = dat[cols]
+    dat[cols[5:]].plot(subplots=True,kind='line')
+
+    fp = "C:/Users/L1656/Documents/Git_repos/CCFPeat/forcing/"
+    fn = "Lettosuo_forcing_2010_2018"
+    dat.to_csv(path_or_buf=fp + fn + ".csv", sep=',', na_rep='NaN', index=False)
+    Readme = "Readme for " + fn + ".csv"
+    Readme += "\n\nDerived from " + fn_meteo
+    Readme += "\nKersti Haahti, Luke " + str(datetime.datetime.now().date()) + readme
+    outF = open(fp + fn + "_readme.txt", "w")
+    print >>outF, Readme
     outF.close()

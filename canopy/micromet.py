@@ -91,12 +91,12 @@ class Aerodynamics():
 
         # canopy aerodynamic & boundary-layer resistances (sm-1). Magnani et al. 1998 PCE eq. B1 & B5
         #ra = 1. / (kv*ustar) * np.log((zm - d) / zom)
-        ra = 1./(VON_KARMAN**2.0 * Uo) * np.log((zm - d) / zom) * np.log((zm - d) / zov)
-        rb = 1. / LAI * beta * ((self.w / Uh)*(alpha / (1.0 - np.exp(-alpha / 2.0))))**0.5
+        ra = 1./(VON_KARMAN**2.0 * Uo + eps) * np.log((zm - d) / zom) * np.log((zm - d) / zov)
+        rb = 1. / LAI * beta * ((self.w / (Uh  + eps))*(alpha / (1.0 - np.exp(-alpha / 2.0))))**0.5
         ra = ra + rb
 
         # soil aerodynamic resistance (sm-1)
-        ras = 1. / (VON_KARMAN**2.0 * Ug) * np.log(self.zg / self.zos) * np.log(self.zg / zosv)
+        ras = 1. / (VON_KARMAN**2.0 * Ug  + eps) * np.log(self.zg / self.zos) * np.log(self.zg / zosv)
 
         ra = np.array([ras, ra])
         U = np.array([Ug, Uh])

@@ -268,7 +268,9 @@ def leaf_boundary_layer_conductance(u, d, Ta, dT, P=101300.):
     Gaby Katul & Samuli Launiainen
     Note: the factor of 1.4 is adopted for outdoor environment, see Campbell and Norman, 1998, p. 89, 101.
     """
-    
+
+    u = np.maximum(u, eps)
+
     # print('U', u, 'd', d, 'Ta', Ta, 'P', P)
     factor1 = 1.4*2  # forced conv. both sides, 1.4 is correction for turbulent flow
     factor2 = 1.5  # free conv.; 0.5 comes from cooler surface up or warmer down

@@ -10,17 +10,18 @@ import pandas as pd
 from forcing.forc_utils import read_forcing
 from canopy.canopy_model import CanopyModel
 from soilprofile.soil_model import SoilModel
+from parameters.canopy_parameters import get_cpara
 
 from copy import deepcopy
 
-def driver(create_ncf=False, LAI_sensitivity=False):
+def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014"):
     """
     """
 
     # Import general parameters
     from parameters.general_parameters import gpara
     # Import canopy model parameters
-    from parameters.canopy_parameters import cpara
+    cpara = get_cpara(dbhfile)
     # Import soil model parameters
     from parameters.soil_parameters import spara
 
@@ -57,7 +58,8 @@ def driver(create_ncf=False, LAI_sensitivity=False):
                 tasks[k].Nsoil_nodes,
                 tasks[k].Ncanopy_nodes,
                 forcing,
-                filename=filename)
+                filename=filename,
+                description=dbhfile)
 
         for task in tasks:
             print('Running simulation number: {}' .format(task.Nsim))
@@ -122,6 +124,8 @@ class Model():
             # Soil moisture forcing for canopy model
             Rew = 1.0
             beta = 1.0
+            Tsoil = self.forcing['Tair'].iloc[k]  # should come from soil model!
+            Wsoil = self.soil_model.Wliq[0]  # certain depth?!
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
@@ -134,8 +138,8 @@ class Model():
             canopy_flux, canopy_state = self.canopy_model._run_timestep(
                     dt=self.dt,
                     forcing=self.forcing.iloc[k],
-                    beta=beta,
-                    Rew=Rew)
+                    beta=beta, Rew=Rew,
+                    Tsoil=Tsoil, Wsoil=Wsoil)
 
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
@@ -250,7 +254,8 @@ def _write_ncf(nsim=None, results=None, ncf=None):
 
     print("Writing results of simulation number: {} is finished".format(nsim))
 
-def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, forcing, filepath='results', filename='climoss.nc'):
+def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, forcing, filepath='results', filename='climoss.nc',
+                      description='Simulation results'):
     """ Climoss netCDF4 format output file initialization
 
     Args:
@@ -280,7 +285,7 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, forcing, filepat
 
     # create dataset and dimensions
     ncf = Dataset(ff, 'w')
-    ncf.description = 'CliMoss model run results.'
+    ncf.description = description
     ncf.history = 'created ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     ncf.source = 'APES_Jan2016'
 

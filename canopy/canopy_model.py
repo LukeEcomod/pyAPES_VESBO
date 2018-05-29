@@ -157,7 +157,7 @@ class CanopyModel():
         if self.Switch_MLM and self.Switch_Eflow and self.Ptypes[0].Switch_lai:
             self.Aero_Model.normalized_flow_stats(self.z, self.lad, self.hc)
 
-    def _run_timestep(self, dt, forcing, Rew=1.0, beta=1.0):
+    def _run_timestep(self, dt, forcing, Rew, beta, Tsoil, Wsoil):
         """
         Runs CanopyModel instance for one timestep
         Args:
@@ -180,7 +180,7 @@ class CanopyModel():
 
         T = np.array([forcing['Tair']])
         U = np.array([forcing['U']])
-        H2O = np.array([forcing['H2O']])  # in multilayer model from H2O somehow?
+        H2O = np.array([forcing['H2O']])
         CO2 = np.array([forcing['CO2']])
         Prec = forcing['Prec']
         P = forcing['P']
@@ -342,8 +342,8 @@ class CanopyModel():
                         dt=dt,
                         Par=Par_gr,
                         T=T[1],
-                        Ts=forcing['Tsa'],
-                        Ws=forcing['Wa'],
+                        Ts=Tsoil,
+                        Ws=Wsoil,
                         SWE=self.Snow_Model.swe)
                 Fc_gr = An_gr + R_gr
 
@@ -660,7 +660,7 @@ class ForestFloor():
         # Skopp limitparam [a,b,d,g] for two soil types
         # sp = {'Yolo':[3.83, 4.43, 1.25, 0.854], 'Valentine': [1.65,6.15,0.385,1.03]}
         Wliq = np.minimum(self.poros, Wliq)        
-        afp = self.poros - Wliq +eps # air filled porosity
+        afp = self.poros - Wliq + eps # air filled porosity
 
         p = self.limitpara
 

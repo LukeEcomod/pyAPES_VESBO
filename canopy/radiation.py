@@ -5,6 +5,7 @@ Created on Tue Mar 06 11:06:37 2018
 @author: L1656
 """
 import numpy as np
+import pandas as pd
 eps = np.finfo(float).eps  # machine epsilon
 
 #  conversion deg -->rad
@@ -98,7 +99,7 @@ def solar_angles(lat, lon, jday, timezone=+2.0):
 
     # fract. year (rad)
     if np.max(jday) > 366:
-        y = 2*np.pi / 366.0 * (jday - 1.0)        
+        y = 2*np.pi / 366.0 * (jday - 1.0)
     else:
         y = 2*np.pi / 365.0 * (jday - 1.0)
     
@@ -465,3 +466,68 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
         plt.legend(('sunlit', 'shaded'), loc='best')
 
     return SWbo, SWdo, SWuo, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_slo, alb
+
+def compute_clouds_rad(doy, zen, Rg, H2O):
+    """
+    Estimates atmospheric transmissivity (tau_atm [-]), cloud cover fraction
+    (f_cloud (0-1), [-]) and fraction of diffuse to total SW radiation (f_diff, [-])
+    Args:   
+        doy - julian day
+        zen - sun zenith angle (rad)
+        Rg - total measured Global radiation above canopy (Wm-2)
+        H2O - water vapor pressure (Pa)
+    Returns:    
+        f_cloud - cloud cover fraction (0-1) [-]
+        f_diff - fraction of diffuse to total radiation (0-1), [-]
+        emi_sky - atmospheric emissivity (0-1) [-]
+
+    ! values for Rg < 100 W/m2 linearly interpolated
+
+    Cloudiness estimate is based on Song et al. 2009 JGR 114, 2009, Appendix A & C
+    Clear-sky emissivity as in Niemelä et al. 2001 Atm. Res 58: 1-18.
+    eq. 18 and cloud correction as Maykut & Church 1973. 
+    Reasonable fit against Hyytiälä data (tested 20.6.13)
+
+    Samuli Launiainen, METLA, 2011-2013
+    """
+
+    # solar constant at top of atm.
+    So = 1367
+    # clear sky Global radiation at surface
+    Qclear = (So * (1.0 + 0.033 * np.cos(2.0 * np.pi * (np.minimum(doy, 365) - 10) / 365)) * np.cos(zen))
+    tau_atm = Rg / Qclear
+    tau_atm[tau_atm < 0.0] = 0.0
+
+    # cloud cover fraction
+    f_cloud = np.maximum(0, 1.0 - tau_atm / 0.7)
+
+    # calculate fraction of diffuse to total Global radiation: Song et al. 2009 JGR eq. A17.
+    f_diff = np.ones(f_cloud.shape)
+    f_diff[tau_atm > 0.7] = 0.2
+
+    ind = np.where((tau_atm >= 0.3) & (tau_atm <= 0.7))
+    f_diff[ind] = 1.0 - 2.0 * (tau_atm[ind] - 0.3)
+
+    # clear-sky atmospheric emissivity
+    ea = H2O / 100  # near-surface vapor pressure (hPa)
+    emi0 = np.where(ea >= 2.0, 0.72 + 0.009 * (ea - 2.0), 0.72 -0.076 * (ea - 2.0))
+
+    # all-sky emissivity (cloud-corrections)
+    emi_sky = (1.0 + 0.22 * f_cloud**2.75) * emi0  # Maykut & Church (1973)
+
+#    other emissivity formulas tested
+#    emi_sky=(1 + 0.2*f_cloud)*emi0;
+#    emi_sky=(1 + 0.3*f_cloud.^2.75)*emi0; % Maykut & Church (1973)
+#    emi_sky=(1 + (1./emi0 -1)*0.87.*f_cloud^3.49).*emi0; % Niemelä et al. 2001 eq. 15 assuming Ts = Ta and surface emissivity = 1
+#    emi_sky=(1-0.84*f_cloud)*emi0 + 0.84*f_cloud; % atmospheric emissivity (Unsworth & Monteith, 1975)
+
+    f_cloud[Rg < 100] = np.nan
+    f_diff[Rg < 100] = np.nan
+    emi_sky[Rg < 100] = np.nan
+
+    df = pd.DataFrame({'f_cloud': f_cloud, 'f_diff': f_diff, 'emi_sky': emi_sky})
+    df = df.interpolate()
+    df = df.fillna(method='bfill')
+    df = df.fillna(method='ffill')
+
+    return df['f_cloud'].values, df['f_diff'].values, df['emi_sky'].values

@@ -63,7 +63,7 @@ def plotresults(results):
     plt.ylabel('[mm]')
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
     plt.subplot(8,3,(10,11))
-    plotxarray(results, ['canopy_transpiration', 'canopy_evaporation', 'canopy_moss_evaporation'],
+    plotxarray(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation'],
                colors=[pal[1]] + [pal[2]] + [pal[0]], xticks=False, m_to='mmperh')
     plt.subplot(8,3,(13,14))
     plotxarray(results, ['soil_total_runoff'],
@@ -101,6 +101,38 @@ def plotxarray(results, variables, colors, xticks=True, m_to=False):
             plt.ylabel('[mm]')
         if m_to=='mmperh':
             dt = (results.date.values[1] - results.date.values[0]) / np.timedelta64(1, 's')
+            conversion = 1e3 / dt * 3600
+            plt.ylabel('[mm h-1]')
+        frame1 = plt.gca()
+        _ = frame1.axes.yaxis.set_ticklabels(
+                frame1.axes.yaxis.get_ticklocs()[:] * conversion)
+    plt.xlabel('')
+    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
+
+def plotxarray2(results, variable, colors, xticks=True, m_to=False):
+    if type(results) != list:
+        results = [results]
+    ymin, ymax = 0.0, 0.0
+    i=0
+    for result in results:
+        result[variable].plot(color=colors[i], label=result.description, linewidth=1)
+        ymin = min(result[variable].values.min(), ymin)
+        ymax = max(result[variable].values.max(), ymax)
+        i+=1
+    result = results[0]
+    plt.title('')
+    plt.ylim(ymin, ymax)
+    plt.xlim([result.date.values[0], result.date.values[-1]])
+    plt.ylabel(result[variable].units)
+    if xticks is False:
+        frame1 = plt.gca()
+        frame1.axes.xaxis.set_ticklabels([])
+    if m_to=='mm' or m_to=='mmperh':
+        if m_to=='mm':
+            conversion = 1e3
+            plt.ylabel('[mm]')
+        if m_to=='mmperh':
+            dt = (result.date.values[1] - result.date.values[0]) / np.timedelta64(1, 's')
             conversion = 1e3 / dt * 3600
             plt.ylabel('[mm h-1]')
         frame1 = plt.gca()
