@@ -160,20 +160,15 @@ def model_trees(z, quantiles, normed=False,
         colors = prop_cycle.by_key()['color']
         plt.figure(figsize=(3,4))
         for k in range(M):
-            plt.plot(lad_p[:, k],z,color=colors[0])#,lad_g,z)
-            plt.plot(lad_s[:, k],z,color=colors[1])
-            plt.plot(lad_d[:, k],z,color=colors[2])
-            plt.legend(['pine','spruce','decid'])
+            plt.plot(lad_p[:, k],z,color=colors[0], label='pine, %.2f m$^2$m$^{-2}$' % lai_p[k])#,lad_g,z)
+            plt.plot(lad_s[:, k],z,color=colors[1], label='spruce, %.2f m$^2$m$^{-2}$' % lai_s[k])
+            plt.plot(lad_d[:, k],z,color=colors[2], label='decid, %.2f m$^2$m$^{-2}$' % lai_d[k])
         plt.title("  ")#dbhfile.split("/")[-1])
         plt.ylabel('height [m]')
         if normed:
             plt.xlabel('normalized lad [-]')
         else:
             plt.xlabel('lad [m$^2$m$^{-3}$]')
-            plt.legend(['pine, %.2f m$^2$m$^{-2}$' % lai_p[0],
-                        'spruce, %.2f m$^2$m$^{-2}$' % lai_s[0],
-                        'decid, %.2f m$^2$m$^{-2}$' % lai_d[0]],
-                        frameon=False, labelspacing=0.1, borderpad=0.0)
         plt.tight_layout()
 
     return lad_p, lad_s, lad_d, n_p, n_s, n_d, lai_p, lai_s, lai_d

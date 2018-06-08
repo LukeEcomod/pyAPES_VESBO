@@ -7,7 +7,7 @@ Created on Wed Mar 14 15:09:03 2018
 import os
 import numpy as np
 import pandas as pd
-from forcing.forc_utils import read_forcing
+from tools.iotools import read_forcing
 from canopy.canopy_model import CanopyModel
 from soilprofile.soil_model import SoilModel
 from parameters.canopy_parameters import get_cpara
@@ -33,11 +33,9 @@ def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014", LAImax=
 
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
-                        gpara['start_time'],
-                        gpara['end_time'],
-                        MLM=cpara['ctr']['multilayer_model']['ON'],
-                        loc=cpara['loc'],
-                        dt=gpara['dt'])
+                           gpara['start_time'],
+                           gpara['end_time'],
+                           dt=gpara['dt'])
 
     tasks = []
 

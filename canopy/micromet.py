@@ -7,7 +7,7 @@ and physical processes in atmospheric surface layer
 """
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from utilities import central_diff, forward_diff, tridiag, smooth
+from tools.utilities import central_diff, forward_diff, tridiag, smooth
 
 # Constants used in the model calculations.
 #: [-], von Karman constant

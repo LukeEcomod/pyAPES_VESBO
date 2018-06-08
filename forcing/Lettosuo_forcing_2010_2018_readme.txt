@@ -1,7 +1,6 @@
 Readme for Lettosuo_forcing_2010_2018.csv
 
-Derived from Lettosuo_meteo_2010_2018.csv
-Kersti Haahti, Luke 2018-05-29
+Kersti Haahti, Luke 2018-06-08
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 doy: Day of year [days]
@@ -13,7 +12,7 @@ U: Wind speed [m/s]
 Ustar: Friction velocity [m/s]
 H2O: Ambient H2O [mol/mol]
 CO2: Ambient CO2 [ppm] - set constant!
-Zen: Zenith angle [rad]
+Zen: Zenith angle [rad], (lat = 60.63, lon = 23.95)
 Rg: Global radiation [W/m2]
 LWin: Downwelling long wave radiation [W/m2]
 LWout: Upwelling long wave radiation [W/m2]
