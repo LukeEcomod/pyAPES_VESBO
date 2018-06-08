@@ -104,8 +104,11 @@ class CanopyModel():
         self.LAI = stand_lai  # canopy total 1-sided leaf area index [m2m-2]
         self.lad = stand_lad  # canopy total 1-sided leaf area density [m2m-3]
         if self.Switch_MLM:
-            f = np.where(self.lad > 0)[0][-1]
-            self.hc = self.z[f].copy()  # canopy height [m]
+            if len(np.where(self.lad > 0)[0]) > 0:
+                f = np.where(self.lad > 0)[0][-1]
+                self.hc = self.z[f].copy()  # canopy height [m]
+            else:
+                self.hc = 0.0
         else:
             self.hc = cpara['canopy_para']['hc']  # canopy height [m]
 
@@ -410,7 +413,10 @@ class CanopyModel():
                            'Rsoil': R_gr,
                            'LE': LE[-1],
                            'LEgr': LE_gr,
-                           'GPPgr': -An_gr})
+                           'GPPgr': -An_gr,
+                           'pt_transpiration': np.array([pt_st['E'] * MH2O * dt * 1e-3 for pt_st in pt_stats]),
+                           'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
+                           'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats])})
             state.update({'wind_speed': U})
             if self.Switch_WMA is False:
                 state.update({'h2o': H2O,
@@ -446,6 +452,8 @@ class PlantType():
         self.Switch_lai = Switch_lai  # seasonal LAI
         self.Switch_WaterStress = Switch_WaterStress  # water stress affects stomata
 
+        self.name = p['name']
+
         # phenology model
         if self.Switch_pheno:
             self.Pheno_Model = Photo_cycle(p['phenop'])  # phenology model instance
@@ -470,8 +478,11 @@ class PlantType():
         if self.Switch_MLM:
             self.dz = z[1] - z[0]
             # plant height [m]
-            f = np.where(self.lad_normed > 0)[0][-1]
-            self.hc = z[f]
+            if len(np.where(self.lad_normed > 0)[0]) > 0:
+                f = np.where(self.lad_normed > 0)[0][-1]
+                self.hc = z[f]
+            else:
+                self.hc = 0.0
             # leaf gas-exchange parameters
             self.photop0 = p['photop']   # A-gs parameters at pheno_state = 1.0 (dict)
             self.photop = self.photop0.copy()  # current A-gs parameters (dict)
@@ -508,7 +519,7 @@ class PlantType():
             if 'kn' in self.photop0:
                 kn = self.photop0['kn']
                 Lc = np.flipud(np.cumsum(np.flipud(self.lad*self.dz)))
-                Lc = Lc / Lc[0]
+                Lc = Lc / np.maximum(Lc[0], eps)
                 f = np.exp(-kn*Lc)
             # preserve proportionality of Jmax and Rd to Vcmax
             self.photop['Vcmax'] = f * self.pheno_state * self.photop0['Vcmax']
@@ -568,8 +579,8 @@ class PlantType():
         del keys
 
         # effective statistics; layerwise fluxes weighted by An
-        g1 = f1 * sl['An'] / np.nansum(f1 * sl['An'] + f2 * sh['An'])
-        g2 = f2 * sh['An'] / np.nansum(f1 * sl['An'] + f2 * sh['An'])
+        g1 = f1 * sl['An'] / np.maximum(eps, np.nansum(f1 * sl['An'] + f2 * sh['An']))
+        g2 = f2 * sh['An'] / np.maximum(eps, np.nansum(f1 * sl['An'] + f2 * sh['An']))
         # print sum(g1 + g2)        
         keys = ['Tl', 'Ci', 'Cs', 'gs_v', 'gb_v']
         

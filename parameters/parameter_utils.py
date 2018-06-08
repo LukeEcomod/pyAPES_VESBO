@@ -7,6 +7,7 @@ Created on Thu Jan 11 10:05:05 2018
 import numpy as np
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
+eps = np.finfo(float).eps  # machine epsilon
 
 def fit_pF(head, watcont, fig=False):
     """
@@ -77,7 +78,7 @@ def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
     # understory shrubs
     lad_g = np.ones([len(z), 1])
     lad_g[z > hs] = 0.0
-    lad_g = lad_g / sum(lad_g * z[1])
+    lad_g = lad_g / np.maximum(sum(lad_g * z[1]), eps)
 
     return lad_p, lad_s, lad_d, lad_g, lai_p, lai_s, lai_d
 
@@ -106,7 +107,7 @@ def model_trees(z, quantiles, normed=False,
     # pines
     h, hb, mleaf, L, a = profiles_hyde(pine, 'pine', z)
     n = pine[:, 1]
-    c = np.cumsum(n) / sum(n)  # relative frequency
+    c = np.cumsum(n) / np.maximum(sum(n), eps)  # relative frequency
     m = 0.0
     lad_p = np.zeros([len(z), M])
     n_p = np.zeros(M)
@@ -118,12 +119,12 @@ def model_trees(z, quantiles, normed=False,
         lai_p[k] = sum(dz*lad_p[:,k])
         m = quantiles[k]
         if normed:
-            lad_p[:, k] = lad_p[:, k] / np.sum(lad_p[:, k] * dz)
+            lad_p[:, k] = lad_p[:, k] / np.maximum(np.sum(lad_p[:, k] * dz), eps)
 
     # spruces
     h, hb, mleaf, L, a = profiles_hyde(spruce, 'spruce', z)
     n = spruce[:, 1]
-    c = np.cumsum(n) / sum(n)  # relative frequency
+    c = np.cumsum(n) / np.maximum(sum(n), eps)  # relative frequency
     m = 0.0
     lad_s = np.zeros([len(z), M])
     n_s = np.zeros(M)
@@ -135,12 +136,12 @@ def model_trees(z, quantiles, normed=False,
         lai_s[k] = sum(dz*lad_s[:,k])
         m = quantiles[k]
         if normed:
-            lad_s[:, k] = lad_s[:, k] / np.sum(lad_s[:, k] * dz)
+            lad_s[:, k] = lad_s[:, k] / np.maximum(np.sum(lad_s[:, k] * dz), eps)
 
     # decid
     h, hb, mleaf, L, a = profiles_hyde(decid, 'birch', z)
     n = decid[:, 1]
-    c = np.cumsum(n) / sum(n)  # relative frequency
+    c = np.cumsum(n) / np.maximum(sum(n), eps)  # relative frequency
     m = 0.0
     lad_d = np.zeros([len(z), M])
     n_d = np.zeros(M)
@@ -152,21 +153,28 @@ def model_trees(z, quantiles, normed=False,
         lai_d[k] = sum(dz*lad_d[:,k])
         m = quantiles[k]
         if normed:
-            lad_d[:, k] = lad_d[:, k] / np.sum(lad_d[:, k] * dz)
+            lad_d[:, k] = lad_d[:, k] / np.maximum(np.sum(lad_d[:, k] * dz), eps)
 
     if plot:
-        plt.figure()
-        plt.plot(lad_p,z,lad_s,z,lad_d,z)#,lad_g,z)
-        plt.legend(['pine','spruce','decid'])
-        plt.title(dbhfile.split("\\")[-1])
+        prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = prop_cycle.by_key()['color']
+        plt.figure(figsize=(3,4))
+        for k in range(M):
+            plt.plot(lad_p[:, k],z,color=colors[0])#,lad_g,z)
+            plt.plot(lad_s[:, k],z,color=colors[1])
+            plt.plot(lad_d[:, k],z,color=colors[2])
+            plt.legend(['pine','spruce','decid'])
+        plt.title("  ")#dbhfile.split("/")[-1])
         plt.ylabel('height [m]')
         if normed:
-            plt.xlabel('normalized lad (-)')
+            plt.xlabel('normalized lad [-]')
         else:
-            plt.xlabel('lad (m2/m3)')
-            plt.legend(['pine, LAI = %.2f m$^2$m$^{-2}$' % lai_p[0],
-                        'spruce, LAI = %.2f m$^2$m$^{-2}$' % lai_s[0],
-                        'decid, LAI = %.2f m$^2$m$^{-2}$' % lai_d[0]])
+            plt.xlabel('lad [m$^2$m$^{-3}$]')
+            plt.legend(['pine, %.2f m$^2$m$^{-2}$' % lai_p[0],
+                        'spruce, %.2f m$^2$m$^{-2}$' % lai_s[0],
+                        'decid, %.2f m$^2$m$^{-2}$' % lai_d[0]],
+                        frameon=False, labelspacing=0.1, borderpad=0.0)
+        plt.tight_layout()
 
     return lad_p, lad_s, lad_d, n_p, n_s, n_d, lai_p, lai_s, lai_d
 

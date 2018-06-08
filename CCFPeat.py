@@ -14,7 +14,7 @@ from parameters.canopy_parameters import get_cpara
 
 from copy import deepcopy
 
-def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014"):
+def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014", LAImax=None):
     """
     """
 
@@ -45,6 +45,9 @@ def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014"):
         if LAI_sensitivity:
             for pt in range(3):
                 cpara['plant_types'][pt].update({'LAImax': [LAIcombinations[k][pt]]})
+        elif LAImax != None:
+            for pt in range(len(LAImax)):
+                cpara['plant_types'][pt].update({'LAImax': [LAImax[pt]]})
         tasks.append(Model(gpara, cpara, spara, forcing, nsim=k))
 
     if create_ncf:
@@ -57,6 +60,7 @@ def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014"):
                 Nsim,
                 tasks[k].Nsoil_nodes,
                 tasks[k].Ncanopy_nodes,
+                tasks[k].Nplant_types,
                 forcing,
                 filename=filename,
                 description=dbhfile)
@@ -105,13 +109,16 @@ class Model():
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para)
 
+        self.Nplant_types = len(self.canopy_model.Ptypes)
+
         # create soil model instance
         self.soil_model = SoilModel(soil_para['z'], soil_para)
 
         self.results = _create_results(gen_para['variables'],
                                        self.Nsteps,
                                        self.Nsoil_nodes,
-                                       self.Ncanopy_nodes)
+                                       self.Ncanopy_nodes,
+                                       self.Nplant_types)
 
     def _run(self):
         """ Runs atmosphere-canopy-soil--continuum model"""
@@ -176,7 +183,7 @@ class Model():
         self.results = _append_results('soil', None, {'z': self.soil_model.z}, self.results)
         return self.results
 
-def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes):
+def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes, Nplant_types):
     """
     Creates temporary results dictionary to accumulate simulation results
     """
@@ -199,6 +206,13 @@ def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes):
                 var_shape = [Nstep, Nsoil_nodes]
             else:
                 var_shape = [Nsoil_nodes]
+
+        elif 'planttype' in dimensions:
+            if 'date' in dimensions:
+                var_shape = [Nstep, Nplant_types]
+            else:
+                var_shape = [Nplant_types]
+
 
         else:
             var_shape = [Nstep]
@@ -254,7 +268,7 @@ def _write_ncf(nsim=None, results=None, ncf=None):
 
     print("Writing results of simulation number: {} is finished".format(nsim))
 
-def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, forcing, filepath='results', filename='climoss.nc',
+def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, forcing, filepath='results', filename='climoss.nc',
                       description='Simulation results'):
     """ Climoss netCDF4 format output file initialization
 
@@ -275,6 +289,7 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, forcing, filepat
     simulation_dimension = sim
     soil_dimension = soil_nodes
     canopy_dimension = canopy_nodes
+    ptypes_dimension = plant_nodes
 
 #    filepath = os.path.join(climoss_path, filepath)
 
@@ -293,6 +308,7 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, forcing, filepat
     ncf.createDimension('simulation', simulation_dimension)
     ncf.createDimension('soil', soil_dimension)
     ncf.createDimension('canopy', canopy_dimension)
+    ncf.createDimension('planttype', ptypes_dimension)
 
     time = ncf.createVariable('date', 'f8', ('date',))
     time.units = 'days since 0001-01-01 00:00:00.0'

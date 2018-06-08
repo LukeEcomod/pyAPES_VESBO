@@ -24,6 +24,10 @@ def yearly_cumulative(results, variables):
         ix = np.where(years > t)
         for i in range(0, len(variables)):
             yearly_cum[i,ix] = yearly_cum[i,ix] - yearly_cum[i,ix[0][0]]
+    
+    for i in range(len(years)-1):
+        if years[i] != years[i+1]:
+            yearly_cum[:,i] = np.nan
     return yearly_cum
 
 def diurnal_cycle(data, ap='hour'):

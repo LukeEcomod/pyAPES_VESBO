@@ -12,7 +12,10 @@ frac = np.linspace(0,1,5)
 frac = frac.tolist()
 combinations = list(itertools.product(*[frac,frac,frac]))
 combinations = filter(lambda x: sum(x) == 1, combinations)
-LAI = np.linspace(1,6,6)
+
+combinations = [(1.0, 0.0, 0.0)]
+LAI = np.linspace(0,6,7)
+LAI = [0, 1, 2, 3, 5, 6]
 LAIcombinations = []
 for lai in LAI:
     LAIcombinations += (lai * np.array(combinations)).tolist()

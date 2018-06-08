@@ -1,6 +1,6 @@
 Readme for Lettosuo_meteo_2010_2018.csv
 
-Kersti Haahti, Luke 2018-05-29
+Kersti Haahti, Luke 2018-06-01
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 Prec_ref: Jokioinen gapfilled precipitaion [mm/30min]

@@ -34,7 +34,7 @@ def plotresults(results):
                            start_time,
                            end_time,
                            cols=['runf'])
-    weir.loc[:,'runf'] = weir.loc[:,'runf'] * 1e-3 *gpara['dt']
+    weir.loc[:,'runf'] = weir.loc[:,'runf'] * 1e-3 * gpara['dt']
     # Read gwl
     gwl_meas = read_forcing("Lettosuo_gwl.csv",
                                start_time,
@@ -61,7 +61,7 @@ def plotresults(results):
 #    plt.ylim(0,700)
     plt.plot(ET_hyde.index, yearly_cum_ET[0], 'k', linewidth=1, label='ET_hyde')
     plt.ylabel('[mm]')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
+    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8, frameon=False)
     plt.subplot(8,3,(10,11))
     plotxarray(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation'],
                colors=[pal[1]] + [pal[2]] + [pal[0]], xticks=False, m_to='mmperh')
@@ -109,21 +109,69 @@ def plotxarray(results, variables, colors, xticks=True, m_to=False):
     plt.xlabel('')
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
 
-def plotxarray2(results, variable, colors, xticks=True, m_to=False):
+def plotxarray2(results, variable, colors, xticks=True, m_to=False, label=''):
     if type(results) != list:
         results = [results]
     ymin, ymax = 0.0, 0.0
     i=0
     for result in results:
-        result[variable].plot(color=colors[i], label=result.description, linewidth=1)
+        result[variable].plot(color=colors[i], label=result.description + label, linewidth=1)
         ymin = min(result[variable].values.min(), ymin)
         ymax = max(result[variable].values.max(), ymax)
         i+=1
     result = results[0]
-    plt.title('')
+    plt.title(result[variable].units.split('[')[0])
     plt.ylim(ymin, ymax)
     plt.xlim([result.date.values[0], result.date.values[-1]])
-    plt.ylabel(result[variable].units)
+    plt.ylabel('[' + result[variable].units.split('[')[-1])
+    if xticks is False:
+        frame1 = plt.gca()
+        frame1.axes.xaxis.set_ticklabels([])
+    if m_to=='mm' or m_to=='mmperh':
+        if m_to=='mm':
+            conversion = 1e3
+            plt.ylabel('[mm]')
+        if m_to=='mmperh':
+            dt = (result.date.values[1] - result.date.values[0]) / np.timedelta64(1, 's')
+            conversion = 1e3 / dt * 3600
+            plt.ylabel('[mm h-1]')
+        frame1 = plt.gca()
+        _ = frame1.axes.yaxis.set_ticklabels(
+                frame1.axes.yaxis.get_ticklocs()[:] * conversion)
+    plt.xlabel('')
+    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
+
+def plotcumulative(results, variable, colors, xticks=True, m_to=False, label='', stack=False, cum=False):
+    if type(results) != list:
+        results = [results]
+    ymin, ymax = 0.0, 0.0
+    i=0
+    values_all=[]
+    ymin=[]
+    ymax=[]
+    for result in results:
+        if cum:
+            values = yearly_cumulative(result, [variable])
+            values = values[0]
+        else:
+            values = result[variable].isel(simulation=0).values
+#        ymax.append(np.maximum(values))
+#        ymin.append(np.minimum(values))
+        if stack==False:
+            plt.plot(result.date.values, values, color=colors[i], linewidth=1, label=result.description + label)
+#            ymax=max(ymax)
+#            ymax=min(ymin)
+        i+=1
+        values_all.append(values)
+    result = results[0]
+    if stack:
+        plt.stackplot(result.date.values, values_all, labels=label, colors=colors)
+#        ymax=sum(ymax)
+#        ymin=sum(ymin)
+    plt.title(result[variable].units.split('[')[0])
+#    plt.ylim(ymin, ymax)
+    plt.xlim([result.date.values[0], result.date.values[-1]])
+    plt.ylabel('[' + result[variable].units.split('[')[-1])
     if xticks is False:
         frame1 = plt.gca()
         frame1.axes.xaxis.set_ticklabels([])
@@ -142,67 +190,67 @@ def plotxarray2(results, variable, colors, xticks=True, m_to=False):
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
 
 def plotresultsMLM(results):
-    Data = read_forcing("Hyde_data_1997_2016.csv",
+    Data = read_forcing("Lettosuo_data_2010_2018.csv",
                             gpara['start_time'],
                             gpara['end_time'],
-                            cols=['NEE','GPP','LE','ET'],
+                            cols=['NEE','GPP','Reco','ET'],
                             na_values="NaN")
+    Data.GPP = -Data.GPP / 44.01 * 1e3
+    Data.NEE = Data.NEE / 44.01 * 1e3
+    Data.Reco = Data.Reco / 44.01 * 1e3
 
     dates = results.date.values
 
     # plot some results as well
     fmonth = 4
-    lmonth = 5
+    lmonth = 9
 
     ix = pd.rolling_mean(results.forcing_precipitation.values, 48, 1)
     dryc = np.ones(len(dates))
     f = np.where(ix > 0)[0]  # wet canopy indices
     dryc[f] = 0.0
 
+    ff = np.where(~np.isnan(Data.GPP))[0]
     x = Data.GPP
     y = results.canopy_GPP.values
-    p = np.polyfit(x, y, 1)
+    p = np.polyfit(x[ff], y[ff], 1)
 
     plt.figure()
     plt.subplot(331)
-    plt.plot(x, y, 'mo')
-    plt.plot([0, 25], [0, 25], 'k-')
+    plt.plot(x[ff], y[ff], 'mo', alpha=0.2)
+    plt.plot([0, 30], [0, 30], 'k:')
     plt.xlabel('GPP meas')
     plt.ylabel('GPP mod')
     plt.title('y = %.2f + %.2f' % (p[0], p[1]))
-    plt.axis('equal')
 
-    ff = np.where(~np.isnan(Data.LE))[0]
-    x = Data.LE
-    y = results.canopy_LE.values
+    ff = np.where(~np.isnan(Data.Reco))[0]
+    x = Data.Reco
+    y = results.canopy_Reco.values
     p = np.polyfit(x[ff], y[ff], 1)
 
     plt.subplot(334)
-    plt.plot(x[ff], y[ff], 'co')
-    plt.plot([0, 600], [0, 600], 'k-')
-    plt.xlabel('LE meas')
-    plt.ylabel('LE mod')
+    plt.plot(x[ff], y[ff], 'co', alpha=0.2)
+    plt.plot([0, 30], [0, 30], 'k-')
+    plt.xlabel('Reco meas')
+    plt.ylabel('Reco mod')
     plt.title('y = %.2f + %.2f' % (p[0], p[1]))
-    plt.axis('equal')
 
     # water fluxes
     del x, y
     months = results.date.dt.month.values
-    f = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]  # & (Forc.Rnet.values > 20.0)
+    f = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & ~np.isnan(Data.ET))[0]  # & (Forc.Rnet.values > 20.0)
 
     ETmod = (results.canopy_transpiration.values + results.canopy_moss_evaporation.values)*1e3
-    Data['ETmeas'] = Data.ET * 0.0324  # mm/30min
-    x = Data.ETmeas
+    x = Data.ET
     y = ETmod
     p = np.polyfit(x[f], y[f], 1)
     
     plt.subplot(337)
-    plt.plot(x[f], y[f], 'ro')
+    plt.plot(x[f], y[f], 'ro', alpha=0.2)
     plt.plot([0, 0.25], [0, 0.25], 'k-')
     plt.xlabel('ET meas')
     plt.ylabel('ET mod')
     plt.title('y = %.2f + %.2f' % (p[0], p[1]))
-    plt.axis('equal')
     
     plt.subplot(3,3,(2,3))
     plt.plot(dates, Data.GPP, 'k.-')
@@ -211,12 +259,12 @@ def plotresultsMLM(results):
     plt.title("Timeseries")
     
     plt.subplot(3,3,(5,6))
-    plt.plot(dates,Data.LE, 'k.-')
-    plt.plot(dates,results.canopy_LE.values, 'c-')
-    plt.ylabel('LE')
+    plt.plot(dates,Data.Reco, 'k.-')
+    plt.plot(dates,results.canopy_Reco.values, 'c-')
+    plt.ylabel('Reco')
     
     plt.subplot(3,3,(8,9))
-    plt.plot(dates, Data.ETmeas, 'k.-')
+    plt.plot(dates, Data.ET, 'k.-')
     plt.plot(dates, ETmod, 'r-')
     plt.ylabel('ET')
     

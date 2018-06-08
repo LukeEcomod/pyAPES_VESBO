@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2018-01-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m]', ('date', 'simulation')],
@@ -22,13 +22,17 @@ gpara = {
                       ['canopy_interception_storage', 'canopy interception storage [m]', ('date', 'simulation')],
                       ['canopy_evaporation', 'evaporation from interception storage [m]', ('date', 'simulation')],
                       ['canopy_transpiration','transpiration [m]', ('date', 'simulation')],
+                      ['canopy_pt_transpiration', 'transpiration [m]', ('date', 'simulation', 'planttype')],
+                      ['canopy_pt_An', 'gross primary production [umol m-3 s-1]', ('date', 'simulation', 'planttype')],
+                      ['canopy_pt_Rd', 'dark respiration [umol m-3 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m]', ('date', 'simulation')],
                       ['canopy_potential_infiltration', 'potential infiltration to soil [m]', ('date', 'simulation')],
                       ['canopy_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
                       ['canopy_moss_evaporation', 'evaporation from moss layer [m]', ('date', 'simulation')],
-                      ['canopy_LE', 'latent heat flux [W m-2]]', ('date', 'simulation')],
+                      ['canopy_LE', 'latent heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
+                      ['canopy_Reco', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],
 #                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
                       ['soil_pond_storage', 'pond storage [m]', ('date', 'simulation')],
                       ['soil_ground_water_level', 'ground water level [m]', ('date', 'simulation')],
