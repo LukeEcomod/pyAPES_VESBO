@@ -111,8 +111,6 @@ def diurnal_cycle(data, ap='hour'):
 
     return res
 
-""" --- Gap filling scripts---"""
-
 def fill_gaps(df, res_col_name, description, fill_nan = None, plot=False):
     """
     Fill gaps with other available data

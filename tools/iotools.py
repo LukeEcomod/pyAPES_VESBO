@@ -138,3 +138,11 @@ def save_df_to_csv(df, fn, readme='', fp="forcing/", timezone = +2):
     outF = open(fp + fn + "_readme.txt", "w")
     print >>outF, Readme
     outF.close()
+
+def xarray_to_df(results, variables, sim_idx=0):
+    series = []
+    for var in variables:
+        series.append(results[var].isel(simulation=sim_idx).to_pandas())
+    df = pd.concat(series, axis=1)
+    df.columns=variables
+    return df

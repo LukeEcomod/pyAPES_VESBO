@@ -12,6 +12,7 @@ from tools.plotting import plotresults, plotxarray, plotxarray2, plotresultsMLM,
 from tools.timeseries_tools import fill_gaps
 import seaborn as sns
 from tools.iotools import read_results, read_forcing, save_df_to_csv
+from tools.dataprocessing_scripts import read_lettosuo_data
 
 plotresults(results.isel(simulation=0))
 
@@ -21,6 +22,8 @@ plotresultsMLM(results.isel(simulation=0))
 results = read_results('201806041539_CCFPeat_results.nc')
 results['canopy_GPP'].values = results['canopy_GPP'].values * 44.01 * 1e-3
 results['canopy_Reco'].values = results['canopy_Reco'].values * 44.01 * 1e-3
+
+
 
 dat = read_forcing("Lettosuo_data_2010_2018.csv", cols=['GPP','Reco','ET'])
 
@@ -213,6 +216,8 @@ fig.savefig('standstructure_WTD.png')
 
 """plotting timeseries"""
 
+lettosuo_data = read_lettosuo_data()
+
 # RH
 plot_columns(lettosuo_data,[44,57,63,81,92,100,112,118,124])
 
@@ -225,7 +230,6 @@ daily_data=lettosuo_data.resample('24H').sum()
 plot_columns(daily_data,[85,100,101,102,60])
 
 # wind
-plot_columns(lettosuo_data,[123,127])
 plot_columns(lettosuo_data,[91,111,117,123,19,23])
 plot_columns(lettosuo_data,[19,23,7,24])
 # ustar

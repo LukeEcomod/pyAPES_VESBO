@@ -151,7 +151,10 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
 
 def read_lettosuo_data():
 
-    # readind data
+    """
+    Reads data related to lettosuo case to dataframe.
+    """
+
     # filepaths
     forc_fp = ["H:/Lettosuo/Forcing_data/Annalea1/avohakkuu_EC.csv",
                "H:/Lettosuo/Forcing_data/Annalea2/Letto1_EC.csv",
@@ -201,7 +204,11 @@ def read_lettosuo_data():
     return lettosuo_data
 
 def gap_fill_lettosuo_meteo(lettosuo_data, plot=False):
-    """ gap filling meteo """
+    """
+    Gap fills Lettosuo meteo (and collesponding flags)
+    and save to file (with readme)
+    """
+
     frames = []
     readme = ""
 
@@ -300,8 +307,11 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False):
     save_df_to_csv(letto_data, "Lettosuo_meteo_2010_2018", readme=readme, fp=direc + "forcing/")
 
 def gather_hyde_data():
+    """
+    Collects yearly hyde data to one file that is saved.
+    """
 
-    """ read files in format Forcing_YYYY.dat """
+    # read files in format Forcing_YYYY.dat
     directory = "H:/Samulilta/Hyde/Forcing_corrected/"
     frames = []
     columns =['U','ust','Ta','RH','CO2','H2O','Prec','P',
@@ -319,7 +329,7 @@ def gather_hyde_data():
 
     hyde_data=pd.concat(frames)
 
-    """ read files in format FIHy_YYYY_pd.csv """
+    # read files in format FIHy_YYYY_pd.csv
     directory = "H:/Samulilta/Hyde/FIHy_1997_2016_new/"
     frames = []
     columns =['NEE','GPP','LE','ET','fRg']

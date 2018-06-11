@@ -9,11 +9,14 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from timeseries_tools import diurnal_cycle, yearly_cumulative
-from iotools import read_forcing
+from iotools import read_forcing, xarray_to_df
 from parameters.general_parameters import gpara
 import seaborn as sns
 
 pal = sns.color_palette("hls", 5)
+
+prop_cycle = plt.rcParams['axes.prop_cycle']
+default = prop_cycle.by_key()['color']
 
 def plotresults(results):
     start_time=results.date.values[0]
@@ -189,105 +192,79 @@ def plotcumulative(results, variable, colors, xticks=True, m_to=False, label='',
     plt.xlabel('')
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
 
-def plotresultsMLM(results):
+def plotresultsMLM(results, sim_idx=0):
     Data = read_forcing("Lettosuo_data_2010_2018.csv",
-                            gpara['start_time'],
-                            gpara['end_time'],
-                            cols=['NEE','GPP','Reco','ET'],
-                            na_values="NaN")
+                        cols=['NEE','GPP','Reco','ET'])
     Data.GPP = -Data.GPP / 44.01 * 1e3
     Data.NEE = Data.NEE / 44.01 * 1e3
     Data.Reco = Data.Reco / 44.01 * 1e3
 
-    dates = results.date.values
+    variables=['canopy_NEE','canopy_GPP','canopy_Reco','canopy_transpiration','forcing_precipitation']
+    df = xarray_to_df(results, variables, sim_idx=sim_idx)
+    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+    Data.canopy_transpiration = Data.canopy_transpiration*1e3
+
+    dates = Data.index
 
     # plot some results as well
     fmonth = 4
     lmonth = 9
 
-    ix = pd.rolling_mean(results.forcing_precipitation.values, 48, 1)
+    ix = pd.rolling_mean(Data.forcing_precipitation.values, 48, 1)
     dryc = np.ones(len(dates))
     f = np.where(ix > 0)[0]  # wet canopy indices
     dryc[f] = 0.0
 
-    ff = np.where(~np.isnan(Data.GPP))[0]
-    x = Data.GPP
-    y = results.canopy_GPP.values
-    p = np.polyfit(x[ff], y[ff], 1)
+    axislabels={'x': 'Measured', 'y': 'Modelled'}
 
-    plt.figure()
-    plt.subplot(331)
-    plt.plot(x[ff], y[ff], 'mo', alpha=0.2)
-    plt.plot([0, 30], [0, 30], 'k:')
-    plt.xlabel('GPP meas')
-    plt.ylabel('GPP mod')
-    plt.title('y = %.2f + %.2f' % (p[0], p[1]))
+    plt.figure(figsize=(10,5))
+    plt.subplot(341)
+    plot_xy(Data.GPP, Data.canopy_GPP, color=pal[0], axislabels=axislabels, title='GPP')
 
-    ff = np.where(~np.isnan(Data.Reco))[0]
-    x = Data.Reco
-    y = results.canopy_Reco.values
-    p = np.polyfit(x[ff], y[ff], 1)
+    plt.subplot(345)
+    plot_xy(Data.Reco, Data.canopy_Reco, color=pal[1], axislabels=axislabels, title='Reco')
 
-    plt.subplot(334)
-    plt.plot(x[ff], y[ff], 'co', alpha=0.2)
-    plt.plot([0, 30], [0, 30], 'k-')
-    plt.xlabel('Reco meas')
-    plt.ylabel('Reco mod')
-    plt.title('y = %.2f + %.2f' % (p[0], p[1]))
+    months = Data.index.month
+    f = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
 
-    # water fluxes
-    del x, y
-    months = results.date.dt.month.values
-    f = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & ~np.isnan(Data.ET))[0]  # & (Forc.Rnet.values > 20.0)
+    plt.subplot(349)
+    plot_xy(Data.ET[f], Data.canopy_transpiration[f], color=pal[2], axislabels=axislabels, title='ET')
 
-    ETmod = (results.canopy_transpiration.values + results.canopy_moss_evaporation.values)*1e3
-    x = Data.ET
-    y = ETmod
-    p = np.polyfit(x[f], y[f], 1)
-    
-    plt.subplot(337)
-    plt.plot(x[f], y[f], 'ro', alpha=0.2)
-    plt.plot([0, 0.25], [0, 0.25], 'k-')
-    plt.xlabel('ET meas')
-    plt.ylabel('ET mod')
-    plt.title('y = %.2f + %.2f' % (p[0], p[1]))
-    
-    plt.subplot(3,3,(2,3))
+    plt.subplot(3,4,(2,3))
     plt.plot(dates, Data.GPP, 'k.-')
-    plt.plot(dates,results.canopy_GPP.values, 'm-')
+    plt.plot(dates, Data.canopy_GPP, color=pal[0])
     plt.ylabel('GPP')
-    plt.title("Timeseries")
-    
-    plt.subplot(3,3,(5,6))
-    plt.plot(dates,Data.Reco, 'k.-')
-    plt.plot(dates,results.canopy_Reco.values, 'c-')
+
+    plt.subplot(3,4,(6,7))
+    plt.plot(dates, Data.Reco, 'k.-')
+    plt.plot(dates, Data.canopy_Reco, color=pal[1])
     plt.ylabel('Reco')
-    
-    plt.subplot(3,3,(8,9))
+
+    plt.subplot(3,4,(10,11))
     plt.plot(dates, Data.ET, 'k.-')
-    plt.plot(dates, ETmod, 'r-')
+    plt.plot(dates, Data.canopy_transpiration, color=pal[2])
     plt.ylabel('ET')
-    
-    #plt.figure()
-    #plt.plot(ETmod[f], 'r.-', dt*flux.Efloor[f], 'g-')
-    # ensemble diurnal cycles
-#    meaa = diurnal_cycle(Data[['GPP', 'LE', 'ETmeas']].iloc[f], ap='hour')
-#    moda = diurnal_cycle(results.iloc[f], ap='hour')
-#    
-#    plt.subplot(333); plt.ylabel('GPP'); plt.xlabel('time')
-#    plt.plot(meaa['GPP']['mean'], 'ko-', moda['GPP']['mean'], 'mo-')
-#    plt.xlim([0, 24])
-#    plt.title("Diurnal cycles")
-#    
-#    plt.subplot(336); plt.ylabel('LE'); plt.xlabel('time')
-#    plt.plot(meaa['LE']['mean'], 'ko-', moda['LE']['mean'], 'co-')
-#    plt.xlim([0, 24])
-#    
-#    plt.subplot(339); plt.ylabel('ET'); plt.xlabel('time')
-#    plt.plot(meaa['ETmeas']['mean'], 'ko-', moda['ETmod']['mean'], 'ro-')
-#    plt.xlim([0, 24])
+
+    plt.subplot(344)
+    plot_diurnal(Data.GPP, color='k', label='Measured')
+    plot_diurnal(Data.canopy_GPP, color=pal[0], ylabel='GPP', title='GPP', label='Modelled')
+
+    plt.subplot(348)
+    plot_diurnal(Data.Reco, color='k', label='Measured')
+    plot_diurnal(Data.canopy_Reco, color=pal[1], ylabel='Reco', title='Reco', label='Modelled')
+
+    plt.subplot(3,4,12)
+    plot_diurnal(Data.ET[f], color='k', label='Measured')
+    plot_diurnal(Data.canopy_transpiration[f], color=pal[2], ylabel='ET', title='ET', label='Modelled')
 
 def plot_columns(data, col_index=None):
+    """
+    Plots specified columns from dataframe as timeseries and correlation matrix.
+    Args:
+        data (DataFrame): dataframe including data to plot
+        col_index (list of int): indices of columns to plot as list
+            (if None plot all colums in data)
+    """
     col_names=[]
     if col_index == None:
         col_index = range(len(data.columns))
@@ -304,7 +281,7 @@ def plot_columns(data, col_index=None):
                 idx = np.isfinite(data[col_names[i]]) & np.isfinite(data[col_names[j]])
                 if idx.sum() != 0.0:
                     p = np.polyfit(data[col_names[j]][idx], data[col_names[i]][idx], 1)
-                    axes[i, j].annotate("y = %.2fx + %.2f \n R2 = %.2f" % (p[0], p[1], corr[i,j]**2), (0.3, 0.9), xycoords='axes fraction', ha='center', va='center')
+                    axes[i, j].annotate("y = %.2fx + %.2f \n R2 = %.2f" % (p[0], p[1], corr[i,j]**2), (0.4, 0.9), xycoords='axes fraction', ha='center', va='center')
                     axes[i, j].plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
                 axes[i, j].plot(lim, lim, 'k--', linewidth=1)
             axes[i, j].set_ylim(lim)
@@ -323,7 +300,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False):
     quantiles = [1.0]
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,
         normed=normed, dbhfile="parameters/runkolukusarjat/" + filename, plot=True)
-    if normed==False:
+    if normed == False:
         lad = z * 0.0
         for k in range(len(quantiles)):
             lad += lad_p[:,k] + lad_s[:,k] +lad_d[:,k]
@@ -331,19 +308,52 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False):
         plt.plot(lad, z,':k', label='total, %.2f m$^2$m$^{-2}$' % lai_tot)
     plt.legend(frameon=False, borderpad=0.0, labelspacing=0.1)
 
-def plot_xy(x,y):
+def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
     Args:
         x,y (array): arrays for x and y data
+        color (str or tuple): color code
+        title (str): title of plot
+        axislabels (dict)
+            'x' (str): x-axis label
+            'y' (str): y-axis label
     """
-    plt.scatter(x, y, marker='o', alpha=.2)
+    plt.scatter(x, y, marker='o', color=color, alpha=.2)
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])
-    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.3, 0.9), xycoords='axes fraction', ha='center', va='center')
+    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.4, 0.8), xycoords='axes fraction', ha='center', va='center')
     lim = [min(min(y), min(x)), max(max(y), max(x))]
     plt.plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
     plt.plot(lim, lim, 'k--', linewidth=1)
     plt.ylim(lim)
     plt.xlim(lim)
+    plt.title(title)
+    plt.xlabel(axislabels['x'])
+    plt.ylabel(axislabels['y'])
+
+def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', label='median'):
+    """
+    Plot diurnal cycle (hourly) for variable
+    Args:
+        var (Dataframe): dataframe with datetime index and variable to plot
+        quantiles (boolean): plot quantiles as ranges
+        color (str or tuple): color code
+        title (str): title of plot
+        ylabel (str): y-axis label
+    """
+    
+    var_diurnal = diurnal_cycle(var)[var.name]
+    if quantiles:
+        plt.fill_between(var_diurnal['hour'], var_diurnal['5th'], var_diurnal['95th'],
+                         color=color, alpha=0.2, label='5...95%')
+        plt.fill_between(var_diurnal['hour'], var_diurnal['25th'], var_diurnal['75th'],
+                         color=color, alpha=0.4, label='25...75%')
+    plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label)
+    plt.legend()
+    plt.title(title)
+    plt.xlabel('Time [h]')
+    plt.xlim(0,24)
+    plt.ylabel(ylabel)
+    plt.legend(frameon=False, borderpad=0.0,loc="center right")
