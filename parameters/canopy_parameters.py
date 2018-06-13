@@ -134,7 +134,7 @@ def get_cpara(dbhfile):
             }
     
     # normed leaf area density profiles
-    quantiles = [1.0]  # quantiles used in creating species stand lad profiles
+    quantiles = [0.75, 1.0]  # quantiles used in creating species stand lad profiles
     hs = 0.5  # height of understory shrubs [m]
     pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'], lai_p, lai_s, lai_d = lad_profiles(
             grid, dbhfile, quantiles, hs, plot=False)
@@ -201,6 +201,7 @@ def get_cpara(dbhfile):
                                 'La': 600.0, 'm': gfact*4.5})
         decid['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
                                          'Jmax': [42.8, 200.0, 637.0]})
+        decid['leafp'].update({'lt': 0.05})
         shrubs['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.3,
                                 'La': 600.0, 'm': gfact*4.5, 'kn': 0.3})
         shrubs['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],

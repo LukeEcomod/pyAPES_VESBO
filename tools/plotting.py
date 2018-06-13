@@ -10,252 +10,296 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from timeseries_tools import diurnal_cycle, yearly_cumulative
 from iotools import read_forcing, xarray_to_df
-from parameters.general_parameters import gpara
-import seaborn as sns
 
+import seaborn as sns
 pal = sns.color_palette("hls", 5)
 
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default = prop_cycle.by_key()['color']
 
-def plotresults(results):
-    start_time=results.date.values[0]
-    end_time=results.date.values[-1]
-    # Read ET
-    ET_hyde = read_forcing("Hyde_data_1997_2016.csv",
-                           start_time,
-                           end_time,
-                           cols=['ET'])
-    ET_hyde.loc[:,'ET'] = ET_hyde.loc[:,'ET'] * 0.0324  # mm/30min
+def plot_results(results, sim_idx=0):
+
     # Read snow
-    snow = read_forcing("FMI_jokioinen.csv",
-                                start_time,
-                                end_time,
-                                cols=['SnowD'])
+
     # Read weir
-    weir = read_forcing("Lettosuo_weir.csv",
-                           start_time,
-                           end_time,
-                           cols=['runf'])
-    weir.loc[:,'runf'] = weir.loc[:,'runf'] * 1e-3 * gpara['dt']
+    weir = read_forcing("Lettosuo_weir.csv", cols=['runf'])
+
     # Read gwl
-    gwl_meas = read_forcing("Lettosuo_gwl.csv",
-                               start_time,
-                               end_time,
-                               cols=['WT_E','WT_N','WT_W','WT_S'])
-    
-    dates = results.date.values
-    variables=['canopy_moss_evaporation',
-               'canopy_transpiration',
-               'canopy_evaporation',
-               'soil_subsurface_drainage',
-               'soil_surface_runoff']
-    yearly_cum = yearly_cumulative(results, variables)
-    yearly_cum_ET = yearly_cumulative(ET_hyde, ['ET'])
-    
-    plt.figure()
-    plt.subplot(8,3,(1,2))
-    plotxarray(results, ['forcing_air_temperature'], colors=pal, xticks=False)
-    plt.subplot(8,3,(4,5))
-    plotxarray(results, ['forcing_precipitation', 'canopy_throughfall'], colors=pal[3:], xticks=False, m_to='mmperh')
-    plt.subplot(8,3,(7,8))
-    plt.stackplot(dates, 1000 * yearly_cum, labels=variables, colors=pal)
-    plt.xlim([results.date.values[0], results.date.values[-1]])
-#    plt.ylim(0,700)
-    plt.plot(ET_hyde.index, yearly_cum_ET[0], 'k', linewidth=1, label='ET_hyde')
-    plt.ylabel('[mm]')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8, frameon=False)
-    plt.subplot(8,3,(10,11))
-    plotxarray(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation'],
-               colors=[pal[1]] + [pal[2]] + [pal[0]], xticks=False, m_to='mmperh')
-    plt.subplot(8,3,(13,14))
-    plotxarray(results, ['soil_total_runoff'],
-               colors='k', xticks=False, m_to='mmperh')
-    plt.plot(weir.index, weir['runf'],':k', linewidth=1, label='meas_runoff')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
-    plt.subplot(8,3,(16,17))
-    plotxarray(results, ['canopy_phenostate', 'canopy_LAI'], colors=pal, xticks=False)
-    plt.subplot(8,3,(19,20))
-    plt.plot(snow.index, 1e-3 * snow['SnowD'], 'gray', linewidth=1, label='meas_snow_depth [cm]')
-    plotxarray(results, ['canopy_snow_water_equivalent'], colors='k', xticks=False, m_to='mm')
-    plt.subplot(8,3,(22,23))
-    plt.plot(gwl_meas.index, gwl_meas['WT_E'],color=pal[2], linewidth=1)
-    plt.plot(gwl_meas.index, gwl_meas['WT_N'],color=pal[2], linewidth=1)
-    plt.plot(gwl_meas.index, gwl_meas['WT_W'],color=pal[2], linewidth=1)
-    plt.plot(gwl_meas.index, gwl_meas['WT_S'],color=pal[2], linewidth=1)
-    plotxarray(results, ['soil_ground_water_level'], colors=pal[3:], xticks=True)
+    gwl_meas = read_forcing("Lettosuo_gwl.csv", cols=['WT_E','WT_N','WT_W','WT_S'], na_values=-999)
 
-def plotxarray(results, variables, colors, xticks=True, m_to=False):
-    ymin, ymax = 0.0, 0.0
-    for k in range (0, len(variables)):
-        results[variables[k]].plot(color=colors[k], label=results[variables[k]].name,linewidth=1)
-        ymin = min(results[variables[k]].values.min(), ymin)
-        ymax = max(results[variables[k]].values.max(), ymax)
-    plt.ylim(ymin, ymax)
-    plt.xlim([results.date.values[0], results.date.values[-1]])
-    plt.title('')
-    plt.ylabel('[' + results[variables[-1]].units.split('[')[-1])
-    if xticks is False:
-        frame1 = plt.gca()
-        frame1.axes.xaxis.set_ticklabels([])
-    if m_to=='mm' or m_to=='mmperh':
-        if m_to=='mm':
-            conversion = 1e3
-            plt.ylabel('[mm]')
-        if m_to=='mmperh':
-            dt = (results.date.values[1] - results.date.values[0]) / np.timedelta64(1, 's')
-            conversion = 1e3 / dt * 3600
-            plt.ylabel('[mm h-1]')
-        frame1 = plt.gca()
-        _ = frame1.axes.yaxis.set_ticklabels(
-                frame1.axes.yaxis.get_ticklocs()[:] * conversion)
-    plt.xlabel('')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
+    plt.figure(figsize=(10,9))
+    ax = plt.subplot(711)
+    plot_timeseries_xr(results, 'forcing_air_temperature', colors=pal, xticks=False, sim_idx=sim_idx)
+    plt.subplot(712, sharex=ax)
+    plot_timeseries_xr(results, ['forcing_precipitation', 'canopy_throughfall'], sim_idx=sim_idx,
+                       colors=pal[3:], xticks=False, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
+    plt.subplot(713, sharex=ax)
+    plot_timeseries_xr(results, ['canopy_moss_evaporation', 'canopy_transpiration', 'canopy_evaporation',
+                       'soil_subsurface_drainage', 'soil_surface_runoff'], sim_idx=sim_idx,
+                       colors=pal, cum=True, stack=True, xticks=False,
+                       unit_conversion={'unit':'mm', 'conversion':1e3},)
+    plt.subplot(714, sharex=ax)
+    plot_timeseries_xr(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation'],
+                       sim_idx=sim_idx, colors=[pal[1]] + [pal[2]] + [pal[0]], xticks=False,
+                       unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
+    plt.subplot(715, sharex=ax)
+    plot_timeseries_df(weir, 'runf', unit_conversion = {'unit':'mm h-1', 'conversion':3600},
+                       labels='measured runoff', colors=['k'], xticks=False)
+    plot_timeseries_xr(results, 'soil_total_runoff', colors=pal, xticks=False, sim_idx=sim_idx,
+                      unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
+    plt.subplot(716, sharex=ax)
+    plot_timeseries_xr(results, 'canopy_snow_water_equivalent', colors=['gray'], xticks=False, stack=True,
+                       sim_idx=sim_idx, unit_conversion={'unit':'mm', 'conversion':1e3})
+    plt.subplot(717, sharex=ax)
+    plot_timeseries_df(gwl_meas, ['WT_E','WT_N','WT_W','WT_S'], colors=[pal[1]], xticks=True)
+    plot_timeseries_xr(results, 'soil_ground_water_level', colors=pal[3:], xticks=True, sim_idx=sim_idx)
+    plt.ylim(-1.0, 0.0)
 
-def plotxarray2(results, variable, colors, xticks=True, m_to=False, label=''):
-    if type(results) != list:
-        results = [results]
-    ymin, ymax = 0.0, 0.0
-    i=0
-    for result in results:
-        result[variable].plot(color=colors[i], label=result.description + label, linewidth=1)
-        ymin = min(result[variable].values.min(), ymin)
-        ymax = max(result[variable].values.max(), ymax)
-        i+=1
-    result = results[0]
-    plt.title(result[variable].units.split('[')[0])
-    plt.ylim(ymin, ymax)
-    plt.xlim([result.date.values[0], result.date.values[-1]])
-    plt.ylabel('[' + result[variable].units.split('[')[-1])
-    if xticks is False:
-        frame1 = plt.gca()
-        frame1.axes.xaxis.set_ticklabels([])
-    if m_to=='mm' or m_to=='mmperh':
-        if m_to=='mm':
-            conversion = 1e3
-            plt.ylabel('[mm]')
-        if m_to=='mmperh':
-            dt = (result.date.values[1] - result.date.values[0]) / np.timedelta64(1, 's')
-            conversion = 1e3 / dt * 3600
-            plt.ylabel('[mm h-1]')
-        frame1 = plt.gca()
-        _ = frame1.axes.yaxis.set_ticklabels(
-                frame1.axes.yaxis.get_ticklocs()[:] * conversion)
-    plt.xlabel('')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
+    plt.tight_layout(rect=(0, 0, 0.8, 1))
 
-def plotcumulative(results, variable, colors, xticks=True, m_to=False, label='', stack=False, cum=False):
-    if type(results) != list:
-        results = [results]
-    ymin, ymax = 0.0, 0.0
-    i=0
-    values_all=[]
-    ymin=[]
-    ymax=[]
-    for result in results:
-        if cum:
-            values = yearly_cumulative(result, [variable])
-            values = values[0]
-        else:
-            values = result[variable].isel(simulation=0).values
-#        ymax.append(np.maximum(values))
-#        ymin.append(np.minimum(values))
-        if stack==False:
-            plt.plot(result.date.values, values, color=colors[i], linewidth=1, label=result.description + label)
-#            ymax=max(ymax)
-#            ymax=min(ymin)
-        i+=1
-        values_all.append(values)
-    result = results[0]
-    if stack:
-        plt.stackplot(result.date.values, values_all, labels=label, colors=colors)
-#        ymax=sum(ymax)
-#        ymin=sum(ymin)
-    plt.title(result[variable].units.split('[')[0])
-#    plt.ylim(ymin, ymax)
-    plt.xlim([result.date.values[0], result.date.values[-1]])
-    plt.ylabel('[' + result[variable].units.split('[')[-1])
-    if xticks is False:
-        frame1 = plt.gca()
-        frame1.axes.xaxis.set_ticklabels([])
-    if m_to=='mm' or m_to=='mmperh':
-        if m_to=='mm':
-            conversion = 1e3
-            plt.ylabel('[mm]')
-        if m_to=='mmperh':
-            dt = (result.date.values[1] - result.date.values[0]) / np.timedelta64(1, 's')
-            conversion = 1e3 / dt * 3600
-            plt.ylabel('[mm h-1]')
-        frame1 = plt.gca()
-        _ = frame1.axes.yaxis.set_ticklabels(
-                frame1.axes.yaxis.get_ticklocs()[:] * conversion)
-    plt.xlabel('')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", fontsize=8)
-
-def plotresultsMLM(results, sim_idx=0):
-    Data = read_forcing("Lettosuo_data_2010_2018.csv",
-                        cols=['NEE','GPP','Reco','ET'])
-    Data.GPP = -Data.GPP / 44.01 * 1e3
-    Data.NEE = Data.NEE / 44.01 * 1e3
-    Data.Reco = Data.Reco / 44.01 * 1e3
+def plot_fluxes(results, sim_idx=0):
+    Data = read_forcing("Lettosuo_data_2010_2018.csv", cols=['NEE','GPP','Reco','ET'])
+    Data.ET = Data.ET / 1800 * 3600
+    Data.GPP = -Data.GPP
 
     variables=['canopy_NEE','canopy_GPP','canopy_Reco','canopy_transpiration','forcing_precipitation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data.canopy_transpiration = Data.canopy_transpiration*1e3
+    Data.canopy_transpiration = Data.canopy_transpiration * 1e3 * 3600
+    Data.canopy_GPP = Data.canopy_GPP * 44.01 * 1e-3
+    Data.canopy_Reco = Data.canopy_Reco * 44.01 * 1e-3
 
     dates = Data.index
-
-    # plot some results as well
-    fmonth = 4
-    lmonth = 9
 
     ix = pd.rolling_mean(Data.forcing_precipitation.values, 48, 1)
     dryc = np.ones(len(dates))
     f = np.where(ix > 0)[0]  # wet canopy indices
     dryc[f] = 0.0
 
-    axislabels={'x': 'Measured', 'y': 'Modelled'}
+    labels=['Measured', 'Modelled']
 
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10,6))
     plt.subplot(341)
-    plot_xy(Data.GPP, Data.canopy_GPP, color=pal[0], axislabels=axislabels, title='GPP')
+    plot_xy(Data.GPP, Data.canopy_GPP, color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(345)
-    plot_xy(Data.Reco, Data.canopy_Reco, color=pal[1], axislabels=axislabels, title='Reco')
+    plot_xy(Data.Reco, Data.canopy_Reco, color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
 
     months = Data.index.month
+    fmonth = 4
+    lmonth = 9
     f = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
 
     plt.subplot(349)
-    plot_xy(Data.ET[f], Data.canopy_transpiration[f], color=pal[2], axislabels=axislabels, title='ET')
+    plot_xy(Data.ET[f], Data.canopy_transpiration[f], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
 
-    plt.subplot(3,4,(2,3))
-    plt.plot(dates, Data.GPP, 'k.-')
-    plt.plot(dates, Data.canopy_GPP, color=pal[0])
-    plt.ylabel('GPP')
+    ax = plt.subplot(3,4,(2,3))
+    plot_timeseries_df(Data, ['GPP','canopy_GPP'], colors=['k', pal[0]], xticks=False,
+                       labels=labels)
+    plt.title('GPP [mg CO2 m-2 s-1]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    plt.subplot(3,4,(6,7))
-    plt.plot(dates, Data.Reco, 'k.-')
-    plt.plot(dates, Data.canopy_Reco, color=pal[1])
-    plt.ylabel('Reco')
+    plt.subplot(3,4,(6,7), sharex=ax)
+    plot_timeseries_df(Data, ['Reco','canopy_Reco'], colors=['k', pal[1]], xticks=False,
+                       labels=labels)
+    plt.title('Reco [mg CO2 m-2 s-1]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    plt.subplot(3,4,(10,11))
-    plt.plot(dates, Data.ET, 'k.-')
-    plt.plot(dates, Data.canopy_transpiration, color=pal[2])
-    plt.ylabel('ET')
+    plt.subplot(3,4,(10,11), sharex=ax)
+    plot_timeseries_df(Data, ['ET','canopy_transpiration'], colors=['k', pal[2]], xticks=True,
+                       labels=labels)
+    plt.title('ET [mm h-1]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    plt.subplot(344)
-    plot_diurnal(Data.GPP, color='k', label='Measured')
-    plot_diurnal(Data.canopy_GPP, color=pal[0], ylabel='GPP', title='GPP', label='Modelled')
+    ax =plt.subplot(344)
+    plot_diurnal(Data.GPP, color='k', legend=False)
+    plot_diurnal(Data.canopy_GPP, color=pal[0], legend=False)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.xlabel('')
 
-    plt.subplot(348)
-    plot_diurnal(Data.Reco, color='k', label='Measured')
-    plot_diurnal(Data.canopy_Reco, color=pal[1], ylabel='Reco', title='Reco', label='Modelled')
+    plt.subplot(348, sharex=ax)
+    plot_diurnal(Data.Reco, color='k', legend=False)
+    plot_diurnal(Data.canopy_Reco, color=pal[1], legend=False)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.xlabel('')
 
-    plt.subplot(3,4,12)
-    plot_diurnal(Data.ET[f], color='k', label='Measured')
-    plot_diurnal(Data.canopy_transpiration[f], color=pal[2], ylabel='ET', title='ET', label='Modelled')
+    plt.subplot(3,4,12, sharex=ax)
+    plot_diurnal(Data.ET[f], color='k', legend=False)
+    plot_diurnal(Data.canopy_transpiration[f], color=pal[2], legend=False)
+
+    plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
+
+def plot_pt_results(results, variable):
+    if variable == 'canopy_pt_transpiration':
+        unit1={'unit':'mm h-1', 'conversion':1e3*3600}
+        unit2={'unit':'mm', 'conversion':1e3}
+    else:
+        unit1={'unit':'mg CO2 m-2 s-1', 'conversion': 44.01 * 1e-3}
+        unit2={'unit':'kg CO2 m-2', 'conversion': 44.01 * 1e-9}
+    plt.figure(figsize=(10,4))
+    ax = plt.subplot(211)
+    plot_timeseries_pt(results, variable, sim_idx=0,
+                       unit_conversion=unit1,
+                       xticks=False, stack=False, cum=False)
+    plt.subplot(212, sharex=ax)
+    plot_timeseries_pt(results, variable, sim_idx=0,
+                       unit_conversion=unit2,
+                       xticks=True, stack=True, cum=True)
+    plt.title('')
+    plt.tight_layout(rect=(0, 0, 0.9, 1))
+
+def plot_timeseries_pt(results, variable, sim_idx=0, unit_conversion={'unit':None, 'conversion':1.0},
+                    xticks=True, stack=True, cum=True):
+    """
+    Plot results by plant type.
+    Args:
+        results (xarray): xarray dataset
+        variables (str): variable name to plot
+        sim_idx (int): index of simulation in xarray dataset
+        unit_converrsion (dict):
+            'unit' (str): unit of plotted variable (if different from unit in dataset)
+            'conversion' (float): conversion needed to get to 'unit'
+        xticks (boolean): False for no xticklabels
+        stack (boolean): stack plotted timeseries (fills areas)
+        cum (boolean): plot yearly cumulative timeseries
+    """
+    species=['Pine','Spruce','Decid']
+    labels=[]
+    colors = sns.color_palette("hls", len(results.planttype))
+    sub_planttypes = (len(results.planttype) - 1) / 3
+    if sub_planttypes > 1:
+        for sp in species:
+            labels += [sp + '_' + str(k) for k in range(sub_planttypes)]
+    else:
+        labels = species
+    labels.append('Shrubs')
+    plot_timeseries_xr([results.isel(planttype=i) for i in range(len(results.planttype))],
+                       variable, colors=colors, xticks=xticks,
+                       stack=stack, cum=cum, sim_idx=sim_idx,
+                       unit_conversion=unit_conversion, labels=labels)
+
+def plot_timeseries_xr(results, variables, sim_idx=0, unit_conversion = {'unit':None, 'conversion':1.0},
+                       colors=default, xticks=True, stack=False, cum=False, labels=None):
+    """
+    Plot timeseries from xarray results.
+    Args:
+        results (xarray or list of xarray): xarray dataset or list of xarray datasets
+        variables (str or list of str): variable names to plot
+        sim_idx (int): index of simulation in xarray dataset
+        unit_converrsion (dict):
+            'unit' (str): unit of plotted variable (if different from unit in dataset)
+            'conversion' (float): conversion needed to get to 'unit'
+        colors (list): list of color codes
+        xticks (boolean): False for no xticklabels
+        stack (boolean): stack plotted timeseries (fills areas)
+        cum (boolean): plot yearly cumulative timeseries
+        labels (list of str): labels corresponding to results[0], results[1],...
+    """
+    if type(results) != list:
+        results = [results]
+    if type(variables) != list:
+        variables = [variables]
+    if len(results) > 1 & len(variables) > 1:
+        print "Provide either multiple results and one variable or one result and multiple variables"
+    values_all=[]
+    for result in results:
+        if cum:
+            values = yearly_cumulative(result.isel(simulation=sim_idx), variables)
+            for k in range(len(values)):
+                values_all.append(values[k])
+        else:
+            for var in variables:
+                values_all.append(result[var].isel(simulation=sim_idx).values)
+    if len(results) > 1:
+        if labels == None:
+            labels = [result.description for result in results]
+        title = results[0][variables[0]].units.split('[')[0]
+    else:
+        labels = [results[0][var].units.split('[')[0] for var in variables]
+        title = ''
+
+    unit = '[' + results[0][variables[0]].units.split('[')[-1]
+    if cum:
+        unit = unit.split(' ')[-2]+']'
+    if unit_conversion['unit'] != None:
+        unit = '[' + unit_conversion['unit'] + ']'
+        values_all = [val * unit_conversion['conversion'] for val in values_all]
+
+    if len(values_all) > len(colors):
+        colors = colors * (len(values_all) / len(colors) + 1)
+
+    if stack:
+        plt.stackplot(results[0].date.values, values_all, labels=labels, colors=colors)
+        ymax = max(sum(values_all))
+    else:
+        for i in range(len(values_all)):
+            plt.plot(results[0].date.values, values_all[i], color=colors[i], linewidth=1, label=labels[i])
+        ymax = max([max(val) for val in values_all])
+    plt.title(title)
+    plt.xlim([results[0].date.values[0], results[0].date.values[-1]])
+    plt.ylim(min([min(val) for val in values_all]), ymax)
+    plt.ylabel(unit)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=xticks)
+    plt.xlabel('')
+    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
+
+def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
+                       labels=None, colors=default, xticks=True, stack=False, cum=False, limits=True):
+    """
+    Plot timeseries from dataframe data.
+    Args:
+        data (DataFrame): Dataframe of datasets with datetime index
+        variables (str or list of str): variable names to plot
+        unit_converrsion (dict):
+            'unit' (str): unit of plotted variable (if different from unit in dataset)
+            'conversion' (float): conversion needed to get to 'unit'
+        labels (str or list of str): labels corresponding to variables (if None uses variable names)
+        colors (list): list of color codes
+        xticks (boolean): False for no xticklabels
+        stack (boolean): stack plotted timeseries (fills areas)
+        cum (boolean): plot yearly cumulative timeseries
+        limits (boolean): set axis limits based on plotted data
+    """
+    if type(variables) != list:
+        variables = [variables]
+    values_all=[]
+    if cum:
+        values = yearly_cumulative(data, variables)
+        for k in range(len(values)):
+            values_all.append(values[k])
+    else:
+        for var in variables:
+            values_all.append(data[var].values)
+    if labels == None:
+        labels = variables
+    if type(labels) != list:
+        labels = [labels]
+
+    if unit_conversion['unit'] != None:
+        unit = '[' + unit_conversion['unit'] + ']'
+        values_all = [val * unit_conversion['conversion'] for val in values_all]
+    else:
+        unit = ''
+
+    if len(values_all) > len(colors):
+        colors = colors * (len(values_all) / len(colors) + 1)
+
+    if stack:
+        plt.stackplot(data.index, values_all, labels=labels, colors=colors)
+        ymax = max(sum(values_all))
+    else:
+        for i in range(len(values_all)):
+            plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i])
+        ymax = max([max(val) for val in values_all])
+
+    if limits:
+        plt.xlim([data.index[0], data.index[-1]])
+        plt.ylim(min([min(val) for val in values_all]), ymax)
+
+    plt.ylabel(unit)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=xticks)
+    plt.xlabel('')
+    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_columns(data, col_index=None):
     """
@@ -287,17 +331,17 @@ def plot_columns(data, col_index=None):
             axes[i, j].set_ylim(lim)
             axes[i, j].set_xlim(lim)
 
-def plot_lad_profiles(filename="letto2016_partial.txt", normed=False):
+def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles = [1.0]):
     """
     Plots stand leaf area density profiles from given file.
     Args:
         filename (str): name of file with dbh series
-        normed (boolean): 
+        normed (boolean): normalized profiles
+        quantiles (list): cumulative frequency limits for grouping trees, e.g. [0.5, 1.0]
     """
     from parameters.parameter_utils import model_trees
 
     z = np.linspace(0, 30.0, 100)
-    quantiles = [1.0]
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,
         normed=normed, dbhfile="parameters/runkolukusarjat/" + filename, plot=True)
     if normed == False:
@@ -323,7 +367,7 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])
-    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.4, 0.8), xycoords='axes fraction', ha='center', va='center')
+    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
     lim = [min(min(y), min(x)), max(max(y), max(x))]
     plt.plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
     plt.plot(lim, lim, 'k--', linewidth=1)
@@ -333,7 +377,7 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
     plt.xlabel(axislabels['x'])
     plt.ylabel(axislabels['y'])
 
-def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', label='median'):
+def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', label='median', legend=True):
     """
     Plot diurnal cycle (hourly) for variable
     Args:
@@ -351,9 +395,10 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
         plt.fill_between(var_diurnal['hour'], var_diurnal['25th'], var_diurnal['75th'],
                          color=color, alpha=0.4, label='25...75%')
     plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label)
-    plt.legend()
     plt.title(title)
     plt.xlabel('Time [h]')
     plt.xlim(0,24)
     plt.ylabel(ylabel)
-    plt.legend(frameon=False, borderpad=0.0,loc="center right")
+    if legend:
+        plt.legend()
+        plt.legend(frameon=False, borderpad=0.0,loc="center right")

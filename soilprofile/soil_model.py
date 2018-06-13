@@ -347,12 +347,12 @@ class SoilModel():
             self.Kv[ix] = Kv.copy()
             self.Wair = self.porosity - self.Wliq - self.Wice
 
-            fluxes.update({'infiltration': infil,
-                           'evaporation': evapo,
-                           'transpiration': trans,
-                           'subsurface_drainage': drainage,
-                           'surface_runoff': roff,
-                           'total_runoff': drainage + roff,
+            fluxes.update({'infiltration': infil / dt,
+                           'evaporation': evapo / dt,
+                           'transpiration': trans /dt,
+                           'subsurface_drainage': drainage /dt,
+                           'surface_runoff': roff /dt,
+                           'total_runoff': (drainage + roff) /dt,
                            'vertical_water_flux': fliq,
                            'MBE': mbe
                           })

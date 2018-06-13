@@ -8,137 +8,48 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 from matplotlib import pyplot as plt
-from tools.plotting import plotresults, plotxarray, plotxarray2, plotresultsMLM, plot_columns, plotcumulative
-from tools.timeseries_tools import fill_gaps
-import seaborn as sns
+from tools.plotting import plot_results, plot_fluxes, plot_columns, plot_pt_results, plot_lad_profiles
 from tools.iotools import read_results, read_forcing, save_df_to_csv
 from tools.dataprocessing_scripts import read_lettosuo_data
+import seaborn as sns
 
-plotresults(results.isel(simulation=0))
-
-plotresultsMLM(results.isel(simulation=0))
-
-
-results = read_results('201806041539_CCFPeat_results.nc')
-results['canopy_GPP'].values = results['canopy_GPP'].values * 44.01 * 1e-3
-results['canopy_Reco'].values = results['canopy_Reco'].values * 44.01 * 1e-3
+results = read_results([output_control2, output_partial])
+results = read_results('results/201806130907_CCFPeat_results.nc')
+results = read_results('results/201806131258_CCFPeat_results.nc')
 
 
-
-dat = read_forcing("Lettosuo_data_2010_2018.csv", cols=['GPP','Reco','ET'])
-
-dat.GPP=-dat.GPP
-
-dat.GPP = dat.GPP * 1800 * 1e-6
-dat.Reco = dat.Reco * 1800 * 1e-6
-
-
-results['canopy_GPP'].values = -results['canopy_GPP'].values * 1800 * 44.01 * 1e-9
-results['canopy_pt_An'].values = -results['canopy_pt_An'].values * 1800 * 44.01 * 1e-9
-results['canopy_Reco'].values = results['canopy_Reco'].values * 1800 * 44.01 * 1e-9
-results['canopy_pt_Rd'].values = results['canopy_pt_Rd'].values * 1800 * 44.01 * 1e-9
-
-plt.figure(figsize=(9.5, 9.5))
-pal = sns.color_palette("hls", 5)
-if type(results) != list:
-    results = [results]
-for i in range(len(results)):
-    result=results[i]
-    plt.subplot(len(results),1,i+1)
-    plotcumulative(result, 'canopy_Reco', colors=pal, xticks=True, cum=True,stack=True,label=['Soil'])
-    plotcumulative([result.isel(planttype=i) for i in range(len(result.planttype))],
-                'canopy_pt_Rd', colors=pal[1:], xticks=True,stack=True, cum=True,
-                label=['Pine','Spruce','Birch','Shrubs'])
-    plotcumulative(result, 'canopy_GPP', colors=[(0,0,0),(0,0,0)], xticks=True, cum=True,stack=True,label=['Moss'])
-    plotcumulative([result.isel(planttype=i) for i in range(len(result.planttype))],
-                'canopy_pt_An', colors=pal[1:], xticks=True,stack=True, cum=True)
-
-plt.figure(figsize=(9.5, 9.5))
-pal = sns.color_palette("hls", 5)
-if type(results) != list:
-    results = [results]
-for i in range(len(results)):
-    result=results[i]
-    plt.subplot(len(results),1,i+1)
-    plotcumulative([result.isel(planttype=i) for i in range(len(result.planttype))],
-                'canopy_pt_transpiration', colors=pal[1:], xticks=True, m_to='mm',stack=True, cum=True,
-                label=['pine','spruce','decid','shrubs'])
-    plt.xlim('01-01-2016','01-01-2018')
-    plt.ylim(0,0.22)
-#    plotcumulative(result, 'canopy_Reco', colors=pal, xticks=True, cum=True,stack=True)
-#    plotcumulative(result, 'canopy_GPP', colors=pal[2:], xticks=True, cum=True,stack=True)
-
-#                   m_to='mm', label=', total')
-
-yearly_cum = yearly_cumulative(dat, ['Reco'])
-plt.plot(dat.index, yearly_cum[0], ':k')
-yearly_cum = yearly_cumulative(dat, ['GPP'])
-plt.plot(dat.index, yearly_cum[0],'k')
+plt.figure()
+for i in range(2):
+    results[i]['canopy_PAR_shaded'].sel(date=results[i]['date.month']==7).mean(dim='date').plot()
+    results[i]['canopy_PAR_sunlit'].sel(date=results[i]['date.month']==7).mean(dim='date').plot()
+plt.figure()
+for i in range(2):
+    results[i]['canopy_wind_speed'].sel(date=results[i]['date.month']==7).mean(dim='date').plot()
+plt.figure()
+for i in range(2):
+    results[i]['canopy_sunlit_fraction'].sel(date=results[i]['date.month']==7).mean(dim='date').plot()
+plt.figure()
+for i in range(2):
+    results[i]['canopy_lad'].sel(date=results[i]['date.month']==7).mean(dim='date').plot()
 
 
-plt.tight_layout(rect=(0, 0, 0.8, 1))
+plot_results(results)
+plot_fluxes(results)
+plot_pt_results(results,'canopy_pt_transpiration')
+plot_pt_results(results,'canopy_pt_An')
+plot_lad_profiles("letto2014.txt", quantiles=[0.75, 1.0])
 
-
-output_control1 = driver(create_ncf=True, dbhfile="letto2009.txt")
+#output_control1 = driver(create_ncf=True, dbhfile="letto2009.txt")
 output_control2 = driver(create_ncf=True, dbhfile="letto2014.txt")
 output_partial = driver(create_ncf=True, dbhfile="letto2016_partial.txt")
-output_clearcut = driver(create_ncf=True, dbhfile="letto2016_clearcut.txt")
-output = driver(create_ncf=True, dbhfile="letto2014.txt", LAImax=[5, 0, 0, 0.7])
-output = driver(create_ncf=True, LAI_sensitivity=True, dbhfile="letto2014.txt")
-
-results = read_results(["results/201806050958_CCFPeat_results.nc",
-                        "results/201806051022_CCFPeat_results.nc",
-                        "results/201806051047_CCFPeat_results.nc"])
-
-pal = sns.color_palette("hls", 4)
-plt.figure(figsize=(9.5, 9.5))
-plt.subplot(611); plotxarray2(results, 'soil_ground_water_level', colors=pal, xticks=False)
-plt.subplot(612); plotxarray2(results, 'canopy_LAI', colors=pal, xticks=False)
-plt.subplot(613); plotcumulative(results, 'canopy_transpiration', colors=pal, xticks=False, m_to='mm', cum=True)
-plt.subplot(614); plotcumulative(results, 'canopy_evaporation', colors=pal, xticks=False, m_to='mm', cum=True)
-plt.subplot(615); plotcumulative(results, 'canopy_moss_evaporation', colors=pal, xticks=False, m_to='mm', cum=True)
-plt.subplot(616); plotcumulative(results, 'soil_total_runoff', colors=pal, xticks=True, m_to='mm', cum=True)
-plt.tight_layout(rect=(0, 0, 0.8, 1))
-
-plt.figure(figsize=(9.5, 9.5))
-plt.subplot(511); plotxarray2(results, 'soil_ground_water_level', colors=pal, xticks=False)
-plt.xlim('01-01-2016','01-01-2018')
-plt.ylim(-0.8,0)
-plt.subplot(512); plotcumulative(results, 'soil_total_runoff', colors=pal, xticks=True, m_to='mm', cum=True)
-plt.xlim('01-01-2016','01-01-2018')
-plt.subplot(513); plotcumulative(results, 'canopy_transpiration', colors=pal, xticks=False, m_to='mm', cum=True)
-plt.xlim('01-01-2016','01-01-2018')
-plt.subplot(514); plotcumulative(results, 'canopy_evaporation', colors=pal, xticks=False, m_to='mm', cum=True)
-plt.xlim('01-01-2016','01-01-2018')
-plt.subplot(515); plotcumulative(results, 'canopy_moss_evaporation', colors=pal, xticks=True, m_to='mm', cum=True)
-plt.xlim('01-01-2016','01-01-2018')
-
-plt.tight_layout(rect=(0, 0, 0.8, 1))
-
-plt.figure(figsize=(9.5, 9.5))
-plt.subplot(513); plotcumulative(results, 'canopy_GPP', colors=pal, xticks=False, m_to='mm', cum=True)
-plt.xlim('01-01-2016','01-01-2018')
-plt.subplot(514); plotcumulative(results, 'canopy_Reco', colors=pal, xticks=True, m_to='mm', cum=True)
-plt.xlim('01-01-2016','01-01-2018')
-
-plt.tight_layout(rect=(0, 0, 0.8, 1))
-
-plt.figure(); 
-plt.subplot(411); plotxarray2(results, 'canopy_GPP', colors=pal, xticks=False)
-plt.subplot(412); plotcumulative(results, 'canopy_GPP', colors=pal, xticks=False)
-plt.subplot(413); plotxarray2(results, 'canopy_LE', colors=pal, xticks=False)
-plt.subplot(414); plotcumulative(results, 'canopy_LE', colors=pal, xticks=True)
-plt.tight_layout(rect=(0, 0, 0.8, 1))
-
-results=read_results(output)
-
-
-
-
+#output_clearcut = driver(create_ncf=True, dbhfile="letto2016_clearcut.txt")
+#output = driver(create_ncf=True, dbhfile="letto2014.txt", LAImax=[5, 0, 0, 0.7])
+#output = driver(create_ncf=True, LAI_sensitivity=True, dbhfile="letto2014.txt")
 
 variable = 'canopy_transpiration'
-variable = 'canopy_GPP'
+
 pal = sns.color_palette("hls", 13)
+
 from parameters.sensitivity_sampling import LAIcombinations
 plt.figure()
 plt.subplot(211)
@@ -150,7 +61,6 @@ for i in range(len(LAIcombinations)):
 plt.tight_layout(rect=(0, 0, 0.8, 1))
 
 """-------- Colormesh plotting --------"""
-
 from parameters.sensitivity_sampling import LAIcombinations
 LAI=np.empty(len(LAIcombinations))
 # pine, spruce, decid
@@ -242,22 +152,6 @@ plot_columns(lettosuo_data,[95,97,52,53])
 plot_columns(lettosuo_data,[59,93,119,125])
 plot_columns(lettosuo_data,[59,-1])
 
-
-lettosuo_data['L']=latent_heat(letto_data['Tair'].values)
-lettosuo_data['ET']=lettosuo_data['Letto1_EC: LE (Wm-2)'] / lettosuo_data['L'] * 1800
-lettosuo_data['ET'][lettosuo_data['ET'] < 0.0] = 0.0
-
-letto_data = lettosuo_data[['Letto1_EC: LE (Wm-2)',
-                            'ET',
-                            'Letto1_EC: PaikNEE_N',
-                            'Letto1_EC: GPP_N',
-                            'Letto1_EC: Reco_N']]
-
-letto_data=letto_data.rename(columns={'Letto1_EC: LE (Wm-2)':'LE',
-                                      'Letto1_EC: PaikNEE_N':'NEE',
-                                      'Letto1_EC: GPP_N':'GPP',
-                                      'Letto1_EC: Reco_N':'Reco'})
-
 # Soil moist
 plot_columns(lettosuo_data,[47,48,49,50,65,66,67,68,84,85,86,87])
 
@@ -272,3 +166,19 @@ plot_columns(lettosuo_data,[33,34,1])
 
 # LE
 plot_columns(lettosuo_data,[15,36])
+
+""" lettosuo EC data """
+lettosuo_data['L']=latent_heat(letto_data['Tair'].values)
+lettosuo_data['ET']=lettosuo_data['Letto1_EC: LE (Wm-2)'] / lettosuo_data['L'] * 1800
+lettosuo_data['ET'][lettosuo_data['ET'] < 0.0] = 0.0
+
+letto_data = lettosuo_data[['Letto1_EC: LE (Wm-2)',
+                            'ET',
+                            'Letto1_EC: PaikNEE_N',
+                            'Letto1_EC: GPP_N',
+                            'Letto1_EC: Reco_N']]
+
+letto_data=letto_data.rename(columns={'Letto1_EC: LE (Wm-2)':'LE',
+                                      'Letto1_EC: PaikNEE_N':'NEE',
+                                      'Letto1_EC: GPP_N':'GPP',
+                                      'Letto1_EC: Reco_N':'Reco'})

@@ -84,7 +84,7 @@ def read_results(outputfiles):
     (or multiple in list of xarrays)
     Args:
         outputfiles (str or list of str):
-            outputfilenameor list of outputfilenames
+            outputfilename or list of outputfilenames
     Returns:
         results (xarray or list of xarrays):
             simulation results from given outputfile(s)
@@ -92,19 +92,17 @@ def read_results(outputfiles):
 
     import xarray as xr
 
-    direc = "results/"
-
     if type(outputfiles) != list:
         outputfiles = [outputfiles]
 
     results = []
     for outputfile in outputfiles:
-        fp = direc + outputfile
+        fp = outputfile
         result = xr.open_dataset(fp)
         result.coords['simulation'] = result.simulation.values
         result.coords['soil'] = result.soil_z.values
         result.coords['canopy'] = result.canopy_z.values
-        result.coords['planttype'] = ['pine','spruce','decid','shrubs']
+#        result.coords['planttype'] = ['pine','spruce','decid','shrubs']
         results.append(result)
 
     if len(results) == 1:

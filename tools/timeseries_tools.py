@@ -12,8 +12,10 @@ from matplotlib import pyplot as plt
 def yearly_cumulative(results, variables):
     if type(results) is pd.DataFrame:
         years = results.index.year
+        dt = (results.index[1] - results.index[0]).total_seconds()
     else: # xarray
         years = results.date.dt.year.values
+        dt=(results.date[1]-results.date[0]).values.astype('timedelta64[s]').astype('float')
 
     yearly_cum = np.empty([len(variables), len(years)])
 
@@ -28,7 +30,7 @@ def yearly_cumulative(results, variables):
     for i in range(len(years)-1):
         if years[i] != years[i+1]:
             yearly_cum[:,i] = np.nan
-    return yearly_cum
+    return yearly_cum * dt
 
 def diurnal_cycle(data, ap='hour'):
     """

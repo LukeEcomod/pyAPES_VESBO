@@ -393,12 +393,12 @@ class CanopyModel():
                  'LAI': self.LAI,
                  'phenostate': self.pheno_state
                  }
-        fluxes = {'potential_infiltration': PotInf,
-                  'throughfall': Trfall_rain + Trfall_snow,
-                  'interception': Interc,
-                  'evaporation': Evap,
-                  'transpiration': Tr,
-                  'moss_evaporation': Efloor,
+        fluxes = {'potential_infiltration': PotInf / dt,
+                  'throughfall': (Trfall_rain + Trfall_snow) / dt,
+                  'interception': Interc / dt,
+                  'evaporation': Evap / dt,
+                  'transpiration': Tr / dt,
+                  'moss_evaporation': Efloor / dt,
                   'Rnet': Rn,
                   'Rnet_ground': Rnet_gr,
                   'U_ground': U[0],
@@ -414,10 +414,14 @@ class CanopyModel():
                            'LE': LE[-1],
                            'LEgr': LE_gr,
                            'GPPgr': -An_gr,
-                           'pt_transpiration': np.array([pt_st['E'] * MH2O * dt * 1e-3 for pt_st in pt_stats]),
+                           'pt_transpiration': np.array([pt_st['E'] * MH2O * 1e-3 for pt_st in pt_stats]),
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
                            'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats])})
-            state.update({'wind_speed': U})
+            state.update({'wind_speed': U,
+                          'PAR_sunlit': Q_sl1,
+                          'PAR_shaded': Q_sh1,
+                          'lad': self.lad,
+                          'sunlit_fraction': f_sl})
             if self.Switch_WMA is False:
                 state.update({'h2o': H2O,
                               'co2': CO2})

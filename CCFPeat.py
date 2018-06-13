@@ -14,7 +14,7 @@ from parameters.canopy_parameters import get_cpara
 
 from copy import deepcopy
 
-def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014", LAImax=None):
+def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014.txt", LAImax=None):
     """
     """
 
@@ -122,6 +122,7 @@ class Model():
         """ Runs atmosphere-canopy-soil--continuum model"""
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
         for k in range(0, self.Nsteps):
+            # print str(k)
             if k in k_steps[:-1]:
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
                 print '{0}..\r'.format(s),
@@ -148,11 +149,11 @@ class Model():
 
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
-            ubc_w = {'Prec': canopy_flux['potential_infiltration'] / self.dt,
+            ubc_w = {'Prec': canopy_flux['potential_infiltration'],
                      'Evap': 0.0}
             # transpiration sink  --- SOIL MODELIN SISÄÄN?!?
             rootsink = np.zeros(self.soil_model.Nlayers)
-            rootsink[0] = canopy_flux['transpiration'] / self.dt / self.soil_model.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
+            rootsink[0] = canopy_flux['transpiration'] / self.soil_model.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
             # temperature above soil surface
             ubc_T = {'type': 'flux', 'value': None}
 
@@ -165,7 +166,7 @@ class Model():
             forcing_state = {
                     'wind_speed': self.forcing['U'].iloc[k],
                     'air_temperature': self.forcing['Tair'].iloc[k],
-                    'precipitation': self.forcing['Prec'].iloc[k] * self.dt,
+                    'precipitation': self.forcing['Prec'].iloc[k],
                     'h2o': self.forcing['H2O'].iloc[k],
                     'co2': self.forcing['CO2'].iloc[k]}
 

@@ -166,7 +166,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Qp, SWabs, LW, U, P=101300.0, mod
     Tl = T  
     
 #    print T, Qp, H2O, CO2, T, Rabs, U, P
-    gb_h, gb_v, gb_c, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
+    gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
 
     err = 999.0
     iterNo = 0
@@ -202,7 +202,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Qp, SWabs, LW, U, P=101300.0, mod
             # For abs(dT)<15 K error is <10Wm-2. Campbell & Norman 1998, p.225
             geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
             Tl = T + (Rabs - LMOLAR*geff_v*Dleaf) / (CP*(gb_h + gr) + LMOLAR*s*geff_v)
-            gb_h, gb_v, gb_c, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
+            gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
             err = np.nanmax(abs(Tl - Told))
             # print('err', err)
         else:
