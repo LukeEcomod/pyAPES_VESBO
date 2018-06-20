@@ -437,14 +437,14 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
     q_sl = q_sh + aDiro  # sunlit leaves diffuse + direct
 
     if PlotFigs:
-        plt.figure(999)
+        plt.figure(998)
         plt.subplot(221)
         plt.title("Source: radiation.canopy_sw_ZhaoQualls")
 
-        plt.plot(f_slo, -Lcumo, 'r-', (1 - f_slo), -Lcumo, 'b-')
+        plt.plot(f_slo, -Lcumo/Clump, 'r-', (1 - f_slo), -Lcumo/Clump, 'b-')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("sunlit & shaded fractions (-)")
-        plt.legend(('f_{sl}', 'f_{sh}'), loc='best')
+        plt.legend(('f_{sl}, total = %.2f' % np.sum(f_slo*LAIz), 'f_{sh}, total = %.2f' % np.sum((1 - f_slo)*LAIz)), loc='best')
 
         # add input parameter values to fig
         plt.text(0.05, 0.75, r'$LAI$ = %1.1f m2 m-2' % (LAI))
@@ -452,20 +452,177 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
         plt.text(0.05, 0.55, r'$\alpha_l$ = %0.2f' % (LeafAlbedo))
         plt.text(0.05, 0.45, r'$\alpha_s$ = %0.2f' % (SoilAlbedo))
 
+        plt.subplot(222)
+        plt.plot(Q_sl, -Lcumo/Clump, 'ro-', Q_sh, -Lcumo/Clump, 'bo-')
+        plt.ylabel("-Lcum eff.")
+        plt.xlabel("Incident radiation (Wm-2 (leaf))")
+        plt.legend(('sunlit', 'shaded'), loc='best')
+
         plt.subplot(223)
-        plt.plot(SWd, -Lcum, 'bo', SWdo, -Lcumo, 'b-', Ib, -Lcum, 'ro',
-                 SWbo, -Lcumo, 'r-', SWu, -Lcum, 'go', SWuo, -Lcumo, 'g-')
+        plt.plot(SWd, -Lcum/Clump, 'bo', SWdo, -Lcumo/Clump, 'b-', Ib, -Lcum/Clump, 'ro',
+                 SWbo, -Lcumo/Clump, 'r-', SWu, -Lcum/Clump, 'go', SWuo, -Lcumo/Clump, 'g-')
         plt.legend(('SWd', 'Swdo', 'SWb', 'SWbo', 'SWu', 'SWuo'), loc='best')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("Incident SW (Wm-2 )")
 
         plt.subplot(224)
-        plt.plot(q_sl, -Lcumo, 'ro-', q_sh, -Lcumo, 'bo-')
+        plt.plot(q_sl, -Lcumo/Clump, 'ro-', q_sh, -Lcumo/Clump, 'bo-')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("Absorbed radiation (Wm-2 (leaf))")
         plt.legend(('sunlit', 'shaded'), loc='best')
 
     return SWbo, SWdo, SWuo, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_slo, alb
+
+def canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="False"):
+#ZEN, IbSky, IdSky, LAI, z, lad, x, CLUMP, LeafAlbedo, SoilAlbedo, PlotFigs="False"):
+    """
+    Computes profiles of incident and absorbed SW within plant canopies using analytic model of Spitters (1986) 
+    without explicit treatment of upward and downward-scattered radiation.
+    INPUT:
+       LAIz: layewise one-sided leaf-area index (m2m-2)
+        Clump: element clumping index (0...1)
+        x: param. of leaf angle distribution 
+            (1=spherical, 0=vertical, inf.=horizontal) (-)
+        ZEN: solar zenith angle (rad),scalar
+        IbSky: incident beam radiation above canopy (Wm-2),scalar
+        IdSky: downwelling diffuse radiation above canopy (Wm-2),scalar
+        LAI: leaf (or plant-area) index, 1-sided (m2m-2),scalar
+        LeafAlbedo: leaf albedo of desired waveband (-)
+        SoilAlbedo: soil albedo of desired waveband (-)
+        PlotFigs="True" plots figures.
+ 
+    OUTPUT:
+        SWb: direct SW at z (Wm-2(ground))
+        SWd: downwelling diffuse at z (Wm-2(ground))
+        Q_sl: incident SW normal to sunlit leaves (Wm-2)
+        Q_sh: incident SW normal to shaded leaves (Wm-2)
+        q_sl: absorbed SW by sunlit leaves (Wm-2(leaf))
+        q_sh: absorbed SW by shaded leaves (Wm-2(leaf))
+        q_soil: absorbed SW by soil surface (Wm-2(ground))
+        f_sl: sunlit fraction at z (-)
+        alb: canopy albedo (-)
+    USES:
+        kbeam(ZEN, x) & kdiffuse(LAI, x) for computing beam and diffuse attenuation coeff.
+    SOURCE:
+        Attenuation coefficients and canopy reflectance based on Campbell & Norman (1998): An introduction to environmental 
+        biophysics, Springer.
+        Other algorithms from Spitters C.T.J. (1986): Separating the diffuse and direct component of global radiation 
+        and its implications for modeling canopy photosynthesis part II: Calculation of canopy photosynthesis. 
+        Agric. For. Meteorol. 38, 231-242.
+    NOTE:
+        At least for conifers NIR LeafAlbedo has to be decreased from leaf-scale values to correctly model canopy albedo of clumped canopies.
+        Adjustment from ~0.7 to 0.55 seems to be sufficient. This corresponds to a=a_needle*[4*STAR / (1- a_needle*(1-4*STAR))], 
+        where a_needle is needle albedo and STAR silhouetteto total area ratio of a conifer shoot. STAR ~0.09-0.21 (mean 0.14) for 
+        Scots pine. Still then overestimates NIR absorption in upper canopy layers, compared to canopy_sw_ZhaoQualls with multiple scattering.
+        Assumes isotropic scattering and does not explicitly compute upward reflected SW.        
+        To compute incident total downward SW at z: SWdown=f_sl*SWbo + (1-f_sl)*SWdo       
+        Arg. PlotFigs="True" plots figures.
+    AUTHOR: 
+        Samuli Launiainen, METLA 1/2011-4/2014 (converted to Python 16.04.2014)
+    """
+    # --- check inputs and create local variables
+    IbSky = max(IbSky, 0.0001)
+    IdSky = max(IdSky, 0.0001)
+
+    L = Clump*LAIz  # effective layerwise LAI (or PAI) in original grid
+    Lcum = np.flipud(np.cumsum(np.flipud(L), 0.0))  # cumulative plant area from the sky, index 0 = ground
+    LAI = max(Lcum)    
+    #N = np.size(L, 0)  # Nr of layers
+    # print L,Lcum
+
+    # attenuation coefficients
+    Kb = kbeam(ZEN, x)
+    Kd = kdiffuse(x, LAI)
+ 
+    # sunlit fraction as a function of L
+    f_sl = np.exp(-Kb*Lcum)
+
+    # canopy hemispherical reflection coefficient Campbell & Norman (1998)
+    rcpy1 = (1.0 - (1.0 - LeafAlbedo)**0.5) / (1.0 + (1.0 - LeafAlbedo)**0.5)
+
+    # in case canopy is deep, soil reflections have small impact and canopy reflection coefficients becomes
+    rb1 = 2.0*Kb / (Kb + 1.0)*rcpy1  # beam
+    rd1 = 2.0*Kd / (Kd + 1.0)*rcpy1  # diffuse
+    
+    # but in sparser canopies soil reflectance has to be taken into account and this yields
+    AA = ((rb1 - SoilAlbedo) / (rb1*SoilAlbedo - 1.0))*np.exp(-2.0*(1.0 - LeafAlbedo)**0.5*Kb*LAI)
+    rb1 = (rb1 + AA) / (1.0 + rb1*AA)  # beam
+    del AA
+
+    AA = ((rd1 - SoilAlbedo) / (rd1*SoilAlbedo - 1.0))*np.exp(-2.0*(1.0 - LeafAlbedo)**0.5*Kd*LAI)
+    rd1 = (rd1 + AA) / (1.0 + rd1*AA)  # diffuse
+    del AA
+
+    # canopy albedo
+    alb = (rb1*IbSky + rd1*IdSky) / (IbSky + IdSky)
+
+    # Incident SW as a function of Lcum
+
+    qd1 = (1.0 - rd1)*IdSky*np.exp(-(1.0 - LeafAlbedo)**0.5*Kd*Lcum)  # attenuated diffuse
+    qb1 = IbSky*np.exp(-Kb*Lcum)  # beam
+    qbt1 = (1.0 - rb1)*IbSky*np.exp(-(1.0 - LeafAlbedo)**0.5*Kb*Lcum)  # total beam
+    qsc1 = qbt1 - (1.0 - rb1)*qb1  # scattered part of beam
+    # print Lcum, f_sl, qd1, qb1, qsc1
+
+    # incident fluxes at each layer per unit ground area
+    SWd = qd1 + qsc1  # total diffuse
+    SWb = qb1  # total direct beam
+
+    # incident to leaf surfaces (per m2 (leaf))
+    Q_sh = Kd*SWd
+    Q_sl = Q_sh + Kb*IbSky
+
+    # absorbed components: A = -dq/dL (Wm-2 (leaf))
+    # diffuse, total beam, direct beam
+    Ad1 = (1.0 - rd1)*IdSky*(1.0 - LeafAlbedo)**0.5*Kd*np.exp(-(1.0 - LeafAlbedo)**0.5*Kd*Lcum)
+    Abt1 = (1.0 - rb1)*IbSky*(1.0 - LeafAlbedo)**0.5*Kb*np.exp(-(1.0 - LeafAlbedo)**0.5*Kb*Lcum)
+    Ab1 = (1.0 - rb1)*(1.0 - LeafAlbedo)*IbSky*Kb*np.exp(-(1.0 - LeafAlbedo)**0.5*Kb*Lcum)
+
+    # absorbed at sunlit & shaded leaves (Wm-2(leaf))
+    q_sh = Ad1 + (Abt1 - Ab1)  # total absorbed diffuse
+    q_sl = q_sh + (1.0 - LeafAlbedo)*Kb*IbSky  # sunlit leaves recieve additional direct radiation, Spitters eq. 14
+
+    # absorbed by soil surface (Wm-2(ground))
+    q_soil = (1.0 - SoilAlbedo)*(SWb[-1] + SWd[-1])
+
+    # sunlit fraction in clumped foliage; clumping means elements shade each other
+    f_sl = Clump*f_sl
+
+    if PlotFigs:
+        plt.figure(999)
+        plt.subplot(221)
+        plt.title("Source: radiation.canopy_sw_Spitters")
+
+        plt.plot(f_sl, -Lcum/Clump, 'r-', (1 - f_sl), -Lcum/Clump, 'b-')
+        plt.ylabel("-Lcum eff.")
+        plt.xlabel("sunlit & shaded fractions (-)")
+        plt.legend(('f_{sl}, total = %.2f' % np.sum(f_sl*LAIz), 'f_{sh}, total = %.2f' % np.sum((1 - f_sl)*LAIz)), loc='best')
+
+        # add input parameter values to fig
+        plt.text(0.05, 0.75, r'$LAI$ = %1.1f m2 m-2' % (LAI))
+        plt.text(0.05, 0.65, r'$ZEN$ = %1.3f rad' % (ZEN))
+        plt.text(0.05, 0.55, r'$\alpha_l$ = %0.2f' % (LeafAlbedo))
+        plt.text(0.05, 0.45, r'$\alpha_s$ = %0.2f' % (SoilAlbedo))
+
+        plt.subplot(222)
+        plt.plot(Q_sl, -Lcum/Clump, 'ro-', Q_sh, -Lcum/Clump, 'bo-')
+        plt.ylabel("-Lcum eff.")
+        plt.xlabel("Incident radiation (Wm-2 (leaf))")
+        plt.legend(('sunlit', 'shaded'), loc='best')
+
+        plt.subplot(223)
+        plt.plot(SWd, -Lcum/Clump, 'bo', SWb, -Lcum/Clump, 'ro')
+        plt.legend(('SWd', 'SWb'), loc='best')
+        plt.ylabel("-Lcum eff.")
+        plt.xlabel("Incident SW (Wm-2 )")
+
+        plt.subplot(224)
+        plt.plot(q_sl, -Lcum/Clump, 'ro-', q_sh, -Lcum/Clump, 'bo-')
+        plt.ylabel("-Lcum eff.")
+        plt.xlabel("Absorbed radiation (Wm-2 (leaf))")
+        plt.legend(('sunlit', 'shaded'), loc='best')
+
+    return SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb
 
 def compute_clouds_rad(doy, zen, Rg, H2O):
     """
@@ -531,3 +688,57 @@ def compute_clouds_rad(doy, zen, Rg, H2O):
     df = df.fillna(method='ffill')
 
     return df['f_cloud'].values, df['f_diff'].values, df['emi_sky'].values
+
+def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQualls", LAIz=None):
+    """
+    Runs test script for SW and LW radiation methods.
+    INPUT: 
+        LAI: leaf area index (m2m-2)
+        CLUMP: clumping index (-)
+        ZEN: solar zenith angle (rad)            
+        x: spherical leaf-angle distr.
+        method: Name of function to be tested "functionname"
+    OUTPUT:
+        none, prints figures
+    AUTHOR: 
+        Samuli Launiainen, METLA 4/2014
+    """
+
+    """ define setup for testing models """
+
+    #ZEN=35.0/180.0*np.pi        
+    IbSky = 100.0
+    IdSky = 100.0
+    LeafAlbedo = 0.12
+    SoilAlbedo = 0.05
+
+    if LAIz == None:
+        LAIz = np.ones(102)*float(LAI) / 100.0
+        LAIz[0] = 0.
+        LAIz[-1] = 0.
+    N = len(LAIz)
+
+    # for LW calculations
+#    T = np.linspace(15, 17, N) # Tair is 15degC at ground and 17 at upper boundary
+#    Tatm = 17
+#    Tsurf = 15
+#    LWdn0 = 0.85*SIGMA*(Tatm + NT)**4
+#    LWup0 = 0.98*SIGMA*(Tsurf + NT)**4
+#    print LWdn0, LWup0
+    if method == "canopy_sw_ZhaoQualls":
+        print "------TestRun of radiation.canopy_sw_ZhaoQualls with given LAI and CLUMP -----------"
+        SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")                                                                         
+#        print SWb,SWd,SWu,Q_sl,Q_sh,q_sl,q_sh,q_soil,f_sl,alb
+        
+    if method == "canopy_sw_Spitters":
+        print "------TestRun of radiation.canopy_sw_Spitters with given LAI and predefined lad profile-----------"
+        SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")
+        # print SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb  
+    
+    if method=="canopy_lw": 
+        print "------TestRun of radiation.canopy_lw------------"
+        LWnet, LWdn, WLup = canopy_lw(LAIz, Clump, T, LWdn0, LWup0, leaf_emi=1.0)
+
+    if method == "canopy_lw_ZhaoQualls":
+        print "------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------"
+        LWnet, LWdn, WLup = canopy_lw_ZhaoQualls(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=0.98, soil_emi=0.98, PlotFigs=True)   

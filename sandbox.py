@@ -30,6 +30,11 @@ for i in range(2):
     results[i]['canopy_sunlit_fraction'].sel(date=results[i]['date.month']==7).mean(dim='date').plot()
 plt.figure()
 for i in range(2):
+    (results[i]['canopy_sunlit_fraction'].sel(date=results[i]['date.month']==7).mean(dim='date') * results[i]['canopy_lad'].sel(date=results[i]['date.month']==7).mean(dim='date')).plot()
+LAI=[np.sum(results[i]['canopy_lad'].sel(date=results[i]['date.month']==7).mean(dim='date').values*0.3) for i in range(2)]
+LAI_sunlit=[np.sum(results[i]['canopy_sunlit_fraction'].sel(date=results[i]['date.month']==7).mean(dim='date').values * results[i]['canopy_lad'].sel(date=results[i]['date.month']==7).mean(dim='date').values*0.3) for i in range(2)]
+plt.figure()
+for i in range(2):
     results[i]['canopy_lad'].sel(date=results[i]['date.month']==7).mean(dim='date').plot()
 
 

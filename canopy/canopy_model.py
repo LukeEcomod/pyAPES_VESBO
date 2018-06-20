@@ -320,7 +320,7 @@ class CanopyModel():
                         fPheno=self.pheno_state,
                         Rew=Rew)
 
-            """ --- snowpack ---"""   ### H2O source???
+            """ --- snowpack ---"""
             PotInf, MBE_snow = self.Snow_Model._run(
                     dt=dt,
                     T=T[0],
