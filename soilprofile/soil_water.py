@@ -450,6 +450,8 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
     # initial and computational time step [s]
     dto = t_final / steps
     dt = dto  # adjusted during solution
+    if Prec > 0.0:
+        dt = min(225.0, dt)
     # convergence criteria
     Conv_crit = 1.0e-12  # for soil moisture 
     Conv_crit2 = 1.0e-10  # for pressure head, decreased to 1.0e-8 when profile saturated
@@ -693,9 +695,9 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
 
         # select new time step based on convergence
         if iterNo <= 3:
-            dt = dt * 1.25
+            dt = dt * 2
         elif iterNo >= 6:
-            dt = dt / 1.25
+            dt = dt / 2
 
         # limit to minimum of 30s
         dt = max(dt, 30)

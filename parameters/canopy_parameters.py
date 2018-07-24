@@ -106,6 +106,13 @@ def get_cpara(dbhfile):
                             'nir_alb': 0.55,  # leaf Nir albedo [-]
                             'emi': 0.98  # leaf emissivity [-]
                             },
+                    'rootp': {  # --- root zone properties ----
+                            'root_depth': 0.2,  # root depth [m]
+                            'beta': 0.943,  # shape parameter for root distribution model. Y=1-beta.^z_in_cm; Y=cumulative distribution (Gale & Grigal 1987)
+                            'RAI_LAI_multiplier': 2.0,  # multiplier for total fine root area index (RAI = 2*LAImax)
+                            'fine_radius': 2e-3,  # fine root radius [m]
+                            'radial_K': 5e-8  # maximum bulk root membrane conductance in radial direction [s-1]
+                            },
                     }
     pine = deepcopy(plant_default)  # initialize with default
     spruce = deepcopy(plant_default)

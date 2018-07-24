@@ -13,10 +13,9 @@ from tools.iotools import read_results, read_forcing, save_df_to_csv
 from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 
-results = read_results([output_control2, output_partial])
-results = read_results('results/201806130907_CCFPeat_results.nc')
-results = read_results('results/201806131258_CCFPeat_results.nc')
-
+#results = read_results([output_control2, output_partial])
+results = read_results('results/201807241659_CCFPeat_results.nc')
+plot_results(results)
 
 plt.figure()
 for i in range(2):

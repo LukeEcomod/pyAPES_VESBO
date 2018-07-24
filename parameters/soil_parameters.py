@@ -14,23 +14,23 @@ nodes = [10, 5, 5, 2, 2, 5, 5]
 
 # Water retention
 ## PÄIVÄNEN SEDGE SATTUMANVARAISESTI
-#watcont = [[94.3, 68, 47.9, 35.5, 22, 18.4, 16.7, 12.6, 7.9, 6.3, -999],
-#           [91.7, 82.9, 61.8, 35.9, 31.7, 25.2, 23.4, 19.2, 17.3, 14.4, -999],
-#           [90.6, 86.2, 56.4, 36.4, 33.4, 29.8, 26.8, 23.5, 20.2, 16.4, -999],
-#           [89.7, 85, 74.5, 53.4, 36, 29, 24.7, 22.1, 17.6, 14.7, -999],
-#           [87.3, 85.4, 77.8, 64, 41.4, 28.8, 23.4, 22.7, 21.9, 17, -999],
-#           [89.3, 86.5, 80.7, 52.5, 45.6, 35.4, 32, 25.1, 20.6, 18.4, -999],
-#           [91, 89.9, 84.7, 60, -999, 33.8, 27.2, 29.3, -999, 17.2, 12.9]]
-#head = [0.0001, 1, 3.2, 10, 20, 60, 100, 200, 500, 1000, 1500]
+watcont = [[94.3, 68, 47.9, 35.5, 22, 18.4, 16.7, 12.6, 7.9, 6.3, -999],
+           [91.7, 82.9, 61.8, 35.9, 31.7, 25.2, 23.4, 19.2, 17.3, 14.4, -999],
+           [90.6, 86.2, 56.4, 36.4, 33.4, 29.8, 26.8, 23.5, 20.2, 16.4, -999],
+           [89.7, 85, 74.5, 53.4, 36, 29, 24.7, 22.1, 17.6, 14.7, -999],
+           [87.3, 85.4, 77.8, 64, 41.4, 28.8, 23.4, 22.7, 21.9, 17, -999],
+           [89.3, 86.5, 80.7, 52.5, 45.6, 35.4, 32, 25.1, 20.6, 18.4, -999],
+           [91, 89.9, 84.7, 60, -999, 33.8, 27.2, 29.3, -999, 17.2, 12.9]]
+head = [0.0001, 1, 3.2, 10, 20, 60, 100, 200, 500, 1000, 1500]
 # ------------ LAIHO 2015 ------------
-watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54],
-           [91.41, 66.26, 56.98, 45.58, 41.44, 39.32, 37.89],
-           [89.12, -999, 72.83, 63.97, 54.40, 50.15, 48.80],
-           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
-           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
-           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
-           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53]]
-head = [0.0001, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
+#watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54],
+#           [91.41, 66.26, 56.98, 45.58, 41.44, 39.32, 37.89],
+#           [89.12, -999, 72.83, 63.97, 54.40, 50.15, 48.80],
+#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
+#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
+#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
+#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53]]
+#head = [0.0001, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
 # -------------------------------------
 # Fit water retention parameters
 pF_para = fit_pF(head, watcont, fig=False)
@@ -79,7 +79,7 @@ spara = {
         'vSilt': -np.ones(len(zh)),              # (float(array): silt fraction of solid volume [-]
         'vClay': -np.ones(len(zh)),              # (float(array): clay fraction of solid volume [-]
         'fp': -np.ones(len(zh)),                 # (float/array): freezing curve parameter
-        'max_pond': 0.0,           # (float) maximum pond depth [m]
+        'max_pond': 0.01,           # (float) maximum pond depth [m]
         'ini_cond': {               # (dict): inputs are floats or arrays of len(z)
                 'gwl': -0.2,        # (float) [m] or (float/array) Wtot', vol. water content [-] or 'h', matrix water potential [m]
                 'T': -1.0,          # soil temperature [degC]
@@ -94,7 +94,7 @@ spara = {
         'homogenous': False,         # (boolean): True assumes vertically homogenous profile and float inputs
         'solve_heat': False,        # (boolean): True solves heatflow
         'solve_water': True,        # (boolean): True solves waterflow
-        'solve_water_type':'Equilibrium',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
+        'solve_water_type':'Richards',  #'Equilibrium',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
         'Bedrock': {
                 'Cv': 2160000.0,
                 'Lambda': 3.0

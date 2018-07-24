@@ -58,7 +58,8 @@ def plot_results(results, sim_idx=0):
     plt.tight_layout(rect=(0, 0, 0.8, 1))
 
 def plot_fluxes(results, sim_idx=0):
-    Data = read_forcing("Lettosuo_data_2010_2018.csv", cols=['NEE','GPP','Reco','ET'])
+    Data = read_forcing("Lettosuo_data_2010_2018.csv", cols=['NEE','GPP','Reco','ET'],
+                        start_time=results.date[0].values, end_time=results.date[-1].values,)
     Data.ET = Data.ET / 1800 * 3600
     Data.GPP = -Data.GPP
 

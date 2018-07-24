@@ -27,7 +27,7 @@ MH2O = 18.02e-3
 L_MOLAR = 44100.0 
 
 class CanopyModel():
-    def __init__(self, cpara):
+    def __init__(self, cpara, dz_soil):
         """
         initializes CanopyModel -object
 
@@ -91,7 +91,7 @@ class CanopyModel():
                     pp['lad'] = p['lad'][:, n]
                 else:
                     pp['lad'] = 0.0
-                ptypes.append(PlantType(self.z, pp,
+                ptypes.append(PlantType(self.z, pp, dz_soil,
                         Switch_pheno=cpara['ctr']['pheno_cylcle'],
                         Switch_lai=cpara['ctr']['seasonal_LAI'],
                         MLM_ctr=cpara['ctr']['multilayer_model']))
@@ -103,6 +103,10 @@ class CanopyModel():
         # --- stand characteristics ---
         self.LAI = stand_lai  # canopy total 1-sided leaf area index [m2m-2]
         self.lad = stand_lad  # canopy total 1-sided leaf area density [m2m-3]
+        rad = sum([pt.Roots.rad for pt in self.Ptypes])
+        self.rad = rad / sum(rad)
+#        plt.figure()
+#        plt.plot(self.rad / dz_soil[:len(rad)], -np.cumsum(dz_soil[:len(rad)])+dz_soil[:len(rad)]/2.0)
         if self.Switch_MLM:
             if len(np.where(self.lad > 0)[0]) > 0:
                 f = np.where(self.lad > 0)[0][-1]
@@ -380,9 +384,7 @@ class CanopyModel():
             # ecosystem GPP umolm-2s-1
             GPP = - NEE + Reco
             # stand transpiration [m/dt]
-            Tr = ((LE[-1] / L_MOLAR) - E_gr) * MH2O * dt * 1e-3
-            if self.Switch_Interc:
-                Tr -=  sum(Ew) * MH2O * dt * 1e-3
+            Tr = sum([pt_st['E'] * MH2O * 1e-3 * dt for pt_st in pt_stats])
 
         # evaporation from moss layer [m/dt]
         Efloor = E_gr * MH2O * dt * 1e-3   # on jo HIAHTUNUT? Ei haihduteta maasta..?
@@ -438,7 +440,7 @@ class PlantType():
     Contains plant-specific properties, state variables and phenology functions
     """
 
-    def __init__(self, z, p, Switch_pheno, Switch_lai,  MLM_ctr, Switch_WaterStress=False):
+    def __init__(self, z, p, dz_soil, Switch_pheno, Switch_lai,  MLM_ctr, Switch_WaterStress=False):
         """
         Creates PlantType
         Args:
@@ -450,6 +452,7 @@ class PlantType():
         """
 
         from phenology import Photo_cycle, LAI_cycle
+        from rootzone import RootUptake
 
         self.Switch_MLM = MLM_ctr['ON']
         self.Switch_pheno = Switch_pheno  # include phenology
@@ -478,6 +481,9 @@ class PlantType():
         self.LAI = self.LAImax * self.relative_LAI  # current LAI
         self.lad_normed = p['lad']  # normalized leaf-area density [m-1]
         self.lad = self.LAI * self.lad_normed  # current leaf-area density [m2m-3]
+
+        # root properties
+        self.Roots = RootUptake(p['rootp'], dz_soil, self.LAImax)
 
         if self.Switch_MLM:
             self.dz = z[1] - z[0]

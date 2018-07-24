@@ -104,13 +104,15 @@ class Model():
         else:
             self.Ncanopy_nodes = 1
 
+        # create soil model instance
+        self.soil_model = SoilModel(soil_para['z'], soil_para)
+
         # create canopy model instance
-        self.canopy_model = CanopyModel(canopy_para)
+        self.canopy_model = CanopyModel(canopy_para, self.soil_model.dz)
 
         self.Nplant_types = len(self.canopy_model.Ptypes)
 
-        # create soil model instance
-        self.soil_model = SoilModel(soil_para['z'], soil_para)
+
 
         self.results = _create_results(gen_para['variables'],
                                        self.Nsteps,
@@ -151,9 +153,11 @@ class Model():
             # potential infiltration and evaporation from ground surface
             ubc_w = {'Prec': canopy_flux['potential_infiltration'],
                      'Evap': 0.0}
-            # transpiration sink  --- SOIL MODELIN SISÄÄN?!?
+            # transpiration sink
             rootsink = np.zeros(self.soil_model.Nlayers)
-            rootsink[0] = canopy_flux['transpiration'] / self.soil_model.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
+            rootsink[0:len(self.canopy_model.rad)] = self.canopy_model.rad * canopy_flux['transpiration']
+            rootsink = rootsink / self.soil_model.dz
+#            rootsink[0] = canopy_flux['transpiration'] / self.soil_model.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
             # temperature above soil surface
             ubc_T = {'type': 'flux', 'value': None}
 
