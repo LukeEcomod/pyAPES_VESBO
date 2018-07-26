@@ -184,12 +184,14 @@ class SoilModel():
         self.T = T
         # hydraulic head [m]
         self.h = h
+        # vol. water content [-]
+        self.Wtot = Wtot
         # liq. water content [-]
         self.Wliq = Wliq
         # ice content [-]
         self.Wice = Wice
         # air volume [-]
-        self.Wair = self.porosity - self.Wliq - self.Wice
+        self.Wair = self.porosity - self.Wtot
 
         # ground water level [m]
         gwl = wf.get_gwl(self.h, self.grid['z'])
@@ -308,7 +310,7 @@ class SoilModel():
                 self.dt_water = dt
             # solve water balance in domain of ix layers
             if self.solve_water_type == 'Equilibrium':  # solving based on equilibrium
-                h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe = \
+                h, Wtot, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe = \
                     wf.waterStorage1D(t_final=dt,
                                       grid=self.grid_w,
                                       h0=self.h[ix],
@@ -327,7 +329,7 @@ class SoilModel():
                                       cosalfa=1.0,
                                       h_atm=h_atm)  # atmospheric pressure head [m]; for soil evap. controls
             else:  # Richards equation for solving water flow
-                h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe, self.dt_water = \
+                h, Wtot, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe, self.dt_water = \
                     wf.waterFlow1D(t_final=dt,
                                    grid=self.grid_w,
                                    h0=self.h[ix],
@@ -345,9 +347,9 @@ class SoilModel():
                                    h_atm=h_atm,  # atmospheric pressure head [m]; for soil evap. controls
                                    steps=dt / self.dt_water)
             self.h[ix] = h.copy()
-            self.Wliq[ix] = Wliq.copy()
+            self.Wtot[ix] = Wtot.copy()
             self.Kv[ix] = Kv.copy()
-            self.Wair = self.porosity - self.Wliq - self.Wice
+            self.Wair = self.porosity - self.Wtot
 
             fluxes.update({'infiltration': infil / dt,
                            'evaporation': evapo / dt,
@@ -364,25 +366,23 @@ class SoilModel():
 
         if self.solve_heat:
             self.T, self.Wliq, self.Wice, fheat, self.Lambda = \
-                hf.heatflow_1D(t_final=dt,
+                hf.heatflow_1D_new(t_final=dt,
                                grid=self.grid,
                                poros=self.porosity,
                                T0=self.T,
-                               Wliq0=self.Wliq,
-                               Wice0=self.Wice,
+                               Wtot=self.Wtot,
                                ubc=ubc_heat,  # upper boundary condition {'type': xx, 'value': yy}
                                lbc=self.lbc_heat,
                                spara=self.solids_prop,  # dict of properties of solid part
                                S=heat_sink,
                                steps=1)
-            self.Wair = self.porosity - self.Wliq - self.Wice
 
             fluxes.update({'vertical_heat_flux': fheat})
 
         # return state in dictionary
         state = {"water_potential": self.h,
-                 "volumetric_water_content": self.Wliq,
-                 "column_water_storage": sum(self.Wliq*self.grid['dz']),
+                 "volumetric_water_content": self.Wtot,
+                 "column_water_storage": sum(self.Wtot*self.grid['dz']),
                  "ice_content": self.Wice,
                  "pond_storage": self.pond,
                  "ground_water_level": self.gwl,
