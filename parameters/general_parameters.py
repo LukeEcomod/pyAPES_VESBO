@@ -5,8 +5,8 @@ GENERAL PARAMETERS
 
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2011-01-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2011-07-04",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2014-06-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2015-06-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -45,6 +45,8 @@ gpara = {
                       ['soil_evaporation', 'evaporation from soil surface [m s-1]', ('date', 'simulation')],
                       ['soil_subsurface_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
                       ['soil_total_runoff', 'total runoff [m s-1]', ('date', 'simulation')],
+                      ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
+                      ['soil_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
                       ['canopy_MBE1', 'interception model mass balance error [m]', ('date', 'simulation')],
                       ['canopy_MBE2', 'snow model mass balance error [m]', ('date', 'simulation')],
                       ['canopy_MBE3', 'moss model mass balance error [m]', ('date', 'simulation')],

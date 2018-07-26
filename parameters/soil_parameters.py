@@ -73,26 +73,29 @@ spara = {
                 },                  # (dict): vanGenuchten water retention parameters; scalars or arrays of len(z)
         'Ksat': Ksat,               # (float/array): saturated vertical hydraulic conductivity [ms-1]
         'Khsat': Khsat,              # (float/array): saturated horizontal hydraulic conductivity [ms-1] - used in drainage equation
-        'Csv': -np.ones(len(zh)),                # (float/array): dry soil vol. heat capacity [J m-3 (total volume) K-1]
-        'vOrg': -np.ones(len(zh)),               # (float/array): organic matter fraction of solid volume [-]
-        'vSand': -np.ones(len(zh)),              # (float/array): sand fraction of solid volume [-]
-        'vSilt': -np.ones(len(zh)),              # (float(array): silt fraction of solid volume [-]
-        'vClay': -np.ones(len(zh)),              # (float(array): clay fraction of solid volume [-]
-        'fp': -np.ones(len(zh)),                 # (float/array): freezing curve parameter
+        'Csv': 250000.0 * np.ones(len(zh)),                # (float/array): dry soil vol. heat capacity [J m-3 (total volume) K-1]
+        'vOrg': 1.0 * np.ones(len(zh)),               # (float/array): organic matter fraction of solid volume [-]
+        'vSand': 0.0 * np.ones(len(zh)),              # (float/array): sand fraction of solid volume [-]
+        'vSilt': 0.0 * np.ones(len(zh)),              # (float(array): silt fraction of solid volume [-]
+        'vClay': 0.0 * np.ones(len(zh)),              # (float(array): clay fraction of solid volume [-]
+        'fp': 0.5 * np.ones(len(zh)),                 # (float/array): freezing curve parameter
         'max_pond': 0.01,           # (float) maximum pond depth [m]
         'ini_cond': {               # (dict): inputs are floats or arrays of len(z)
                 'gwl': -0.2,        # (float) [m] or (float/array) Wtot', vol. water content [-] or 'h', matrix water potential [m]
-                'T': -1.0,          # soil temperature [degC]
+                'T': 4.0,          # soil temperature [degC]
                 'pond': 0.0
                 },                  # [m] initial pond depth at surface
-        'lbc_heat': -1.0,           # lower boundary condition type for heat
+        'lbc_heat': {
+                'type': 'temperature',
+                'value': 4.0
+                },           # lower boundary condition type for heat
         'lbc_water': {
                 'type': 'impermeable',
                 'value': None,
-                'depth': -2.0,
+                'depth': -2.0
                 },                  # lower boundary condition type for water (type, value, depth)
         'homogenous': False,         # (boolean): True assumes vertically homogenous profile and float inputs
-        'solve_heat': False,        # (boolean): True solves heatflow
+        'solve_heat': True,        # (boolean): True solves heatflow
         'solve_water': True,        # (boolean): True solves waterflow
         'solve_water_type':'Richards',  #'Equilibrium',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
         'Bedrock': {

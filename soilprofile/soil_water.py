@@ -9,12 +9,12 @@ Created on Wed Apr 06 08:16:37 2016
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+from tools.utilities import tridiag as thomas
 eps = np.finfo(float).eps  # machine epsilon
 
 """
 General functions
 """
-
 
 def wrc(pF, x=None, var=None):
     """
@@ -340,7 +340,7 @@ Water flow in soils in 1D
 """
 
 
-def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
+def waterFlow1D(t_final, grid, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                 lbc={'type': 'impermeable', 'value': None}, Wice0=0.0,
                 maxPond=0.0, pond0=0.0, cosalfa=1.0, h_atm=-1000.0, steps=10):
     """
@@ -407,25 +407,13 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
 
     # ------------------- computation grid -----------------------
 
-    N = len(z)
-
     # grid
-    dz = np.empty(N)
-    dzu = np.empty(N)
-    dzl = np.empty(N)
+    z = grid['z']
+    dz = grid['dz']
+    dzu = grid['dzu']
+    dzl = grid['dzl']
 
-    # distances between grid points i-1 and i
-    dzu[1:] = z[:-1] - z[1:]
-    dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
-
-    # compartment thickness (nodes in cell center!! Would be easier to input thicknessess not z)
-    dz[0] = 2 * dzu[0]
-    for k in range(1, N):
-        dz[k] = 2 * dzu[k] - dz[k-1]
-
-    # distances between grid points i and i+1
-    dzl[:-1] = z[:-1] - z[1:]
-    dzl[-1] = dz[-1] / 2.0 #  from last node to bottom surface
+    N = len(z)
 
     # -------- soil variables and intial conditions --------------
 
@@ -531,7 +519,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                         print 'only part fits into profile, h_sur = ' + str(h_sur) + ' h = ' + str(h_iter[0])
                     else:  # all fits into profile
                         
-                        # set better initial guess, was this need here?
+                        # set better initial guess, is this needed here?
                         if iterNo ==1 and Airvol < 1e-3:
                             h_iter -= dz[0]
                             W_iter = h_to_cellmoist(pF, h_iter, dz)
@@ -559,12 +547,6 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                     print 'case evaporation, no limit, q_sur = ' + str(q_sur) + ' Airvol = ' + str(Airvol)
 
             # ---------------------------------------------------
-
-#            # strickter convergence criterion for saturated profile
-#            if Qin >= Airvol:
-#                Conv_crit2 = 1e-8
-#            else:
-#                Conv_crit2 = 1e-6
 
             # differential water capacity [m-1]
             C = diff_wcapa(pF, h_iter, dz)
@@ -726,7 +708,7 @@ def waterFlow1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
     return h, W, h_pond, C_inf, C_eva, C_dra, C_trans, C_roff, Fliq, gwl, KLh, mbe, dto
 
 
-def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl, GwlToWsto,
+def waterStorage1D(t_final, grid, h0, pF, Ksat, Prec, Evap, R, WstoToGwl, GwlToWsto,
                 HM=0.0, lbc={'type': 'impermeable', 'value': None}, Wice0=0.0,
                 maxPond=0.0, pond0=0.0, cosalfa=1.0, h_atm=-1000.0):
     """
@@ -788,25 +770,13 @@ def waterStorage1D(t_final, z, h0, pF, Ksat, Prec, Evap, R, WstoToGwl, GwlToWsto
 
     # ------------------- computation grid -----------------------
 
-    N = len(z)
-
     # grid
-    dz = np.empty(N)
-    dzu = np.empty(N)
-    dzl = np.empty(N)
+    z = grid['z']
+    dz = grid['dz']
+    dzu = grid['dzu']
+    dzl = grid['dzl']
 
-    # distances between grid points i-1 and i
-    dzu[1:] = z[:-1] - z[1:]
-    dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
-
-    # compartment thickness (nodes in cell center!! Would be easier to input thicknessess not z)
-    dz[0] = 2 * dzu[0]
-    for k in range(1, N):
-        dz[k] = 2 * dzu[k] - dz[k-1]
-
-    # distances between grid points i and i+1
-    dzl[:-1] = z[:-1] - z[1:]
-    dzl[-1] = dz[-1] / 2.0 #  from last node to bottom surface
+    N = len(z)
 
     # -------- soil variables and intial conditions --------------
 
@@ -968,31 +938,31 @@ def get_gwl(head, x):
 
     return gwl
 
-def thomas(a, b, C, D):
-    """
-    Tridiagonal matrix algorithm of Thomas
-    a=subdiag, b=diag, C=superdiag, D=rhs
-    """
-    n = len(a)
-    V = np.zeros(n)
-    G = np.zeros(n)
-    U = np.zeros(n)
-    x = np.zeros(n)
-
-    V[0] = b[0].copy()
-    G[0] = C[0] / V[0]
-    U[0] = D[0] / V[0]
-
-    for i in range(1, n):  # nr of nodes
-        V[i] = b[i] - a[i]*G[i - 1]
-        U[i] = (D[i] - a[i]*U[i - 1]) / V[i]
-        G[i] = C[i] / V[i]
-
-    x[-1] = U[-1]
-    inn = n - 2
-    for i in range(inn, -1, -1):
-        x[i] = U[i] - G[i] * x[i + 1]
-    return x
+#def thomas(a, b, C, D):
+#    """
+#    Tridiagonal matrix algorithm of Thomas
+#    a=subdiag, b=diag, C=superdiag, D=rhs
+#    """
+#    n = len(a)
+#    V = np.zeros(n)
+#    G = np.zeros(n)
+#    U = np.zeros(n)
+#    x = np.zeros(n)
+#
+#    V[0] = b[0].copy()
+#    G[0] = C[0] / V[0]
+#    U[0] = D[0] / V[0]
+#
+#    for i in range(1, n):  # nr of nodes
+#        V[i] = b[i] - a[i]*G[i - 1]
+#        U[i] = (D[i] - a[i]*U[i - 1]) / V[i]
+#        G[i] = C[i] / V[i]
+#
+#    x[-1] = U[-1]
+#    inn = n - 2
+#    for i in range(inn, -1, -1):
+#        x[i] = U[i] - G[i] * x[i + 1]
+#    return x
 
 def diff_capa(pF, head):
     """

@@ -339,7 +339,7 @@ Soil heat transfer in 1D
 """
 
 
-def heatflow_1D(t_final, z, poros, T0, Wliq0, Wice0, ubc, lbc, spara, S=0.0, steps=10):
+def heatflow_1D(t_final, grid, poros, T0, Wliq0, Wice0, ubc, lbc, spara, S=0.0, steps=10):
     """
      Solves soil heat flow in 1-D using implicit, backward finite difference solution
      of heat equation (Hansson et al., 2004; Saito et al., 2006):
@@ -417,21 +417,15 @@ def heatflow_1D(t_final, z, poros, T0, Wliq0, Wice0, ubc, lbc, spara, S=0.0, ste
     Lf = LATENT_HEAT_FREEZING  # latent heat of freezing, J/kg; % Lv is latent heat of vaportization
     Tfr = FREEZING_POINT_H2O  # freezing point of water (degC)
 
-    # ----- Set computation grid properties   
-    N = len(z)  # nr of nodal points, 0 is top
-    dz = np.empty(N)
-    dzu = np.empty(N)
-    dzl = np.empty(N)
+    # ------------------- computation grid -----------------------
 
-    # distances between grid points: dzu is between point i-1 and i, dzl between point i and i+1
-    dzu[1:] = z[0:-1] - z[1:N]
-    dzu[0] = -z[0]
-    dzl[0:-1] = z[0:-1] - z[1:]
-    dzl[-1] = (z[-2] - z[-1]) / 2.0
+    # grid
+    z = grid['z']
+    dz = grid['dz']
+    dzu = grid['dzu']
+    dzl = grid['dzl']
 
-    dz = (dzu + dzl) / 2.0
-    dz[0] = dzu[0] + dzl[0] / 2.0
-    # print dz, dzu, dzl
+    N = len(z)
 
     # -----get parameters from dict
     fp = spara['fp']       # freezing-curve parameter, 2...4 for clay and 0.5-1.5 for sandy soils

@@ -108,7 +108,7 @@ class Model():
         self.soil_model = SoilModel(soil_para['z'], soil_para)
 
         # create canopy model instance
-        self.canopy_model = CanopyModel(canopy_para, self.soil_model.dz)
+        self.canopy_model = CanopyModel(canopy_para, self.soil_model.grid['dz'])
 
         self.Nplant_types = len(self.canopy_model.Ptypes)
 
@@ -156,10 +156,10 @@ class Model():
             # transpiration sink
             rootsink = np.zeros(self.soil_model.Nlayers)
             rootsink[0:len(self.canopy_model.rad)] = self.canopy_model.rad * canopy_flux['transpiration']
-            rootsink = rootsink / self.soil_model.dz
+            rootsink = rootsink / self.soil_model.grid['dz']
 #            rootsink[0] = canopy_flux['transpiration'] / self.soil_model.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
             # temperature above soil surface
-            ubc_T = {'type': 'flux', 'value': None}
+            ubc_T = {'type': 'temperature', 'value': self.forcing['Tair'].iloc[k]}
 
             # run soil water and heat flow
             soil_flux, soil_state = self.soil_model._run(
@@ -183,7 +183,7 @@ class Model():
 
         print '100%'
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
-        self.results = _append_results('soil', None, {'z': self.soil_model.z}, self.results)
+        self.results = _append_results('soil', None, {'z': self.soil_model.grid['z']}, self.results)
         return self.results
 
 def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes, Nplant_types):

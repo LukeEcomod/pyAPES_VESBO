@@ -76,26 +76,27 @@ class SoilModel():
         self.Nlayers = N
         
         # grid
-        dz = np.empty(N)
-        dzu = np.empty(N)
-        dzl = np.empty(N)
+        dz = np.zeros(N)
+        dzu = np.zeros(N)
+        dzl = np.zeros(N)
 
         # distances between grid points i-1 and i
         dzu[1:] = z[:-1] - z[1:]
         dzu[0] = -z[0]  # from soil surface to first node, soil surface af z = 0
-
+    
         # compartment thickness (nodes in cell center!! Would be easier to input thicknessess not z)
         dz[0] = 2 * dzu[0]
         for k in range(1, N):
             dz[k] = 2 * dzu[k] - dz[k-1]
-
+    
         # distances between grid points i and i+1
         dzl[:-1] = z[:-1] - z[1:]
         dzl[-1] = dz[-1] / 2.0 #  from last node to bottom surface
 
-        self.z = z                          # vertical grid [m], <0
-        self.dz = dz                        # layer thickness [m]
-        del dz, dzu, dzl
+        self.grid = {'z': z,
+                     'dz': dz,
+                     'dzu': dzu,
+                     'dzl': dzl}
 
         # create homogenous soil profile: needs float inputs
         if para['homogenous']:
@@ -171,10 +172,10 @@ class SoilModel():
         if 'h' in ini_cond:
             h = np.ones(N)*ini_cond['h']
             # vol. water content [-]
-            Wtot = wf.h_to_cellmoist(self.pF, h, self.dz)
+            Wtot = wf.h_to_cellmoist(self.pF, h, self.grid['dz'])
         elif 'gwl' in ini_cond:
             h = np.ones(N)*(ini_cond['gwl']-z)
-            Wtot = wf.h_to_cellmoist(self.pF, h, self.dz)
+            Wtot = wf.h_to_cellmoist(self.pF, h, self.grid['dz'])
         else:
             Wtot = np.ones(N)*ini_cond['Wtot']
 
@@ -191,7 +192,7 @@ class SoilModel():
         self.Wair = self.porosity - self.Wliq - self.Wice
 
         # ground water level [m]
-        gwl = wf.get_gwl(self.h, self.z)
+        gwl = wf.get_gwl(self.h, self.grid['z'])
         self.gwl = gwl
         # print(self.z, self.Wliq, self.T, self.h, self.Wice, self.Ls)
 
@@ -205,8 +206,9 @@ class SoilModel():
             vOrg=vOrg, vSand=vSand, vSilt=vSilt, vClay=vClay)
 
         # In case there is impermeable layer (bedrock bottom), water flow is solved only above this
-        self.ix_w = np.where(self.z >= self.lbc_water['depth'])
+        self.ix_w = np.where(self.grid['z'] >= self.lbc_water['depth'])
         ix_max = np.max(self.ix_w)
+        self.grid_w = {key: self.grid[key][self.ix_w] for key in self.grid.keys()}
 
         if ix_max < self.Nlayers-1:
             self.h[ix_max + 1:] = np.NaN
@@ -235,7 +237,7 @@ class SoilModel():
             if 'solve_water_type' in para:
                 self.solve_water_type = para['solve_water_type']
                 if self.solve_water_type == 'Equilibrium':
-                    self.WstoToGwl, self.GwlToWsto = wf.gwl_Wsto(self.dz, self.pF)
+                    self.WstoToGwl, self.GwlToWsto = wf.gwl_Wsto(self.grid['dz'], self.pF)
             else:
                 self.solve_water_type = None
 
@@ -294,21 +296,21 @@ class SoilModel():
         if self.solve_water:
             # drainage to ditches
             if self.drainage_equation['type'] == 'Hooghoudt':  # Hooghoudt's drainage
-                _, q_drain = wf.drainage_hooghoud(self.dz[ix],
+                _, q_drain = wf.drainage_hooghoud(self.grid_w['dz'],
                                               self.Khsat[ix],
                                               self.gwl,
                                               self.drainage_equation['depth'],
                                               self.drainage_equation['spacing'],
                                               self.drainage_equation['width'])
             else:
-                q_drain = np.zeros(len(self.z[ix]))  # no drainage
+                q_drain = np.zeros(len(self.grid_w['z']))  # no drainage
             if self.dt_water == None:
                 self.dt_water = dt
             # solve water balance in domain of ix layers
             if self.solve_water_type == 'Equilibrium':  # solving based on equilibrium
                 h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe = \
                     wf.waterStorage1D(t_final=dt,
-                                      z=self.z[ix],
+                                      grid=self.grid_w,
                                       h0=self.h[ix],
                                       pF=pFpara,
                                       Ksat=self.Ksat[ix],
@@ -327,7 +329,7 @@ class SoilModel():
             else:  # Richards equation for solving water flow
                 h, Wliq, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe, self.dt_water = \
                     wf.waterFlow1D(t_final=dt,
-                                   z=self.z[ix],
+                                   grid=self.grid_w,
                                    h0=self.h[ix],
                                    pF=pFpara,
                                    Ksat=self.Ksat[ix],
@@ -363,7 +365,7 @@ class SoilModel():
         if self.solve_heat:
             self.T, self.Wliq, self.Wice, fheat, self.Lambda = \
                 hf.heatflow_1D(t_final=dt,
-                               z=self.z,
+                               grid=self.grid,
                                poros=self.porosity,
                                T0=self.T,
                                Wliq0=self.Wliq,
@@ -380,7 +382,7 @@ class SoilModel():
         # return state in dictionary
         state = {"water_potential": self.h,
                  "volumetric_water_content": self.Wliq,
-                 "column_water_storage": sum(self.Wliq*self.dz),
+                 "column_water_storage": sum(self.Wliq*self.grid['dz']),
                  "ice_content": self.Wice,
                  "pond_storage": self.pond,
                  "ground_water_level": self.gwl,
@@ -395,7 +397,7 @@ class SoilModel():
         """ Calculates soil water content in steady state with ground water level
         """
 
-        h = np.arange(self.z[0], gwl, self.z[1]-self.z[0])
+        h = np.arange(self.grid['z'][0], gwl, self.grid['z'][1]-self.grid['z'][0])
         h = np.append(np.flip(h, axis=0), np.zeros(self.Nlayers - len(h)))
         self.h = h.copy()
 
