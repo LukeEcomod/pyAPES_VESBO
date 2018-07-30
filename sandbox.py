@@ -14,6 +14,7 @@ from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 
 #results = read_results([output_control2, output_partial])
+#results = read_results('results/201807301250_CCFPeat_results.nc')
 results = read_results(outputfile)
 plot_results(results)
 

@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2014-09-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2015-09-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2014-10-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -51,6 +51,7 @@ gpara = {
                       ['canopy_MBE2', 'snow model mass balance error [m]', ('date', 'simulation')],
                       ['canopy_MBE3', 'moss model mass balance error [m]', ('date', 'simulation')],
                       ['soil_MBE', 'soil mass balance error [m]', ('date', 'simulation')],
+                      ['soil_heat_be', 'soil heat balance error [W m2]', ('date', 'simulation')],
                       ['canopy_z', 'canopy model grid node elevations [m]', ('canopy')],
                       ['soil_z', 'soil model grid node elevations [m]', ('soil')],
                       ['canopy_Rnet','[W m-2]', ('date', 'simulation')],

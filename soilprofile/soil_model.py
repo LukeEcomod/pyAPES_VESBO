@@ -249,8 +249,9 @@ class SoilModel():
             else:
                 self.drainage_equation = {'type': None}
 
-            # Keep track of dt used in solving water
+            # Keep track of dt used in solving water and heat
             self.dt_water = None
+            self.dt_heat = None
 
 
     def _run(self, dt, ubc_water, ubc_heat, h_atm=-1000.0, water_sink=None, heat_sink=None, 
@@ -308,6 +309,8 @@ class SoilModel():
                 q_drain = np.zeros(len(self.grid_w['z']))  # no drainage
             if self.dt_water == None:
                 self.dt_water = dt
+            if self.dt_heat == None:
+                self.dt_heat = dt
             # solve water balance in domain of ix layers
             if self.solve_water_type == 'Equilibrium':  # solving based on equilibrium
                 h, Wtot, self.pond, infil, evapo, drainage, trans, roff, fliq, self.gwl, Kv, mbe = \
@@ -365,7 +368,7 @@ class SoilModel():
             self._steady_state_water(pF= self.pF, Ksat=self.Ksat, gwl=self.gwl)
 
         if self.solve_heat:
-            self.T, self.Wliq, self.Wice, fheat, self.Lambda = \
+            self.T, self.Wliq, self.Wice, fheat, self.Lambda, self.dt_heat, heat_be = \
                 hf.heatflow_1D_new(t_final=dt,
                                grid=self.grid,
                                poros=self.porosity,
@@ -375,7 +378,7 @@ class SoilModel():
                                lbc=self.lbc_heat,
                                spara=self.solids_prop,  # dict of properties of solid part
                                S=heat_sink,
-                               steps=1)
+                               steps= dt / self.dt_heat)
 
             fluxes.update({'vertical_heat_flux': fheat})
 
@@ -388,7 +391,8 @@ class SoilModel():
                  "ground_water_level": self.gwl,
                  "hydraulic_conductivity": self.Kv,
                  "temperature": self.T,
-                 "thermal_conductivity": self.Lambda
+                 "thermal_conductivity": self.Lambda,
+                 "heat_be": heat_be
                  }
 
         return fluxes, state

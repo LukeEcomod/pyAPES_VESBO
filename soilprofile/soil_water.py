@@ -611,11 +611,11 @@ def waterFlow1D(t_final, grid, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                     iterNo = 0
                     h_iter = h_old.copy()  #h_iterold.copy()
                     W_iter = W_old.copy()  #W_iterold.copy()
-                    print 'Solution blowing up, new dt = ' + str(dt)
+                    print 'soil_water.waterflow1D: Solution blowing up, new dt = ' + str(dt)
                     continue
                 else:  # convergence not reached with dt=30s, break
+                    print 'soil_water.waterflow1D: Problem with solution, blow up'
                     break
-                    print 'Problem with solution, blow up'
                 # print (a) print (b) print (g) print (f) print (h)
                 # break
 
@@ -625,12 +625,11 @@ def waterFlow1D(t_final, grid, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
                 if dt > 10:
                     dt = max(dt, 30)
                     iterNo = 0
-                    print 'More than 20 iterations, new dt = ' + str(dt)
+                    print 'soil_water.waterflow1D: More than 20 iterations, new dt = ' + str(dt)
                     continue
                 else:  # convergence not reached with dt=30s, break
+                    print 'soil_water.waterflow1D: Solution not converging'
                     break
-                    print 'Problem with solution'
-
             # errors for determining convergence
             err1 = sum(abs(W_iter - W_iterold)*dz)
             err2 = max(abs(h_iter - h_iterold))
@@ -671,7 +670,7 @@ def waterFlow1D(t_final, grid, h0, pF, Ksat, Prec, Evap, R, HM=0.0,
         # ----------- solution time and new timestep ------------
 
         t += dt
-        print 't = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo)
+        print 'soil_water.waterflow1D: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo)
 
         dt_old = dt  # save temporarily
 

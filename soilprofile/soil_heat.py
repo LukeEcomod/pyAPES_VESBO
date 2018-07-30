@@ -11,6 +11,7 @@ Last edit: 3.7.2017 / Samuli
 import numpy as np
 import matplotlib.pyplot as plt
 from soil_water import wrc
+from tools.utilities import tridiag as thomas
 
 eps = np.finfo(float).eps  # machine epsilon
 
@@ -108,7 +109,7 @@ def volumetric_heat_capacity(poros, wliq=0.0, wice=0.0, cs=None, vOrg=0.0):
 
     wair = poros - wliq - wice
 
-    cv = cs + Cv_WATER*wliq + Cv_ICE*wice + Cv_AIR*wair
+    cv = cs*(1 - poros) + Cv_WATER*wliq + Cv_ICE*wice + Cv_AIR*wair
 
     return cv
 
@@ -332,6 +333,10 @@ def thermal_conductivity_simple(poros, wliq, wice, ks=None, soilComp=None):
 
     return L
 
+def heat_content(T, Wtot, poros, cs, fp, To=0.0):
+    Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=To)
+    Cv = volumetric_heat_capacity(poros, Wliq, wice=Wice, cs=cs)
+    return Cv * T + LATENT_HEAT_FREEZING * Wice
 
 """
 Soil heat transfer in 1D
@@ -403,7 +408,6 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
     """
 
     Conv_crit1 = 1.0e-3  # degC
-    Conv_crit2 = 1e-4  # wliq [m3m-3]
 
     LH = 0.0    # heat sink/source to 1st node due infiltration or evaporation
                 # LH=-cw*infil_rate *T_infil/ dz[0] [Wm-3]
@@ -441,41 +445,41 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
 
     # ---initial conditions
     T = T0
+
     # Liquid and ice content, and dWice/dTs
     Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=Tfr)
 
-    dt = t_final / float(steps)  # initial time step [s]
-    t = 0.0  # running time
+    # running time [s]
+    t = 0.0
+    # initial and computational time step [s]
+    dto = t_final / steps
+    dt = dto  # adjusted during solution
 
     while t < t_final:  # loop until solution timestep
         # these will stay cduring iteration over time step "dt"
         T_old = T
-        Wice_old = Wice
 
-        # Thermal conductivity 
-        R = thermal_conductivity(poros, Wliq, wice=Wice, vOrg=vorg, vSand=vsand, vSilt=vsilt, 
+        # Fraction of water and ice assumed constant during dt, so these only computed here
+        # Thermal conductivity
+        R = thermal_conductivity(poros, Wliq, wice=Wice, vOrg=vorg, vSand=vsand, vSilt=vsilt,
                                  vClay=vclay, bedrockL=bedrockL)
         R = spatial_average2(R, method='arithmetic')
+        # bulk soil heat capacity [Jm-3K-1]
+        CP = volumetric_heat_capacity(poros, Wliq, wice=Wice, cs=cs)
+        # heat capacity of freezing/thawing [Jm-3K-1]
+        A = rhoi*Lf*gamma
 
-        # these change during iteration
+        # changes during iteration
         T_iter = T.copy()
-        Wice_iter = Wice.copy()
-        Wliq_iter = Wliq.copy()
 
         err1 = 999.0
-        err2 = 999.0
         iterNo = 0
 
         # start iterative solution of heat equation
 
-        while err1 > Conv_crit1 or err2 > Conv_crit2:  # and pass_flag is False: 
+        while err1 > Conv_crit1:
             # print 'err1=' +str(err1) +'   err2=' + str(err2)
             iterNo += 1
-
-            # bulk soil heat capacity [Jm-3K-1]
-            CP = volumetric_heat_capacity(poros, Wliq_iter, wice=Wice_iter, cs=cs)
-            # heat capacity of freezing/thawing [Jm-3K-1]
-            A = rhoi*Lf*gamma
 
             # --- set up tridiagonal matrix
             a = np.zeros(N)
@@ -487,8 +491,7 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
             b[1:-1] = CP[1:-1] + A[1:-1] + dt / dz[1:-1] * (R[1:N-1] / dzu[1:-1] + R[2:N] / dzl[1:-1])
             a[1:-1] = - dt / (dz[1:-1]*dzu[1:-1]) * R[1:N-1]
             g[1:-1] = - dt / (dz[1:-1]*dzl[1:-1]) * R[2:N]
-            f[1:-1] = CP[1:-1] * T_old[1:-1] + A[1:-1] * T_iter[1:-1]\
-                      + Lf * rhoi * (Wice_iter[1:-1] - Wice_old[1:-1]) - S[1:-1] * dt
+            f[1:-1] = CP[1:-1] * T_old[1:-1] + A[1:-1] * T_old[1:-1] - S[1:-1] * dt
 
             # ---------- top node (n=0)
             # LH is heat input by infiltration. loss by evaporation not currently implemented
@@ -498,16 +501,14 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
                 b[0] = CP[0] + A[0] + dt / (dz[0] * dzl[0]) * R[1]
                 a[0] = 0.0
                 g[0] = -dt / (dz[0] * dzl[0]) * R[1]
-                f[0] = CP[0]*T_old[0] + A[0]*T_iter[0] + Lf * rhoi *  (Wice_iter[0] - Wice_old[0])\
-                       - dt / dz[0] * F_sur - dt*LH - dt*S[0]
+                f[0] = CP[0]*T_old[0] + A[0]*T_old[0] - dt / dz[0] * F_sur - dt*LH - dt*S[0]
 
             if ubc['type'] == 'temperature':   # fixed T at imaginary node at surface
                 T_sur = ubc['value']
                 b[0] = CP[0] + A[0] + dt / dz[0]* (R[0] / dzu[0] + R[1] / dzl[0])
                 a[0] = 0.0
                 g[0] = -dt / (dz[0]*dzl[0]) * R[1]
-                f[0] = CP[0]*T_old[0] + A[0]*T_iter[0] + Lf*rhoi* (Wice_iter[0] - Wice_old[0])\
-                       + dt / (dz[0]*dzu[0])*R[0]*T_sur - dt*LH - dt*S[0]
+                f[0] = CP[0]*T_old[0] + A[0]*T_old[0] + dt / (dz[0]*dzu[0])*R[0]*T_sur - dt*LH - dt*S[0]
 
             # ------ bottom node (n=N)
             if lbc['type'] == 'flux':  # or lbc['type'] is 'grad':
@@ -515,71 +516,90 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
                 b[-1] = CP[-1] + A[-1] + dt / (dz[-1]*dzu[-1]) * R[N-1]
                 a[-1] = -dt / (dz[-1]*dzu[-1]) * R[N-1]
                 g[-1] = 0.0
-                f[-1] = CP[-1]*T_old[-1] + A[-1]*T_iter[-1]\
-                        + Lf*rhoi* (Wice_iter[-1] - Wice_old[-1]) - dt / dz[-1]*F_bot - dt*S[-1]
+                f[-1] = CP[-1]*T_old[-1] + A[-1]*T_old[-1] - dt / dz[-1]*F_bot - dt*S[-1]
     
             if lbc['type'] == 'temperature':  # fixed temperature, Tbot "at node N+1"
                 T_bot = lbc['value']
                 b[-1] = CP[-1] + A[-1] + dt / dz[-1] * (R[N-1] / dzu[-1] + R[N] / dzl[-1])
                 a[-1] = -dt / (dz[-1]*dzu[-1]) * R[N-1]
                 g[-1] = 0.0
-                f[-1] = CP[-1]*T_old[-1] + A[-1]*T_iter[-1]\
-                        + Lf*rhoi*(Wice_iter[-1] - Wice_old[-1])\
-                        + dt/(dz[-1]*dzl[-1]) * R[N]*T_bot - dt*S[-1]
+                f[-1] = CP[-1]*T_old[-1] + A[-1]*T_old[-1] + dt/(dz[-1]*dzl[-1]) * R[N]*T_bot - dt*S[-1]
 
             # --------- update iteration values
             T_iterold = T_iter.copy()
-            Wice_iterold = Wice_iter.copy()
-            # Wice_iterold = Wice_iter.copy()
 
             # --- call tridiagonal solver
             T_iter = thomas(a, b, g, f)
 
-            Wliq_iter, Wice_iter, gamma = frozen_water(T_iter, Wtot, fp=fp)
-
-            if iterNo == 7:
+            # if problems reaching convergence devide time step and retry
+            if iterNo == 20:
                 dt = dt / 3.0
                 if dt > 10:
                     dt = max(dt, 30)
                     iterNo = 0
-                    print 'More than 20 iterations, new dt = ' + str(dt)
+                    print 'soil_heat.heatflow_1D: More than 20 iterations, new dt = ' + str(dt) + 'Terr1 = ' + str(err1)
                     continue
                 else:  # convergence not reached with dt=30s, break
-                    print 'Problem with solution'
+                    print 'soil_heat.heatflow_1D: Solution not converging' + 'Terr1 = ' + str(err1)
                     break
+            # check solution, if problem continues break
             elif any(np.isnan(T_iter)):
-                print 'soil_heat.heatflow_1D: nan found, breaking'
-                break  # break while loop
+                dt = dt / 3.0
+                if dt > 10:
+                    dt = max(dt, 30)
+                    iterNo = 0
+                    T_iter = T_old.copy()
+                    print 'soil_heat.heatflow_1D: Solution blowing up, new dt = ' + str(dt)
+                    continue
+                else:  # convergence not reached with dt=30s, break
+                    print 'soil_heat.heatflow_1D: Problem with solution, blow up'
+                    break
 
             err1 = np.max(abs(T_iter - T_iterold))
-            err2 = np.max(abs(Wice_iter - Wice_iterold))
-            print 'Terr1 = ' + str(err1) + ' Terr2 = ' + str(err2)
+#            print 'Terr1 = ' + str(err1) + ' Terr2 = ' + str(err2)
 
         # ------- ending iteration loop -------
         # print 'Pass: t = ' +str(t) + ' dt = ' +str(dt) + ' iterNo = ' + str(iterNo)
 
         # update state
         T = T_iter.copy()
-        Wliq = Wliq_iter.copy()
-        Wice = Wice_iter.copy()
+        # Liquid and ice content, and dWice/dTs
+        Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=Tfr)
 
-        # solution time & new initial timestep
+        # ----------- solution time and new timestep ------------
+
         t += dt
+        print 'soil_heat.heatflow_1D: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo) + 'Terr1 = ' + str(err1)
 
-        if iterNo < 2:
-            dt = dt*1.25
-        elif iterNo > 4:
-            dt = dt / 1.25
+        dt_old = dt  # save temporarily
 
-        dt = min(dt, t_final - t)
-        # print 'new dt= ' +str(dt)
+        # select new time step based on convergence
+        if iterNo <= 3:
+            dt = dt * 2
+        elif iterNo >= 6:
+            dt = dt / 2
 
-    # ----- now at t = t_final, end while loop, compute heat flux profile
-    R = thermal_conductivity(poros, Wliq, wice=Wice, vOrg=vorg, vSand=vsand, vSilt=vsilt, 
-                                 vClay=vclay, bedrockL=bedrockL)
-    Fheat = nodal_fluxes(z, T, R)  # Wm-2
+        # limit to minimum of 30s
+        dt = max(dt, 30)
 
-    return T, Wliq, Wice, Fheat, R
+        # save dto for output to be used in next run of heatflow1D()
+        if dt_old == t_final or t_final > t:
+            dto = min(dt, t_final)
+
+        # limit by time left to solve
+        dt = min(dt, t_final-t)
+
+    # ----- now at t = t_final, end while loop, compute heat flux profile Wm-2
+    Fheat = np.zeros(N+1)
+    Fheat[1:-1] = -R[1:-1]*(T[1:] - T[:-1])/dzl[:-1]
+    Fheat[0] = -R[0]*(T[0] - T_sur)/dzu[0]
+    Fheat[-1] = -R[-1]*(T_bot - T[-1])/dzl[-1]
+
+    heat_be = sum(dz * heat_content(T_old, Wtot, poros, cs, fp, To=Tfr)
+                    + t_final * (Fheat[:-1] - Fheat[1:])
+                    - dz * heat_content(T, Wtot, poros, cs, fp, To=Tfr))
+
+    return T, Wliq, Wice, Fheat, R, dto, heat_be
 
 def heatflow_1D(t_final, grid, poros, T0, Wliq0, Wice0, ubc, lbc, spara, S=0.0, steps=10):
     """
@@ -946,53 +966,6 @@ def soil_temperature_Rankinen(t_final, z, To, T_sur, Ds, para, steps=10):
 
 """ ----Utility functions ---- """
 
-
-def thomas(a, b, C, D):
-    """
-    Tridiagonal matrix algorithm of Thomas
-    a=subdiag, b=diag, C=superdiag, D=rhs
-    """
-    n = len(a)
-    V = np.zeros(n)
-    G = np.zeros(n)
-    U = np.zeros(n)
-    x = np.zeros(n)
-    V[0] = b[0].copy()
-    G[0] = C[0] / V[0]
-    U[0] = D[0] / V[0]
-
-    for i in range(1, n):  # nr of nodes
-        V[i] = b[i] - a[i] * G[i - 1]
-        U[i] = (D[i] - a[i] * U[i - 1]) / V[i]
-        G[i] = C[i] / V[i]
- 
-    x[-1] = U[-1]
-    inn = n - 2
-    for i in range(inn, -1, -1):
-        x[i] = U[i] - G[i] * x[i + 1]
-    return x
-
-
-def diff_capa(pF, head):
-    """
-    Analytic derivative of vGenuchten soil water retention curve [m-1]
-    IN: pF-dict & head [m]
-    OUT: x - dW/dhead [m-1]
-    """
-
-    head = -100*head  # cm
-    ts = pF['ThetaS']
-    tr = pF['ThetaR']
-    n = pF['n']
-    m = 1.0 - np.divide(1, n)
-    alfa = pF['alpha']
-
-    # print ts, tr, n, m, alfa
-    x = 100.0*(ts - tr)*(n - 1.0)*alfa**n*head**(n - 1.0) / ( (1 + (alfa*head)**n)**(m + 1.0))
-    x[head <= 0.0] = 0.0
-    return x
-
-
 def find_index(a, func):
     """
     finds indexes or array elements that fill the condition
@@ -1033,7 +1006,6 @@ def spatial_average(y, x=None, method='arithmetic'):
         f[-1] = y[-1]
 
     return f
-
 
 def nodal_fluxes(x, y, K):
     """
