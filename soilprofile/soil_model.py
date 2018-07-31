@@ -369,7 +369,7 @@ class SoilModel():
 
         if self.solve_heat:
             self.T, self.Wliq, self.Wice, fheat, self.Lambda, self.dt_heat, heat_be = \
-                hf.heatflow_1D_new(t_final=dt,
+                hf.heatflow_1D_new2(t_final=dt,
                                grid=self.grid,
                                poros=self.porosity,
                                T0=self.T,

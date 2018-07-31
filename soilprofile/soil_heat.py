@@ -333,11 +333,6 @@ def thermal_conductivity_simple(poros, wliq, wice, ks=None, soilComp=None):
 
     return L
 
-def heat_content(T, Wtot, poros, cs, fp, To=0.0):
-    Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=To)
-    Cv = volumetric_heat_capacity(poros, Wliq, wice=Wice, cs=cs)
-    return Cv * T + LATENT_HEAT_FREEZING * Wice
-
 """
 Soil heat transfer in 1D
 
@@ -398,7 +393,303 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
         R: thermal conductivity [Wm-1K-1]
     CODE:
         Samuli Launiainen, Luke 19.4.2016. Converted from Matlab (APES SoilProfile.Soil_HeatFlow)
-        Kersti, 26.7.2018 
+        Kersti, 26.7.2018 edits to avoid computation getting stuck during freezing conditions,
+            still problems with convergence around zero temperatures.
+            Check heat balance error to see problematic periods
+    NOTE:
+        (19.4.2016): Tested ok; solved 'coupled' water&heatflow solve heatflow and waterflow
+        sequentially for small timesteps
+    TODO:
+        1. think how heat advection with infiltration should be accounted for
+        2. gradient boundary should be implemented as flux-based
+    """
+
+    Conv_crit1 = 1.0e-3  # degC
+    Conv_crit2 = 1.0e-5  # ice content m3/m3
+
+    LH = 0.0    # heat sink/source to 1st node due infiltration or evaporation
+                # LH=-cw*infil_rate *T_infil/ dz[0] [Wm-3]
+
+    # -------------- constants ---------------
+
+    rhoi = RHO_ICE  # density of ice
+    Lf = LATENT_HEAT_FREEZING  # latent heat of freezing, J/kg; % Lv is latent heat of vaportization
+    Tfr = FREEZING_POINT_H2O  # freezing point of water (degC)
+
+    # ------------------- computation grid -----------------------
+
+    # grid
+    z = grid['z']
+    dz = grid['dz']
+    dzu = grid['dzu']
+    dzl = grid['dzl']
+
+    N = len(z)
+
+    # -----get parameters from dict
+    fp = spara['fp']       # freezing-curve parameter, 2...4 for clay and 0.5-1.5 for sandy soils
+                            # (Femma-code/Harri Koivusalo)
+
+    cs = spara['cs']        # dry soil vol. heat capacity [J m-3 K-1]
+    vorg = spara['vOrg']    # organic matter vol. fraction [-]
+    vsand = spara['vSand']  # sand vol. fraction [-]
+    vsilt = spara['vSilt']  # silt vol. fraction [-]
+    vclay = spara['vClay']  # clay vol. fraction [-]
+    bedrockL = spara['bedrockL']
+
+    S = np.ones(N)*S  # sink-source array [Wm-3 =  Js-1m3], < 0 is heat sink
+
+    """ -------- find solution at t_final --------- """
+
+    # ---initial conditions
+    T = T0
+    # ---initiate heat flux array [W/m3]
+    Fheat = np.zeros(N+1)
+
+    # Liquid and ice content, and dWliq/dTs
+    Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=Tfr)
+
+    # running time [s]
+    t = 0.0
+    # initial and computational time step [s]
+    dto = t_final / steps
+    dt = dto  # adjusted during solution
+
+    while t < t_final:  # loop until solution timestep
+        # these will stay cduring iteration over time step "dt"
+        T_old = T
+        Wice_old = Wice
+
+        # old bulk soil heat capacity [Jm-3K-1]
+        CP_old = volumetric_heat_capacity(poros, Wliq, wice=Wice, cs=cs)
+
+        # Fraction of water and ice assumed constant during dt, so these only computed here
+        # Thermal conductivity - this remains constant during iteration
+        R = thermal_conductivity(poros, Wliq, wice=Wice, vOrg=vorg, vSand=vsand, vSilt=vsilt,
+                                 vClay=vclay, bedrockL=bedrockL)
+        R = spatial_average2(R, method='arithmetic')
+
+        # changes during iteration
+        T_iter = T.copy()
+        Wice_iter = Wice.copy()
+
+        err1 = 999.0
+        err2 = 999.0
+        iterNo = 0
+
+        # start iterative solution of heat equation
+
+        while err1 > Conv_crit1 or err2 > Conv_crit2:
+            # print 'err1=' +str(err1) +'   err2=' + str(err2)
+            iterNo += 1
+
+            # bulk soil heat capacity [Jm-3K-1]
+            CP = volumetric_heat_capacity(poros, Wliq, wice=Wice, cs=cs)
+            # heat capacity due to freezing/thawing [Jm-3K-1]
+            A = rhoi*Lf*gamma
+
+            # --- set up tridiagonal matrix
+            a = np.zeros(N)
+            b = np.zeros(N)
+            g = np.zeros(N)
+            f = np.zeros(N)
+
+            # ---- intermediate nodes
+            b[1:-1] = CP[1:-1] + A[1:-1] + dt / dz[1:-1] * (R[1:N-1] / dzu[1:-1] + R[2:N] / dzl[1:-1])
+            a[1:-1] = - dt / (dz[1:-1]*dzu[1:-1]) * R[1:N-1]
+            g[1:-1] = - dt / (dz[1:-1]*dzl[1:-1]) * R[2:N]
+            f[1:-1] = CP_old[1:-1] * T_old[1:-1] + A[1:-1] * T_iter[1:-1] \
+                    + Lf*rhoi*(Wice_iter[1:-1] - Wice_old[1:-1]) - S[1:-1] * dt
+
+            # ---------- top node (n=0)
+            # LH is heat input by infiltration. loss by evaporation not currently implemented
+
+            if ubc['type'] == 'flux':  # or ubc['type'] is 'grad':
+                F_sur = ubc['value']
+                b[0] = CP[0] + A[0] + dt / (dz[0] * dzl[0]) * R[1]
+                a[0] = 0.0
+                g[0] = -dt / (dz[0] * dzl[0]) * R[1]
+                f[0] = CP_old[0]*T_old[0] + A[0]*T_iter[0] + Lf*rhoi*(Wice_iter[0] - Wice_old[0])\
+                        - dt / dz[0] * F_sur - dt*LH - dt*S[0]
+
+            if ubc['type'] == 'temperature':   # fixed T at imaginary node at surface
+                T_sur = ubc['value']
+                b[0] = CP[0] + A[0] + dt / dz[0]* (R[0] / dzu[0] + R[1] / dzl[0])
+                a[0] = 0.0
+                g[0] = -dt / (dz[0]*dzl[0]) * R[1]
+                f[0] = CP_old[0]*T_old[0] + A[0]*T_iter[0] + Lf*rhoi*(Wice_iter[0] - Wice_old[0])\
+                        + dt / (dz[0]*dzu[0])*R[0]*T_sur - dt*LH - dt*S[0]
+
+            # ------ bottom node (n=N)
+            if lbc['type'] == 'flux':  # or lbc['type'] is 'grad':
+                F_bot = lbc['value']
+                b[-1] = CP[-1] + A[-1] + dt / (dz[-1]*dzu[-1]) * R[N-1]
+                a[-1] = -dt / (dz[-1]*dzu[-1]) * R[N-1]
+                g[-1] = 0.0
+                f[-1] = CP_old[-1]*T_old[-1] + A[-1]*T_iter[-1] + Lf*rhoi*(Wice_iter[-1] - Wice_old[-1])\
+                        - dt / dz[-1]*F_bot - dt*S[-1]
+    
+            if lbc['type'] == 'temperature':  # fixed temperature, Tbot "at node N+1"
+                T_bot = lbc['value']
+                b[-1] = CP[-1] + A[-1] + dt / dz[-1] * (R[N-1] / dzu[-1] + R[N] / dzl[-1])
+                a[-1] = -dt / (dz[-1]*dzu[-1]) * R[N-1]
+                g[-1] = 0.0
+                f[-1] = CP_old[-1]*T_old[-1] + A[-1]*T_iter[-1] + Lf*rhoi*(Wice_iter[-1] - Wice_old[-1])\
+                        + dt/(dz[-1]*dzl[-1]) * R[N]*T_bot - dt*S[-1]
+
+            # --------- update iteration values
+            T_iterold = T_iter.copy()
+            Wice_iterold = Wice_iter.copy()
+
+            # --- call tridiagonal solver
+            T_iter = thomas(a, b, g, f)
+
+            Wliq_iter, Wice_iter, gamma = frozen_water(T_iter, Wtot, fp=fp)
+
+            # if problems reaching convergence devide time step and retry
+            if iterNo == 20:
+                dt = dt / 3.0
+                if dt > 10:
+                    dt = max(dt, 30)
+                    iterNo = 0
+                    T_iter = T_old.copy()
+                    Wice_iter = Wice_old.copy()
+                    #print 'soil_heat.heatflow_1D: More than 20 iterations, new dt = ' + str(dt) + 'Terr1 = ' + str(err1)+ 'Terr2 = ' + str(err2)
+                    continue
+                else:  # convergence not reached with dt=30s, break
+                    #print 'soil_heat.heatflow_1D: Solution not converging' + 'Terr1 = ' + str(err1)+ 'Terr2 = ' + str(err2) + 'Tair = ' + str(T_sur)
+                    break
+            # check solution, if problem continues break
+            elif any(np.isnan(T_iter)):
+                dt = dt / 3.0
+                if dt > 10:
+                    dt = max(dt, 30)
+                    iterNo = 0
+                    T_iter = T_old.copy()
+                    Wice_iter = Wice_old.copy()
+                    #print 'soil_heat.heatflow_1D: Solution blowing up, new dt = ' + str(dt)
+                    continue
+                else:  # convergence not reached with dt=30s, break
+                    #print 'soil_heat.heatflow_1D: Problem with solution, blow up'
+                    break
+
+            err1 = np.max(abs(T_iter - T_iterold))
+            err2 = np.max(abs(Wice_iter - Wice_iterold))
+#            print 'Terr1 = ' + str(err1) + ' Terr2 = ' + str(err2)
+
+        # ------- ending iteration loop -------
+        # print 'Pass: t = ' +str(t) + ' dt = ' +str(dt) + ' iterNo = ' + str(iterNo)
+
+        # update state
+        T = T_iter.copy()
+        # Liquid and ice content, and dWice/dTs
+        Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=Tfr)
+        # Heat flux [W m-2]
+        Fheat[1:-1] += -R[1:-1]*(T[1:] - T[:-1])/dzl[:-1] * dt / t_final
+        Fheat[0] += -R[0]*(T[0] - T_sur)/dzu[0] * dt / t_final
+        Fheat[-1] += -R[-1]*(T_bot - T[-1])/dzl[-1] * dt / t_final
+
+        # ----------- solution time and new timestep ------------
+
+        t += dt
+#        print 'soil_heat.heatflow_1D: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo) + 'Terr1 = ' + str(err1)
+
+        dt_old = dt  # save temporarily
+
+        # select new time step based on convergence
+        if iterNo <= 3:
+            dt = dt * 2
+        elif iterNo >= 6:
+            dt = dt / 2
+
+        # limit to minimum of 30s
+        dt = max(dt, 30)
+
+        # save dto for output to be used in next run of heatflow1D()
+        if dt_old == t_final or t_final > t:
+            dto = min(dt, t_final)
+
+        # limit by time left to solve
+        dt = min(dt, t_final-t)
+
+    # ----- now at t = t_final, end while loop
+
+    def heat_content(x):
+        wliq, wice, _ = frozen_water(x, Wtot, fp=fp, To=Tfr)
+        Cv = volumetric_heat_capacity(poros, wliq=wliq, wice=Wice, cs=cs)
+        return Cv * x - Lf * rhoi * wice
+
+    def heat_balance(x):
+        return heat_content(T0) + t_final * (Fheat[:-1] - Fheat[1:]) / dz - heat_content(x)
+
+#    T_new = newtons_method(heat_balance, dheat_content, T, Conv_crit2)
+#
+#    T = T_new.copy()
+#    Wliq, Wice, _ = frozen_water(T, Wtot, fp=fp, To=Tfr)
+
+    heat_be = sum(heat_balance(T))
+    return T, Wliq, Wice, Fheat, R, dto, heat_be
+
+def heatflow_1D_new2(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, steps=10):
+    """
+     Solves soil heat flow in 1-D using implicit, backward finite difference solution
+     of heat equation (Hansson et al., 2004; Saito et al., 2006):
+
+    .. math::
+        \\frac{\\partial C_p T}{\\partial t} =
+        \\frac{\\partial}{\\partial z} \\left[\\lambda(\\theta)\\frac{\\partial T}{\\partial z}\\right] +
+        C_w\\frac{\\partial q T}{\\partial z}
+
+    where :math:`C_p` is volumetric heat capacity of soil, :math:`C_w` is volumetric heat
+    capacity of liquid water, :math:`\\lambda(z)` is heat conductivity in soil, and
+    :math:`q(z)` is the liquid water flow.
+
+    Backward finite difference solution adapted from the on of Van Dam and Feddes (2000) for
+    solving Richars equation.
+
+    Reference:
+        Hansson et al. (2004). Vadose Zone Journal 3:693-704
+        Saito et al. (2006). Vadose Zone Journal 5:784-800
+        van Dam and Feddes (2000). J. Hydrology xxxx
+
+    Args:
+        t_final: solution timestep [s]
+        z: grid,<0, monotonically decreasing [m]
+        poros: porosity
+        T0: initial temperature profile [degC]
+        Wtot: volumetric water content [m3m-3]
+        ubc: upper bc: {'type': (give str 'flux','temperature'), 'value': ubc value}.
+            Downward flux <0 (i.e. surface heating / bottom cooling)
+        lbc: lower bc, formulate as ubc
+        spara: soil type parameter dict with necessary fields for
+            * 'cs':
+                dry soil vol. heat capacity [Jm\ :sup:`-3` K\ :sup:`-1`\ ]
+            * 'fp':
+                freezing curve shape parameter
+                    * 2...4 for clay soils
+                    * 0.5...1.5 for sandy soils
+                    * < 0.5 for organic soils
+            * 'vOrg': organic matter volume fraction (of solid volume)
+            * 'vSand': sand -"-
+            * 'vSilt': silt -"-
+            * 'vClay': clay -"-
+        S:
+            local heat sink/source array [Wm-3 =  Js-1m3], <0 for sink
+        steps:
+            initial subtimesteps used to proceed to 't_final'
+
+    Returns:
+        T: new temperature profile [m]
+        Wliq: new liquid water content [m3m-3]
+        Wice: new ice ontent [m3m-3]
+        Fheat: heat flux array [Wm-2]
+        R: thermal conductivity [Wm-1K-1]
+    CODE:
+        Samuli Launiainen, Luke 19.4.2016. Converted from Matlab (APES SoilProfile.Soil_HeatFlow)
+        Kersti, 26.7.2018, computation following method in FEMMA but correction of T based 
+            on heat balance is not working, bisection method may work?
+            Now computes temperature profile with constant Wice (results in heat balance 
+            error during freezing/thawing)
     NOTE:
         (19.4.2016): Tested ok; solved 'coupled' water&heatflow solve heatflow and waterflow
         sequentially for small timesteps
@@ -445,8 +736,10 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
 
     # ---initial conditions
     T = T0
+    # ---initiate heat flow array
+    Fheat = np.zeros(N+1)
 
-    # Liquid and ice content, and dWice/dTs
+    # Liquid and ice content, and dWliq/dTs
     Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=Tfr)
 
     # running time [s]
@@ -565,11 +858,15 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
         T = T_iter.copy()
         # Liquid and ice content, and dWice/dTs
         Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=Tfr)
+        # Heat flux [W m-2]
+        Fheat[1:-1] += -R[1:-1]*(T[1:] - T[:-1])/dzl[:-1] * dt / t_final
+        Fheat[0] += -R[0]*(T[0] - T_sur)/dzu[0] * dt / t_final
+        Fheat[-1] += -R[-1]*(T_bot - T[-1])/dzl[-1] * dt / t_final
 
         # ----------- solution time and new timestep ------------
 
         t += dt
-        print 'soil_heat.heatflow_1D: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo) + 'Terr1 = ' + str(err1)
+#        print 'soil_heat.heatflow_1D: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo) + 'Terr1 = ' + str(err1)
 
         dt_old = dt  # save temporarily
 
@@ -589,17 +886,57 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
         # limit by time left to solve
         dt = min(dt, t_final-t)
 
-    # ----- now at t = t_final, end while loop, compute heat flux profile Wm-2
-    Fheat = np.zeros(N+1)
-    Fheat[1:-1] = -R[1:-1]*(T[1:] - T[:-1])/dzl[:-1]
-    Fheat[0] = -R[0]*(T[0] - T_sur)/dzu[0]
-    Fheat[-1] = -R[-1]*(T_bot - T[-1])/dzl[-1]
+    # ----- now at t = t_final, end while loop
 
-    heat_be = sum(dz * heat_content(T_old, Wtot, poros, cs, fp, To=Tfr)
-                    + t_final * (Fheat[:-1] - Fheat[1:])
-                    - dz * heat_content(T, Wtot, poros, cs, fp, To=Tfr))
+    def heat_content(x):
+        wliq, wice, _ = frozen_water(x, Wtot, fp=fp, To=Tfr)
+        Cv = volumetric_heat_capacity(poros, wliq=wliq, wice=Wice, cs=cs)
+        return Cv * x - Lf * rhoi * wice
 
+    def dheat_content(x):
+        dx = 1e-3
+        return -(heat_content(x+dx) - heat_content(x-dx))/(2*dx)
+    
+    def heat_balance(x):
+        return heat_content(T0) + t_final * (Fheat[:-1] - Fheat[1:]) / dz - heat_content(x)
+
+#    This part didn't work out..
+#    T_new = newtons_method(heat_balance, dheat_content, T, Conv_crit2)
+#
+#    T = T_new.copy()
+#    Wliq, Wice, _ = frozen_water(T, Wtot, fp=fp, To=Tfr)
+
+    heat_be = sum(heat_balance(T))
     return T, Wliq, Wice, Fheat, R, dto, heat_be
+
+def newtons_method(f, df, x0, e):
+    alfa=1.0
+    i = 0
+    while  abs(sum(f(x0))) > e:# and i < 20:
+        x0 = x0 - alfa*f(x0)/df(x0)
+        i += 1
+        if i % 20 == 0:
+            alfa *= 0.5
+        if i>100:
+            print 'Newtons method reached 100 iterations!'
+            break
+    print 'Newtons method iterations: ' + str(i)
+    return x0
+
+def bisection_method(f, x1, x2, e):
+    x0 = (x1 + x2) / 2.0
+    delta = np.max((x2 - x1) / 2.0)
+    i = 0
+    while delta > e and i < 50:
+        ix = np.where(f(x1)*f(x0) < 0)
+        ixx = np.where(f(x1)*f(x0) > 0)
+        x2[ix] = x0
+        x1[ixx] = x0
+        x0 = (x1 + x2) / 2.0
+        delta = np.max((x2 - x1) / 2.0)
+        i += 1
+    print 'Bisection method iterations: ' +  str(i)
+    return x0
 
 def heatflow_1D(t_final, grid, poros, T0, Wliq0, Wice0, ubc, lbc, spara, S=0.0, steps=10):
     """
@@ -1099,7 +1436,7 @@ def frozen_water(T, wtot, fp=2.0, To=0.0):
     T = np.array(T, ndmin=1)
 
     wice = wtot*(1.0 - np.exp(-(To - T) / fp))
-    # derivative dwice/dT
+    # derivative dwliq/dT
     gamma = (wtot - wice) / fp
 
     wice[T > To] = 0.0
