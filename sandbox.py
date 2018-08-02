@@ -13,8 +13,8 @@ from tools.iotools import read_results, read_forcing, save_df_to_csv
 from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 
-#results = read_results([output_control2, output_partial])
-#results = read_results('results/201807311827_CCFPeat_results.nc')
+#results = read_results(['results/201808010932_CCFPeat_results.nc', outputfile])
+#results = read_results('results/201808010932_CCFPeat_results.nc')
 results = read_results(outputfile)
 plot_results(results)
 

@@ -97,7 +97,7 @@ spara = {
         'homogenous': False,         # (boolean): True assumes vertically homogenous profile and float inputs
         'solve_heat': True,        # (boolean): True solves heatflow
         'solve_water': True,        # (boolean): True solves waterflow
-        'solve_water_type':'Equilibrium', #'Richards', # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
+        'solve_water_type':'Richards', #'Equilibrium', # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
         'Bedrock': {
                 'Cv': 2160000.0,
                 'Lambda': 3.0

@@ -622,12 +622,7 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
     def heat_balance(x):
         return heat_content(T0) + t_final * (Fheat[:-1] - Fheat[1:]) / dz - heat_content(x)
 
-#    T_new = newtons_method(heat_balance, dheat_content, T, Conv_crit2)
-#
-#    T = T_new.copy()
-#    Wliq, Wice, _ = frozen_water(T, Wtot, fp=fp, To=Tfr)
-
-    heat_be = sum(heat_balance(T))
+    heat_be = sum(dz * heat_balance(T))
     return T, Wliq, Wice, Fheat, R, dto, heat_be
 
 def heatflow_1D_new2(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, steps=10):
@@ -906,7 +901,7 @@ def heatflow_1D_new2(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, ste
 #    T = T_new.copy()
 #    Wliq, Wice, _ = frozen_water(T, Wtot, fp=fp, To=Tfr)
 
-    heat_be = sum(heat_balance(T))
+    heat_be = sum(dz * heat_balance(T))
     return T, Wliq, Wice, Fheat, R, dto, heat_be
 
 def newtons_method(f, df, x0, e):
