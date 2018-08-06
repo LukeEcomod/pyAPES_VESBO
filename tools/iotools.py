@@ -62,7 +62,8 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
                 'dirPar',
                 'diffNir',
                 'dirNir']
-
+    elif cols == 'all':
+        cols = [col for col in dat]
     # Forc dataframe from specified columns
     Forc = dat[cols]
 
@@ -73,7 +74,7 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
         if (Forc.index[1] - Forc.index[0]).total_seconds() != dt:
             sys.exit("Forcing file time step differs from dt given in general parameters")
 
-    if cols[0] == 'doy':
+    if Forc.columns[0] == 'doy':
         Forc.loc[:,'Par'] = Forc['diffPar'].values + Forc['dirPar'].values
 
     return Forc

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Mar 15 12:40:57 2018
-
 @author: L1656
     """
 import pandas as pd
@@ -14,7 +13,7 @@ from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 
 #results = read_results(['results/201808010932_CCFPeat_results.nc', outputfile])
-#results = read_results('results/201808010932_CCFPeat_results.nc')
+#results = read_results('results/201808061226_CCFPeat_results.nc')
 results = read_results(outputfile)
 plot_results(results)
 
@@ -186,4 +185,56 @@ letto_data = lettosuo_data[['Letto1_EC: LE (Wm-2)',
 letto_data=letto_data.rename(columns={'Letto1_EC: LE (Wm-2)':'LE',
                                       'Letto1_EC: PaikNEE_N':'NEE',
                                       'Letto1_EC: GPP_N':'GPP',
-                                      'Letto1_EC: Reco_N':'Reco'})
+'Letto1_EC: Reco_N':'Reco'})
+
+""" WTD """
+from tools.plotting import plot_timeseries_df
+import seaborn as sns
+pal = sns.color_palette("hls", 5)
+
+gwl_meas = read_forcing("lettosuo_WTD.csv", cols='all')
+
+gwl_meas['ctrl'] = np.nanmean([gwl_meas['ctrl8m'].values, gwl_meas['ctrl22.5m'].values],axis=0)
+gwl_meas['clear4m'][gwl_meas.index < '11-01-2015']=np.nan
+gwl_meas['clear12m'][gwl_meas.index < '11-01-2015']=np.nan
+
+gwl_calib = gwl_meas[(gwl_meas.index <= '03-15-2016')]
+
+plot_columns(gwl_calib[['WT_E','WT_N','WT_S','WT_W', 'ctrl']])
+gwl_meas['WT_Ec'] = 0.96 * gwl_meas['WT_E'] -9.19
+gwl_meas['WT_Nc'] = 1.60 * gwl_meas['WT_N'] + 18.15
+gwl_meas['WT_Sc'] = 1.06 * gwl_meas['WT_S'] - 14.72
+gwl_meas['WT_Wc'] = 1.20 * gwl_meas['WT_W'] - 5.73
+plt.figure()
+plot_timeseries_df(gwl_meas, ['WT_Ec','WT_Sc','WT_Wc','ctrl'],colors=pal,xticks=False, limits=False)
+
+plot_columns(gwl_calib[['part4m','part8m','part12m','part22.5m', 'ctrl']])
+gwl_meas['part12mc'] = 1.13 * gwl_meas['part12m'] + 4.9
+gwl_meas['part22.5mc'] = 0.97 * gwl_meas['part22.5m'] - 11.28
+plt.figure()
+plot_timeseries_df(gwl_meas, ['part12mc','part22.5mc','ctrl'],colors=pal,xticks=False, limits=False)
+
+plot_columns(gwl_calib[['clear4m','clear8m','clear12m','clear22.5m', 'ctrl']])
+gwl_meas['clear4mc'] = 0.97 * gwl_meas['clear4m'] - 3.88
+gwl_meas['clear12mc'] = 1.25 * gwl_meas['clear12m'] - 0.50
+plt.figure()
+plot_timeseries_df(gwl_meas, ['clear4mc','clear12mc','ctrl'],colors=pal,xticks=False, limits=False)
+
+plt.figure()
+plot_timeseries_df(gwl_meas, ['WT_Ec','WT_Sc','WT_Wc'],colors=[pal[2]],xticks=False, limits=False)
+plot_timeseries_df(gwl_meas, ['part12mc','part22.5mc'],colors=[pal[1]],xticks=False, limits=False)
+plot_timeseries_df(gwl_meas, ['clear4mc','clear12mc'],colors=[pal[3]],xticks=False, limits=False)
+plot_timeseries_df(gwl_meas, ['ctrl8m','ctrl22.5m'],colors=[pal[0]],xticks=True, limits=False)
+
+gwl_meas['ctrl'] = np.nanmean([gwl_meas['ctrl8m'].values, gwl_meas['ctrl22.5m'].values],axis=0)
+gwl_meas['part'] = np.nanmean([gwl_meas['part12mc'].values, gwl_meas['part22.5mc'].values,gwl_meas['WT_Ec'].values, gwl_meas['WT_Sc'].values,gwl_meas['WT_Wc'].values],axis=0)
+gwl_meas['part1'] = np.nanmean([gwl_meas['part12mc'].values, gwl_meas['part22.5mc'].values],axis=0)
+gwl_meas['part2'] = np.nanmean([gwl_meas['WT_Ec'].values, gwl_meas['WT_Sc'].values,gwl_meas['WT_Wc'].values],axis=0)
+gwl_meas['clear'] = np.nanmean([gwl_meas['clear4mc'].values, gwl_meas['clear12mc'].values],axis=0)
+plt.figure()
+plot_timeseries_df(gwl_meas, ['part','clear','ctrl'],colors=[pal[2],pal[3],pal[0]],xticks=True, limits=False)
+plt.figure()
+plot_timeseries_df(gwl_meas, ['part2','part1','clear','ctrl'],colors=[pal[1],pal[2],pal[3],pal[0]],xticks=True, limits=False)
+
+save_df_to_csv(gwl_meas[['WT_Ec','WT_Sc','WT_Wc','part12mc','part22.5mc','clear4mc','clear12mc','ctrl8m','ctrl22.5m','part','clear','ctrl']],
+               'lettosuo_WTD_pred', readme=' - Check timezone!! \nWT_Ec, WT_Sc,...: selected WTD timeseries, all predicted to control site using period from 1-Nov-2015 to 15-Mar-2016\npart, clear, ctrl: mean values for treatments')
