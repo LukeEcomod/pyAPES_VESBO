@@ -256,8 +256,8 @@ def hydraulic_conductivity(pF, x=None, var=None, Ksat=1):
         m = 1.0 - np.divide(1.0, n)
     else:  # list input
         pF = np.array(pF, ndmin=1)
-        alfa = pF[:, 2]
-        n = pF[:, 3]
+        alfa = pF[2]
+        n = pF[3]
         m = 1.0 - np.divide(1.0, n)
 
     def relcond(x):

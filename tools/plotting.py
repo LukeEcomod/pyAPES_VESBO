@@ -302,7 +302,7 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
     plt.xlabel('')
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
-def plot_columns(data, col_index=None):
+def plot_columns(data, col_index=None, slope=None):
     """
     Plots specified columns from dataframe as timeseries and correlation matrix.
     Args:
@@ -325,8 +325,15 @@ def plot_columns(data, col_index=None):
             if i != j:
                 idx = np.isfinite(data[col_names[i]]) & np.isfinite(data[col_names[j]])
                 if idx.sum() != 0.0:
-                    p = np.polyfit(data[col_names[j]][idx], data[col_names[i]][idx], 1)
-                    axes[i, j].annotate("y = %.2fx + %.2f \n R2 = %.2f" % (p[0], p[1], corr[i,j]**2), (0.4, 0.9), xycoords='axes fraction', ha='center', va='center')
+                    if slope==None:
+                        p = np.polyfit(data[col_names[j]][idx], data[col_names[i]][idx], 1)
+                        R2 = corr[i,j]**2
+                    else:
+                        p = [slope, np.mean(data[col_names[i]][idx] - slope* data[col_names[j]][idx])]
+                        SStot = np.sum((data[col_names[i]][idx] - np.mean(data[col_names[i]][idx]))**2)
+                        SSres = np.sum((data[col_names[i]][idx] - (p[0]*data[col_names[j]][idx] + p[1]))**2)
+                        R2 = 1 - SSres/SStot
+                    axes[i, j].annotate("y = %.2fx + %.2f \n R2 = %.3f" % (p[0], p[1], R2), (0.4, 0.9), xycoords='axes fraction', ha='center', va='center')
                     axes[i, j].plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
                 axes[i, j].plot(lim, lim, 'k--', linewidth=1)
             axes[i, j].set_ylim(lim)

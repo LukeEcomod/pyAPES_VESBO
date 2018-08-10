@@ -13,7 +13,7 @@ nodes = [10, 5, 5, 2, 2, 5, 5]
 # ---- Layer characteristics ----
 
 # Water retention
-## PÄIVÄNEN SEDGE SATTUMANVARAISESTI
+# PÄIVÄNEN SEDGE SATTUMANVARAISESTI
 watcont = [[94.3, 68, 47.9, 35.5, 22, 18.4, 16.7, 12.6, 7.9, 6.3, -999],
            [91.7, 82.9, 61.8, 35.9, 31.7, 25.2, 23.4, 19.2, 17.3, 14.4, -999],
            [90.6, 86.2, 56.4, 36.4, 33.4, 29.8, 26.8, 23.5, 20.2, 16.4, -999],
@@ -22,18 +22,20 @@ watcont = [[94.3, 68, 47.9, 35.5, 22, 18.4, 16.7, 12.6, 7.9, 6.3, -999],
            [89.3, 86.5, 80.7, 52.5, 45.6, 35.4, 32, 25.1, 20.6, 18.4, -999],
            [91, 89.9, 84.7, 60, -999, 33.8, 27.2, 29.3, -999, 17.2, 12.9]]
 head = [0.0001, 1, 3.2, 10, 20, 60, 100, 200, 500, 1000, 1500]
+pF_para_JP = fit_pF(head, watcont, fig=False)
 # ------------ LAIHO 2015 ------------
-#watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54],
-#           [91.41, 66.26, 56.98, 45.58, 41.44, 39.32, 37.89],
-#           [89.12, -999, 72.83, 63.97, 54.40, 50.15, 48.80],
-#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
-#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
-#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
-#           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53]]
-#head = [0.0001, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
+watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54],
+           [91.41, 66.26, 56.98, 45.58, 41.44, 39.32, 37.89],
+           [89.12, -999, 72.83, 63.97, 54.40, 50.15, 48.80],
+           [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
+           [92.22, -999, 87.06, 78.02, 74.76, 72.77, 71.70],
+           [92.22, -999, 87.06, 78.02, 74.76, 72.77, 71.70],
+           [92.22, -999, 87.06, 78.02, 74.76, 72.77, 71.70]]
+head = [0.0001, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
 # -------------------------------------
 # Fit water retention parameters
 pF_para = fit_pF(head, watcont, fig=False)
+pF_para = pF_para_JP
 
 # Hydraulic conductivity [m s-1]
 Kvsat = [2e-4, 2e-5, 5e-5, 3e-6, 5e-6, 1e-6, 1e-7]  # vertical
@@ -95,7 +97,7 @@ spara = {
                 'depth': -2.0
                 },                  # lower boundary condition type for water (type, value, depth)
         'homogenous': False,         # (boolean): True assumes vertically homogenous profile and float inputs
-        'solve_heat': True,        # (boolean): True solves heatflow
+        'solve_heat': False,        # (boolean): True solves heatflow
         'solve_water': True,        # (boolean): True solves waterflow
         'solve_water_type':'Richards', #'Equilibrium', # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
         'Bedrock': {

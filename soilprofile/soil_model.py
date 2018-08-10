@@ -380,7 +380,9 @@ class SoilModel():
                                S=heat_sink,
                                steps= dt / self.dt_heat)
 
-            fluxes.update({'vertical_heat_flux': fheat})
+            fluxes.update({'vertical_heat_flux': fheat,
+                           'heat_be': heat_be})
+
 
         # return state in dictionary
         state = {"water_potential": self.h,
@@ -392,7 +394,6 @@ class SoilModel():
                  "hydraulic_conductivity": self.Kv,
                  "temperature": self.T,
                  "thermal_conductivity": self.Lambda,
-                 "heat_be": heat_be
                  }
 
         return fluxes, state

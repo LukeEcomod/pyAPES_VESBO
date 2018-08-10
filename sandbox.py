@@ -13,9 +13,13 @@ from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 
 #results = read_results(['results/201808010932_CCFPeat_results.nc', outputfile])
-#results = read_results('results/201808061226_CCFPeat_results.nc')
+#results = read_results('results/201808091042_CCFPeat_results.nc')
+#results = read_results('results/201808081619_CCFPeat_results.nc')
 results = read_results(outputfile)
-plot_results(results)
+#plot_results(results)
+#plt.figure()
+#plot_timeseries_df(gwl_meas, ['part','clear','ctrl'],colors=[pal[2],pal[3],pal[0]],xticks=True, limits=False)
+results['soil_ground_water_level'].plot()
 
 plt.figure()
 for i in range(2):
@@ -193,32 +197,37 @@ import seaborn as sns
 pal = sns.color_palette("hls", 5)
 
 gwl_meas = read_forcing("lettosuo_WTD.csv", cols='all')
-
+#
+#plot_columns(gwl_meas[['ctrl4m','ctrl8m','ctrl12m','ctrl22.5m']])
+#plot_columns(gwl_meas[['part4m','part8m','part12m','part22.5m']])
+#plot_columns(gwl_meas[['clear4m','clear8m','clear12m','clear22.5m']])
+#plot_columns(gwl_meas[['WT_E','WT_N','WT_S','WT_W']])
 gwl_meas['ctrl'] = np.nanmean([gwl_meas['ctrl8m'].values, gwl_meas['ctrl22.5m'].values],axis=0)
 gwl_meas['clear4m'][gwl_meas.index < '11-01-2015']=np.nan
 gwl_meas['clear12m'][gwl_meas.index < '11-01-2015']=np.nan
 
 gwl_calib = gwl_meas[(gwl_meas.index <= '03-15-2016')]
+#plot_columns(gwl_calib[['ctrl4m','ctrl12m', 'ctrl']],slope=1.0)
 
-plot_columns(gwl_calib[['WT_E','WT_N','WT_S','WT_W', 'ctrl']])
-gwl_meas['WT_Ec'] = 0.96 * gwl_meas['WT_E'] -9.19
-gwl_meas['WT_Nc'] = 1.60 * gwl_meas['WT_N'] + 18.15
-gwl_meas['WT_Sc'] = 1.06 * gwl_meas['WT_S'] - 14.72
-gwl_meas['WT_Wc'] = 1.20 * gwl_meas['WT_W'] - 5.73
-plt.figure()
-plot_timeseries_df(gwl_meas, ['WT_Ec','WT_Sc','WT_Wc','ctrl'],colors=pal,xticks=False, limits=False)
-
-plot_columns(gwl_calib[['part4m','part8m','part12m','part22.5m', 'ctrl']])
-gwl_meas['part12mc'] = 1.13 * gwl_meas['part12m'] + 4.9
-gwl_meas['part22.5mc'] = 0.97 * gwl_meas['part22.5m'] - 11.28
-plt.figure()
-plot_timeseries_df(gwl_meas, ['part12mc','part22.5mc','ctrl'],colors=pal,xticks=False, limits=False)
-
-plot_columns(gwl_calib[['clear4m','clear8m','clear12m','clear22.5m', 'ctrl']])
-gwl_meas['clear4mc'] = 0.97 * gwl_meas['clear4m'] - 3.88
-gwl_meas['clear12mc'] = 1.25 * gwl_meas['clear12m'] - 0.50
-plt.figure()
-plot_timeseries_df(gwl_meas, ['clear4mc','clear12mc','ctrl'],colors=pal,xticks=False, limits=False)
+#plot_columns(gwl_calib[['WT_E','WT_N','WT_S','WT_W', 'ctrl']],slope=1.0)
+gwl_meas['WT_Ec'] = gwl_meas['WT_E'] - 7.57
+gwl_meas['WT_Nc'] = gwl_meas['WT_N'] -7.21
+gwl_meas['WT_Sc'] = gwl_meas['WT_S'] - 16.67
+gwl_meas['WT_Wc'] = gwl_meas['WT_W'] - 13.10
+#plt.figure()
+#plot_timeseries_df(gwl_meas, ['WT_Ec','WT_Sc','WT_Wc','WT_Nc','ctrl'],colors=pal,xticks=False, limits=False)
+#
+#plot_columns(gwl_calib[['part4m','part8m','part12m','part22.5m', 'ctrl']],slope=1.0)
+gwl_meas['part12mc'] = gwl_meas['part12m'] -1.46
+gwl_meas['part22.5mc'] = gwl_meas['part22.5m'] - 9.97
+#plt.figure()
+#plot_timeseries_df(gwl_meas, ['part12mc','part22.5mc','ctrl'],colors=pal,xticks=False, limits=False)
+#
+#plot_columns(gwl_calib[['clear4m','clear8m','clear12m','clear22.5m', 'ctrl']],slope=1.0)
+gwl_meas['clear4mc'] = gwl_meas['clear4m'] - 2.32
+gwl_meas['clear12mc'] = gwl_meas['clear12m'] - 9.39
+#plt.figure()
+#plot_timeseries_df(gwl_meas, ['clear4mc','clear12mc','ctrl'],colors=pal,xticks=False, limits=False)
 
 plt.figure()
 plot_timeseries_df(gwl_meas, ['WT_Ec','WT_Sc','WT_Wc'],colors=[pal[2]],xticks=False, limits=False)
@@ -231,6 +240,9 @@ gwl_meas['part'] = np.nanmean([gwl_meas['part12mc'].values, gwl_meas['part22.5mc
 gwl_meas['part1'] = np.nanmean([gwl_meas['part12mc'].values, gwl_meas['part22.5mc'].values],axis=0)
 gwl_meas['part2'] = np.nanmean([gwl_meas['WT_Ec'].values, gwl_meas['WT_Sc'].values,gwl_meas['WT_Wc'].values],axis=0)
 gwl_meas['clear'] = np.nanmean([gwl_meas['clear4mc'].values, gwl_meas['clear12mc'].values],axis=0)
+
+for col in gwl_meas:
+    gwl_meas[col] = gwl_meas[col] / 100.0
 plt.figure()
 plot_timeseries_df(gwl_meas, ['part','clear','ctrl'],colors=[pal[2],pal[3],pal[0]],xticks=True, limits=False)
 plt.figure()
