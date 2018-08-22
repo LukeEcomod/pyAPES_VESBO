@@ -25,7 +25,8 @@ def plot_results(results, sim_idx=0):
     weir = read_forcing("Lettosuo_weir.csv", cols=['runf'])
 
     # Read gwl
-    gwl_meas = read_forcing("Lettosuo_gwl.csv", cols=['WT_E','WT_N','WT_W','WT_S'], na_values=-999)
+    gwl_meas = read_forcing("lettosuo_WTD_pred.csv", cols=['part','clear','ctrl'])
+#    gwl_meas = read_forcing("Lettosuo_gwl.csv", cols=['WT_E','WT_N','WT_W','WT_S'], na_values=-999)
 
     plt.figure(figsize=(10,9))
     ax = plt.subplot(711)
@@ -51,8 +52,8 @@ def plot_results(results, sim_idx=0):
     plot_timeseries_xr(results, 'canopy_snow_water_equivalent', colors=['gray'], xticks=False, stack=True,
                        sim_idx=sim_idx, unit_conversion={'unit':'mm', 'conversion':1e3})
     plt.subplot(717, sharex=ax)
-    plot_timeseries_df(gwl_meas, ['WT_E','WT_N','WT_W','WT_S'], colors=[pal[1]], xticks=True)
-    plot_timeseries_xr(results, 'soil_ground_water_level', colors=pal[3:], xticks=True, sim_idx=sim_idx)
+    plot_timeseries_df(gwl_meas, ['part','clear','ctrl'], colors=pal[1:], xticks=True, limits=False)
+    plot_timeseries_xr(results, 'soil_ground_water_level', colors=pal[0:], xticks=True, sim_idx=sim_idx)
     plt.ylim(-1.0, 0.0)
 
     plt.tight_layout(rect=(0, 0, 0.8, 1))
@@ -63,10 +64,10 @@ def plot_fluxes(results, sim_idx=0):
     Data.ET = Data.ET / 1800 * 3600
     Data.GPP = -Data.GPP
 
-    variables=['canopy_NEE','canopy_GPP','canopy_Reco','canopy_transpiration','forcing_precipitation']
+    variables=['canopy_NEE','canopy_GPP','canopy_Reco','canopy_transpiration','forcing_precipitation','canopy_moss_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data.canopy_transpiration = Data.canopy_transpiration * 1e3 * 3600
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_moss_evaporation) * 1e3 * 3600
     Data.canopy_GPP = Data.canopy_GPP * 44.01 * 1e-3
     Data.canopy_Reco = Data.canopy_Reco * 44.01 * 1e-3
 
@@ -92,7 +93,7 @@ def plot_fluxes(results, sim_idx=0):
     f = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
 
     plt.subplot(349)
-    plot_xy(Data.ET[f], Data.canopy_transpiration[f], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
+    plot_xy(Data.ET[f], Data.ET_mod[f], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
 
     ax = plt.subplot(3,4,(2,3))
     plot_timeseries_df(Data, ['GPP','canopy_GPP'], colors=['k', pal[0]], xticks=False,
@@ -107,7 +108,7 @@ def plot_fluxes(results, sim_idx=0):
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(10,11), sharex=ax)
-    plot_timeseries_df(Data, ['ET','canopy_transpiration'], colors=['k', pal[2]], xticks=True,
+    plot_timeseries_df(Data, ['ET','ET_mod'], colors=['k', pal[2]], xticks=True,
                        labels=labels)
     plt.title('ET [mm h-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
@@ -126,7 +127,7 @@ def plot_fluxes(results, sim_idx=0):
 
     plt.subplot(3,4,12, sharex=ax)
     plot_diurnal(Data.ET[f], color='k', legend=False)
-    plot_diurnal(Data.canopy_transpiration[f], color=pal[2], legend=False)
+    plot_diurnal(Data.ET_mod[f], color=pal[2], legend=False)
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
 

@@ -5,16 +5,17 @@ GENERAL PARAMETERS
 
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2011-01-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
                       ['forcing_h2o','H2O concentration [mol mol-1]', ('date', 'simulation')],
                       ['forcing_co2','CO2 concentration [ppm]', ('date', 'simulation')],
                       ['forcing_wind_speed','wind speed [m s-1]', ('date', 'simulation')],
-#                      ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
+                      ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
+                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
+                      ['canopy_T','air temperature []degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
                       ['canopy_PAR_sunlit','incident PAR sunlit leaves [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
                       ['canopy_PAR_shaded','incident PAR shaded leaves [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
@@ -29,6 +30,7 @@ gpara = {
                       ['canopy_pt_transpiration', 'transpiration [m s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_An', 'gross primary production [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_Rd', 'dark respiration [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
+                      ['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m s-1]', ('date', 'simulation')],
                       ['canopy_potential_infiltration', 'potential infiltration to soil [m s-1]', ('date', 'simulation')],
                       ['canopy_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],

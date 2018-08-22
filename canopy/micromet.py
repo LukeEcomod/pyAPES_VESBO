@@ -13,7 +13,7 @@ from tools.utilities import central_diff, forward_diff, tridiag, smooth
 #: [-], von Karman constant
 VON_KARMAN = 0.41
 
-class Aerodynamics():
+class Micromet():
     """
     Computes wind speed at ground and canopy + boundary layer conductances
     Computes wind speed at ground height assuming logarithmic profile above and
@@ -53,7 +53,6 @@ class Aerodynamics():
             self.dz = z[1] - z[0]
 
         if MLM:
-            self.ones = np.ones(len(z))  # dummy
             # initialize state variables
             _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
                     z, self.Cd, lad, hc, self.Utop + eps, self.Ubot, dPdx=self.dPdx)
@@ -118,7 +117,7 @@ class Aerodynamics():
         _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
                 z, self.Cd, lad, hc, Utop + eps, self.Ubot, dPdx=self.dPdx)
 
-    def update_state(self, ustaro, To, H2Oo, CO2o):
+    def update_state(self, ustaro):
 
         U = self.U_n * ustaro
         U[0] = U[1]
@@ -127,18 +126,16 @@ class Aerodynamics():
         Km[0] = Km[1]
         self.Km = Km
 
-        T = To * self.ones
-        H2O = H2Oo * self.ones
-        CO2 = CO2o * self.ones
-
-        return U, T, H2O, CO2
+        return U
 
     def scalar_profiles(self, gam, H2O, CO2, T, P, source, lbc):
         """
         solves H2O and CO2 profiles: we need to add here T-profile as well
         """
-        H2O_old = H2O.copy()
-        CO2_old = CO2.copy()
+        # previous guess, not values of previous time step!
+        H2O_prev = H2O.copy()
+        CO2_prev = CO2.copy()
+        T_prev = T.copy()
 
         # --- H2O ---
         H2O = closure_1_model_scalar(dz=self.dz,
@@ -149,9 +146,9 @@ class Aerodynamics():
                                      scalar='H2O',
                                      T=T[-1], P=P)
         # relative error
-        err_h2o = max(abs((H2O - H2O_old) / H2O))
+        err_h2o = max(abs((H2O - H2O_prev) / H2O))
         # new H2O
-        H2O = gam * H2O_old + (1 - gam) * H2O
+        H2O = gam * H2O_prev + (1 - gam) * H2O
 
         # --- CO2 ---
         CO2 = closure_1_model_scalar(dz=self.dz,
@@ -162,11 +159,24 @@ class Aerodynamics():
                                      scalar='CO2',
                                      T=T[-1], P=P)
         # relative error
-        err_co2 = max(abs((CO2 - CO2_old) / CO2))
+        err_co2 = max(abs((CO2 - CO2_prev) / CO2))
         # new CO2
-        CO2 = gam * CO2_old + (1 - gam) * CO2
+        CO2 = gam * CO2_prev + (1 - gam) * CO2
 
-        return H2O, CO2, err_h2o, err_co2
+        # --- T ---
+        T = closure_1_model_scalar(dz=self.dz,
+                                   Ks=self.Km * self.Sc['T'],
+                                   Source=source['T'],
+                                   ubc=T[-1],
+                                   lbc=lbc['T'],
+                                   scalar='T',
+                                   T=T[-1], P=P)
+        # absolut error
+        err_t = max(abs(T - T_prev))
+        # new CO2
+        T = gam * T_prev + (1 - gam) * T
+
+        return H2O, CO2, T, err_h2o, err_co2, err_t
 
 def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None):
     """

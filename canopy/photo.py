@@ -163,8 +163,8 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Qp, SWabs, LW, U, P=101300.0, mod
     H2O = np.array(H2O, ndmin=1)
     CO2 = np.array(CO2, ndmin=1)
     Rabs = np.array(SWabs + LW, ndmin=1)  # isothermal net radiation (Wm-2)
-    Tl = T  
-    
+    Tl = T
+
 #    print T, Qp, H2O, CO2, T, Rabs, U, P
     gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
 
@@ -204,7 +204,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Qp, SWabs, LW, U, P=101300.0, mod
             Tl = T + (Rabs - LMOLAR*geff_v*Dleaf) / (CP*(gb_h + gr) + LMOLAR*s*geff_v)
             gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
             err = np.nanmax(abs(Tl - Told))
-            # print('err', err)
+            #print('err', err, 'Tl', np.mean(Tl))
         else:
             err = 0.0
             H = None

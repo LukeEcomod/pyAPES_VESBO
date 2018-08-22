@@ -17,9 +17,11 @@ def get_cpara(dbhfile):
                                 # In case ON:
                                 'MLinterception': True, #True,  # multilayer scheme for interception
                                 'Eflow': True,  # ensemble flow
-                                'WMA': True,  # well-mixed assumption
+                                'WMA': False, #True,  # well-mixed assumption
                                 'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
-                                'Ebal': False},  # computes leaf temperature by solving energy balance (not supported yet)
+                                'Ebal': True, #False,  # computes leaf temperature by solving energy balance (not supported yet)
+                                'SwModel': 'ZhaoQualls',
+                                'LwModel': 'Flerchinger'},
            'seasonal_LAI': True,  # account for seasonal LAI dynamics
            'pheno_cylcle': True  # account for phenological cycle
            }
@@ -48,7 +50,11 @@ def get_cpara(dbhfile):
             # additional parameters necessary for multilayer model
             'leaf_angle': 1.0,  # leaf-angle distribution [-]
             'Par_alb': 0.12,  # shoot Par-albedo [-]
-            'soil_Par_alb': 0.05  # soil (moss) Par-albedo [-]
+            'soil_Par_alb': 0.05,  # soil (moss) Par-albedo [-]
+            'Nir_alb': 0.55,  # shoot NIR-albedo [-]
+            'soil_Nir_alb': 0.5,  # soil (moss) NIR-albedo [-]
+            'soil_emi': 0.98,
+            'leaf_emi': 0.98
             }
     
     # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
@@ -141,7 +147,7 @@ def get_cpara(dbhfile):
             }
     
     # normed leaf area density profiles
-    quantiles = [0.75, 1.0]  # quantiles used in creating species stand lad profiles
+    quantiles = [1.0]  # quantiles used in creating species stand lad profiles
     hs = 0.5  # height of understory shrubs [m]
     pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'], lai_p, lai_s, lai_d = lad_profiles(
             grid, dbhfile, quantiles, hs, plot=False)

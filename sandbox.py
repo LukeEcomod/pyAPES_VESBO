@@ -2,24 +2,30 @@
 """
 Created on Thu Mar 15 12:40:57 2018
 @author: L1656
-    """
+"""
 import pandas as pd
 import xarray as xr
 import numpy as np
 from matplotlib import pyplot as plt
-from tools.plotting import plot_results, plot_fluxes, plot_columns, plot_pt_results, plot_lad_profiles
+from tools.plotting import plot_results, plot_fluxes, plot_columns, plot_pt_results, plot_lad_profiles, plot_timeseries_df
 from tools.iotools import read_results, read_forcing, save_df_to_csv
 from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
+pal = sns.color_palette("hls", 5)
+
 
 #results = read_results(['results/201808010932_CCFPeat_results.nc', outputfile])
 #results = read_results('results/201808091042_CCFPeat_results.nc')
-#results = read_results('results/201808081619_CCFPeat_results.nc')
+#results = read_results('results/201808101506_CCFPeat_results.nc')
 results = read_results(outputfile)
-#plot_results(results)
-#plt.figure()
-#plot_timeseries_df(gwl_meas, ['part','clear','ctrl'],colors=[pal[2],pal[3],pal[0]],xticks=True, limits=False)
-results['soil_ground_water_level'].plot()
+plot_results(results)
+gwl_meas = read_forcing("lettosuo_WTD_pred.csv", cols='all')
+plt.figure()
+plot_timeseries_df(gwl_meas, ['part','clear','ctrl'],colors=[pal[2],pal[3],pal[0]],xticks=True, limits=False)
+results['soil_pond_storage'].plot()
+
+results['canopy_Tleaf'].mean(dim='date').plot()
+results['canopy_T'].mean(dim='date').plot()
 
 plt.figure()
 for i in range(2):
@@ -43,7 +49,7 @@ for i in range(2):
 
 plot_results(results)
 plot_fluxes(results)
-plot_pt_results(results,'canopy_pt_transpiration')
+plot_pt_results(results,'canopy_pt_Tleaf')
 plot_pt_results(results,'canopy_pt_An')
 plot_lad_profiles("letto2014.txt", quantiles=[0.75, 1.0])
 

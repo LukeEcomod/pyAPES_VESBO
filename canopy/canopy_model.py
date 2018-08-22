@@ -20,6 +20,7 @@ import numpy as np
 eps = np.finfo(float).eps
 from matplotlib import pyplot as plt
 from photo import leaf_interface
+from radiation import PAR_TO_UMOL, SIGMA, NT
 
 #: [kg mol-1, molar mass of H2O
 MH2O = 18.02e-3
@@ -50,11 +51,11 @@ class CanopyModel():
                     z, dz, Nlayers (floats)
                 objects:
                     Ptypes (.Pheno_Model, .LAI_model), Forestfloor (.Evap_Model, ...)
-                    Radi_Model, Aero_Model, Interc_model, Canopy_Tr, Snow_Model
+                    Radi_Model, Micromet_Model, Interc_model, Canopy_Tr, Snow_Model
         """
 
         from radiation import Radiation
-        from micromet import Aerodynamics
+        from micromet import Micromet
         from interception import Interception
         from evapotranspiration import Canopy_Transpiration
         from snow import Snowpack
@@ -73,10 +74,12 @@ class CanopyModel():
             self.Switch_Eflow = cpara['ctr']['multilayer_model']['Eflow']
             self.Switch_WMA = cpara['ctr']['multilayer_model']['WMA']
             self.Switch_Interc = cpara['ctr']['multilayer_model']['MLinterception']
+            self.Switch_Ebal = cpara['ctr']['multilayer_model']['Ebal']
         else:
             self.z = np.array([-1])
             self.dz = np.array([-1])
             self.Switch_Interc = False
+        self.ones = np.ones(len(self.z))  # dummy
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
@@ -120,10 +123,10 @@ class CanopyModel():
             self.Canopy_Tr = Canopy_Transpiration(cpara['phys_para'])
 
         # --- initialize radiation model ---
-        self.Radi_Model = Radiation(cpara['radi'], self.Switch_MLM)
+        self.Radi_Model = Radiation(cpara['radi'], cpara['ctr']['multilayer_model'])
 
         # --- initialize canopy flow model ---
-        self.Aero_Model = Aerodynamics(self.z, self.lad, self.hc, cpara['aero'], self.Switch_MLM)
+        self.Micromet_Model = Micromet(self.z, self.lad, self.hc, cpara['aero'], self.Switch_MLM)
 
         # --- initialize interception model---
         self.Interc_Model = Interception(cpara['interc_snow'], self.LAI, 
@@ -162,7 +165,7 @@ class CanopyModel():
 
         """ normalized flow statistics in canopy with new lad """
         if self.Switch_MLM and self.Switch_Eflow and self.Ptypes[0].Switch_lai:
-            self.Aero_Model.normalized_flow_stats(self.z, self.lad, self.hc)
+            self.Micromet_Model.normalized_flow_stats(self.z, self.lad, self.hc)
 
     def _run_timestep(self, dt, forcing, Rew, beta, Tsoil, Wsoil):
         """
@@ -185,10 +188,15 @@ class CanopyModel():
             state (dict):
         """
 
-        T = np.array([forcing['Tair']])
-        U = np.array([forcing['U']])
-        H2O = np.array([forcing['H2O']])
-        CO2 = np.array([forcing['CO2']])
+        # initialize canopy micrometeo and Tleaf
+        T = self.ones * ([forcing['Tair']])
+        H2O = self.ones * ([forcing['H2O']])
+        CO2 = self.ones * ([forcing['CO2']])
+        Tleaf = T.copy()
+
+        Tsurf = 0.9*forcing['Tair']  # SHOULD COME FROM SOIL??
+
+        U = forcing['U']
         Prec = forcing['Prec']
         P = forcing['P']
 
@@ -204,10 +212,10 @@ class CanopyModel():
                 LAI=self.LAI,
                 Rnet=Rn)
 
-        """ --- aerodynamics --- """
+        """ --- Flow stats and initialize vertical scalar porfiles --- """
         if self.Switch_MLM is False:
             # aerodynamic resistance and wind speed at ground and canopy
-            ra, U = self.Aero_Model._run(
+            ra, U = self.Micromet_Model._run(
                     LAI=self.LAI,
                     hc=self.hc,
                     Uo=U)
@@ -215,36 +223,48 @@ class CanopyModel():
             # multilayer canopy flow statistics
             if self.Switch_Eflow is False:
                 # recompute normalized flow statistics in canopy with current meteo
-                self.Aero_Model.normalized_flow_stats(
+                self.Micromet_Model.normalized_flow_stats(
                         z=self.z,
                         lad=self.lad,
                         hc=self.hc,
                         Utop=forcing['U']/(forcing['Ustar'] + eps))
-            # update U and initialize canopy flow statistics
-            U, T, H2O, CO2 = self.Aero_Model.update_state(
-                    ustaro=forcing['Ustar'], 
-                    To=forcing['Tair'], 
-                    H2Oo=forcing['H2O'], 
-                    CO2o=forcing['CO2'])
+            # update U
+            U = self.Micromet_Model.update_state(ustaro=forcing['Ustar'])
             # aerodynamic resistance
-            ra, _ = self.Aero_Model._run(   ## tähän joku Uta ja ladia hyödyntävä tapa?
+            ra, _ = self.Micromet_Model._run(   ## tähän joku Uta ja ladia hyödyntävä tapa?
                     LAI=self.LAI,
                     hc=self.hc,
                     Uo=U[-1])
 
-        """ --- compute Par profiles with canopy --- """
+        """ --- compute SW profiles within canopy --- """
         if self.Switch_MLM:
-            Q_sl1, Q_sh1, f_sl, Par_gr = self.Radi_Model.PAR_profiles(
+            # --- Par ---
+            Q_sl1, Q_sh1, q_sl1, q_sh1, q_soil1, f_sl, Par_gr = self.Radi_Model.SW_profiles(
                     LAIz=self.lad * self.dz,
                     zen=forcing['Zen'],
-                    dirPar=forcing['dirPar'],
-                    diffPar=forcing['diffPar'])
+                    dirSW=forcing['dirPar'],
+                    diffSW=forcing['diffPar'],
+                    radtype='Par')
+            if self.Switch_Ebal:
+                # --- Nir ---
+                Q_sl2, Q_sh2, q_sl2, q_sh2, q_soil2, _, Nir_gr = self.Radi_Model.SW_profiles(
+                    LAIz=self.lad * self.dz,
+                    zen=forcing['Zen'],
+                    dirSW=forcing['dirNir'],
+                    diffSW=forcing['diffNir'],
+                    radtype='Nir')
+                # absorbed radiation by sunlit and shaded leafs [W m-2(leaf)]
+                SWabs_sl = q_sl1 + q_sl2
+                SWabs_sh = q_sh1 + q_sh2
+            else: # values need to be given but are not used
+                SWabs_sl = 0.0
+                SWabs_sh = 0.0
 
         # multi-layer computations
         max_err = 0.01  # maximum relative error
         max_iter = 10  # maximum iterations
         gam = 0.5  # weight for iterations
-        err_h2o, err_co2 = 999., 999.
+        err_t, err_h2o, err_co2 = 999., 999., 999.
 
         if self.Switch_MLM:
             Switch_WMA = self.Switch_WMA
@@ -253,7 +273,7 @@ class CanopyModel():
 
         iter_no = 1
 
-        while (err_h2o > max_err or err_co2 > max_err) and iter_no < max_iter:
+        while (err_t > max_err or err_h2o > max_err or err_co2 > max_err) and iter_no < max_iter:  ## should Tleaf also converge?
 
             if self.Switch_Interc is False and iter_no == 1:
                 """ --- big leaf interception and interception evaporation --- """
@@ -269,7 +289,19 @@ class CanopyModel():
                         U=U[-1])
 
             if self.Switch_MLM:
-                # --- h2o and co2 sink/source terms
+                if self.Switch_Ebal:
+                    """ --- compute LW profiles and net isothermal LW at leaf --- """
+                    LWuo = self.Radi_Model.soil_emi*SIGMA*(Tsurf + NT)**4  # soil lw emission
+                    LWl, LWu, LWd = self.Radi_Model.LW_profiles(
+                            LAIz=self.lad*self.dz,
+                            Tleaf=Tleaf,
+                            LWdn0=forcing['LWin'],
+                            LWup0=LWuo)
+                else: # values need to be given but are not used
+                    LWl = np.zeros(self.Nlayers)
+
+                # --- T, h2o and co2 sink/source terms
+                tsource = np.zeros(self.Nlayers)
                 qsource = np.zeros(self.Nlayers)
                 csource = np.zeros(self.Nlayers)
                 # dark respiration
@@ -277,7 +309,7 @@ class CanopyModel():
                 # PlantType results, create empty list to append
                 pt_stats = []
 
-                if self.Switch_Interc:
+                if self.Switch_Interc:  #  GET Twetleaf and source of latent heat!!! sublimation?!
                     """ --- multilayer interception and interception evaporation --- """
                     # here assume Tleaf = T
                     df, Trfall_rain, Trfall_snow, Interc, Evap, Ew, MBE_interc = self.Interc_Model._multi_layer(
@@ -294,14 +326,15 @@ class CanopyModel():
                     qsource += Ew / self.dz  # mol m-3 s-1
 
                 """ --- leaf gas-exchange at each layer and for each PlantType --- """
-                # here assume Tleaf = T
-                for pt in self.Ptypes:
+                for pt in self.Ptypes:  # GET canopy dray leaf temperature in each layer!!!
                     # --- sunlit and shaded leaves
-                    pt_stats_i, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
-                            f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1,
-                            SWabs_sl=0.0, SWabs_sh=0.0, LWl=np.zeros(self.Nlayers)) # only used if Ebal=True
+                    pt_stats_i, dtsource, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
+                            f_sl, H2O, CO2, T, U, P, Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
+                            SWabs_sl=SWabs_sl, SWabs_sh=SWabs_sh, LWl=LWl, # only used if Ebal=True
+                            Ebal=self.Switch_Ebal) # only used if Ebal=True
                     # --- update ---
-                    # h2o and co2 sink/source terms
+                    # t, h2o and co2 sink/source terms
+                    tsource += dtsource  # W m-3
                     qsource += dqsource  # mol m-3 s-1
                     csource += dcsource  #umol m-3 s-1
                     # dark respiration umol m-2 s-1
@@ -337,7 +370,7 @@ class CanopyModel():
                     dt=dt,
                     Rn=Rnet_gr,  ## EI KÄYTÄ??
                     Prec=PotInf*1e3,  # mm!!
-                    U=U[0],  # MIKSI oli [1]??
+                    U=U[0],
                     T=T[0],
                     H2O=H2O[0],
                     P=P,
@@ -347,26 +380,27 @@ class CanopyModel():
             if self.Switch_MLM:
                 An_gr, R_gr = self.ForestFloor._run_CO2(
                         dt=dt,
-                        Par=Par_gr,
-                        T=T[1],
+                        Par=Par_gr*PAR_TO_UMOL,
+                        T=T[1],  ## 1 or 0 ??
                         Ts=Tsoil,
                         Ws=Wsoil,
                         SWE=self.Snow_Model.swe)
                 Fc_gr = An_gr + R_gr
+                H_gr = 0.0  # THIS SHOULD CHANGE!!!!!
 
-            """  --- solve scalar profiles (H2O, CO2) """
+            """  --- solve scalar profiles (H2O, CO2, T) """
             # we need to add here T-profile as well
             if Switch_WMA is False:
-                H2O, CO2, err_h2o, err_co2 = self.Aero_Model.scalar_profiles(
+                H2O, CO2, T, err_h2o, err_co2, err_t = self.Micromet_Model.scalar_profiles(
                         gam, H2O, CO2, T, P,
-                        source={'H2O': qsource, 'CO2': csource},
-                        lbc={'H2O': E_gr, 'CO2': Fc_gr})
+                        source={'H2O': qsource, 'CO2': csource, 'T': tsource},
+                        lbc={'H2O': E_gr, 'CO2': Fc_gr, 'T': H_gr})
                 iter_no += 1
                 if iter_no == max_iter:  # if no convergence, re-compute with WMA -assumption
                     Switch_WMA = True
                     iter_no = 1
             else:
-                err_h2o, err_co2 = 0.0, 0.0
+                err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
 
         """ --- update state variables --- """
         self.Snow_Model._update()  # snow water equivalent SWE, SWEi, SWEl
@@ -418,7 +452,8 @@ class CanopyModel():
                            'GPPgr': -An_gr,
                            'pt_transpiration': np.array([pt_st['E'] * MH2O * 1e-3 for pt_st in pt_stats]),
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
-                           'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats])})
+                           'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats]),
+                           'Tleaf': pt_stats[0]['Tleaf']})
             state.update({'wind_speed': U,
                           'PAR_sunlit': Q_sl1,
                           'PAR_shaded': Q_sh1,
@@ -426,7 +461,8 @@ class CanopyModel():
                           'sunlit_fraction': f_sl})
             if self.Switch_WMA is False:
                 state.update({'h2o': H2O,
-                              'co2': CO2})
+                              'co2': CO2,
+                              'T': T})
             if self.Switch_Interc:
                 state.update({'interception_storage': sum(self.Interc_Model.W)})
             else:
@@ -499,7 +535,6 @@ class PlantType():
             # leaf properties
             self.leafp = p['leafp']  # leaf properties (dict)
             self.StomaModel = MLM_ctr['StomaModel']
-            self.Switch_Ebal = MLM_ctr['Ebal']
             self.gsref = 0.0
         else:
             self.gsref = p['gsref']
@@ -544,7 +579,7 @@ class PlantType():
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl):
+    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, Ebal):
         """
         Compute leaf gas-exchange for PlantType
         """
@@ -552,22 +587,23 @@ class PlantType():
         # --- sunlit leaves
         sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Q_sl1,
                             SWabs_sl, LWl, U, P=P, model=self.StomaModel,
-                            Ebal=self.Switch_Ebal, dict_output=True)
+                            Ebal=Ebal, dict_output=True)
 
         # --- shaded leaves
         sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Q_sh1, 
                             SWabs_sh, LWl, U, P=P, model=self.StomaModel,
-                            Ebal=self.Switch_Ebal, dict_output=True)
+                            Ebal=Ebal, dict_output=True)
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
         pt_stats = self._integrate(sl, sh, f_sl)
 
         # --- sink/source terms
+        dtsource = (f_sl*sl['H'] + (1 - f_sl)*sh['H'])*self.lad  # W m-3
         dqsource = (f_sl*sl['E'] + (1.0 - f_sl)*sh['E'])*self.lad  # mol m-3 s-1
         dcsource = - (f_sl*sl['An'] + (1.0 - f_sl)*sh['An'])*self.lad  #umol m-3 s-1
         dRstand = np.sum((f_sl*sl['Rd'] + (1.0 - f_sl)*sh['Rd'])*self.lad*self.dz)  # add dark respiration umol m-2 s-1
 
-        return pt_stats, dqsource, dcsource, dRstand
+        return pt_stats, dtsource, dqsource, dcsource, dRstand
 
     def _integrate(self, sl, sh, f_sl):
         """
@@ -596,6 +632,7 @@ class PlantType():
         
         y.update({k: np.nansum(sl[k]*g1 + sh[k]*g2) for k in keys})
         # print y
+        y.update({'Tleaf': f_sl * sl['Tl'] + (1.0 - f_sl) * sh['Tl']})
         return y
 
 class ForestFloor():

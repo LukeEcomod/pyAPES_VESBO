@@ -6,6 +6,7 @@ Created on Thu Jan 11 10:05:05 2018
 """
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 eps = np.finfo(float).eps  # machine epsilon
 
@@ -20,7 +21,7 @@ def fit_pF(head, watcont, fig=False):
         c = 0
     head = np.array(head)
     head = head * 10  # kPa -> cm
-    vg_ini=(0.88,	 0.09, 0.03, 1.3)
+    vg_ini=(0.88, 0.09, 0.03, 1.3)
     van_g = lambda h, *p:   p[1] + (p[0] - p[1]) / (1. + (p[2] * h) **p[3]) **(1. - 1. / p[3])
     vgen_all = []
 
@@ -54,6 +55,60 @@ def fit_pF(head, watcont, fig=False):
         plt.legend()
 
     return vgen_all
+
+def peat_hydrol_properties(x, unit='g/cm3', var='bd', ptype='A', fig=False):
+    """
+    Peat water retention and saturated hydraulic conductivity as a function of bulk density
+    Päivänen 1973. Hydraulic conductivity and water retention in peat soils. Acta forestalia fennica 129.
+    see bulk density: page 48, fig 19; degree of humification: page 51 fig 21
+    Hydraulic conductivity (cm/s) as a function of bulk density(g/cm3), page 18, as a function of degree of humification see page 51 
+    input:
+        - x peat inputvariable in: db, bulk density or dgree of humification (von Post)  as array \n
+        - bulk density unit 'g/cm3' or 'kg/m3' \n
+        - var 'db' if input variable is as bulk density, 'H' if as degree of humification (von Post) \n
+        - ptype peat type: 'A': all, 'S': sphagnum, 'C': Carex, 'L': wood, list with length of x 
+    output: (ThetaS and ThetaR in m3 m-3)
+        van Genuchten water retention parameters as array [ThetaS, ThetaR, alpha, n] \n
+        hydraulic conductivity (m/s)
+    Arin koodi
+    """
+    #paras is dict variable, parameter estimates are stored in tuples, the model is water content = a0 + a1x + a2x2, where x is
+    para={}  #'bd':bulk density in g/ cm3; 'H': von Post degree of humification
+    para['bd'] ={'pF0':(97.95, -79.72, 0.0), 'pF1.5':(20.83, 759.69, -2484.3),
+            'pF2': (3.81, 705.13, -2036.2), 'pF3':(9.37, 241.69, -364.6),
+            'pF4':(-0.06, 249.8, -519.9), 'pF4.2':(0.0, 174.48, -348.9)}
+    para['H'] ={'pF0':(95.17, -1.26, 0.0), 'pF1.5':(46.20, 8.32, -0.54),
+            'pF2': (27.03, 8.14, -0.43), 'pF3':(17.59, 3.22, -0.07),
+            'pF4':(8.81, 3.03, -0.10), 'pF4.2':(5.8, 2.27, -0.08)}
+    
+    intp_pF1={}  # interpolation functions for pF1        
+    intp_pF1['bd'] = interp1d([0.04,0.08,0.1,0.2],[63.,84.,86.,80.],fill_value='extrapolate')
+    intp_pF1['H'] = interp1d([1.,4.,6.,10.],[75.,84.,86.,80.],fill_value='extrapolate')
+    
+    #Saturatated hydraulic conductivity parameters
+    Kpara ={'bd':{'A':(-2.271, -9.80), 'S':(-2.321, -13.22), 'C':(-1.921, -10.702), 'L':(-1.921, -10.702)}, 
+            'H':{'A':(-2.261, -0.205), 'S':(-2.471, -0.253), 'C':(-1.850, -0.278), 'L':(-2.399, -0.124)}}
+
+    x = np.array(x)
+    prs = para[var]
+    pF1=intp_pF1[var]
+    if unit=='kg/m3'and var=='db': x=x/1000.
+    if  np.shape(x)[0] >1 and len(ptype)==1:
+        ptype=np.repeat(ptype, np.shape(x)[0])
+
+    wcont = lambda x, (a0, a1, a2): a0 + a1*x + a2*x**2.
+    potentials =np.array([0.001, 1.,3.2, 10.,100.,1000.,1500.])
+    wc = (np.array([wcont(x,prs['pF0']), pF1(x), wcont(x,prs['pF1.5']), wcont(x,prs['pF2']),
+               wcont(x,prs['pF3']), wcont(x,prs['pF4']),wcont(x,prs['pF4.2'])]))
+    wc = np.transpose(wc)
+    pF_para = fit_pF(potentials, wc, fig=fig)
+
+    Ksat = np.zeros((np.size(x)))
+    K = lambda x, (a0, a1): 10.**(a0 + a1*x) / 100.   # to m/s
+    for i, a, pt in zip(range(len(x)), x, ptype):
+        Ksat[i] = K(a, Kpara[var][pt])  # hydraulic conductivity (cm/s -> m/s)
+
+    return pF_para, Ksat
 
 """ Functions for computing lad profiles """
 

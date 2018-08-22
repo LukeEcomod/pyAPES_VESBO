@@ -14,12 +14,16 @@ DEG_TO_RAD = np.pi / 180.0
 RAD_TO_DEG = 180.0 / np.pi
 # conversion from Wm-2 to micromol m-2 s-1
 PAR_TO_UMOL = 4.56
+# 0 degC in K
+NT = 273.15
+# Stefan-Boltzman constant W m-2 K-4
+SIGMA = 5.6697e-8
 
 class Radiation():
     """
     
     """
-    def __init__(self, p, MLM):
+    def __init__(self, p, MLM):  # method for SWrad and LWrad could be given here!
         """
         Args:
             p - parameter dict
@@ -32,11 +36,17 @@ class Radiation():
         # parameters
         self.clump = p['clump']
         self.kd = p['kd']
-        if MLM:
+        if MLM['ON']:
             # additional parameters necessary for multilayer model
             self.leaf_angle = p['leaf_angle']  # leaf-angle distribution [-]
-            self.Par_alb = p['Par_alb']  # shoot Par-albedo [-]
-            self.soil_Par_alb = p['soil_Par_alb']  # soil (moss) Par-albedo [-]
+            self.alb = {'Par': p['Par_alb'],  # shoot Par-albedo [-]
+                        'Nir': p['Nir_alb']}  # shoot Nir-albedo [-]
+            self.soil_alb = {'Par': p['soil_Par_alb'],# soil (moss) Par-albedo [-]
+                             'Nir': p['soil_Nir_alb']}  # soil (moss) Nir-albedo [-]
+            self.soil_emi = p['soil_emi']
+            self.leaf_emi = p['leaf_emi']
+            self.SWmodel = MLM['SwModel'].upper()
+            self.LWmodel = MLM['LwModel'].upper()
 
     def layerwise_Rnet(self, LAI, Rnet):
         """
@@ -55,31 +65,61 @@ class Radiation():
 
         return Rnet_c, Rnet_gr
 
-    def PAR_profiles(self, LAIz, zen, dirPar, diffPar):
+    def SW_profiles(self, LAIz, zen, dirSW, diffSW, radtype):
         """
         Args:
             LAIz (array): layewise one-sided leaf-area index [m2m-2]
             zen (float): solar zenith angle [rad]
-            dirPar (float): direct Par [Wm-2]
-            diffPar (float): diffuse Par [Wm-2]
+            dirSW (float): direct Par [Wm-2]
+            diffSW (float): diffuse Par [Wm-2]
+            radtype (string): 'Nir' or 'Par'
         Returns:
-            Q_sl1 (array): incident SW normal to sunlit leaves [umol m-2 s-1]
-            Q_sh1 (array): incident SW normal to shaded leaves [umol m-2 s-1]
+            Q_sl (array): incident SW normal to sunlit leaves [W m-2]
+            Q_sh (array): incident SW normal to shaded leaves [W m-2]
+            q_sl (array): absorbed SW by sunlit leaves [W m-2(leaf)]
+            q_sh (array): absorbed SW by shaded leaves [W m-2(leaf)]
+            q_soil (array): absorbed SW by soil surface [W m-2(ground)]
             f_sl (array): sunlit fraction of leaves [-]: Note: to get sunlit fraction below
                 all vegetation f_sl[0] / clump
-            Par_gr (float): incident Par at ground level umolm-2s-1
+            SW_gr (float): incident SW at ground level [W m-2]
         """
-        SWb1, SWd1, SWu1, Q_sl1, Q_sh1, q_sl1, q_sh1, q_soil1, f_sl, alb1 = canopy_sw_ZhaoQualls(
-                LAIz, self.clump, self.leaf_angle, zen, dirPar, diffPar, self.Par_alb, self.soil_Par_alb)
+        if self.SWmodel == 'ZHAOQUALLS':
+            SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(
+                LAIz, self.clump, self.leaf_angle, zen, dirSW, diffSW, self.alb[radtype], self.soil_alb[radtype])
+        # OTHER MODELS??
 
-        # units
-        Q_sl1 = Q_sl1 * PAR_TO_UMOL  # umol m-2 s-1
-        Q_sh1 = Q_sh1 * PAR_TO_UMOL  # umol m-2 s-1
+        # incident SW at ground level
+        SW_gr = (SWb[0] + SWd[0])
 
-        # incident Par at ground level umolm-2s-1
-        Par_gr = (SWb1[0] + SWd1[0]) * PAR_TO_UMOL # incident Par at ground level umolm-2s-1
+        return Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, SW_gr
 
-        return Q_sl1, Q_sh1, f_sl, Par_gr
+    def LW_profiles(self, LAIz, Tleaf, LWdn0, LWup0):
+        """
+        Estimates long-wave radiation budget and net isothermal LW radiation within the canopy
+        Assumes canopy elements as black bodies (es=1.0) at local air temperature
+        T(z). Neglects scattering etc.
+        
+        INPUT: 
+           LAIz - 1-sided LAI in each layer (m2m2(ground))
+           CLUMP - clumping factor (-), [0...1]
+           T: leaf temperature (degC)
+           LWdn0 - downwelling LW above uppermost gridpoint (Wm-2(ground)). LWdn0=eatm*b*Tatm^4
+           LWup0 - upwelling LW at surface (Wm-2(ground)). LWup0=esurf*b*Tsurf^4
+        OUTPUT:
+           LWleaf - net isothermal long-wave absorbed by leaf (Wm-2 (leaf))
+           LWdn - downwelling LW (Wm-2)
+           LWup - upwelling LW (Wm-2)
+        SOURCE:
+           Modified from Flerchinger et al. 2009. Simulation of within-canopy radiation exchange, NJAS 57, 5-15.
+           Assumes Tcan(z) = T(z) and neglects scattering (canopy elements black bodies)
+        
+        Samuli Launiainen (Luke). Last edit: 12.5.2017
+        """
+        if self.LWmodel == 'FLERCHINGER':
+            LWleaf, LWdn, LWup = canopy_lw(LAIz, self.clump, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi)
+        # ADD OTHER??
+
+        return LWleaf, LWdn, LWup
 
 def solar_angles(lat, lon, jday, timezone=+2.0):
     """
@@ -688,6 +728,59 @@ def compute_clouds_rad(doy, zen, Rg, H2O):
     df = df.fillna(method='ffill')
 
     return df['f_cloud'].values, df['f_diff'].values, df['emi_sky'].values
+
+def canopy_lw(LAIz, Clump, T, LWdn0, LWup0, leaf_emi=1.0):
+    """
+    Estimates long-wave radiation budget and net isothermal LW radiation within the canopy
+    Assumes canopy elements as black bodies (es=1.0) at local air temperature
+    T(z). Neglects scattering etc.
+    
+    INPUT: 
+       LAIz - 1-sided LAI in each layer (m2m2(ground))
+       CLUMP - clumping factor (-), [0...1]
+       T: leaf temperature (degC)
+       LWdn0 - downwelling LW above uppermost gridpoint (Wm-2(ground)). LWdn0=eatm*b*Tatm^4
+       LWup0 - upwelling LW at surface (Wm-2(ground)). LWup0=esurf*b*Tsurf^4
+    OUTPUT:
+       LWleaf - net isothermal long-wave absorbed by leaf (Wm-2 (leaf))
+       LWdn - downwelling LW (Wm-2)
+       LWup - upwelling LW (Wm-2)
+    SOURCE:
+       Modified from Flerchinger et al. 2009. Simulation of within-canopy radiation exchange, NJAS 57, 5-15.
+       Assumes Tcan(z) = T(z) and neglects scattering (canopy elements black bodies)
+    
+    Samuli Launiainen (Luke). Last edit: 12.5.2017
+    """
+
+    N = len(LAIz)  # Node 0 = ground
+    LWdn = np.zeros(N)
+    LWup = np.zeros(N)
+
+    LayerLAI = Clump*LAIz  # plant-area m2m-2 in a layer addjusted for clumping
+    cantop = max(np.where(LayerLAI>0)[0])  # node at canopy top
+    
+    # layerwise attenuation coeffcient
+    Kd = 0.7815  # diffuse radiation, Flearchinger et al. 2009 NJAS
+    tau = np.exp(-Kd*LayerLAI)
+
+    # LW down
+    LWdn[cantop+1:N] = LWdn0 
+    for k in range(cantop, -1, -1):
+        LWdn[k]=tau[k]*LWdn[k+1] +(1 - tau[k])*(leaf_emi*SIGMA*(T[k] + NT)**4)
+    del k
+
+    # LW up
+    LWup[0] = LWup0
+    for k in range(1, cantop+1):
+        LWup[k] = tau[k]*LWup[k-1] + (1 - tau[k])*(leaf_emi*SIGMA*(T[k] + NT)**4)
+    del k
+    LWup[cantop+1:N] = LWup[cantop]
+
+    # absorbed isothermal net radiation by the leaf (Wm-2(leaf))
+    # Kd is mean projection of leaves 
+    LWleaf = Kd*(1 - tau)*leaf_emi*(LWdn + LWup - 2*SIGMA*(T + NT)**4)/ (LAIz + eps)
+
+    return LWleaf, LWdn, LWup
 
 def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQualls", LAIz=None):
     """
