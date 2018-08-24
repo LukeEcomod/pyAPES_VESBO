@@ -173,7 +173,7 @@ class Micromet():
                                    T=T[-1], P=P)
         # absolut error
         err_t = max(abs(T - T_prev))
-        # new CO2
+        # new T
         T = gam * T_prev + (1 - gam) * T
 
         return H2O, CO2, T, err_h2o, err_co2, err_t

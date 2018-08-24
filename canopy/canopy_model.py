@@ -193,6 +193,11 @@ class CanopyModel():
         H2O = self.ones * ([forcing['H2O']])
         CO2 = self.ones * ([forcing['CO2']])
         Tleaf = T.copy()
+        
+#        if self.Switch_WMA is False: !Initial guess from previous timestep!
+#            T[:-1] = self.Told
+#            H2O[:-1] = self.H2Oold
+#            CO2[:-1] = self.CO2old
 
         Tsurf = 0.9*forcing['Tair']  # SHOULD COME FROM SOIL??
 
@@ -309,21 +314,28 @@ class CanopyModel():
                 # PlantType results, create empty list to append
                 pt_stats = []
 
-                if self.Switch_Interc:  #  GET Twetleaf and source of latent heat!!! sublimation?!
+                if self.Switch_Interc:
                     """ --- multilayer interception and interception evaporation --- """
+                    # isothermal radiation balance at each layer,
+                    # sunlit and shaded leaves together [W m-2]
+                    Rabs = SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl  # zero if Ebal not solve
                     # here assume Tleaf = T
-                    df, Trfall_rain, Trfall_snow, Interc, Evap, Ew, MBE_interc = self.Interc_Model._multi_layer(
+                    df, Trfall_rain, Trfall_snow, Interc, Evap, Ew, Hw, Tleaf_w, MBE_interc = self.Interc_Model._multi_layer(
                             dt=dt,
                             lt=0.1,  ############ to inputs!!!
+                            ef=self.Radi_Model.leaf_emi,
                             LAIz=self.lad * self.dz,
                             H2O=H2O,
                             U=U,
                             T=T,
+                            Rabs=Rabs,
                             Prec=Prec,
-                            P=P)
+                            P=P,
+                            Ebal=self.Switch_Ebal)
                     # --- update ---
-                    # h2o sink/source terms
-                    qsource += Ew / self.dz  # mol m-3 s-1
+                    # heat and h2o sink/source terms
+                    tsource += Hw / self.dz  # [W m-3]
+                    qsource += Ew / self.dz  # [mol m-3 s-1]
 
                 """ --- leaf gas-exchange at each layer and for each PlantType --- """
                 for pt in self.Ptypes:  # GET canopy dray leaf temperature in each layer!!!
@@ -331,12 +343,12 @@ class CanopyModel():
                     pt_stats_i, dtsource, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
                             f_sl, H2O, CO2, T, U, P, Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
                             SWabs_sl=SWabs_sl, SWabs_sh=SWabs_sh, LWl=LWl, # only used if Ebal=True
-                            Ebal=self.Switch_Ebal) # only used if Ebal=True
+                            df=df, Ebal=self.Switch_Ebal) # only used if Ebal=True
                     # --- update ---
-                    # t, h2o and co2 sink/source terms
+                    # heat, h2o and co2 sink/source terms
                     tsource += dtsource  # W m-3
                     qsource += dqsource  # mol m-3 s-1
-                    csource += dcsource  #umol m-3 s-1
+                    csource += dcsource  # umol m-3 s-1
                     # dark respiration umol m-2 s-1
                     Rstand +=  dRstand
                     # PlantType results
@@ -386,10 +398,9 @@ class CanopyModel():
                         Ws=Wsoil,
                         SWE=self.Snow_Model.swe)
                 Fc_gr = An_gr + R_gr
-                H_gr = 0.0  # THIS SHOULD CHANGE!!!!!
+                H_gr = 0.0  #################################### THIS SHOULD CHANGE!!!!!
 
             """  --- solve scalar profiles (H2O, CO2, T) """
-            # we need to add here T-profile as well
             if Switch_WMA is False:
                 H2O, CO2, T, err_h2o, err_co2, err_t = self.Micromet_Model.scalar_profiles(
                         gam, H2O, CO2, T, P,
@@ -401,6 +412,7 @@ class CanopyModel():
                     iter_no = 1
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
+        print('iterNo', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
 
         """ --- update state variables --- """
         self.Snow_Model._update()  # snow water equivalent SWE, SWEi, SWEl
@@ -453,7 +465,9 @@ class CanopyModel():
                            'pt_transpiration': np.array([pt_st['E'] * MH2O * 1e-3 for pt_st in pt_stats]),
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
                            'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats]),
-                           'Tleaf': pt_stats[0]['Tleaf']})
+                           'Tleaf': pt_stats[0]['Tleaf'],
+                           'Rabs': Rabs,
+                           'LWleaf': LWl})
             state.update({'wind_speed': U,
                           'PAR_sunlit': Q_sl1,
                           'PAR_shaded': Q_sh1,
@@ -464,7 +478,8 @@ class CanopyModel():
                               'co2': CO2,
                               'T': T})
             if self.Switch_Interc:
-                state.update({'interception_storage': sum(self.Interc_Model.W)})
+                state.update({'interception_storage': sum(self.Interc_Model.W),
+                              'Tleaf_wet': Tleaf_w})
             else:
                 state.update({'interception_storage': self.Interc_Model.W})
 
@@ -536,6 +551,9 @@ class PlantType():
             self.leafp = p['leafp']  # leaf properties (dict)
             self.StomaModel = MLM_ctr['StomaModel']
             self.gsref = 0.0
+            
+            self.Tl_sh = None
+            self.Tl_sl = None
         else:
             self.gsref = p['gsref']
  
@@ -579,29 +597,41 @@ class PlantType():
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, Ebal):
+    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, df, Ebal):
         """
         Compute leaf gas-exchange for PlantType
         """
+        
+        # initial guess for leaf temperature
+        if self.Tl_sh is None or Ebal is False:
+            Tl_sh = T.copy()
+            Tl_sl = T.copy()
+        else:
+            Tl_sh = self.Tl_sh.copy()
+            Tl_sl = self.Tl_sh.copy()
 
         # --- sunlit leaves
-        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Q_sl1,
+        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sl, Q_sl1,
                             SWabs_sl, LWl, U, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
 
         # --- shaded leaves
-        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Q_sh1, 
+        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sh, Q_sh1,
                             SWabs_sh, LWl, U, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
+
+        if Ebal:
+            self.Tl_sh= sh['Tl'].copy()
+            self.Tl_sl = sl['Tl'].copy()
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
         pt_stats = self._integrate(sl, sh, f_sl)
 
         # --- sink/source terms
-        dtsource = (f_sl*sl['H'] + (1 - f_sl)*sh['H'])*self.lad  # W m-3
-        dqsource = (f_sl*sl['E'] + (1.0 - f_sl)*sh['E'])*self.lad  # mol m-3 s-1
-        dcsource = - (f_sl*sl['An'] + (1.0 - f_sl)*sh['An'])*self.lad  #umol m-3 s-1
-        dRstand = np.sum((f_sl*sl['Rd'] + (1.0 - f_sl)*sh['Rd'])*self.lad*self.dz)  # add dark respiration umol m-2 s-1
+        dtsource = df * (f_sl*sl['H'] + (1 - f_sl)*sh['H'])*self.lad  # W m-3
+        dqsource = df * (f_sl*sl['E'] + (1.0 - f_sl)*sh['E'])*self.lad  # mol m-3 s-1
+        dcsource = - df *(f_sl*sl['An'] + (1.0 - f_sl)*sh['An'])*self.lad  #umol m-3 s-1
+        dRstand = np.sum(df * (f_sl*sl['Rd'] + (1.0 - f_sl)*sh['Rd'])*self.lad*self.dz)  # add dark respiration umol m-2 s-1
 
         return pt_stats, dtsource, dqsource, dcsource, dRstand
 

@@ -112,8 +112,6 @@ class Model():
 
         self.Nplant_types = len(self.canopy_model.Ptypes)
 
-
-
         self.results = _create_results(gen_para['variables'],
                                        self.Nsteps,
                                        self.Nsoil_nodes,
