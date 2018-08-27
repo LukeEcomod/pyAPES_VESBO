@@ -19,7 +19,7 @@ def get_cpara(dbhfile):
                                 'Eflow': True,  # ensemble flow
                                 'WMA': False, #True,  # well-mixed assumption
                                 'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
-                                'Ebal': True, #False,  # computes leaf temperature by solving energy balance (not supported yet)
+                                'Ebal': True,  # computes leaf temperature by solving energy balance (not supported yet)
                                 'SwModel': 'ZhaoQualls',
                                 'LwModel': 'Flerchinger'},
            'seasonal_LAI': True,  # account for seasonal LAI dynamics

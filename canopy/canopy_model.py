@@ -192,12 +192,7 @@ class CanopyModel():
         T = self.ones * ([forcing['Tair']])
         H2O = self.ones * ([forcing['H2O']])
         CO2 = self.ones * ([forcing['CO2']])
-        Tleaf = T.copy()
-        
-#        if self.Switch_WMA is False: !Initial guess from previous timestep!
-#            T[:-1] = self.Told
-#            H2O[:-1] = self.H2Oold
-#            CO2[:-1] = self.CO2old
+        Tleaf = T.copy() * self.lad / (self.lad + eps)
 
         Tsurf = 0.9*forcing['Tair']  # SHOULD COME FROM SOIL??
 
@@ -267,18 +262,24 @@ class CanopyModel():
 
         # multi-layer computations
         max_err = 0.01  # maximum relative error
-        max_iter = 10  # maximum iterations
+        max_iter = 20  # maximum iterations
         gam = 0.5  # weight for iterations
-        err_t, err_h2o, err_co2 = 999., 999., 999.
+        err_t, err_h2o, err_co2, err_Tl = 999., 999., 999., 999.
 
         if self.Switch_MLM:
             Switch_WMA = self.Switch_WMA
         else:
             Switch_WMA = True
 
-        iter_no = 1
+        iter_no = 0
 
-        while (err_t > max_err or err_h2o > max_err or err_co2 > max_err) and iter_no < max_iter:  ## should Tleaf also converge?
+        while (err_t > max_err or
+               err_h2o > max_err or
+               err_co2 > max_err or
+               err_Tl > max_err) and iter_no <= max_iter:
+
+            iter_no += 1
+            Tleaf_prev = Tleaf.copy()
 
             if self.Switch_Interc is False and iter_no == 1:
                 """ --- big leaf interception and interception evaporation --- """
@@ -319,7 +320,6 @@ class CanopyModel():
                     # isothermal radiation balance at each layer,
                     # sunlit and shaded leaves together [W m-2]
                     Rabs = SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl  # zero if Ebal not solve
-                    # here assume Tleaf = T
                     df, Trfall_rain, Trfall_snow, Interc, Evap, Ew, Hw, Tleaf_w, MBE_interc = self.Interc_Model._multi_layer(
                             dt=dt,
                             lt=0.1,  ############ to inputs!!!
@@ -336,9 +336,11 @@ class CanopyModel():
                     # heat and h2o sink/source terms
                     tsource += Hw / self.dz  # [W m-3]
                     qsource += Ew / self.dz  # [mol m-3 s-1]
+                    # canopy leaf temperature
+                    Tleaf = Tleaf_w * (1 - df) * self.lad
 
                 """ --- leaf gas-exchange at each layer and for each PlantType --- """
-                for pt in self.Ptypes:  # GET canopy dray leaf temperature in each layer!!!
+                for pt in self.Ptypes:
                     # --- sunlit and shaded leaves
                     pt_stats_i, dtsource, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
                             f_sl, H2O, CO2, T, U, P, Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
@@ -353,6 +355,12 @@ class CanopyModel():
                     Rstand +=  dRstand
                     # PlantType results
                     pt_stats.append(pt_stats_i)
+                    # canopy leaf temperature
+                    Tleaf += pt_stats_i['Tleaf'] * df * pt.lad
+                # canopy leaf temperature as weighted average
+                Tleaf = Tleaf / (self.lad + eps)
+                err_Tl = max(abs(Tleaf - Tleaf_prev))
+
             else:
                 "" "--- canopy transpiration --- """
                 Tr = self.Canopy_Tr._run(  # DRY ??
@@ -406,13 +414,15 @@ class CanopyModel():
                         gam, H2O, CO2, T, P,
                         source={'H2O': qsource, 'CO2': csource, 'T': tsource},
                         lbc={'H2O': E_gr, 'CO2': Fc_gr, 'T': H_gr})
-                iter_no += 1
-                if iter_no == max_iter:  # if no convergence, re-compute with WMA -assumption
+                if iter_no > max_iter:  # if no convergence, re-compute with WMA -assumption
                     Switch_WMA = True
-                    iter_no = 1
+                    iter_no = 0
+                    print 'Maximum number of iterations reached, WMA assumed'
+                    print('err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
-        print('iterNo', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
+
+#        print('iterNo', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t, 'err_Tl', err_Tl)
 
         """ --- update state variables --- """
         self.Snow_Model._update()  # snow water equivalent SWE, SWEi, SWEl
@@ -465,9 +475,10 @@ class CanopyModel():
                            'pt_transpiration': np.array([pt_st['E'] * MH2O * 1e-3 for pt_st in pt_stats]),
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
                            'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats]),
-                           'Tleaf': pt_stats[0]['Tleaf'],
+                           'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan),
                            'Rabs': Rabs,
-                           'LWleaf': LWl})
+                           'LWleaf': LWl,
+                           'IterWMA': iter_no})
             state.update({'wind_speed': U,
                           'PAR_sunlit': Q_sl1,
                           'PAR_shaded': Q_sh1,

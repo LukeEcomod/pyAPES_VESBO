@@ -7,15 +7,18 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 from matplotlib import pyplot as plt
-from tools.plotting import plot_results, plot_fluxes, plot_columns, plot_pt_results, plot_lad_profiles, plot_timeseries_df
+from tools.plotting import plot_timeseries_xr,plot_results, plot_fluxes, plot_columns, plot_pt_results, plot_lad_profiles, plot_timeseries_df
 from tools.iotools import read_results, read_forcing, save_df_to_csv
 from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 pal = sns.color_palette("hls", 5)
 
 
-#results = read_results(['results/201808231602_CCFPeat_results.nc', 'results/201808231613_CCFPeat_results.nc'])
-#results = read_results('results/201808091042_CCFPeat_results.nc')
+results = read_results(['results/201808271237_CCFPeat_results.nc',
+                        'results/201808271241_CCFPeat_results.nc',
+                        'results/201808271244_CCFPeat_results.nc',
+                        'results/201808271317_CCFPeat_results.nc'])
+#results = read_results('results/201808271237_CCFPeat_results.nc')
 #results = read_results('results/201808231333_CCFPeat_results.nc')
 results = read_results(outputfile)
 plot_results(results)
@@ -31,9 +34,22 @@ results['canopy_T'].mean(dim='date').plot()
 results['canopy_Tleaf_wet'].mean(dim='date').plot()
 results['canopy_lad'].mean(dim='date').plot()
 
-results['canopy_h2o'].mean(dim='date').plot()
+results['canopy_IterWMA'].plot()
+results['forcing_precipitation'].plot()
 
-plot_timeseries_xr(results, 'canopy_evaporation')
+labels=['Ebal & no WMA', 'no Ebal & no WMA', 'Ebal & WMA', 'no Ebal & WMA']
+plt.figure()
+plot_timeseries_xr(results, 'canopy_IterWMA', labels=labels)
+plt.figure()
+plt.subplot(211)
+plot_timeseries_xr(results, 'canopy_transpiration', labels=labels,unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
+plt.subplot(212)
+plot_timeseries_xr(results, 'canopy_transpiration', labels=labels, cum=True, unit_conversion={'unit':'mm', 'conversion':1e3})
+plt.figure()
+plt.subplot(211)
+plot_timeseries_xr(results, 'canopy_evaporation', labels=labels, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
+plt.subplot(212)
+plot_timeseries_xr(results, 'canopy_evaporation', labels=labels, cum=True, unit_conversion={'unit':'mm', 'conversion':1e3})
 
 plt.figure()
 for i in range(2):

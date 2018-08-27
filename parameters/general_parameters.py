@@ -42,6 +42,7 @@ gpara = {
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_Reco', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],
+                      ['canopy_IterWMA', 'number of iterations [-]', ('date', 'simulation')],
 #                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
                       ['soil_pond_storage', 'pond storage [m]', ('date', 'simulation')],
                       ['soil_ground_water_level', 'ground water level [m]', ('date', 'simulation')],
