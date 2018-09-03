@@ -246,7 +246,7 @@ def plot_timeseries_xr(results, variables, sim_idx=0, unit_conversion = {'unit':
     plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
-                       labels=None, colors=default, xticks=True, stack=False, cum=False, limits=True):
+                       labels=None, colors=default, xticks=True, stack=False, cum=False, limits=True,legend=True):
     """
     Plot timeseries from dataframe data.
     Args:
@@ -301,7 +301,8 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
     plt.ylabel(unit)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=xticks)
     plt.xlabel('')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
+    if legend:
+        plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_columns(data, col_index=None, slope=None):
     """

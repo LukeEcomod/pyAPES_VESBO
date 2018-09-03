@@ -17,11 +17,11 @@ def get_cpara(dbhfile):
                                 # In case ON:
                                 'MLinterception': True, #True,  # multilayer scheme for interception
                                 'Eflow': True,  # ensemble flow
-                                'WMA': False, #True,  # well-mixed assumption
+                                'WMA': False, # well-mixed assumption
                                 'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
                                 'Ebal': True,  # computes leaf temperature by solving energy balance (not supported yet)
                                 'SwModel': 'ZhaoQualls',
-                                'LwModel': 'Flerchinger'},
+                                'LwModel': 'ZhaoQualls'},#'Flerchinger'},  #
            'seasonal_LAI': True,  # account for seasonal LAI dynamics
            'pheno_cylcle': True  # account for phenological cycle
            }
@@ -159,7 +159,8 @@ def get_cpara(dbhfile):
         decid['LAImax'] = lai_d
     
     # --- forest floor ---
-    mossp = {'Wmax': 20.0,  # 
+    mossp0 = {'ground_coverage': 1.0,  # fraction of moss ground coverage [-]
+             'Wmax': 20.0,  # 
              'Wmin': 1.5,  # 
              'zr': 0.01,  # roughness height [m]
              'Mdry': 0.060,  # 
@@ -176,7 +177,7 @@ def get_cpara(dbhfile):
             'poros': 0.947,  # porosity [m3m-3]    ----> vesimallista?
             'limitpara': [3.83, 4.43, 1.25, 0.854]  #Skopp respiration function param [a ,b, d, g]
             }
-    ffloor = {'mossp': mossp, 'soilp': soilp}
+    ffloor = {'mossp': [mossp0], 'soilp': soilp}
     
     if ctr['multilayer_model']['ON'] is False:
         """parameters for simple (not multilayer) model"""

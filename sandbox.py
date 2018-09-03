@@ -14,21 +14,21 @@ import seaborn as sns
 pal = sns.color_palette("hls", 5)
 
 
-results = read_results(['results/201808271237_CCFPeat_results.nc',
-                        'results/201808271241_CCFPeat_results.nc',
-                        'results/201808271244_CCFPeat_results.nc',
-                        'results/201808271317_CCFPeat_results.nc'])
+#results = read_results(['results/201808271237_CCFPeat_results.nc',
+#                        'results/201808271241_CCFPeat_results.nc',
+#                        'results/201808271244_CCFPeat_results.nc',
+#                        'results/201808271317_CCFPeat_results.nc'])
 #results = read_results('results/201808271237_CCFPeat_results.nc')
-#results = read_results('results/201808231333_CCFPeat_results.nc')
+#results = read_results('results/201808291555_CCFPeat_results.nc')
 results = read_results(outputfile)
 plot_results(results)
-gwl_meas = read_forcing("lettosuo_WTD_pred.csv", cols='all')
-plt.figure()
-plot_timeseries_df(gwl_meas, ['part','clear','ctrl'],colors=[pal[2],pal[3],pal[0]],xticks=True, limits=False)
+
 results['soil_pond_storage'].plot()
 
+plt.figure(1)
 results['canopy_Rabs'].mean(dim='date').plot()
 results['canopy_LWleaf'].mean(dim='date').plot()
+plt.figure(2)
 results['canopy_Tleaf'].mean(dim='date').plot()
 results['canopy_T'].mean(dim='date').plot()
 results['canopy_Tleaf_wet'].mean(dim='date').plot()
@@ -36,6 +36,13 @@ results['canopy_lad'].mean(dim='date').plot()
 
 results['canopy_IterWMA'].plot()
 results['forcing_precipitation'].plot()
+
+gwl_meas = read_forcing("lettosuo_WTD_pred.csv", cols='all')
+plt.figure()
+plot_timeseries_df(gwl_meas[gwl_meas.index >= "12.1.2014"], ['part','clear','ctrl'],colors=[pal[2],pal[3],pal[0]],xticks=True, 
+                   limits=False, labels=['Partial', 'Clear-cut','Control'])
+plot_timeseries_df(gwl_meas[gwl_meas.index < "12.1.2014"], ['part'],colors=[pal[0]],xticks=True, 
+                   limits=False, legend=False)
 
 labels=['Ebal & no WMA', 'no Ebal & no WMA', 'Ebal & WMA', 'no Ebal & WMA']
 plt.figure()

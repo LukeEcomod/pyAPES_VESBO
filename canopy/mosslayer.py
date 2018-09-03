@@ -16,6 +16,7 @@ class MossLayer():
         """
         Moss layer interception, evaporation and CO2 exchange model
         """
+        self.f_cover = para['ground_coverage']  # fraction of moss ground coverage [-]
         self.LAI = para['LAI']  # leaf area index
         self.Amax = para['Amax']  # max photo rate [umolm-2s-1]
         self.b = self.Amax / (2.0 * para['qeff'])  # half-saturation par

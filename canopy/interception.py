@@ -54,7 +54,7 @@ class Interception():
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAI) # interception storage [m]
         if MLinterception: # compute with multilayer scheme
             self.W = self.W * LAIz
-            self.Tl_wet = None
+#            self.Tl_wet = None
 
         self._update()
 
@@ -143,7 +143,7 @@ class Interception():
 
         return Trfall_rain, Trfall_snow, Interc, Evap, MBE
 
-    def _multi_layer(self, dt, lt, ef, LAIz, H2O, U, T, Rabs, Prec, P, Ebal):
+    def _multi_layer(self, dt, lt, ef, LAIz, H2O, U, T, Rabs, Prec, P, Ebal, Tl_ave):
         """
         updates canopy liquid water storage by partitioning precipitation (Prec) to
         interception and throughfall (rain and snow separately) at each layer
@@ -188,15 +188,17 @@ class Interception():
         N = len(LAIz)
 
         # initial guess for wet leaf temperature
-        if self.Tl_wet is None or Ebal is False:
-            Tl_wet = T.copy()
-        else:
-            Tl_wet = self.Tl_wet.copy()
+#        if self.Tl_wet is None or Ebal is False:
+        Tl_wet = T.copy()
+#        else:
+#            Tl_wet = self.Tl_wet.copy()
 
         # radiative conductance mol m-2 s-1, Campbell & Norman, 1998
-        gr = 4 * ef * SIGMA * (T + NT)**3 / CP
+        gr = 2 * 4 * ef * SIGMA * (Tl_ave + NT)**3 / CP
+#        gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
+#        Tl_ave = 0.0 
         # latent heat of vaporization at temperature T [J/mol]
-        L = latent_heat(T) * MOLAR_MASS_H2O
+        LMOLAR = latent_heat(T) * MOLAR_MASS_H2O
 
         # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
         F = 0.5 # for randomdly oriented leaves
@@ -224,20 +226,21 @@ class Interception():
             # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
             es, s, _ = e_sat(Tl_wet)
             Dleaf = np.maximum(0.0, es / P - H2O)  # [mol/mol]
-            s = s / P  # [mol/mol]
+            s = s / P  # [mol/mol/degC]
 
             if Ebal:
                 # solve leaf temperature [degC]
-                Tl_wet = T + (Rabs - L*gb_v*Dleaf)/(CP * (gb_h + gr) + L * s * gb_v)
+                Tl_wet = (Rabs + CP*gr*Tl_ave + CP*gb_h*T - LMOLAR*gb_v*Dleaf 
+                  + LMOLAR*s*gb_v*Told) / (CP*(gr + gb_h) + LMOLAR*s*gb_v)
                 err = np.nanmax(abs(Tl_wet - Told))
-                Tl_wet = 0.5 * Tl_wet + 0.5 * Told
+#                Tl_wet = 0.5 * Tl_wet + 0.5 * Told
 #                print ('iterNo', iterNo, 'err', err, 'Tl_wet', np.mean(Tl_wet))
             else:
                 err = 0.0
 
         """ --- energy and water fluxes for wet leaf --- """ ##### or sublimation/deposition ????????? GITHUB SPATHY!!
         # rate as latent heat flux [W m-2] per unit wet/dry leaf area
-        LEw = L * gb_v * Dleaf
+        LEw = LMOLAR * gb_v * Dleaf
         # sensible heat flux [W m-2(wet leaf)]
         Hw = CP * gb_h * (Tl_wet - T)
         # non-isothermal radiative flux (Wm-2)???
@@ -335,7 +338,7 @@ class Interception():
 
         # update state variables
         self.W = W
-        self.Tl_wet = Tl_wet
+#        self.Tl_wet = Tl_wet
 
 #        if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
 #            print " W " + str(sum(W)) + " Prec " + str(Prec * dt) +" Evap " + str(sum(Evap)) + " Tr " + str((Trfall_rain + Trfall_snow))

@@ -331,13 +331,14 @@ class CanopyModel():
                             Rabs=Rabs,
                             Prec=Prec,
                             P=P,
-                            Ebal=self.Switch_Ebal)
+                            Ebal=self.Switch_Ebal,
+                            Tl_ave=Tleaf_prev)
                     # --- update ---
                     # heat and h2o sink/source terms
                     tsource += Hw / self.dz  # [W m-3]
                     qsource += Ew / self.dz  # [mol m-3 s-1]
                     # canopy leaf temperature
-                    Tleaf = Tleaf_w * (1 - df) * self.lad
+                    Tleafff = Tleaf_w * (1 - df) * self.lad
 
                 """ --- leaf gas-exchange at each layer and for each PlantType --- """
                 for pt in self.Ptypes:
@@ -345,7 +346,7 @@ class CanopyModel():
                     pt_stats_i, dtsource, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
                             f_sl, H2O, CO2, T, U, P, Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
                             SWabs_sl=SWabs_sl, SWabs_sh=SWabs_sh, LWl=LWl, # only used if Ebal=True
-                            df=df, Ebal=self.Switch_Ebal) # only used if Ebal=True
+                            df=df, Ebal=self.Switch_Ebal, Tl_ave=Tleaf_prev) # only used if Ebal=True
                     # --- update ---
                     # heat, h2o and co2 sink/source terms
                     tsource += dtsource  # W m-3
@@ -356,9 +357,9 @@ class CanopyModel():
                     # PlantType results
                     pt_stats.append(pt_stats_i)
                     # canopy leaf temperature
-                    Tleaf += pt_stats_i['Tleaf'] * df * pt.lad
+                    Tleafff += pt_stats_i['Tleaf'] * df * pt.lad
                 # canopy leaf temperature as weighted average
-                Tleaf = Tleaf / (self.lad + eps)
+                Tleafff = Tleafff / (self.lad + eps)
                 err_Tl = max(abs(Tleaf - Tleaf_prev))
 
             else:
@@ -414,9 +415,13 @@ class CanopyModel():
                         gam, H2O, CO2, T, P,
                         source={'H2O': qsource, 'CO2': csource, 'T': tsource},
                         lbc={'H2O': E_gr, 'CO2': Fc_gr, 'T': H_gr})
-                if iter_no > max_iter:  # if no convergence, re-compute with WMA -assumption
+                if iter_no > max_iter or any(np.isnan(T)) or any(np.isnan(H2O)) or any(np.isnan(CO2)):  # if no convergence, re-compute with WMA -assumption
                     Switch_WMA = True
                     iter_no = 0
+                    T = self.ones * ([forcing['Tair']])
+                    H2O = self.ones * ([forcing['H2O']])
+                    CO2 = self.ones * ([forcing['CO2']])
+                    Tleaf = T.copy() * self.lad / (self.lad + eps)
                     print 'Maximum number of iterations reached, WMA assumed'
                     print('err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
             else:
@@ -475,7 +480,7 @@ class CanopyModel():
                            'pt_transpiration': np.array([pt_st['E'] * MH2O * 1e-3 for pt_st in pt_stats]),
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
                            'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats]),
-                           'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan),
+                           'Tleaf': np.where(self.lad > 0.0, Tleafff, np.nan),
                            'Rabs': Rabs,
                            'LWleaf': LWl,
                            'IterWMA': iter_no})
@@ -562,9 +567,7 @@ class PlantType():
             self.leafp = p['leafp']  # leaf properties (dict)
             self.StomaModel = MLM_ctr['StomaModel']
             self.gsref = 0.0
-            
-            self.Tl_sh = None
-            self.Tl_sl = None
+
         else:
             self.gsref = p['gsref']
  
@@ -608,32 +611,32 @@ class PlantType():
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, df, Ebal):
+    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, df, Ebal, Tl_ave):
         """
         Compute leaf gas-exchange for PlantType
         """
         
         # initial guess for leaf temperature
-        if self.Tl_sh is None or Ebal is False:
-            Tl_sh = T.copy()
-            Tl_sl = T.copy()
-        else:
-            Tl_sh = self.Tl_sh.copy()
-            Tl_sl = self.Tl_sh.copy()
+#        if self.Tl_sh is None or Ebal is False:
+        Tl_sh = T.copy()
+        Tl_sl = T.copy()
+#        else:
+#            Tl_sh = self.Tl_sh.copy()
+#            Tl_sl = self.Tl_sh.copy()
 
         # --- sunlit leaves
         sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sl, Q_sl1,
-                            SWabs_sl, LWl, U, P=P, model=self.StomaModel,
+                            SWabs_sl, LWl, U, Tl_ave, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
 
         # --- shaded leaves
         sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sh, Q_sh1,
-                            SWabs_sh, LWl, U, P=P, model=self.StomaModel,
+                            SWabs_sh, LWl, U, Tl_ave, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
-
-        if Ebal:
-            self.Tl_sh= sh['Tl'].copy()
-            self.Tl_sl = sl['Tl'].copy()
+#
+#        if Ebal:
+#            self.Tl_sh= sh['Tl'].copy()
+#            self.Tl_sl = sl['Tl'].copy()
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
         pt_stats = self._integrate(sl, sh, f_sl)
@@ -678,13 +681,22 @@ class PlantType():
 
 class ForestFloor():
     """
-    Forest floor
+    Forest floor consisting of moss and/or bares soil
     """
     def __init__(self, p, MLM):
 
         from mosslayer import MossLayer
 
-        self.moss = MossLayer(p['mossp'])
+        # Bryotypes
+        brtypes = []
+        f_bryo = 0.0
+        for br_para in p['mossp']:
+            brtypes.append(MossLayer(br_para))
+            f_bryo += br_para['ground_coverage']
+        self.Bryophytes = brtypes
+        # soil coverage: baresoil, bryotypes (and litter?)
+        self.f_baresoil = 1.0 - f_bryo
+        self.f_bryo = f_bryo
 
         if MLM:
             self.R10 = p['soilp']['R10']
@@ -707,16 +719,31 @@ class ForestFloor():
             Evap - evaporation rate [mol m-2 s-1]
             Trfall - trfall rate below moss layer [mm s-1]
         """
+        # initialize fluxes at forest floor
+        Trfall = 0.0  # throughfall rate (mm s-1)
+        Ef = 0.0  # evaporation from bryo (+ litter??) (molm-2(ground)s-1) 
+        Esoil = 0.0  # soil evaporation (molm-2(ground)s-1)
+        Hf = 0.0  # forest floor sensible heat flux (Wm-2)
+        Gsoil = 0.0  # ground heat fluxes (Wm-2) 
+        LWf = 0.0  # emitted LW (Wm-2)
+        Tf = 0.0  # forest floor temperature (degC)
+        Tbryo = 0.0  # bryophyte temperature (degC)
+        # water (and energy) closure
+        MBE = 0.0
 
         if SWE > 0:  # snow on the ground
-            Evap = 0.0
-            Trfall = Prec
-            MBE = 0.0
+            Trfall += Prec
         else:
-            Evap, Trfall, MBE = self.moss.waterbalance(dt, Rn, Prec, U, T, H2O, P=P)
-            Evap = Evap / MH2O  # mol m-2 s-1
-
-        return Evap, Trfall, MBE
+            if self.f_bryo > 0.0:
+                for bryo in self.Bryophytes:
+                    ef, trfall, mbe = bryo.waterbalance(dt, Rn, Prec, U, T, H2O, P=P)
+                    Ef += bryo.f_cover * ef / MH2O  # mol m-2 s-1
+                    Trfall += bryo.f_cover * trfall
+                    MBE += bryo.f_cover * mbe
+            if self.f_baresoil > 0.0:
+                Trfall += Prec * self.f_baresoil
+                # soil surface energy balance
+        return Ef, Trfall, MBE
 
     def _run_CO2(self, dt, Par, T, Ts, Ws, SWE):
         """
@@ -732,11 +759,12 @@ class ForestFloor():
             An - moss net CO2 exchange [umolm-2s-1]
             Rsoil - soil respiration rate [umolm-2s-1]
         """
-        # moss CO2 exchange when not covered by snow
-        if SWE > 0:
-            An = 0.0
-        else:
-            An = self.moss.co2_exchange(Par, T)
+        An = 0.0
+        # moss CO2 exchange when not covered by snow (or yes???????????????)
+        if SWE == 0.0:
+            if self.f_bryo > 0.0:
+                for bryo in self.Bryophytes:
+                    An += bryo.f_cover * bryo.co2_exchange(Par, T)
 
         # soil respiration
         Rsoil, fm = self.soil_respiration(Ts, Ws)

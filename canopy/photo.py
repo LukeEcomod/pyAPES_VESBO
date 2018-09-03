@@ -72,7 +72,7 @@ def test_leafscale(method=1):
         #plt.plot(Qp, an, 'r.-', Qp, an1, 'g.-')
         
 
-def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, P=101300.0, model='CO_OPTI', Ebal=True,
+def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, P=101300.0, model='CO_OPTI', Ebal=True,
                    dict_output=True):
     """
     Entry-point to coupled leaf gas-exchange and energy balance functions.
@@ -153,8 +153,9 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, P=101300.0,
     ef = leafp['emi']
 
     # radiative conductance (mol m-2 s-1), Campbell & Norman, 1998
-    gr = 4.0*ef*SIGMA*(T+NT)**3 / CP
-    gr = 2.0*gr  # LW is emited from both sides
+    gr = 2.0 * 4.0 * ef * SIGMA * (Tl_ave + NT)**3 / CP
+#    gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
+#    Tl_ave = 0.0 
 
     #
     T = np.array(T)
@@ -166,17 +167,17 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, P=101300.0,
     Tl = np.array(Tl)
 
 #    print T, Qp, H2O, CO2, T, Rabs, U, P
-    gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
 
     err = 999.0
     iterNo = 0
     while err > 0.01 and iterNo < 20:
         iterNo += 1
-        #print iterNo
+        # boundary layer conductance
+        gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
+        # vapor pressure
         esat, s = saturation_vapor_pressure(Tl)
-        s = s / P  # mol/mol
-        Dleaf = esat / P - H2O  # mol/mol
-        Dleaf[Dleaf < 0] = eps
+        s = s / P  # slope of esat, mol/mol / degC
+        Dleaf = np.maximum(eps, esat / P - H2O)  # mol/mol
 
         #print Dleaf
         Told = Tl.copy()
@@ -201,8 +202,9 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, P=101300.0,
             # solve leaf temperature using Taylor's expansion for LW term.
             # For abs(dT)<15 K error is <10Wm-2. Campbell & Norman 1998, p.225
             geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
-            Tl = T + (Rabs - LMOLAR*geff_v*Dleaf) / (CP*(gb_h + gr) + LMOLAR*s*geff_v)
-            gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
+#            Tl = T + (Rabs - LMOLAR*geff_v*Dleaf) / (CP*(gb_h + gr) + LMOLAR*s*geff_v)
+            Tl = (Rabs + CP*gr*Tl_ave + CP*gb_h*T - LMOLAR*geff_v*Dleaf 
+                  + LMOLAR*s*geff_v*Told) / (CP*(gr + gb_h) + LMOLAR*s*geff_v)
             err = np.nanmax(abs(Tl - Told))
 #            print('iterNo', iterNo, 'err', err, 'Tl', np.mean(Tl))
         else:
@@ -213,7 +215,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, P=101300.0,
 
     # outputs
     H = CP*gb_h*(Tl - T)  # Wm-2
-    Fr = CP*gr*(Tl - T)  # flux due to radiative conductance (Wm-2)
+    Fr = CP*gr*(Tl - Tl_ave)  # flux due to radiative conductance (Wm-2) ##############????
     E = fe
     
 #    if any(np.isnan(An)):

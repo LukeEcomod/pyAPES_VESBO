@@ -17,11 +17,7 @@ gpara = {
                       ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
                       ['canopy_T','air temperature []degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
-                      ['canopy_PAR_sunlit','incident PAR sunlit leaves [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
-                      ['canopy_PAR_shaded','incident PAR shaded leaves [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
                       ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
-                      ['canopy_Rabs','isothermal radiation balance [W m-2]', ('date', 'simulation', 'canopy')],
-                      ['canopy_LWleaf','net isothermal long-wave radiation [W m-2]', ('date', 'simulation', 'canopy')],
                       ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
                       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
                       ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
@@ -33,7 +29,8 @@ gpara = {
                       ['canopy_pt_An', 'gross primary production [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_Rd', 'dark respiration [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-                      ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+                      ['canopy_LWleaf', 'leaf longwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
+                      ['canopy_Rabs', 'leaf net isothermal radiation [W m-2]]', ('date', 'simulation', 'canopy')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m s-1]', ('date', 'simulation')],
                       ['canopy_potential_infiltration', 'potential infiltration to soil [m s-1]', ('date', 'simulation')],
                       ['canopy_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
@@ -59,10 +56,7 @@ gpara = {
                       ['soil_MBE', 'soil mass balance error [m]', ('date', 'simulation')],
                       ['soil_heat_be', 'soil heat balance error [W m2]', ('date', 'simulation')],
                       ['canopy_z', 'canopy model grid node elevations [m]', ('canopy')],
-                      ['soil_z', 'soil model grid node elevations [m]', ('soil')],
-                      ['canopy_Rnet','[W m-2]', ('date', 'simulation')],
-                      ['canopy_Rnet_ground', '[W m-2]', ('date', 'simulation')],
-                      ['canopy_U_ground', '[m s-1]', ('date', 'simulation')]
+                      ['soil_z', 'soil model grid node elevations [m]', ('soil')]
                       ]
         }
 
