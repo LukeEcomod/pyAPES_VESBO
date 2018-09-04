@@ -263,7 +263,7 @@ class CanopyModel():
         # multi-layer computations
         max_err = 0.01  # maximum relative error
         max_iter = 20  # maximum iterations
-        gam = 0.5  # weight for iterations
+        gam = 0.5  # weight for old value in iterations
         err_t, err_h2o, err_co2, err_Tl = 999., 999., 999., 999.
 
         if self.Switch_MLM:
@@ -298,13 +298,14 @@ class CanopyModel():
                 if self.Switch_Ebal:
                     """ --- compute LW profiles and net isothermal LW at leaf --- """
                     LWuo = self.Radi_Model.soil_emi*SIGMA*(Tsurf + NT)**4  # soil lw emission
-                    LWl, LWu, LWd = self.Radi_Model.LW_profiles(
+                    LWl, LWu, LWd, gr = self.Radi_Model.LW_profiles(
                             LAIz=self.lad*self.dz,
                             Tleaf=Tleaf,
                             LWdn0=forcing['LWin'],
                             LWup0=LWuo)
                 else: # values need to be given but are not used
                     LWl = np.zeros(self.Nlayers)
+                    gr = 0.0
 
                 # --- T, h2o and co2 sink/source terms
                 tsource = np.zeros(self.Nlayers)
@@ -332,7 +333,8 @@ class CanopyModel():
                             Prec=Prec,
                             P=P,
                             Ebal=self.Switch_Ebal,
-                            Tl_ave=Tleaf_prev)
+                            Tl_ave=Tleaf_prev,
+                            gr=gr)
                     # --- update ---
                     # heat and h2o sink/source terms
                     tsource += Hw / self.dz  # [W m-3]
@@ -346,7 +348,7 @@ class CanopyModel():
                     pt_stats_i, dtsource, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
                             f_sl, H2O, CO2, T, U, P, Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
                             SWabs_sl=SWabs_sl, SWabs_sh=SWabs_sh, LWl=LWl, # only used if Ebal=True
-                            df=df, Ebal=self.Switch_Ebal, Tl_ave=Tleaf_prev) # only used if Ebal=True
+                            df=df, Ebal=self.Switch_Ebal, Tl_ave=Tleaf_prev, gr=gr) # only used if Ebal=True
                     # --- update ---
                     # heat, h2o and co2 sink/source terms
                     tsource += dtsource  # W m-3
@@ -360,6 +362,7 @@ class CanopyModel():
                     Tleafff += pt_stats_i['Tleaf'] * df * pt.lad
                 # canopy leaf temperature as weighted average
                 Tleafff = Tleafff / (self.lad + eps)
+                Tleaf = Tleafff.copy()
                 err_Tl = max(abs(Tleaf - Tleaf_prev))
 
             else:
@@ -415,15 +418,18 @@ class CanopyModel():
                         gam, H2O, CO2, T, P,
                         source={'H2O': qsource, 'CO2': csource, 'T': tsource},
                         lbc={'H2O': E_gr, 'CO2': Fc_gr, 'T': H_gr})
-                if iter_no > max_iter or any(np.isnan(T)) or any(np.isnan(H2O)) or any(np.isnan(CO2)):  # if no convergence, re-compute with WMA -assumption
+#                print('iterNo', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
+                if iter_no > max_iter or any(np.isnan(T)) or err_t > 50.0 or any(np.isnan(H2O)) or any(np.isnan(CO2)):  # if no convergence, re-compute with WMA -assumption
                     Switch_WMA = True
+                    print 'Maximum number of iterations reached, WMA assumed'
+                    print('iter_no', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
                     iter_no = 0
+                    err_t, err_h2o, err_co2, err_Tl = 999., 999., 999., 999.
                     T = self.ones * ([forcing['Tair']])
                     H2O = self.ones * ([forcing['H2O']])
                     CO2 = self.ones * ([forcing['CO2']])
                     Tleaf = T.copy() * self.lad / (self.lad + eps)
-                    print 'Maximum number of iterations reached, WMA assumed'
-                    print('err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
+                    self.Interc_Model.Tl_wet = None
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
 
@@ -432,6 +438,7 @@ class CanopyModel():
         """ --- update state variables --- """
         self.Snow_Model._update()  # snow water equivalent SWE, SWEi, SWEl
         self.Interc_Model._update()  # interception storage
+        self.ForestFloor._update()  # bryo storage
 
         if self.Switch_MLM:
             # ecosystem fluxes
@@ -446,6 +453,14 @@ class CanopyModel():
             GPP = - NEE + Reco
             # stand transpiration [m/dt]
             Tr = sum([pt_st['E'] * MH2O * 1e-3 * dt for pt_st in pt_stats])
+            
+            # energy closure of canopy
+            energy_closure =  sum((SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl) * self.lad * self.dz) - (  # absorbed radiation
+                              sum(tsource*self.dz) + sum(qsource*self.dz) * L_MOLAR)  #  # sensible and latent heat flux
+#            print('energy_closure', energy_closure,
+#                  'Rabs', sum((SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl) * self.lad * self.dz),
+#                  'H', sum(tsource*self.dz),
+#                  'LE', sum(qsource*self.dz) * L_MOLAR)
 
         # evaporation from moss layer [m/dt]
         Efloor = E_gr * MH2O * dt * 1e-3   # on jo HIAHTUNUT? Ei haihduteta maasta..?
@@ -481,9 +496,13 @@ class CanopyModel():
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
                            'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats]),
                            'Tleaf': np.where(self.lad > 0.0, Tleafff, np.nan),
+                           'Tleaf_wet':np.where(self.lad > 0.0, Tleaf_w, np.nan),
+                           'Tleaf_sl': np.where(self.lad > 0.0, sum([pt_st['Tleaf_sl'] for pt_st in pt_stats])/(self.lad+eps), np.nan),
+                           'Tleaf_sh':np.where(self.lad > 0.0, sum([pt_st['Tleaf_sh'] for pt_st in pt_stats])/(self.lad+eps), np.nan),
                            'Rabs': Rabs,
                            'LWleaf': LWl,
-                           'IterWMA': iter_no})
+                           'IterWMA': iter_no,
+                           'energy_closure': energy_closure})
             state.update({'wind_speed': U,
                           'PAR_sunlit': Q_sl1,
                           'PAR_shaded': Q_sh1,
@@ -611,7 +630,7 @@ class PlantType():
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, df, Ebal, Tl_ave):
+    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, df, Ebal, Tl_ave, gr):
         """
         Compute leaf gas-exchange for PlantType
         """
@@ -626,12 +645,12 @@ class PlantType():
 
         # --- sunlit leaves
         sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sl, Q_sl1,
-                            SWabs_sl, LWl, U, Tl_ave, P=P, model=self.StomaModel,
+                            SWabs_sl, LWl, U, Tl_ave, gr, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
 
         # --- shaded leaves
         sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sh, Q_sh1,
-                            SWabs_sh, LWl, U, Tl_ave, P=P, model=self.StomaModel,
+                            SWabs_sh, LWl, U, Tl_ave, gr, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
 #
 #        if Ebal:
@@ -677,6 +696,8 @@ class PlantType():
         y.update({k: np.nansum(sl[k]*g1 + sh[k]*g2) for k in keys})
         # print y
         y.update({'Tleaf': f_sl * sl['Tl'] + (1.0 - f_sl) * sh['Tl']})
+        y.update({'Tleaf_sl': sl['Tl'] * self.lad})
+        y.update({'Tleaf_sh': sh['Tl'] * self.lad})
         return y
 
 class ForestFloor():
@@ -744,6 +765,12 @@ class ForestFloor():
                 Trfall += Prec * self.f_baresoil
                 # soil surface energy balance
         return Ef, Trfall, MBE
+
+    def _update(self):
+        # updates W of each bryo to old W
+        if self.f_bryo > 0.0:
+            for bryo in self.Bryophytes:
+                bryo._update()
 
     def _run_CO2(self, dt, Par, T, Ts, Ws, SWE):
         """

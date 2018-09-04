@@ -72,7 +72,7 @@ def test_leafscale(method=1):
         #plt.plot(Qp, an, 'r.-', Qp, an1, 'g.-')
         
 
-def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, P=101300.0, model='CO_OPTI', Ebal=True,
+def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr, P=101300.0, model='CO_OPTI', Ebal=True,
                    dict_output=True):
     """
     Entry-point to coupled leaf gas-exchange and energy balance functions.
@@ -153,7 +153,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, P=1
     ef = leafp['emi']
 
     # radiative conductance (mol m-2 s-1), Campbell & Norman, 1998
-    gr = 2.0 * 4.0 * ef * SIGMA * (Tl_ave + NT)**3 / CP
+    gr = gr / CP
 #    gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
 #    Tl_ave = 0.0 
 
@@ -167,10 +167,10 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, P=1
     Tl = np.array(Tl)
 
 #    print T, Qp, H2O, CO2, T, Rabs, U, P
-
+    itermax = 20
     err = 999.0
     iterNo = 0
-    while err > 0.01 and iterNo < 20:
+    while err > 0.01 and iterNo < itermax:
         iterNo += 1
         # boundary layer conductance
         gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
@@ -206,7 +206,9 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, P=1
             Tl = (Rabs + CP*gr*Tl_ave + CP*gb_h*T - LMOLAR*geff_v*Dleaf 
                   + LMOLAR*s*geff_v*Told) / (CP*(gr + gb_h) + LMOLAR*s*geff_v)
             err = np.nanmax(abs(Tl - Told))
-#            print('iterNo', iterNo, 'err', err, 'Tl', np.mean(Tl))
+            if iterNo == itermax:
+                print 'Maximum number of iterations reached in dry leaf module'
+                print('err', err, 'Tl', np.mean(Tl))
         else:
             err = 0.0
             H = None

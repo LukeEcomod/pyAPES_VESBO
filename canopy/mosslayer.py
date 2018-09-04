@@ -29,6 +29,7 @@ class MossLayer():
         self.Wmin = para['Mdry']*para['Wmin']
 
         self.W = para['Wmax']*para['Mdry']      # current water content
+        self.Wold = self.W
 
     def waterbalance(self, dt, Rn, Prec, U, T, H2O, P=101300.0):
         """
@@ -50,7 +51,7 @@ class MossLayer():
         D = np.maximum(0.0, es / P - H2O)  # mol / mol
 
         # initial water content
-        Wo = self.W
+        Wo = self.Wold
 
         # interception and throughfall rate, new storage
         Ir = np.maximum(0.0, np.minimum(Prec, self.Wmax - Wo))
@@ -135,3 +136,8 @@ class MossLayer():
         gb = rhoa * 10**(-3.18) * Re**1.61 * Dv / self.zr * Sc**(0.33)  # m s-1
 
         return gb + eps
+
+    def _update(self):
+#        print('Wold',self.Wold, 'W', self.W)
+        self.Wold = self.W
+

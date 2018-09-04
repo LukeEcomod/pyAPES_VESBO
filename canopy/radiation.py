@@ -117,12 +117,12 @@ class Radiation():
         Samuli Launiainen (Luke). Last edit: 12.5.2017
         """
         if self.LWmodel == 'FLERCHINGER':
-            LWleaf, LWdn, LWup = canopy_lw(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi)
+            LWleaf, LWdn, LWup, gr = canopy_lw(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi)
         if self.LWmodel == 'ZHAOQUALLS':
-            LWleaf, LWdn, LWup = canopy_lw_ZhaoQualls(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi, soil_emi=self.soil_emi)
+            LWleaf, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi, soil_emi=self.soil_emi)
         # ADD OTHER??
 
-        return LWleaf, LWdn, LWup
+        return LWleaf, LWdn, LWup, gr
 
 def solar_angles(lat, lon, jday, timezone=+2.0):
     """
@@ -875,6 +875,9 @@ def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
                         LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*SIGMA*leaf_emi*(T[0:cantop+1] + NT)**4)/(
                         LAIz[0:cantop+1] + eps)
     LWnet[0:cantop+1] = (LWdn[1:cantop+2] - LWdn[0:cantop+1] + LWup[0:cantop+1] - LWup[1:cantop+2])/(LAIz[0:cantop+1]+eps)
+
+    gr = 2 * 4 * leaf_emi * SIGMA * ( 1 - tau) * (T + NT) ** 3 / (LAIz + eps)
+
     if PlotFigs:
         Lcum = np.cumsum(np.flipud(LAIz))  # cumulative plant area index from canopy top
         Lcum = np.flipud(Lcum)
@@ -910,7 +913,7 @@ def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
         plt.xlabel("LW (Wm-2 )")
         plt.title('LWup0=%.1f, LWdn0=%.1f' % (LWup0, LWdn0))
         plt.legend()
-    return LWleaf, LWdn, LWup
+    return LWleaf, LWdn, LWup, gr
 
 def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soil_emi=0.98, PlotFigs=False):
     """
@@ -1090,6 +1093,8 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
                           LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*SIGMA*(Tleaf[0:cantop+1] + NT)**4)/(
                           LAIz[0:cantop+1] + eps)
 
+    gr = 2 * 4 * leaf_emi * SIGMA * ( 1 - taud) * (Tleaf + NT) ** 3 / (LAIz + eps)
+
     if PlotFigs:
         plt.figure(99)
         plt.subplot(221)
@@ -1126,7 +1131,7 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
         plt.xlabel("LW (Wm-2 )")
         plt.title('LWup0=%.1f, LWdn0=%.1f' % (LWup0, LWdn0))
         plt.legend()
-    return LWleaf,  LWdn, LWup
+    return LWleaf,  LWdn, LWup, gr
 
 def canopy_lw_ZhaoQualls2(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soil_emi=0.98, PlotFigs=False):
     """
@@ -1388,7 +1393,8 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     
     if method=="canopy_lw": 
         print "------TestRun of radiation.canopy_lw------------"
-        LWnet, LWdn, WLup = canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi,PlotFigs=True)
+        LWnet, LWdn, LWup, gr = canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi,PlotFigs=True)
+        print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
         
     if method=="canopy_lw2": 
         print "------TestRun of radiation.canopy_lw------------"
@@ -1396,7 +1402,8 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
 
     if method == "canopy_lw_ZhaoQualls":
         print "------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------"
-        LWnet, LWdn, WLup = canopy_lw_ZhaoQualls(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi, soil_emi=soil_emi, PlotFigs=True)   
+        LWnet, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi, soil_emi=soil_emi, PlotFigs=True)   
+        print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
 
     if method == "canopy_lw_ZhaoQualls2":
         print "------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------"

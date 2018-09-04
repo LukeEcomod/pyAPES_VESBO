@@ -54,7 +54,7 @@ class Interception():
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAI) # interception storage [m]
         if MLinterception: # compute with multilayer scheme
             self.W = self.W * LAIz
-#            self.Tl_wet = None
+            self.Tl_wet = None
 
         self._update()
 
@@ -143,7 +143,7 @@ class Interception():
 
         return Trfall_rain, Trfall_snow, Interc, Evap, MBE
 
-    def _multi_layer(self, dt, lt, ef, LAIz, H2O, U, T, Rabs, Prec, P, Ebal, Tl_ave):
+    def _multi_layer(self, dt, lt, ef, LAIz, H2O, U, T, Rabs, Prec, P, Ebal, Tl_ave, gr):
         """
         updates canopy liquid water storage by partitioning precipitation (Prec) to
         interception and throughfall (rain and snow separately) at each layer
@@ -188,13 +188,13 @@ class Interception():
         N = len(LAIz)
 
         # initial guess for wet leaf temperature
-#        if self.Tl_wet is None or Ebal is False:
-        Tl_wet = T.copy()
-#        else:
-#            Tl_wet = self.Tl_wet.copy()
+        if self.Tl_wet is None or Ebal is False:
+            Tl_wet = T.copy()
+        else:
+            Tl_wet = self.Tl_wet.copy()
 
         # radiative conductance mol m-2 s-1, Campbell & Norman, 1998
-        gr = 2 * 4 * ef * SIGMA * (Tl_ave + NT)**3 / CP
+        gr = gr / CP
 #        gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
 #        Tl_ave = 0.0 
         # latent heat of vaporization at temperature T [J/mol]
@@ -215,14 +215,16 @@ class Interception():
         Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
 
         """ --- wet Leaf temperature --- """
+        itermax = 20
         err = 999.0
         iterNo = 0
-        while err > 0.01 and iterNo < 20:
+        while err > 0.01 and iterNo < itermax:
             iterNo += 1
             Told = Tl_wet.copy()
             
             # boundary layer conductances for H2O [mol m-2 s-1]
-            gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl_wet - T, P)
+            gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
+#            gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl_wet - T, P)
             # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
             es, s, _ = e_sat(Tl_wet)
             Dleaf = np.maximum(0.0, es / P - H2O)  # [mol/mol]
@@ -233,8 +235,11 @@ class Interception():
                 Tl_wet = (Rabs + CP*gr*Tl_ave + CP*gb_h*T - LMOLAR*gb_v*Dleaf 
                   + LMOLAR*s*gb_v*Told) / (CP*(gr + gb_h) + LMOLAR*s*gb_v)
                 err = np.nanmax(abs(Tl_wet - Told))
-#                Tl_wet = 0.5 * Tl_wet + 0.5 * Told
+                Tl_wet = 0.5 * Tl_wet + 0.5 * Told
 #                print ('iterNo', iterNo, 'err', err, 'Tl_wet', np.mean(Tl_wet))
+                if iterNo == itermax:
+                    print 'Maximum number of iterations reached in wet leaf module'
+                    print('err', err, 'Tl_wet', np.mean(Tl_wet))
             else:
                 err = 0.0
 
@@ -273,6 +278,7 @@ class Interception():
         Evap = np.zeros(N)  # evaporation [m]
         Cond = np.zeros(N)  # condesation [m]
         Heat = np.zeros(N)  # sensible heat flux [W m-2(ground)]
+        wf = np.zeros(N)  # wetness ratio
         Trfall = 0.0  # throughfall below canopy [m]
 
         if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
@@ -288,32 +294,32 @@ class Interception():
                                 * (1.0 - np.exp(-(F * P[n+1] + Ep[n]) * LAIz[n] * subdt / Wmax[n]))
                         # wetness ration in layer
                         if LAIz[n] > 0 and P[n+1] + Ep[n] > 0:
-                            wf = (F * P[n+1] - dW[n] / (LAIz[n] * subdt)) / (F * P[n+1] + Ep[n])
+                            wf[n] = (F * P[n+1] - dW[n] / (LAIz[n] * subdt)) / (F * P[n+1] + Ep[n])
                         else:
-                            wf = 0.0
+                            wf[n] = 0.0
                         # interception rate in layer [m/s]
-                        Ir[n] = F * (1 - wf) * LAIz[n] * P[n+1]
+                        Ir[n] = F * (1 - wf[n]) * LAIz[n] * P[n+1]
                         # drainage rate from layer [m/s]
                         P[n] = P[n+1] - Ir[n]
                         # evaporation from layer [m]
-                        Evap[n] += wf * LAIz[n] * Ep[n] * subdt
+                        Evap[n] += wf[n] * LAIz[n] * Ep[n] * subdt
                     else:  # condensation case
                         # change in storage [m]
                         dW[n] = (Wmax[n] - W[n]) \
                                 * (1.0 - np.exp(-(F * P[n+1] - Ep[n]) * LAIz[n] * subdt / Wmax[n]))
                         # wetness ration in layer
                         if LAIz[n] > 0 and P[n+1] - Ep[n] > 0:
-                            wf = (F * P[n+1] - Ep[n] - dW[n] / (LAIz[n] * subdt)) / (F * P[n+1] - Ep[n])
+                            wf[n] = (F * P[n+1] - Ep[n] - dW[n] / (LAIz[n] * subdt)) / (F * P[n+1] - Ep[n])
                         else:
-                            wf = 0.0
+                            wf[n] = 0.0
                         # interception rate in layer [m/s]
-                        Ir[n] = F * (1 - wf) * LAIz[n] * P[n+1]
+                        Ir[n] = F * (1 - wf[n]) * LAIz[n] * P[n+1]
                         # drainage rate from layer [m/s] (incl. increase by condensation drip)
-                        P[n] = P[n+1] - Ir[n] - wf * LAIz[n] * Ep[n]
+                        P[n] = P[n+1] - Ir[n] - wf[n] * LAIz[n] * Ep[n]
                         # Condensation [m] (incl. condenstation to dry leaf and drip from wet leaf)
                         Cond[n] += LAIz[n] * Ep[n] * subdt
                     # Sensible heat flux [W m-2(ground)] * subdt
-                    Heat[n] += wf * LAIz[n] * Hw[n] * subdt
+                    Heat[n] += wf[n] * LAIz[n] * Hw[n] * subdt
                 # update storage [m]
                 W += dW
                 # interception and throughfall [m]
@@ -334,11 +340,11 @@ class Interception():
             W *= 0.0
 
         # dry canopy fraction
-        df = 1.0 - W / Wmax
+        df = 1.0 - wf  #W / Wmax
 
         # update state variables
         self.W = W
-#        self.Tl_wet = Tl_wet
+        self.Tl_wet = Tl_wet
 
 #        if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
 #            print " W " + str(sum(W)) + " Prec " + str(Prec * dt) +" Evap " + str(sum(Evap)) + " Tr " + str((Trfall_rain + Trfall_snow))
