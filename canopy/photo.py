@@ -166,7 +166,11 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     Rabs = np.array(SWabs + LW, ndmin=1)  # isothermal net radiation (Wm-2)
     Tl = np.array(Tl)
 
-#    print T, Qp, H2O, CO2, T, Rabs, U, P
+    # vapor pressure
+    esat, s = saturation_vapor_pressure(Tl)
+    s = s / P  # slope of esat, mol/mol / degC
+    Dleaf = np.maximum(eps, esat / P - H2O)  # mol/mol
+
     itermax = 20
     err = 999.0
     iterNo = 0
@@ -174,10 +178,6 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
         iterNo += 1
         # boundary layer conductance
         gb_h, gb_c, gb_v, _ = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
-        # vapor pressure
-        esat, s = saturation_vapor_pressure(Tl)
-        s = s / P  # slope of esat, mol/mol / degC
-        Dleaf = np.maximum(eps, esat / P - H2O)  # mol/mol
 
         #print Dleaf
         Told = Tl.copy()
@@ -185,46 +185,44 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
         # --- analytical co-limitation model Vico et al. 2013
         if model.upper() == 'CO_OPTI':
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_analytical(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v)
-            gsv = a*gs_opt
         if model.upper() == 'MEDLYN':
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v, P=P)
-            gsv = a*gs_opt
         if model.upper() == 'MEDLYN_FARQUHAR':
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn_farquhar(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v, P=P)
-            gsv = a*gs_opt
         if model.upper() == 'BWB':
             rh  = (1 - Dleaf*P / esat)  # rh at leaf (-)
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_bwb(photop, Qp, Tl, rh, CO2, gb_c, gb_v, P=P)
-            gsv = a*gs_opt
+
+        gsv = a*gs_opt
+        geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
 
         # solve  energy balance
         if Ebal:
-            # solve leaf temperature using Taylor's expansion for LW term.
-            # For abs(dT)<15 K error is <10Wm-2. Campbell & Norman 1998, p.225
-            geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
+            # solve leaf temperature 
 #            Tl = T + (Rabs - LMOLAR*geff_v*Dleaf) / (CP*(gb_h + gr) + LMOLAR*s*geff_v)
             Tl = (Rabs + CP*gr*Tl_ave + CP*gb_h*T - LMOLAR*geff_v*Dleaf 
                   + LMOLAR*s*geff_v*Told) / (CP*(gr + gb_h) + LMOLAR*s*geff_v)
             err = np.nanmax(abs(Tl - Told))
+            # vapor pressure
+            esat, s = saturation_vapor_pressure(Tl)
+            s = s / P  # slope of esat, mol/mol / degC
+            Dleaf = np.maximum(eps, esat / P - H2O)  # mol/mol
             if iterNo == itermax:
                 print 'Maximum number of iterations reached in dry leaf module'
                 print('err', err, 'Tl', np.mean(Tl))
         else:
             err = 0.0
-            H = None
-            Fr = None
-            E = None
 
     # outputs
     H = CP*gb_h*(Tl - T)  # Wm-2
-    Fr = CP*gr*(Tl - Tl_ave)  # flux due to radiative conductance (Wm-2) ##############????
-    E = fe
-    
+    Fr = CP*gr*(Tl - Tl_ave)  # flux due to radiative conductance (Wm-2)
+    E = geff_v * Dleaf
+
 #    if any(np.isnan(An)):
 #        print('leafinterface: ', Tl, Qp, Dleaf, CO2, gb_c, gb_v )
 
     if dict_output:  # return dict
-        x = {'An': An, 'Rd': Rd, 'E': fe, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
+        x = {'An': An, 'Rd': Rd, 'E': E, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
              'Cs': Cs, 'gs_v': gsv, 'gs_c': gs_opt, 'gb_v': gb_v}
         return x
     else:  # return 11 arrays

@@ -311,6 +311,7 @@ class CanopyModel():
                 tsource = np.zeros(self.Nlayers)
                 qsource = np.zeros(self.Nlayers)
                 csource = np.zeros(self.Nlayers)
+                frsource = np.zeros(self.Nlayers)
                 # dark respiration
                 Rstand = 0.0
                 # PlantType results, create empty list to append
@@ -321,7 +322,7 @@ class CanopyModel():
                     # isothermal radiation balance at each layer,
                     # sunlit and shaded leaves together [W m-2]
                     Rabs = SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl  # zero if Ebal not solve
-                    df, Trfall_rain, Trfall_snow, Interc, Evap, Ew, Hw, Tleaf_w, MBE_interc = self.Interc_Model._multi_layer(
+                    df, Trfall_rain, Trfall_snow, Interc, Evap, Cond, Ew, Hw, dFr, Tleaf_w, MBE_interc = self.Interc_Model._multi_layer(
                             dt=dt,
                             lt=0.1,  ############ to inputs!!!
                             ef=self.Radi_Model.leaf_emi,
@@ -339,13 +340,15 @@ class CanopyModel():
                     # heat and h2o sink/source terms
                     tsource += Hw / self.dz  # [W m-3]
                     qsource += Ew / self.dz  # [mol m-3 s-1]
+                    
+                    frsource += dFr / self.dz  # [W m-3]
                     # canopy leaf temperature
                     Tleafff = Tleaf_w * (1 - df) * self.lad
 
                 """ --- leaf gas-exchange at each layer and for each PlantType --- """
                 for pt in self.Ptypes:
                     # --- sunlit and shaded leaves
-                    pt_stats_i, dtsource, dqsource, dcsource, dRstand = pt.leaf_gasexchange(
+                    pt_stats_i, dtsource, dqsource, dcsource, dRstand, dFr = pt.leaf_gasexchange(
                             f_sl, H2O, CO2, T, U, P, Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
                             SWabs_sl=SWabs_sl, SWabs_sh=SWabs_sh, LWl=LWl, # only used if Ebal=True
                             df=df, Ebal=self.Switch_Ebal, Tl_ave=Tleaf_prev, gr=gr) # only used if Ebal=True
@@ -354,6 +357,7 @@ class CanopyModel():
                     tsource += dtsource  # W m-3
                     qsource += dqsource  # mol m-3 s-1
                     csource += dcsource  # umol m-3 s-1
+                    frsource += dFr  # [W m-3]
                     # dark respiration umol m-2 s-1
                     Rstand +=  dRstand
                     # PlantType results
@@ -454,7 +458,7 @@ class CanopyModel():
             # stand transpiration [m/dt]
             Tr = sum([pt_st['E'] * MH2O * 1e-3 * dt for pt_st in pt_stats])
             
-            # energy closure of canopy
+            # energy closure of canopy  -- THIS IS EQUAL TO frsource (the error caused by linearizing sigma*ef*T^4)
             energy_closure =  sum((SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl) * self.lad * self.dz) - (  # absorbed radiation
                               sum(tsource*self.dz) + sum(qsource*self.dz) * L_MOLAR)  #  # sensible and latent heat flux
 #            print('energy_closure', energy_closure,
@@ -475,6 +479,7 @@ class CanopyModel():
                   'throughfall': (Trfall_rain + Trfall_snow) / dt,
                   'interception': Interc / dt,
                   'evaporation': Evap / dt,
+                  'condensation': Cond / dt,
                   'transpiration': Tr / dt,
                   'moss_evaporation': Efloor / dt,
                   'Rnet': Rn,
@@ -502,7 +507,8 @@ class CanopyModel():
                            'Rabs': Rabs,
                            'LWleaf': LWl,
                            'IterWMA': iter_no,
-                           'energy_closure': energy_closure})
+                           'energy_closure': energy_closure,
+                           'Frsource': sum(frsource*self.dz)})
             state.update({'wind_speed': U,
                           'PAR_sunlit': Q_sl1,
                           'PAR_shaded': Q_sh1,
@@ -587,6 +593,8 @@ class PlantType():
             self.StomaModel = MLM_ctr['StomaModel']
             self.gsref = 0.0
 
+            self.Tl_sh = None
+
         else:
             self.gsref = p['gsref']
  
@@ -636,12 +644,12 @@ class PlantType():
         """
         
         # initial guess for leaf temperature
-#        if self.Tl_sh is None or Ebal is False:
-        Tl_sh = T.copy()
-        Tl_sl = T.copy()
-#        else:
-#            Tl_sh = self.Tl_sh.copy()
-#            Tl_sl = self.Tl_sh.copy()
+        if self.Tl_sh is None or Ebal is False:
+            Tl_sh = T.copy()
+            Tl_sl = T.copy()
+        else:
+            Tl_sh = self.Tl_sh.copy()
+            Tl_sl = self.Tl_sh.copy()
 
         # --- sunlit leaves
         sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sl, Q_sl1,
@@ -652,10 +660,10 @@ class PlantType():
         sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sh, Q_sh1,
                             SWabs_sh, LWl, U, Tl_ave, gr, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
-#
-#        if Ebal:
-#            self.Tl_sh= sh['Tl'].copy()
-#            self.Tl_sl = sl['Tl'].copy()
+
+        if Ebal:
+            self.Tl_sh= sh['Tl'].copy()
+            self.Tl_sl = sl['Tl'].copy()
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
         pt_stats = self._integrate(sl, sh, f_sl)
@@ -665,8 +673,9 @@ class PlantType():
         dqsource = df * (f_sl*sl['E'] + (1.0 - f_sl)*sh['E'])*self.lad  # mol m-3 s-1
         dcsource = - df *(f_sl*sl['An'] + (1.0 - f_sl)*sh['An'])*self.lad  #umol m-3 s-1
         dRstand = np.sum(df * (f_sl*sl['Rd'] + (1.0 - f_sl)*sh['Rd'])*self.lad*self.dz)  # add dark respiration umol m-2 s-1
+        Frw = df * (f_sl*sl['Fr'] + (1 - f_sl)*sh['Fr'])*self.lad
 
-        return pt_stats, dtsource, dqsource, dcsource, dRstand
+        return pt_stats, dtsource, dqsource, dcsource, dRstand, Frw
 
     def _integrate(self, sl, sh, f_sl):
         """
