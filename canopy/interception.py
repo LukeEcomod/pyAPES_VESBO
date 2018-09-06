@@ -7,7 +7,7 @@ Created on Thu Mar 01 13:21:29 2018
 
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from evapotranspiration import penman_monteith, e_sat, latent_heat
+from evapotranspiration import penman_monteith, e_sat
 from micromet import leaf_boundary_layer_conductance
 
 #: [kg m-3], Density of water
@@ -186,6 +186,7 @@ class Interception():
 
         # number of canopy layers
         N = len(LAIz)
+        ic = np.where(LAIz > 0)
 
         # initial guess for wet leaf temperature
         if self.Tl_wet is None or Ebal is False:
@@ -197,8 +198,8 @@ class Interception():
         gr = gr / CP
 #        gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
 #        Tl_ave = 0.0 
-        # latent heat of vaporization at temperature T [J/mol]
-        LMOLAR = 44100.0   ##latent_heat(T) * MOLAR_MASS_H2O
+        # latent heat of vaporization/sublimation at temperature T [J/mol]
+        L = latent_heat(T) * MOLAR_MASS_H2O
 
         # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
         F = 0.5 # for randomdly oriented leaves
@@ -214,9 +215,10 @@ class Interception():
         # maximum interception storage capacities layerwise [m]
         Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
 
-        # boundary layer conductances for H2O [mol m-2 s-1]
+        # boundary layer conductances for H2O and heat [mol m-2 s-1]
         gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
-#       gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl_wet - T, P)
+#        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl_wet - T, P)
+
         # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
         es, s, _ = e_sat(Tl_wet)
         Dleaf = es / P - H2O  #np.maximum(0.0, es / P - H2O)  # [mol/mol]
@@ -232,8 +234,8 @@ class Interception():
 
             if Ebal:
                 # solve leaf temperature [degC]
-                Tl_wet = (Rabs + CP*gr*Tl_ave + CP*gb_h*T - LMOLAR*gb_v*Dleaf 
-                  + LMOLAR*s*gb_v*Told) / (CP*(gr + gb_h) + LMOLAR*s*gb_v)
+                Tl_wet[ic] = (Rabs[ic] + CP*gr[ic]*Tl_ave[ic] + CP*gb_h[ic]*T[ic] - L[ic]*gb_v[ic]*Dleaf[ic] 
+                  + L[ic]*s[ic]*gb_v[ic]*Told[ic]) / (CP*(gr[ic] + gb_h[ic]) + L[ic]*s[ic]*gb_v[ic])
                 err = np.nanmax(abs(Tl_wet - Told))
 #                Tl_wet = 0.5 * Tl_wet + 0.5 * Told
 #                print ('iterNo', iterNo, 'err', err, 'Tl_wet', np.mean(Tl_wet))
@@ -247,8 +249,6 @@ class Interception():
                 err = 0.0
 
         """ --- energy and water fluxes for wet leaf --- """ ##### or sublimation/deposition ????????? GITHUB SPATHY!!
-        # rate as latent heat flux [W m-2] per unit wet/dry leaf area
-        LEw = LMOLAR * gb_v * Dleaf
         # sensible heat flux [W m-2(wet leaf)]
         Hw = CP * gb_h * (Tl_wet - T)
         # non-isothermal radiative flux [W m-2 (wet leaf)]???
@@ -342,6 +342,8 @@ class Interception():
         dqsource = (Evap + Cond) / dt / MOLAR_MASS_H2O * RHO_WATER
         # heat source [W m-2(ground)]
         dtsource = Heat / dt
+        # latent heat flux [W m-2(ground)]
+        LE = dqsource * L
 
         if sum(W) < eps:
             W *= 0.0
@@ -359,8 +361,23 @@ class Interception():
         # mass-balance error [m] ! self.W is old storage
         MBE = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - sum(Cond) - (Trfall_rain + Trfall_snow))
 
-        return df, Trfall_rain, Trfall_snow, sum(Interc), sum(Evap), sum(Cond), dqsource,  dtsource, Fr/dt, Tl_wet, MBE
+        return df, Trfall_rain, Trfall_snow, sum(Interc), sum(Evap), sum(Cond), dqsource,  dtsource, Fr/dt, LE, Tl_wet, MBE
 
     def _update(self):
 
         self.oldW = self.W.copy()
+
+def latent_heat(T):
+    """
+    Computes latent heat of vaporization or sublimation [J/kg]
+    Args:
+        T: ambient air temperature [degC]
+    Returns:
+        L: latent heat of vaporization or sublimation depending on 'type'[J/kg]
+    """
+    # latent heat of vaporizati [J/kg]
+    Lv = 1e3 * (3147.5 - 2.37 * (T + NT))
+    # latent heat sublimation [J/kg]
+    Ls = Lv + 3.3e5
+    L = np.where(T < 0, Ls, Lv)
+    return L

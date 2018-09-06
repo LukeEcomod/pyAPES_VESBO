@@ -312,6 +312,7 @@ class CanopyModel():
                 qsource = np.zeros(self.Nlayers)
                 csource = np.zeros(self.Nlayers)
                 frsource = np.zeros(self.Nlayers)
+                lsource = np.zeros(self.Nlayers)
                 # dark respiration
                 Rstand = 0.0
                 # PlantType results, create empty list to append
@@ -322,7 +323,7 @@ class CanopyModel():
                     # isothermal radiation balance at each layer,
                     # sunlit and shaded leaves together [W m-2]
                     Rabs = SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl  # zero if Ebal not solve
-                    df, Trfall_rain, Trfall_snow, Interc, Evap, Cond, Ew, Hw, dFr, Tleaf_w, MBE_interc = self.Interc_Model._multi_layer(
+                    df, Trfall_rain, Trfall_snow, Interc, Evap, Cond, Ew, Hw, dFr, LEw, Tleaf_w, MBE_interc = self.Interc_Model._multi_layer(
                             dt=dt,
                             lt=0.1,  ############ to inputs!!!
                             ef=self.Radi_Model.leaf_emi,
@@ -340,7 +341,7 @@ class CanopyModel():
                     # heat and h2o sink/source terms
                     tsource += Hw / self.dz  # [W m-3]
                     qsource += Ew / self.dz  # [mol m-3 s-1]
-                    
+                    lsource += LEw / self.dz
                     frsource += dFr / self.dz  # [W m-3]
                     # canopy leaf temperature
                     Tleafff = Tleaf_w * (1 - df) * self.lad
@@ -357,6 +358,7 @@ class CanopyModel():
                     tsource += dtsource  # W m-3
                     qsource += dqsource  # mol m-3 s-1
                     csource += dcsource  # umol m-3 s-1
+                    lsource += dqsource * L_MOLAR
                     frsource += dFr  # [W m-3]
                     # dark respiration umol m-2 s-1
                     Rstand +=  dRstand
@@ -460,7 +462,7 @@ class CanopyModel():
             
             # energy closure of canopy  -- THIS IS EQUAL TO frsource (the error caused by linearizing sigma*ef*T^4)
             energy_closure =  sum((SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl) * self.lad * self.dz) - (  # absorbed radiation
-                              sum(tsource*self.dz) + sum(qsource*self.dz) * L_MOLAR)  #  # sensible and latent heat flux
+                              sum(tsource*self.dz) + sum(lsource*self.dz))  #  # sensible and latent heat flux
 #            print('energy_closure', energy_closure,
 #                  'Rabs', sum((SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl) * self.lad * self.dz),
 #                  'H', sum(tsource*self.dz),

@@ -3,6 +3,7 @@
 Created on Thu Mar 15 12:40:57 2018
 @author: L1656
 """
+
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -13,13 +14,12 @@ from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 pal = sns.color_palette("hls", 5)
 
-
 #results = read_results(['results/201808271237_CCFPeat_results.nc',
 #                        'results/201808271241_CCFPeat_results.nc',
 #                        'results/201808271244_CCFPeat_results.nc',
 #                        'results/201808271317_CCFPeat_results.nc'])
 #results = read_results('results/201808271237_CCFPeat_results.nc')
-#results = read_results('results/201809051401_CCFPeat_results.nc')
+#results = read_results(['results/201809061556_CCFPeat_results.nc','results/201809061609_CCFPeat_results.nc'])
 results = read_results(outputfile)
 plot_results(results)
 
@@ -32,12 +32,13 @@ results['canopy_Frsource'].plot()
 plt.figure(1)
 results['canopy_Rabs'].mean(dim='date').plot()
 results['canopy_LWleaf'].mean(dim='date').plot()
-plt.figure(4)
-results['canopy_Tleaf'].mean(dim='date').plot()
-results['canopy_Tleaf_wet'].mean(dim='date').plot()
-results['canopy_Tleaf_sl'].mean(dim='date').plot()
-results['canopy_Tleaf_sh'].mean(dim='date').plot()
-results['canopy_T'].mean(dim='date').plot()
+plt.figure(5)
+i=1
+results[i]['canopy_Tleaf'].mean(dim='date').plot()
+results[i]['canopy_Tleaf_wet'].mean(dim='date').plot()
+results[i]['canopy_Tleaf_sl'].mean(dim='date').plot()
+results[i]['canopy_Tleaf_sh'].mean(dim='date').plot()
+results[i]['canopy_T'].mean(dim='date').plot()
 plt.legend(['Tleaf','Tleaf_wet','Tleaf_sl','Tleaf_sh','Tair'])
 plt.figure(4)
 idx=25
@@ -65,7 +66,12 @@ plot_timeseries_df(gwl_meas[gwl_meas.index >= "12.1.2014"], ['part','clear','ctr
 plot_timeseries_df(gwl_meas[gwl_meas.index < "12.1.2014"], ['part'],colors=[pal[0]],xticks=True, 
                    limits=False, legend=False)
 
+results = read_results(['results/201809051734_CCFPeat_results.nc',
+                        'results/201809060950_CCFPeat_results.nc',
+                        'results/201809060954_CCFPeat_results.nc',
+                        'results/201809061000_CCFPeat_results.nc'])
 labels=['Ebal & no WMA', 'no Ebal & no WMA', 'Ebal & WMA', 'no Ebal & WMA']
+labels=['Lv','Ls']
 plt.figure()
 plot_timeseries_xr(results, 'canopy_IterWMA', labels=labels)
 plt.figure()
@@ -78,6 +84,11 @@ plt.subplot(211)
 plot_timeseries_xr(results, 'canopy_evaporation', labels=labels, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
 plt.subplot(212)
 plot_timeseries_xr(results, 'canopy_evaporation', labels=labels, cum=True, unit_conversion={'unit':'mm', 'conversion':1e3})
+plt.figure()
+plt.subplot(211)
+plot_timeseries_xr(results, 'canopy_condensation', labels=labels, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
+plt.subplot(212)
+plot_timeseries_xr(results, 'canopy_condensation', labels=labels, cum=True, unit_conversion={'unit':'mm', 'conversion':1e3})
 
 plt.figure()
 for i in range(2):

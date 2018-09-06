@@ -152,6 +152,8 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     lt = leafp['lt']
     ef = leafp['emi']
 
+    # canopy nodes
+    ic = np.where(abs(LW) > 0.0)
     # radiative conductance (mol m-2 s-1), Campbell & Norman, 1998
     gr = gr / CP
 #    gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
@@ -200,8 +202,8 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
         if Ebal:
             # solve leaf temperature 
 #            Tl = T + (Rabs - LMOLAR*geff_v*Dleaf) / (CP*(gb_h + gr) + LMOLAR*s*geff_v)
-            Tl = (Rabs + CP*gr*Tl_ave + CP*gb_h*T - LMOLAR*geff_v*Dleaf 
-                  + LMOLAR*s*geff_v*Told) / (CP*(gr + gb_h) + LMOLAR*s*geff_v)
+            Tl[ic] = (Rabs[ic] + CP*gr[ic]*Tl_ave[ic] + CP*gb_h[ic]*T[ic] - LMOLAR*geff_v[ic]*Dleaf[ic] 
+                  + LMOLAR*s[ic]*geff_v[ic]*Told[ic]) / (CP*(gr[ic] + gb_h[ic]) + LMOLAR*s[ic]*geff_v[ic])
             err = np.nanmax(abs(Tl - Told))
             # vapor pressure
             esat, s = saturation_vapor_pressure(Tl)
