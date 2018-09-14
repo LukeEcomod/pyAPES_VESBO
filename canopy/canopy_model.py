@@ -427,8 +427,8 @@ class CanopyModel():
 #                print('iterNo', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
                 if iter_no > max_iter or any(np.isnan(T)) or err_t > 50.0 or any(np.isnan(H2O)) or any(np.isnan(CO2)):  # if no convergence, re-compute with WMA -assumption
                     Switch_WMA = True
-                    print 'Maximum number of iterations reached, WMA assumed'
-                    print('iter_no', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
+#                    print 'Maximum number of iterations reached, WMA assumed'
+#                    print('iter_no', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl = 999., 999., 999., 999.
                     T = self.ones * ([forcing['Tair']])
@@ -519,7 +519,8 @@ class CanopyModel():
             if self.Switch_WMA is False:
                 state.update({'h2o': H2O,
                               'co2': CO2,
-                              'T': T})
+                              'T': T,
+                              'WMA': 1.0*Switch_WMA})
             if self.Switch_Interc:
                 state.update({'interception_storage': sum(self.Interc_Model.W),
                               'Tleaf_wet': Tleaf_w})

@@ -65,7 +65,7 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
     elif cols == 'all':
         cols = [col for col in dat]
     # Forc dataframe from specified columns
-    Forc = dat[cols]
+    Forc = dat[cols].copy()
 
     # Check time step if specified
     if dt is not None:

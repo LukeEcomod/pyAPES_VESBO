@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 eps = np.finfo(float).eps  # machine epsilon
 from tools.utilities import tridiag
+from matplotlib import pyplot as plt
 
 #  conversion deg -->rad
 DEG_TO_RAD = np.pi / 180.0
@@ -331,7 +332,7 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
     Kd = kdiffuse(LAI, x)
 
     # fraction of sunlit & shad ground area in a layer (-)
-    f_sl = np.flipud(np.exp(-Kb*Lcum))
+    f_sl = np.flipud(np.exp(-Kb*(Lcum)))
 
     # beam radiation at each layer
     Ib = f_sl*IbSky
@@ -431,7 +432,7 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
     aL = aL[0:M+1]
 
     # --- NOW return values back to the original grid
-    f_slo = np.exp(-Kb*Lcumo)
+    f_slo = np.exp(-Kb*(Lcumo))
     SWbo = f_slo*IbSky  # Beam radiation
 
 
@@ -443,7 +444,7 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
     del X, xi
 
     # incident radiation on sunlit and shaded leaves Wm-2
-    Q_sh = Kd*(SWdo + SWuo)  # normal to shaded leaves is all diffuse
+    Q_sh = Clump*Kd*(SWdo + SWuo)  # normal to shaded leaves is all diffuse
     Q_sl = Kb*IbSky + Q_sh  # normal to sunlit leaves is direct and diffuse
 
     # absorbed components
@@ -480,7 +481,7 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
     q_sl = q_sh + aDiro  # sunlit leaves diffuse + direct
 
     if PlotFigs:
-        plt.figure(998)
+        plt.figure(999)
         plt.subplot(221)
         plt.title("Source: radiation.canopy_sw_ZhaoQualls")
 
@@ -497,6 +498,7 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
 
         plt.subplot(222)
         plt.plot(Q_sl, -Lcumo/Clump, 'ro-', Q_sh, -Lcumo/Clump, 'bo-')
+        plt.plot(q_sl/(1-LeafAlbedo), -Lcumo/Clump, 'k-', q_sh/(1-LeafAlbedo), -Lcumo/Clump, 'k-')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("Incident radiation (Wm-2 (leaf))")
         plt.legend(('sunlit', 'shaded'), loc='best')
@@ -510,6 +512,8 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
 
         plt.subplot(224)
         plt.plot(q_sl, -Lcumo/Clump, 'ro-', q_sh, -Lcumo/Clump, 'bo-')
+#        plt.plot((-SWdo[:-1]+SWdo[1:]-SWuo[1:]+SWuo[:-1])/(LAIz[:-1]+eps),-Lcumo[1:]/Clump,'-k')
+        plt.plot((1-np.exp(-Kd*Lo))*(SWdo + SWuo)/(LAIz+eps),-Lcumo/Clump,'-k')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("Absorbed radiation (Wm-2 (leaf))")
         plt.legend(('sunlit', 'shaded'), loc='best')

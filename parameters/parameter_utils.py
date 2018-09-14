@@ -213,7 +213,7 @@ def model_trees(z, quantiles, normed=False,
     if plot:
         prop_cycle = plt.rcParams['axes.prop_cycle']
         colors = prop_cycle.by_key()['color']
-        plt.figure(figsize=(3,4))
+        plt.figure(figsize=(2.5,3.5))
         for k in range(M):
             plt.plot(lad_p[:, k],z,color=colors[0], label='pine, %.2f m$^2$m$^{-2}$' % lai_p[k])#,lad_g,z)
             plt.plot(lad_s[:, k],z,color=colors[1], label='spruce, %.2f m$^2$m$^{-2}$' % lai_s[k])

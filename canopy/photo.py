@@ -25,34 +25,34 @@ R = 8.314427  # universal gas constant, J mol-1 K-1
 
 
 def test_leafscale(method=1):
-    Vcmax = 70.75
-    Jmax = 78.36
-    Rd = 0.023*Vcmax
-    tresp = {'Vcmax': [69.83, 200.0, 27.56],
-             'Jmax': [100.28, 147.92, 19.8],
-             'Rd': [33.0], 'include': 'y'}
+    Vcmax = 55.
+    Jmax = 104.
+    Rd = 1.3
+    tresp = {'Vcmax': [78, 200.0, 650.0],
+             'Jmax': [56, 200.0, 647.0],
+             'Rd': [33.0]}
     photop = {'Vcmax': Vcmax, 'Jmax': Jmax, 'Rd': Rd,
-              'alpha': 0.3, 'theta': 0.8, 'beta': 0.8, 'La': 1600.0, 'm': 2.3,
-              'g0': 1e-3, 'kn': 0.0, 'tresp': tresp}
+              'alpha': 0.3, 'theta': 0.7, 'beta': 0.95, 'La': 1600.0, 'm': 1.2*2.3,
+              'g0': 1e-3, 'kn': 0.6, 'tresp': tresp}
 
     leafp = {'lt': 0.02, 'emi': 0.98, 'par_alb': 0.12, 'nir_alb': 0.55}
 
     # env. conditions
     P = 101300.0
-    Qp = np.array([1.0, 100., 300., 600., 1200., 1600.])
-    #LW = np.array([0.0, -20.0, -30.0, -50.0])
-    LW = np.zeros(np.shape(Qp))
-    H2O = np.ones(6) * 1.0e3 / P
-    CO2 = np.ones(6) * 400.0
+    Qp = np.linspace(1.,1800.,50)
+    N=len(Qp)
+    LW = np.zeros(N)
+    H2O = np.ones(N) * 1.0e3 / P
+    CO2 = np.ones(N) * 400.0
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = 20.0  # np.array([20.0, 19.0, 18.0, 20.0])
+    T = 25.0  # np.array([20.0, 19.0, 18.0, 20.0])
     
     SWabs = 0.5*(1-leafp['par_alb'])*Qp / PARCF + 0.5*(1-leafp['nir_alb'])*Qp / PARCF 
-    print('SWabs', SWabs)
+#    print('SWabs', SWabs)
     if method is not 1:
-        x = leaf_interface(photop, leafp, H2O, CO2, T, Qp, SWabs, LW, U, P=101300.0, model=method, Ebal=False, dict_output=True)  
-        print x
-        plt.figure()
+        x = leaf_interface(photop, leafp, H2O, CO2, T, T, Qp, SWabs, LW, U, T, 0.0, P=101300.0, model=method, Ebal=False, dict_output=True)  
+#        print x
+        plt.figure(2)
         plt.subplot(221); plt.plot(Qp, x['An'], 'o')
         plt.subplot(222); plt.plot(Qp, x['E'], 'o')
         plt.subplot(223); plt.plot(Qp, x['gs_v'], 'o')
@@ -167,6 +167,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     CO2 = np.array(CO2, ndmin=1)
     Rabs = np.array(SWabs + LW, ndmin=1)  # isothermal net radiation (Wm-2)
     Tl = np.array(Tl)
+    gr=np.array(gr)
 
     # vapor pressure
     esat, s = saturation_vapor_pressure(Tl)

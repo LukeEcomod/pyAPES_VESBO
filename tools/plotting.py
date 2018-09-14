@@ -77,23 +77,23 @@ def plot_fluxes(results, sim_idx=0):
     dryc = np.ones(len(dates))
     f = np.where(ix > 0)[0]  # wet canopy indices
     dryc[f] = 0.0
-
+    months = Data.index.month
+    fmonth = 4
+    lmonth = 9
+    ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
+    ixGPP = np.where((months >= fmonth) & (months <= lmonth))[0]
+    ixReco = np.where((months >= fmonth) & (months <= lmonth))[0]
     labels=['Measured', 'Modelled']
 
     plt.figure(figsize=(10,6))
     plt.subplot(341)
-    plot_xy(Data.GPP, Data.canopy_GPP, color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
+    plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(345)
-    plot_xy(Data.Reco, Data.canopy_Reco, color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
-
-    months = Data.index.month
-    fmonth = 4
-    lmonth = 9
-    f = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
+    plot_xy(Data.Reco[ixReco], Data.canopy_Reco[ixReco], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(349)
-    plot_xy(Data.ET[f], Data.ET_mod[f], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
+    plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
 
     ax = plt.subplot(3,4,(2,3))
     plot_timeseries_df(Data, ['GPP','canopy_GPP'], colors=['k', pal[0]], xticks=False,
@@ -114,20 +114,20 @@ def plot_fluxes(results, sim_idx=0):
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     ax =plt.subplot(344)
-    plot_diurnal(Data.GPP, color='k', legend=False)
-    plot_diurnal(Data.canopy_GPP, color=pal[0], legend=False)
+    plot_diurnal(Data.GPP[ixGPP], color='k', legend=False)
+    plot_diurnal(Data.canopy_GPP[ixGPP], color=pal[0], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
     plt.subplot(348, sharex=ax)
-    plot_diurnal(Data.Reco, color='k', legend=False)
-    plot_diurnal(Data.canopy_Reco, color=pal[1], legend=False)
+    plot_diurnal(Data.Reco[ixReco], color='k', legend=False)
+    plot_diurnal(Data.canopy_Reco[ixReco], color=pal[1], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
     plt.subplot(3,4,12, sharex=ax)
-    plot_diurnal(Data.ET[f], color='k', legend=False)
-    plot_diurnal(Data.ET_mod[f], color=pal[2], legend=False)
+    plot_diurnal(Data.ET[ixET], color='k', legend=False)
+    plot_diurnal(Data.ET_mod[ixET], color=pal[2], legend=False)
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
 
@@ -151,7 +151,7 @@ def plot_pt_results(results, variable):
     plt.tight_layout(rect=(0, 0, 0.9, 1))
 
 def plot_timeseries_pt(results, variable, sim_idx=0, unit_conversion={'unit':None, 'conversion':1.0},
-                    xticks=True, stack=True, cum=True):
+                    xticks=True, stack=True, cum=True, legend=True, limits=True, colors=None):
     """
     Plot results by plant type.
     Args:
@@ -167,7 +167,9 @@ def plot_timeseries_pt(results, variable, sim_idx=0, unit_conversion={'unit':Non
     """
     species=['Pine','Spruce','Decid']
     labels=[]
-    colors = sns.color_palette("hls", len(results.planttype))
+    if colors == None:
+        prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = prop_cycle.by_key()['color']
     sub_planttypes = (len(results.planttype) - 1) / 3
     if sub_planttypes > 1:
         for sp in species:
@@ -178,10 +180,10 @@ def plot_timeseries_pt(results, variable, sim_idx=0, unit_conversion={'unit':Non
     plot_timeseries_xr([results.isel(planttype=i) for i in range(len(results.planttype))],
                        variable, colors=colors, xticks=xticks,
                        stack=stack, cum=cum, sim_idx=sim_idx,
-                       unit_conversion=unit_conversion, labels=labels)
+                       unit_conversion=unit_conversion, labels=labels, legend=legend, limits=limits)
 
 def plot_timeseries_xr(results, variables, sim_idx=0, unit_conversion = {'unit':None, 'conversion':1.0},
-                       colors=default, xticks=True, stack=False, cum=False, labels=None):
+                       colors=default, xticks=True, stack=False, cum=False, labels=None, limits=True, legend=True):
     """
     Plot timeseries from xarray results.
     Args:
@@ -239,11 +241,13 @@ def plot_timeseries_xr(results, variables, sim_idx=0, unit_conversion = {'unit':
         ymax = max([max(val) for val in values_all])
     plt.title(title)
     plt.xlim([results[0].date.values[0], results[0].date.values[-1]])
-    plt.ylim(min([min(val) for val in values_all]), ymax)
+    if limits:
+        plt.ylim(min([min(val) for val in values_all]), ymax)
     plt.ylabel(unit)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=xticks)
     plt.xlabel('')
-    plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
+    if legend:
+        plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
                        labels=None, colors=default, xticks=True, stack=False, cum=False, limits=True,legend=True):
@@ -405,7 +409,9 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
         plt.fill_between(var_diurnal['hour'], var_diurnal['25th'], var_diurnal['75th'],
                          color=color, alpha=0.4, label='25...75%')
     plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label)
+    print 'Daily sum :' + str(sum(var_diurnal['median'])) + ' mm/d'
     plt.title(title)
+    plt.xticks(np.linspace(0,24,4))
     plt.xlabel('Time [h]')
     plt.xlim(0,24)
     plt.ylabel(ylabel)

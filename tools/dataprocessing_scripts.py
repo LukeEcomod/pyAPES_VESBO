@@ -169,7 +169,9 @@ def read_lettosuo_data():
                "H:/Lettosuo/Forcing_data/FMI/jokioinen_prec2.txt",
                "H:/Lettosuo/Forcing_data/FMI/somero_meteo.txt",
                "H:/Lettosuo/Forcing_data/FMI/hameenlinna_meteo.txt",
-               "H:/Lettosuo/Forcing_data/FMI/salo_kiikala_meteo.txt"]
+               "H:/Lettosuo/Forcing_data/FMI/salo_kiikala_meteo.txt",
+               "H:/Lettosuo/Forcing_data/MikaK/Partial_EC_gapfilled_fluxes.csv",
+               "H:/Lettosuo/Forcing_data/Annalea2/energyfluxes_lettosuo.csv"]
 
     index=pd.date_range('01-01-2009','06-01-2018',freq='0.5H')
     lettosuo_data=pd.DataFrame(index=index, columns=[])

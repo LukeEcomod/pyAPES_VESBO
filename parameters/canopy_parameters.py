@@ -72,6 +72,7 @@ def get_cpara(dbhfile):
                    }
     
     # --- default values for plant characteristics ---
+    gamma = 1.5  # adjust shoot light response
     plant_default = {'phenop': {  # --- seasonal cycle of phenology ---
                                 'Xo': 0.0,  # initial delayed temperature [degC]
                                 'fmin': 0.01,  # minimum photocapacity [-]
@@ -93,7 +94,7 @@ def get_cpara(dbhfile):
                             'Vcmax': None,  # maximum carboxylation velocity [umolm-2s-1]
                             'Jmax': None,  # maximum rate of electron transport [umolm-2s-1]
                             'Rd': None,  # dark respiration rate [umolm-2s-1]
-                            'alpha': 0.16,  # quantum yield parameter [mol/mol]
+                            'alpha': gamma * 0.2,  # quantum yield parameter [mol/mol]
                             'theta': 0.7,  # co-limitation parameter of Farquhar-model
                             'La':None,  # stomatal parameter (Lambda, m, ...) depending on model
                             'm':None,
@@ -203,20 +204,20 @@ def get_cpara(dbhfile):
         cpara.update({'grid': grid})
         # adjust leaf gas-exchange parameters
         gfact = 1.2  # coefficient for adjusting (?)
-        pine['photop'].update({'Vcmax': 55.0, 'Jmax': 104.0, 'Rd': 1.3,
+        pine['photop'].update({'Vcmax': 55.0, 'Jmax': 105.0, 'Rd': 1.3,
                                'La': 1600.0, 'm': gfact*2.5})
         pine['photop']['tresp'].update({'Vcmax': [78, 200.0, 650.0],
                                         'Jmax': [56, 200.0, 647.0]})
-        spruce['photop'].update({'Vcmax': 70.0, 'Jmax': 133.0, 'Rd': 1.6,
+        spruce['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.5,
                                  'La': 1600.0, 'm': gfact*2.5})
         spruce['photop']['tresp'].update({'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
                                           'Jmax': [38.4, 202.0, 655.8]})
-        decid['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.3,
+        decid['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
                                 'La': 600.0, 'm': gfact*4.5})
         decid['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
                                          'Jmax': [42.8, 200.0, 637.0]})
         decid['leafp'].update({'lt': 0.05})
-        shrubs['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.3,
+        shrubs['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
                                 'La': 600.0, 'm': gfact*4.5, 'kn': 0.3})
         shrubs['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],
                                          'Jmax': [42.8, 200.0, 637.0]})
