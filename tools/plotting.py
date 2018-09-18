@@ -40,8 +40,8 @@ def plot_results(results, sim_idx=0):
                        colors=pal, cum=True, stack=True, xticks=False,
                        unit_conversion={'unit':'mm', 'conversion':1e3},)
     plt.subplot(714, sharex=ax)
-    plot_timeseries_xr(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation'],
-                       sim_idx=sim_idx, colors=[pal[1]] + [pal[2]] + [pal[0]], xticks=False,
+    plot_timeseries_xr(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation', 'canopy_baresoil_evaporation'],
+                       sim_idx=sim_idx, colors=[pal[1]] + [pal[2]] + [pal[0]] + [pal[4]], xticks=False,
                        unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(715, sharex=ax)
     plot_timeseries_df(weir, 'runf', unit_conversion = {'unit':'mm h-1', 'conversion':3600},

@@ -14,11 +14,21 @@ from tools.dataprocessing_scripts import read_lettosuo_data
 import seaborn as sns
 pal = sns.color_palette("hls", 5)
 
+results = read_results(outputfile)
+plot_results(results)
+
+plot_timeseries_xr(results.isel(soil=0), ['forcing_air_temperature','canopy_Tsurf','soil_temperature'])
+
+T_surf, Hw, Frw, Gw, Ep, LEw, closure = baresoil_energybalance(z_can=0.3, U=0.02, T=18, H2O=0.005, P=98630,
+                       T_ave=18, soil_alb={'Par':0.05, 'Nir': 0.5}, soil_emi=0.98, zr=0.01,
+                       T_soil=17, h_soil=-0.41, z_soil=-0.005, Kh=5e-7, Kt=0.35,
+                       Par_gr=25, Nir_gr=50, LWn=-25, Ebal=True)
+
 #results = read_results(['results/201808271237_CCFPeat_results.nc',
 #                        'results/201808271241_CCFPeat_results.nc',
 #                        'results/201808271244_CCFPeat_results.nc',
 #                        'results/201808271317_CCFPeat_results.nc'])
-#results = read_results('results/201809130923_CCFPeat_results.nc')
+#results = read_results('results/201809131932_CCFPeat_results.nc')
 
 
 control=driver(create_ncf=True, dbhfile="letto2014.txt")
@@ -130,8 +140,7 @@ plt.legend(bbox_to_anchor=(1.02,0.5), loc="center left", frameon=False, borderpa
 #plt.savefig('Tr.png',dpi=500)
 
 
-results = read_results(outputfile)
-plot_results(results[0])
+
 plot_results(results[1])
 plot_results(results[2])
 
@@ -170,7 +179,7 @@ results['canopy_Tleaf'].isel(date=20).plot()
 plt.figure(3)
 results['canopy_WMA'].plot()
 results['canopy_IterWMA'].plot()
-results['forcing_precipitation'].plot()
+results['forcing_h2o'].plot()
 
 
 

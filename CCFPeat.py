@@ -145,8 +145,11 @@ class Model():
                     dt=self.dt,
                     forcing=self.forcing.iloc[k],
                     beta=beta, Rew=Rew,
-                    Tsoil=Tsoil, Wsoil=Wsoil)
-
+                    Tsoil=Tsoil, Wsoil=Wsoil,
+                    Ts=self.soil_model.T[0], hs=self.soil_model.h[0],
+                    zs=self.soil_model.grid['z'][0], Kh=self.soil_model.Kv[0], Kt=self.soil_model.Lambda[0])
+            print(self.soil_model.T[0], self.forcing['Tair'].iloc[k], self.soil_model.h[0], self.soil_model.grid['z'][0], 
+                  self.soil_model.Kv[0], self.soil_model.Lambda[0], self.soil_model.Wliq[0])
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
             ubc_w = {'Prec': canopy_flux['potential_infiltration'],

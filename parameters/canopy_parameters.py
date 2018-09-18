@@ -17,9 +17,9 @@ def get_cpara(dbhfile):
                                 # In case ON:
                                 'MLinterception': True, #True,  # multilayer scheme for interception
                                 'Eflow': True,  # ensemble flow
-                                'WMA': False, # well-mixed assumption
+                                'WMA': True, #False, # well-mixed assumption
                                 'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
-                                'Ebal': True,  # computes leaf temperature by solving energy balance (not supported yet)
+                                'Ebal': False, #True,  # computes leaf temperature by solving energy balance (not supported yet)
                                 'SwModel': 'ZhaoQualls',
                                 'LwModel': 'ZhaoQualls'},#'Flerchinger'},  #
            'seasonal_LAI': True,  # account for seasonal LAI dynamics
@@ -160,7 +160,7 @@ def get_cpara(dbhfile):
         decid['LAImax'] = lai_d
     
     # --- forest floor ---
-    mossp0 = {'ground_coverage': 1.0,  # fraction of moss ground coverage [-]
+    mossp0 = {'ground_coverage': 0.5,  # fraction of moss ground coverage [-]
              'Wmax': 20.0,  # 
              'Wmin': 1.5,  # 
              'zr': 0.01,  # roughness height [m]

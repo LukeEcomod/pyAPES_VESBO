@@ -58,6 +58,7 @@ class CanopyModel():
         from micromet import Micromet
         from interception import Interception
         from evapotranspiration import Canopy_Transpiration
+        from forestfloor import ForestFloor
         from snow import Snowpack
 
         # --- control switches ---
@@ -136,7 +137,7 @@ class CanopyModel():
         self.Snow_Model = Snowpack(cpara['interc_snow'], self.Interc_Model.cf)
 
         # --- forest floor (incl. moss layer) ---
-        self.ForestFloor = ForestFloor(cpara['ffloor'], self.Switch_MLM)
+        self.ForestFloor = ForestFloor(cpara['ffloor'], cpara['radi'], self.Switch_MLM)
 
     def _run_daily(self, doy, Ta, PsiL=0.0):
         """
@@ -167,7 +168,8 @@ class CanopyModel():
         if self.Switch_MLM and self.Switch_Eflow and self.Ptypes[0].Switch_lai:
             self.Micromet_Model.normalized_flow_stats(self.z, self.lad, self.hc)
 
-    def _run_timestep(self, dt, forcing, Rew, beta, Tsoil, Wsoil):
+    def _run_timestep(self, dt, forcing, Rew, beta, Tsoil, Wsoil,
+                      Ts, hs, zs, Kh, Kt):  # properties of first soil node
         """
         Runs CanopyModel instance for one timestep
         Args:
@@ -188,13 +190,12 @@ class CanopyModel():
             state (dict):
         """
 
-        # initialize canopy micrometeo and Tleaf
+        # initialize canopy micrometeo, Tleaf and Tsurf
         T = self.ones * ([forcing['Tair']])
         H2O = self.ones * ([forcing['H2O']])
         CO2 = self.ones * ([forcing['CO2']])
         Tleaf = T.copy() * self.lad / (self.lad + eps)
-
-        Tsurf = 0.9*forcing['Tair']  # SHOULD COME FROM SOIL??
+        Tsurf = T[0]
 
         U = forcing['U']
         Prec = forcing['Prec']
@@ -259,12 +260,13 @@ class CanopyModel():
             else: # values need to be given but are not used
                 SWabs_sl = 0.0
                 SWabs_sh = 0.0
+                Nir_gr = 0.0
 
         # multi-layer computations
         max_err = 0.01  # maximum relative error
         max_iter = 20  # maximum iterations
         gam = 0.5  # weight for old value in iterations
-        err_t, err_h2o, err_co2, err_Tl = 999., 999., 999., 999.
+        err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
 
         if self.Switch_MLM:
             Switch_WMA = self.Switch_WMA
@@ -276,10 +278,12 @@ class CanopyModel():
         while (err_t > max_err or
                err_h2o > max_err or
                err_co2 > max_err or
-               err_Tl > max_err) and iter_no <= max_iter:
+               err_Tl > max_err or
+               err_Ts > max_err) and iter_no <= max_iter:
 
             iter_no += 1
             Tleaf_prev = Tleaf.copy()
+            Tsurf_prev = Tsurf
 
             if self.Switch_Interc is False and iter_no == 1:
                 """ --- big leaf interception and interception evaporation --- """
@@ -306,6 +310,7 @@ class CanopyModel():
                 else: # values need to be given but are not used
                     LWl = np.zeros(self.Nlayers)
                     gr = 0.0
+                    LWd = np.array([0.0])
 
                 # --- T, h2o and co2 sink/source terms
                 tsource = np.zeros(self.Nlayers)
@@ -396,16 +401,18 @@ class CanopyModel():
 
             """ --- forest floor --- """
             # Water balance at forest floor (interception and evaporation of moss layer)
-            E_gr, Trfall_gr, MBE_moss = self.ForestFloor._run_waterbalance(
+            Trfall_gr, Ebryo, Esoil, Gsoil, LE_gr, H_gr, Tsurf, MBE_ff, ene_ff = self.ForestFloor._run_water_energy_balance(
                     dt=dt,
-                    Rn=Rnet_gr,  ## EI KÄYTÄ??
-                    Prec=PotInf*1e3,  # mm!!
-                    U=U[0],
+                    Prec=PotInf,
+                    U=U[1],  # from first node above ground, corresponds to z_can
                     T=T[0],
                     H2O=H2O[0],
                     P=P,
-                    SWE=self.Snow_Model.swe)
-            LE_gr = E_gr * L_MOLAR  # W m-2
+                    SWE=self.Snow_Model.swe,
+                    z_can=self.z[1], T_ave=Tsurf_prev, 
+                    T_soil=Ts, h_soil=hs, z_soil=zs, Kh=Kh, Kt=Kt,  # from soil model
+                    Par_gr=Par_gr, Nir_gr=Nir_gr, LWn=LWd[0], Ebal=self.Switch_Ebal)
+            err_Ts = abs(Tsurf - Tsurf_prev)
             # CO2 flux at forest floor
             if self.Switch_MLM:
                 An_gr, R_gr = self.ForestFloor._run_CO2(
@@ -416,14 +423,13 @@ class CanopyModel():
                         Ws=Wsoil,
                         SWE=self.Snow_Model.swe)
                 Fc_gr = An_gr + R_gr
-                H_gr = 0.0  #################################### THIS SHOULD CHANGE!!!!!
 
             """  --- solve scalar profiles (H2O, CO2, T) """
             if Switch_WMA is False:
                 H2O, CO2, T, err_h2o, err_co2, err_t = self.Micromet_Model.scalar_profiles(
                         gam, H2O, CO2, T, P,
                         source={'H2O': qsource, 'CO2': csource, 'T': tsource},
-                        lbc={'H2O': E_gr, 'CO2': Fc_gr, 'T': H_gr})
+                        lbc={'H2O': Ebryo + Esoil, 'CO2': Fc_gr, 'T': H_gr})
 #                print('iterNo', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
                 if iter_no > max_iter or any(np.isnan(T)) or err_t > 50.0 or any(np.isnan(H2O)) or any(np.isnan(CO2)):  # if no convergence, re-compute with WMA -assumption
                     Switch_WMA = True
@@ -449,7 +455,7 @@ class CanopyModel():
         if self.Switch_MLM:
             # ecosystem fluxes
             Fc = np.cumsum(csource)*self.dz + Fc_gr  # umolm-2s-1
-            LE = (np.cumsum(qsource)*self.dz + E_gr) * L_MOLAR  # Wm-2
+            LE = np.cumsum(lsource)*self.dz + LE_gr  # Wm-2
 
             # net ecosystem exchange umolm-2s-1
             NEE = Fc[-1]
@@ -469,8 +475,9 @@ class CanopyModel():
 #                  'LE', sum(qsource*self.dz) * L_MOLAR)
 
         # evaporation from moss layer [m/dt]
-        Efloor = E_gr * MH2O * dt * 1e-3   # on jo HIAHTUNUT? Ei haihduteta maasta..?
-        PotInf = Trfall_gr * 1e-3  # m!!
+        Efloor = Ebryo * MH2O * dt * 1e-3
+        Esoil = Esoil * MH2O * dt * 1e-3
+        PotInf = Trfall_gr
 
         # return state and fluxes in dictionary
         state = {'snow_water_equivalent': self.Snow_Model.swe,
@@ -484,12 +491,13 @@ class CanopyModel():
                   'condensation': Cond / dt,
                   'transpiration': Tr / dt,
                   'moss_evaporation': Efloor / dt,
+                  'baresoil_evaporation': Esoil / dt,
                   'Rnet': Rn,
                   'Rnet_ground': Rnet_gr,
                   'U_ground': U[0],
                   'MBE1': MBE_interc,
                   'MBE2': MBE_snow,
-                  'MBE3': MBE_moss
+                  'MBE3': MBE_ff
                   }
         if self.Switch_MLM:
             fluxes.update({'NEE': NEE,
@@ -503,6 +511,7 @@ class CanopyModel():
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),
                            'pt_Rd': np.array([pt_st['Rd'] for pt_st in pt_stats]),
                            'Tleaf': np.where(self.lad > 0.0, Tleafff, np.nan),
+                           'Tsurf': Tsurf,
                            'Tleaf_wet':np.where(self.lad > 0.0, Tleaf_w, np.nan),
                            'Tleaf_sl': np.where(self.lad > 0.0, sum([pt_st['Tleaf_sl'] for pt_st in pt_stats])/(self.lad+eps), np.nan),
                            'Tleaf_sh':np.where(self.lad > 0.0, sum([pt_st['Tleaf_sh'] for pt_st in pt_stats])/(self.lad+eps), np.nan),
@@ -712,131 +721,3 @@ class PlantType():
         y.update({'Tleaf_sh': sh['Tl'] * self.lad})
         return y
 
-class ForestFloor():
-    """
-    Forest floor consisting of moss and/or bares soil
-    """
-    def __init__(self, p, MLM):
-
-        from mosslayer import MossLayer
-
-        # Bryotypes
-        brtypes = []
-        f_bryo = 0.0
-        for br_para in p['mossp']:
-            brtypes.append(MossLayer(br_para))
-            f_bryo += br_para['ground_coverage']
-        self.Bryophytes = brtypes
-        # soil coverage: baresoil, bryotypes (and litter?)
-        self.f_baresoil = 1.0 - f_bryo
-        self.f_bryo = f_bryo
-
-        if MLM:
-            self.R10 = p['soilp']['R10']
-            self.Q10 = p['soilp']['Q10']
-            self.poros = p['soilp']['poros']
-            self.limitpara = p['soilp']['limitpara']
-
-    def _run_waterbalance(self, dt, Rn, Prec, U, T, H2O, P, SWE):
-        """
-        Moss layer interception and evaporation
-        Args:
-            dt - timestep [s]
-            Rn - net radiation at forest floor
-            Prec - precipitation rate [mm s-1]
-            U - wind speed [m s-1]
-            T - air temperature [degC]
-            H2O - mixing ratio [mol mol-1]
-            P - ambient pressure [Pa]
-        Returns:
-            Evap - evaporation rate [mol m-2 s-1]
-            Trfall - trfall rate below moss layer [mm s-1]
-        """
-        # initialize fluxes at forest floor
-        Trfall = 0.0  # throughfall rate (mm s-1)
-        Ef = 0.0  # evaporation from bryo (+ litter??) (molm-2(ground)s-1) 
-        Esoil = 0.0  # soil evaporation (molm-2(ground)s-1)
-        Hf = 0.0  # forest floor sensible heat flux (Wm-2)
-        Gsoil = 0.0  # ground heat fluxes (Wm-2) 
-        LWf = 0.0  # emitted LW (Wm-2)
-        Tf = 0.0  # forest floor temperature (degC)
-        Tbryo = 0.0  # bryophyte temperature (degC)
-        # water (and energy) closure
-        MBE = 0.0
-
-        if SWE > 0:  # snow on the ground
-            Trfall += Prec
-        else:
-            if self.f_bryo > 0.0:
-                for bryo in self.Bryophytes:
-                    ef, trfall, mbe = bryo.waterbalance(dt, Rn, Prec, U, T, H2O, P=P)
-                    Ef += bryo.f_cover * ef / MH2O  # mol m-2 s-1
-                    Trfall += bryo.f_cover * trfall
-                    MBE += bryo.f_cover * mbe
-            if self.f_baresoil > 0.0:
-                Trfall += Prec * self.f_baresoil
-                # soil surface energy balance
-        return Ef, Trfall, MBE
-
-    def _update(self):
-        # updates W of each bryo to old W
-        if self.f_bryo > 0.0:
-            for bryo in self.Bryophytes:
-                bryo._update()
-
-    def _run_CO2(self, dt, Par, T, Ts, Ws, SWE):
-        """
-        run forest floor model for one timestep
-        Args:
-            dt - timestep [s]
-            Par - incident Par [umolm-2s-1]
-            T - air temperture [degC]
-            Ts - soil temperature [degC]
-            Ws - soil vol. moisture [m3m-3]
-            SWE - snow water equivalent, >0 sets E and An to zero
-        Returns:
-            An - moss net CO2 exchange [umolm-2s-1]
-            Rsoil - soil respiration rate [umolm-2s-1]
-        """
-        An = 0.0
-        # moss CO2 exchange when not covered by snow (or yes???????????????)
-        if SWE == 0.0:
-            if self.f_bryo > 0.0:
-                for bryo in self.Bryophytes:
-                    An += bryo.f_cover * bryo.co2_exchange(Par, T)
-
-        # soil respiration
-        Rsoil, fm = self.soil_respiration(Ts, Ws)
-
-        return An, Rsoil
-
-    def soil_respiration(self, Ts, Wliq):
-        """
-        computes heterotrophic respiration rate (CO2-flux) based on
-        Pumpanen et al. (2003) Soil.Sci.Soc.Am
-        Restricts respiration by soil moisuture as in
-        Skopp et al. (1990), Soil.Sci.Soc.Am
-        Args:
-            Ts - soil temperature [degC]
-            Wliq - soil vol. moisture content [m3m-3]
-        Returns:
-            rsoil - soil respiration rate [umolm-2s-1]
-            fm - relative modifier (Skopp et al.)
-        """
-        # Skopp limitparam [a,b,d,g] for two soil types
-        # sp = {'Yolo':[3.83, 4.43, 1.25, 0.854], 'Valentine': [1.65,6.15,0.385,1.03]}
-        Wliq = np.minimum(self.poros, Wliq)        
-        afp = self.poros - Wliq + eps # air filled porosity
-
-        p = self.limitpara
-
-        # unrestricted respiration rate
-        rs0 = self.R10 * np.power(self.Q10, (Ts - 10.0) / 10.0)
-
-        # moisture response (substrate diffusion, oxygen limitation)
-        fm = np.minimum(p[0]*Wliq**p[2], p[1]*afp**p[3])  # ]0...1]
-        fm = np.minimum(fm, 1.0)
-        # fm = 1.0
-        rsoil = rs0 * fm
-
-        return rsoil, fm

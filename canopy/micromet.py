@@ -480,3 +480,41 @@ def leaf_boundary_layer_conductance(u, d, Ta, dT, P=101300.):
     #r = Gr / (Re**2)  # ratio of free/forced convection
 
     return gb_h, gb_c, gb_v#, r
+
+def soil_boundary_layer_conductance(u, z, zo, Ta, dT, P=101300.):
+    """
+    Computes soil surface boundary layer conductance (mol m-2 s-1)
+    assuming velocity profile logarithmic between z and z0.
+    INPUT: u - mean velocity (m/s)
+           z - height of mean velocity u (m)
+           zo - soil surface roughness length for momentum (m)
+           Ta - ambient temperature (degC)
+           dT - soil surface-air temperature difference (degC)
+           P - pressure(Pa)
+    OUTPUT: boundary-layer conductances (mol m-2 s-1)
+        gb_h - heat (mol m-2 s-1)
+        gb_c- CO2 (mol m-2 s-1)
+        gb_v - H2O (mol m-2 s-1)
+    Based on Daamond & Simmons (1996). Note: gb decreases both in
+    unstable and stable conditions compared to near-neutral;
+    nonfeasible?
+    Samuli Launiainen, 18.3.2014
+    to python by Kersti
+    """
+    Da_v = 2.4e-5  # Molecular diffusivity of "water vapor" in air at STP (20C and 101kPa) [m2/s]
+    Da_c = 1.57e-5  # Molecular diffusivity of "CO2" in air at STP [m2/s]
+    Da_T = 2.14e-5  # Molecular diffusivity of "heat" in air at STP [m2/s]
+    rho_air = 44.6*(P / 101300.0)*(273.15 / (Ta + 273.13))  # molar density of air [mol/m3]
+
+    delta = 5.0 * 9.81 * z * dT / ((Ta + 273.15) * u**2)
+    if delta > 0:
+        d = -0.75
+    else:
+        d = -2
+    rb = (np.log(z/zo))**2 / (0.4**2*u)*(1 + delta)**d
+
+    gb_h = rho_air * 1 / rb
+    gb_v = Da_v / Da_T * gb_h
+    gb_c = Da_c / Da_T * gb_h
+
+    return gb_h, gb_c, gb_v

@@ -383,7 +383,6 @@ class SoilModel():
             fluxes.update({'vertical_heat_flux': fheat,
                            'heat_be': heat_be})
 
-
         # return state in dictionary
         state = {"water_potential": self.h,
                  "volumetric_water_content": self.Wtot,

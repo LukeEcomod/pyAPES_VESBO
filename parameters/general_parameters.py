@@ -5,8 +5,8 @@ GENERAL PARAMETERS
 
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2015-01-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2018-01-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-06-10",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -31,6 +31,7 @@ gpara = {
                       ['canopy_pt_An', 'gross primary production [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_Rd', 'dark respiration [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+                      ['canopy_Tsurf', 'soil surface temperature [degC]', ('date', 'simulation')],
 #                      ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
@@ -40,6 +41,7 @@ gpara = {
                       ['canopy_potential_infiltration', 'potential infiltration to soil [m s-1]', ('date', 'simulation')],
                       ['canopy_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
                       ['canopy_moss_evaporation', 'evaporation from moss layer [m s-1]', ('date', 'simulation')],
+                      ['canopy_baresoil_evaporation', 'evaporation from baresoil [m s-1]', ('date', 'simulation')],
                       ['canopy_LE', 'latent heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
@@ -55,7 +57,7 @@ gpara = {
                       ['soil_evaporation', 'evaporation from soil surface [m s-1]', ('date', 'simulation')],
                       ['soil_subsurface_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
                       ['soil_total_runoff', 'total runoff [m s-1]', ('date', 'simulation')],
-#                      ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
+                      ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
 #                      ['soil_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
                       ['canopy_MBE1', 'interception model mass balance error [m]', ('date', 'simulation')],
                       ['canopy_MBE2', 'snow model mass balance error [m]', ('date', 'simulation')],
