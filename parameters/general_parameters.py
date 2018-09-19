@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-06-10",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-09-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -42,6 +42,8 @@ gpara = {
                       ['canopy_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
                       ['canopy_moss_evaporation', 'evaporation from moss layer [m s-1]', ('date', 'simulation')],
                       ['canopy_baresoil_evaporation', 'evaporation from baresoil [m s-1]', ('date', 'simulation')],
+                      ['canopy_ground_heat_flux', 'ground heat flux [W m-2]', ('date', 'simulation')],
+                      ['canopy_sensible_heat_flux', 'sensible heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_LE', 'latent heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],

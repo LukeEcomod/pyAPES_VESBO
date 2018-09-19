@@ -1380,7 +1380,7 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     # for LW calculations
     T = np.linspace(15, 17, N) # Tair is 15degC at ground and 17 at upper boundary
     Tatm = 17
-    Tsurf = 15
+    Tsurf = 16
     T = T * LAIz / (LAIz + eps)
     LWdn0 = 0.85*SIGMA*(Tatm + NT)**4
     LWup0 = 0.98*SIGMA*(Tsurf + NT)**4

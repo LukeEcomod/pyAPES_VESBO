@@ -12,7 +12,7 @@ from timeseries_tools import diurnal_cycle, yearly_cumulative
 from iotools import read_forcing, xarray_to_df
 
 import seaborn as sns
-pal = sns.color_palette("hls", 5)
+pal = sns.color_palette("hls", 6)
 
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default = prop_cycle.by_key()['color']
@@ -35,13 +35,13 @@ def plot_results(results, sim_idx=0):
     plot_timeseries_xr(results, ['forcing_precipitation', 'canopy_throughfall'], sim_idx=sim_idx,
                        colors=pal[3:], xticks=False, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(713, sharex=ax)
-    plot_timeseries_xr(results, ['canopy_moss_evaporation', 'canopy_transpiration', 'canopy_evaporation',
+    plot_timeseries_xr(results, ['canopy_moss_evaporation', 'canopy_baresoil_evaporation', 'canopy_transpiration', 'canopy_evaporation',
                        'soil_subsurface_drainage', 'soil_surface_runoff'], sim_idx=sim_idx,
                        colors=pal, cum=True, stack=True, xticks=False,
                        unit_conversion={'unit':'mm', 'conversion':1e3},)
     plt.subplot(714, sharex=ax)
     plot_timeseries_xr(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation', 'canopy_baresoil_evaporation'],
-                       sim_idx=sim_idx, colors=[pal[1]] + [pal[2]] + [pal[0]] + [pal[4]], xticks=False,
+                       sim_idx=sim_idx, colors=[pal[3]] + [pal[2]] + [pal[0]] + [pal[1]], xticks=False,
                        unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(715, sharex=ax)
     plot_timeseries_df(weir, 'runf', unit_conversion = {'unit':'mm h-1', 'conversion':3600},

@@ -586,8 +586,14 @@ def heatflow_1D_new(t_final, grid, poros, T0, Wtot, ubc, lbc, spara, S=0.0, step
         Wliq, Wice, gamma = frozen_water(T, Wtot, fp=fp, To=Tfr)
         # Heat flux [W m-2]
         Fheat[1:-1] += -R[1:-1]*(T[1:] - T[:-1])/dzl[:-1] * dt / t_final
-        Fheat[0] += -R[0]*(T[0] - T_sur)/dzu[0] * dt / t_final
-        Fheat[-1] += -R[-1]*(T_bot - T[-1])/dzl[-1] * dt / t_final
+        if ubc['type'] == 'temperature':
+            Fheat[0] += -R[0]*(T[0] - T_sur)/dzu[0] * dt / t_final
+        if ubc['type'] == 'flux':
+            Fheat[0] += -F_sur * dt / t_final
+        if lbc['type'] == 'temperature':
+            Fheat[-1] += -R[-1]*(T_bot - T[-1])/dzl[-1] * dt / t_final
+        if lbc['type'] == 'flux':
+            Fheat[-1] += -F_bot * dt / t_final
 
         # ----------- solution time and new timestep ------------
 

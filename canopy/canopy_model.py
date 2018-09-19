@@ -302,7 +302,7 @@ class CanopyModel():
                 if self.Switch_Ebal:
                     """ --- compute LW profiles and net isothermal LW at leaf --- """
                     LWuo = self.Radi_Model.soil_emi*SIGMA*(Tsurf + NT)**4  # soil lw emission
-                    LWl, LWu, LWd, gr = self.Radi_Model.LW_profiles(
+                    LWl, LWd, LWu, gr = self.Radi_Model.LW_profiles(
                             LAIz=self.lad*self.dz,
                             Tleaf=Tleaf,
                             LWdn0=forcing['LWin'],
@@ -310,7 +310,7 @@ class CanopyModel():
                 else: # values need to be given but are not used
                     LWl = np.zeros(self.Nlayers)
                     gr = 0.0
-                    LWd = np.array([0.0])
+                    LWd, LWu = np.array([0.0]),np.array([0.0])
 
                 # --- T, h2o and co2 sink/source terms
                 tsource = np.zeros(self.Nlayers)
@@ -411,8 +411,9 @@ class CanopyModel():
                     SWE=self.Snow_Model.swe,
                     z_can=self.z[1], T_ave=Tsurf_prev, 
                     T_soil=Ts, h_soil=hs, z_soil=zs, Kh=Kh, Kt=Kt,  # from soil model
-                    Par_gr=Par_gr, Nir_gr=Nir_gr, LWn=LWd[0], Ebal=self.Switch_Ebal)
+                    Par_gr=Par_gr, Nir_gr=Nir_gr, LWn=LWd[0]-LWu[0], Ebal=self.Switch_Ebal)
             err_Ts = abs(Tsurf - Tsurf_prev)
+#            print(iter_no, LWd[0]-LWu[0])
             # CO2 flux at forest floor
             if self.Switch_MLM:
                 An_gr, R_gr = self.ForestFloor._run_CO2(
@@ -436,7 +437,7 @@ class CanopyModel():
 #                    print 'Maximum number of iterations reached, WMA assumed'
 #                    print('iter_no', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
                     iter_no = 0
-                    err_t, err_h2o, err_co2, err_Tl = 999., 999., 999., 999.
+                    err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
                     T = self.ones * ([forcing['Tair']])
                     H2O = self.ones * ([forcing['H2O']])
                     CO2 = self.ones * ([forcing['CO2']])
@@ -492,6 +493,7 @@ class CanopyModel():
                   'transpiration': Tr / dt,
                   'moss_evaporation': Efloor / dt,
                   'baresoil_evaporation': Esoil / dt,
+                  'ground_heat_flux': Gsoil,
                   'Rnet': Rn,
                   'Rnet_ground': Rnet_gr,
                   'U_ground': U[0],
@@ -506,6 +508,7 @@ class CanopyModel():
                            'Rsoil': R_gr,
                            'LE': LE[-1],
                            'LEgr': LE_gr,
+                           'sensible_heat_flux':H_gr,
                            'GPPgr': -An_gr,
                            'pt_transpiration': np.array([pt_st['E'] * MH2O * 1e-3 for pt_st in pt_stats]),
                            'pt_An': np.array([pt_st['An']+pt_st['Rd'] for pt_st in pt_stats]),

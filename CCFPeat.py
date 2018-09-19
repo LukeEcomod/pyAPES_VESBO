@@ -148,8 +148,8 @@ class Model():
                     Tsoil=Tsoil, Wsoil=Wsoil,
                     Ts=self.soil_model.T[0], hs=self.soil_model.h[0],
                     zs=self.soil_model.grid['z'][0], Kh=self.soil_model.Kv[0], Kt=self.soil_model.Lambda[0])
-            print(self.soil_model.T[0], self.forcing['Tair'].iloc[k], self.soil_model.h[0], self.soil_model.grid['z'][0], 
-                  self.soil_model.Kv[0], self.soil_model.Lambda[0], self.soil_model.Wliq[0])
+#            print(self.soil_model.T[0], self.forcing['Tair'].iloc[k], self.soil_model.h[0], self.soil_model.grid['z'][0], 
+#                  self.soil_model.Kv[0], self.soil_model.Lambda[0], self.soil_model.Wliq[0])
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
             ubc_w = {'Prec': canopy_flux['potential_infiltration'],
@@ -160,7 +160,8 @@ class Model():
             rootsink = rootsink / self.soil_model.grid['dz']
 #            rootsink[0] = canopy_flux['transpiration'] / self.soil_model.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
             # temperature above soil surface
-            ubc_T = {'type': 'temperature', 'value': self.forcing['Tair'].iloc[k]}
+#            ubc_T = {'type': 'temperature', 'value': self.forcing['Tair'].iloc[k]}
+            ubc_T = {'type': 'flux', 'value': -canopy_flux['ground_heat_flux']}
 
             # run soil water and heat flow
             soil_flux, soil_state = self.soil_model._run(
