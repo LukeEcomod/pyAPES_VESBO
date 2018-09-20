@@ -156,10 +156,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     ic = np.where(abs(LW) > 0.0)
     # radiative conductance (mol m-2 s-1), Campbell & Norman, 1998
     gr = gr / CP
-#    gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
-#    Tl_ave = 0.0 
 
-    #
     T = np.array(T)
     Qp = np.array(Qp)
     U = np.array(U)
@@ -168,6 +165,8 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     Rabs = np.array(SWabs + LW, ndmin=1)  # isothermal net radiation (Wm-2)
     Tl = np.array(Tl)
     gr=np.array(gr)
+
+    Tl_ini = Tl.copy()
 
     # vapor pressure
     esat, s = saturation_vapor_pressure(Tl)

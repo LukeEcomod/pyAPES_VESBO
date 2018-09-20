@@ -195,7 +195,7 @@ class CanopyModel():
         H2O = self.ones * ([forcing['H2O']])
         CO2 = self.ones * ([forcing['CO2']])
         Tleaf = T.copy() * self.lad / (self.lad + eps)
-        Tsurf = T[0]
+        Tsurf = T[0].copy()
 
         U = forcing['U']
         Prec = forcing['Prec']
@@ -374,6 +374,7 @@ class CanopyModel():
                 # canopy leaf temperature as weighted average
                 Tleafff = Tleafff / (self.lad + eps)
                 Tleaf = Tleafff.copy()
+
                 err_Tl = max(abs(Tleaf - Tleaf_prev))
 
             else:
@@ -413,7 +414,7 @@ class CanopyModel():
                     T_soil=Ts, h_soil=hs, z_soil=zs, Kh=Kh, Kt=Kt,  # from soil model
                     Par_gr=Par_gr, Nir_gr=Nir_gr, LWn=LWd[0]-LWu[0], Ebal=self.Switch_Ebal)
             err_Ts = abs(Tsurf - Tsurf_prev)
-#            print(iter_no, LWd[0]-LWu[0])
+#            print('Tsurf', Tsurf)
             # CO2 flux at forest floor
             if self.Switch_MLM:
                 An_gr, R_gr = self.ForestFloor._run_CO2(
@@ -432,7 +433,8 @@ class CanopyModel():
                         source={'H2O': qsource, 'CO2': csource, 'T': tsource},
                         lbc={'H2O': Ebryo + Esoil, 'CO2': Fc_gr, 'T': H_gr})
 #                print('iterNo', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
-                if iter_no > max_iter or any(np.isnan(T)) or err_t > 50.0 or any(np.isnan(H2O)) or any(np.isnan(CO2)):  # if no convergence, re-compute with WMA -assumption
+                if (iter_no > max_iter or any(np.isnan(T)) or err_t > 50.0 or
+                    any(np.isnan(H2O)) or any(np.isnan(CO2))):  # if no convergence, re-compute with WMA -assumption
                     Switch_WMA = True
 #                    print 'Maximum number of iterations reached, WMA assumed'
 #                    print('iter_no', iter_no, 'err_h2o', err_h2o, 'err_co2', err_co2, 'err_t', err_t)
@@ -443,6 +445,7 @@ class CanopyModel():
                     CO2 = self.ones * ([forcing['CO2']])
                     Tleaf = T.copy() * self.lad / (self.lad + eps)
                     self.Interc_Model.Tl_wet = None
+                    Tsurf = T[0].copy()
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
 

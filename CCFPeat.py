@@ -153,7 +153,7 @@ class Model():
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
             ubc_w = {'Prec': canopy_flux['potential_infiltration'],
-                     'Evap': 0.0}
+                     'Evap': canopy_flux['baresoil_evaporation']}
             # transpiration sink
             rootsink = np.zeros(self.soil_model.Nlayers)
             rootsink[0:len(self.canopy_model.rad)] = self.canopy_model.rad * canopy_flux['transpiration']

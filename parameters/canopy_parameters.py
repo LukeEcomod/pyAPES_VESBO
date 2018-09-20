@@ -17,7 +17,7 @@ def get_cpara(dbhfile):
                                 # In case ON:
                                 'MLinterception': True, #True,  # multilayer scheme for interception
                                 'Eflow': True,  # ensemble flow
-                                'WMA': True, #False, # well-mixed assumption
+                                'WMA': False, # well-mixed assumption
                                 'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
                                 'Ebal': True,  # computes leaf temperature by solving energy balance (not supported yet)
                                 'SwModel': 'ZhaoQualls',

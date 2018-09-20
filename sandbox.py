@@ -29,14 +29,14 @@ plot_timeseries_xr(results.isel(soil=0), ['soil_heat_be'])
 
 T_surf, Hw, Frw, Gw, Ep, LEw, closure = baresoil_energybalance(z_can=0.3, U=0.002, T=8, H2O=0.005, P=98630,
                        T_ave=8, soil_alb={'Par':0.05, 'Nir': 0.5}, soil_emi=0.98, zr=0.01,
-                       T_soil=7, h_soil=-0.41, z_soil=-0.005, Kh=5e-7, Kt=0.35,
+                       T_soil=7, h_soil=-0.41, z_soil=-0.005, Kh=5e-7, Kt=0.05,
                        Par_gr=20, Nir_gr=20, LWn=-10, Ebal=True)
 
 #results = read_results(['results/201808271237_CCFPeat_results.nc',
 #                        'results/201808271241_CCFPeat_results.nc',
 #                        'results/201808271244_CCFPeat_results.nc',
 #                        'results/201808271317_CCFPeat_results.nc'])
-#results = read_results('results/201809191112_CCFPeat_results.nc')
+#results = read_results('results/201809191457_CCFPeat_results.nc')
 
 
 control=driver(create_ncf=True, dbhfile="letto2014.txt")
@@ -155,7 +155,7 @@ plot_results(results[2])
 results['soil_pond_storage'].plot()
 
 
-plt.figure(1)
+plt.figure()
 results['canopy_energy_closure'].plot()
 results['canopy_Frsource'].plot()
 plt.figure(1)
@@ -164,17 +164,17 @@ results['canopy_LWleaf'].mean(dim='date').plot()
 plt.figure(5)
 i=1
 results['canopy_Tleaf'].mean(dim='date').plot()
-results['canopy_Tleaf_wet'].mean(dim='date').plot()
-results['canopy_Tleaf_sl'].mean(dim='date').plot()
-results['canopy_Tleaf_sh'].mean(dim='date').plot()
+#results['canopy_Tleaf_wet'].mean(dim='date').plot()
+#results['canopy_Tleaf_sl'].mean(dim='date').plot()
+#results['canopy_Tleaf_sh'].mean(dim='date').plot()
 results['canopy_T'].mean(dim='date').plot()
 plt.legend(['Tleaf','Tleaf_wet','Tleaf_sl','Tleaf_sh','Tair'])
 plt.figure(4)
 idx=25
 results['canopy_Tleaf'].isel(date=idx).plot()
-results['canopy_Tleaf_wet'].isel(date=idx).plot()
-results['canopy_Tleaf_sl'].isel(date=idx).plot()
-results['canopy_Tleaf_sh'].isel(date=idx).plot()
+#results['canopy_Tleaf_wet'].isel(date=idx).plot()
+#results['canopy_Tleaf_sl'].isel(date=idx).plot()
+#results['canopy_Tleaf_sh'].isel(date=idx).plot()
 results['canopy_T'].isel(date=idx).plot()
 plt.legend(['Tleaf','Tleaf_wet','Tleaf_sl','Tleaf_sh','Tair'])
 plt.figure(3)
@@ -184,12 +184,13 @@ results['canopy_lad'].mean(dim='date').plot()
 plt.figure(3)
 results['canopy_T'].isel(date=3).plot()
 results['canopy_Tleaf'].isel(date=20).plot()
-plt.figure()
 
+plt.figure()
 results['canopy_IterWMA'].plot()
-results['forcing_h2o'].plot()
+#results['forcing_h2o'].plot()
 results['canopy_WMA'].plot()
 
+results['canopy_WMA'].sum()/len(results['canopy_WMA'])
 
 results = read_results(['results/201809051734_CCFPeat_results.nc',
                         'results/201809060950_CCFPeat_results.nc',
