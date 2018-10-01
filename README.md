@@ -1,5 +1,5 @@
-# CCFPeat project's README
-kokeilu
+# README
+Branch for cleaned model codes for pyAPES development
 
 ### Soil_model
 Water flow:
@@ -14,7 +14,7 @@ Heat flow:
 ! neglects heat convection (heat transfer with water flow)
 
 ### Canopy_model
-Simple canopy description (based on SpaFHy)
+!REMOVE! - Simple canopy description (based on SpaFHy)
 * Big leaf interception 
 ! Interception by shrubs separately?
 * Interception evaporation and tranpiration besad on Penman-Montieth
