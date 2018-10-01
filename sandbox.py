@@ -36,7 +36,7 @@ T_surf, Hw, Frw, Gw, Ep, LEw, closure = baresoil_energybalance(z_can=0.3, U=0.00
 #                        'results/201808271241_CCFPeat_results.nc',
 #                        'results/201808271244_CCFPeat_results.nc',
 #                        'results/201808271317_CCFPeat_results.nc'])
-#results = read_results('results/201809191457_CCFPeat_results.nc')
+#results = read_results('results/201809131815_CCFPeat_results.nc')
 
 
 control=driver(create_ncf=True, dbhfile="letto2014.txt")
@@ -240,7 +240,7 @@ for i in range(2):
 
 
 plot_results(results)
-plot_fluxes(results[0])
+plot_fluxes(results)
 plot_pt_results(results,'canopy_pt_Tleaf')
 plot_pt_results(results,'canopy_pt_An')
 plot_lad_profiles("letto2014.txt", quantiles=[0.75, 1.0])
