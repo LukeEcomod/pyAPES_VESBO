@@ -8,7 +8,9 @@ Water flow:
 ! description of preferential flow?
 
 Heat flow:
-* As in Climoss, not tested yet
+* solves heat conduction
+-> soil temperature and ice content 
+! neglects heat convection (heat transfer with water flow)
 
 ### Canopy_model
 Simple canopy description (based on SpaFHy)
@@ -18,18 +20,20 @@ Simple canopy description (based on SpaFHy)
 * Wind speed amd net radiation at ground and canopy + boundary layer conductances
 
 OR Multilayer canopy description
-* Radiation model: canopy SW (only PAR used) transfer including multiple scattering in horizontally homogenous porous media Zhao & Qualls (2005, Water Resources Res), sunlit/shade leaves
+* Radiation model: canopy SW (PAR&NIR) and LW including multiple scattering in horizontally homogenous porous media Zhao & Qualls (2005, 2006), sunlit/shade leaves
 ! range of zenith angle?
 * Interception model: interception of rainfall and snow following approach by Tanaka (2002, Ecol. Mod.) 
-! Leaf temperature not solved
+-> solves wet leaf temperature
 ! restrict to snow surface level? sublimation of snow from canopy should be checked
 * Leaf gas-exchange: Photosynthesis calculated based on biochemical model of Farquhar et al. (1980) coupled with various stomatal control schemes (Medlyn, Ball-Woodrow-Berry, Hari, Katul-Vico et al.)
-! Leaf temperature not solved
-* Momentum, H2O, CO2 within canopy: 1st-order closure model (sources/sinks: evaporation, transpiration, photosynthesis, respiration etc.)
+-> solves dry leaf temperature
+* Momentum, H2O, CO2 and T within canopy: 1st-order closure model (sources/sinks: evaporation, transpiration, photosynthesis, respiration, sensible heat etc.)
 
 Forest floor and snowpack:
-* Moss layer (present during snow free periods): Interceps rainfall and evaporates interception storage, CO2 exchange (respiration and photo?)
+* Moss cover (present during snow free periods): Interceps rainfall and evaporates interception storage, CO2 exchange (respiration and photo?)
 ! capillary flux not included
+* Bare soil surface energy balance
+-> solves soil surface temperature 
 * Soil respiration
 ! simplified?
 * Snow model: Temperature-based snow accumulation and melt
@@ -42,12 +46,9 @@ see tools/dataprocessing_scripts
 
 ### Todos..
 
-* Including temperature and leaf energy balance
-* Including capillary flux from soil to moss layer?
-* Test stomatal control schemes other than Medlyn
-* Description of respiration? Moss CO2 exchange?
+* Updating bryophyte model (energy and water)
+* Description of soil respiration? branches etc..
 * Marklund biomass functions ok for drained peatlands?
 * Feedbacks from soil to canopy
-* Water and heat models should be separated
 * Parallelize model run and result writing (netCDF4) as in Climoss
 * Running sensitivity analysis easily?
