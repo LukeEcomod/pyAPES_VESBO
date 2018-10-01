@@ -9,63 +9,33 @@ import pandas as pd
 eps = np.finfo(float).eps  # machine epsilon
 from tools.utilities import tridiag
 from matplotlib import pyplot as plt
-
-#  conversion deg -->rad
-DEG_TO_RAD = np.pi / 180.0
-#  conversion rad -->deg
-RAD_TO_DEG = 180.0 / np.pi
-# conversion from Wm-2 to micromol m-2 s-1
-PAR_TO_UMOL = 4.56
-# 0 degC in K
-NT = 273.15
-# Stefan-Boltzman constant W m-2 K-4
-SIGMA = 5.6697e-8
+from constants import DEG_TO_RAD, PAR_TO_UMOL, DEG_TO_KELVIN, STEFAN_BOLTZMANN
 
 class Radiation():
     """
     
     """
-    def __init__(self, p, MLM):  # method for SWrad and LWrad could be given here!
+    def __init__(self, p, ctr):
         """
         Args:
             p - parameter dict
                 'clump': clumping index [-]
-                'kd': extinction coeff for diffuse radiation [-]
                 ?? leaf-angle distribution [-], shoot Par-albedo [-], soil (moss) Par-albedo [-]
         Returns:
             Radiation -object
         """
         # parameters
         self.clump = p['clump']
-        self.kd = p['kd']
-        if MLM['ON']:
-            # additional parameters necessary for multilayer model
-            self.leaf_angle = p['leaf_angle']  # leaf-angle distribution [-]
-            self.alb = {'Par': p['Par_alb'],  # shoot Par-albedo [-]
-                        'Nir': p['Nir_alb']}  # shoot Nir-albedo [-]
-            self.soil_alb = {'Par': p['soil_Par_alb'],# soil (moss) Par-albedo [-]
-                             'Nir': p['soil_Nir_alb']}  # soil (moss) Nir-albedo [-]
-            self.soil_emi = p['soil_emi']
-            self.leaf_emi = p['leaf_emi']
-            self.SWmodel = MLM['SwModel'].upper()
-            self.LWmodel = MLM['LwModel'].upper()
+        self.leaf_angle = p['leaf_angle']  # leaf-angle distribution [-]
+        self.alb = {'Par': p['Par_alb'],  # shoot Par-albedo [-]
+                    'Nir': p['Nir_alb']}  # shoot Nir-albedo [-]
+        self.soil_alb = {'Par': p['soil_Par_alb'],# soil (moss) Par-albedo [-]
+                         'Nir': p['soil_Nir_alb']}  # soil (moss) Nir-albedo [-]
+        self.soil_emi = p['soil_emi']
+        self.leaf_emi = p['leaf_emi']
+        self.SWmodel = ctr['SwModel'].upper()
+        self.LWmodel = ctr['LwModel'].upper()
 
-    def layerwise_Rnet(self, LAI, Rnet):
-        """
-        Computes net radiation (Rnet) available at canopy and 
-        ground based on above canopy Rnet
-        Args:
-            LAI (float): canopy leaf area index [m2/m2]
-            Rnet (float): net radiation [W/m2]
-        Returns:
-            Rnet_c (float): net radiation available at canopy [W/m2]
-            Rnet_gr (float): net radiation available at ground [W/m2]
-        """
-        # Rnet at canopy and forest floor
-        Rnet_c = (1.0 - np.exp(-self.kd * self.clump * LAI)) * Rnet
-        Rnet_gr = np.exp(-self.kd * LAI) * Rnet
-
-        return Rnet_c, Rnet_gr
 
     def SW_profiles(self, LAIz, zen, dirSW, diffSW, radtype):
         """
@@ -95,7 +65,7 @@ class Radiation():
 
         return Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, SW_gr
 
-    def LW_profiles(self, LAIz, Tleaf, LWdn0, LWup0):
+    def LW_profiles(self, LAIz, Tleaf, Tsurf, LWdn0):
         """
         Estimates long-wave radiation budget and net isothermal LW radiation within the canopy
         Assumes canopy elements as black bodies (es=1.0) at local air temperature
@@ -117,6 +87,7 @@ class Radiation():
         
         Samuli Launiainen (Luke). Last edit: 12.5.2017
         """
+        LWup0 = self.soil_emi*STEFAN_BOLTZMANN*(Tsurf + DEG_TO_KELVIN)**4
         if self.LWmodel == 'FLERCHINGER':
             LWleaf, LWdn, LWup, gr = canopy_lw(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi)
         if self.LWmodel == 'ZHAOQUALLS':
@@ -173,7 +144,7 @@ def solar_angles(lat, lon, jday, timezone=+2.0):
     zen0 = 90.833 * DEG_TO_RAD  # zenith angle at sunries/sunset after refraction correction
 
     aa = np.cos(zen0) / (np.cos(lat0)*np.cos(decl)) - np.tan(lat0)*np.tan(decl)
-    ha0 = np.arccos(aa) * RAD_TO_DEG
+    ha0 = np.arccos(aa) / DEG_TO_RAD
 
     sunrise = 720.0 - 4.*(lon + ha0) - et  # minutes
     sunset = 720.0 - 4.*(lon - ha0) - et  # minutes 
@@ -736,93 +707,6 @@ def compute_clouds_rad(doy, zen, Rg, H2O):
 
     return df['f_cloud'].values, df['f_diff'].values, df['emi_sky'].values
 
-def canopy_lw2(LAIz, Clump, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
-    """
-    Estimates long-wave radiation budget and net isothermal LW radiation within the canopy
-    Assumes canopy elements as black bodies (es=1.0) at local air temperature
-    T(z). Neglects scattering etc.
-    
-    INPUT: 
-       LAIz - 1-sided LAI in each layer (m2m2(ground))
-       CLUMP - clumping factor (-), [0...1]
-       T: leaf temperature (degC)
-       LWdn0 - downwelling LW above uppermost gridpoint (Wm-2(ground)). LWdn0=eatm*b*Tatm^4
-       LWup0 - upwelling LW at surface (Wm-2(ground)). LWup0=esurf*b*Tsurf^4
-    OUTPUT:
-       LWleaf - net isothermal long-wave absorbed by leaf (Wm-2 (leaf))
-       LWdn - downwelling LW (Wm-2)
-       LWup - upwelling LW (Wm-2)
-    SOURCE:
-       Modified from Flerchinger et al. 2009. Simulation of within-canopy radiation exchange, NJAS 57, 5-15.
-       Assumes Tcan(z) = T(z) and neglects scattering (canopy elements black bodies)
-    
-    Samuli Launiainen (Luke). Last edit: 12.5.2017
-    """
-
-    N = len(LAIz)  # Node 0 = ground
-    LWdn = np.zeros(N)
-    LWup = np.zeros(N)
-
-    LayerLAI = Clump*LAIz  # plant-area m2m-2 in a layer addjusted for clumping
-    cantop = max(np.where(LayerLAI>0)[0])  # node at canopy top
-    
-    # layerwise attenuation coeffcient
-    Kd = 0.7815  # diffuse radiation, Flearchinger et al. 2009 NJAS
-    tau = np.exp(-Kd*LayerLAI)
-
-    # LW down
-    LWdn[cantop+1:N] = LWdn0 
-    for k in range(cantop, -1, -1):
-        LWdn[k]=tau[k]*LWdn[k+1] +(1 - tau[k])*(leaf_emi*SIGMA*(T[k] + NT)**4)
-    del k
-
-    # LW up
-    LWup[0] = LWup0
-    for k in range(1, cantop+1):
-        LWup[k] = tau[k]*LWup[k-1] + (1 - tau[k])*(leaf_emi*SIGMA*(T[k] + NT)**4)
-    del k
-    LWup[cantop+1:N] = LWup[cantop]
-
-    # absorbed isothermal net radiation by the leaf (Wm-2(leaf))
-    # Kd is mean projection of leaves 
-    LWleaf = Kd*(1 - tau)*leaf_emi*(LWdn + LWup - 2*SIGMA*(T + NT)**4)/ (LAIz + eps)
-
-    if PlotFigs:
-        Lcum = np.cumsum(np.flipud(LAIz))  # cumulative plant area index from canopy top
-        Lcum = np.flipud(Lcum)
-        plt.figure(99)
-        plt.subplot(221)
-        plt.title("radiation.canopy_lw", fontsize=8)
-    
-        plt.plot(LWdn, -Lcum, 'bo', label='LWdn')
-        plt.plot(LWup, -Lcum, 'ro', label='LWup')
-        plt.ylabel("-Lcum eff.")
-        plt.xlabel("LW (Wm-2 )")
-        plt.legend()
-    
-        plt.subplot(222)
-        plt.plot(LWdn-LWup, -Lcum, 'go',label='LWdn - LWup')
-        plt.plot(LWleaf, -Lcum, 'ro',label='LWleaf')
-        plt.ylabel("-Lcum eff.")
-        plt.xlabel("LW (Wm-2 )")
-        plt.title('LWup0=%.1f, LWdn0=%.1f' % (LWup0, LWdn0))
-        
-        plt.subplot(223)
-        plt.plot(LWdn, range(len(Lcum)), 'bo', label='LWdn')
-        plt.plot(LWup,range(len(Lcum)), 'ro', label='LWup')    
-        plt.ylabel("N")
-        plt.xlabel("LW (Wm-2 )")
-        plt.legend()
-    
-        plt.subplot(224)
-        plt.plot(LWdn-LWup,range(len(Lcum)), 'go',label='LWdn - LWup')
-        plt.plot(LWleaf,range(len(Lcum)), 'ro',label='LWleaf')
-        plt.ylabel("N")
-        plt.xlabel("LW (Wm-2 )")
-        plt.title('LWup0=%.1f, LWdn0=%.1f' % (LWup0, LWdn0))
-        plt.legend()
-    return LWleaf, LWdn, LWup
-
 def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
     """
     Estimates long-wave radiation budget and net isothermal LW radiation within the canopy
@@ -863,24 +747,24 @@ def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
     # LW down
     LWdn[cantop+1:N] = LWdn0  # downwelling LW entering layer i=cantop
     for k in range(cantop, -1, -1):
-        LWdn[k]=tau[k]*LWdn[k+1] +(1 - tau[k])*(leaf_emi*SIGMA*(T[k] + NT)**4)
+        LWdn[k]=tau[k]*LWdn[k+1] +(1 - tau[k])*(leaf_emi*STEFAN_BOLTZMANN*(T[k] + DEG_TO_KELVIN)**4)
     del k
 
     # LW up
     LWup[0] = LWup0  # upwelling LW entering layer i=0
     for k in range(1, cantop+2):
-        LWup[k] = tau[k-1]*LWup[k-1] + (1 - tau[k-1])*(leaf_emi*SIGMA*(T[k-1] + NT)**4)
+        LWup[k] = tau[k-1]*LWup[k-1] + (1 - tau[k-1])*(leaf_emi*STEFAN_BOLTZMANN*(T[k-1] + DEG_TO_KELVIN)**4)
     del k
     LWup[cantop+2:N] = LWup[cantop+1]
 
     # absorbed isothermal net radiation by the leaf (Wm-2(leaf))
     # Kd is mean projection of leaves 
     LWleaf[0:cantop+1] = (1 - tau[0:cantop+1])*(
-                        LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*SIGMA*leaf_emi*(T[0:cantop+1] + NT)**4)/(
+                        LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*STEFAN_BOLTZMANN*leaf_emi*(T[0:cantop+1] + DEG_TO_KELVIN)**4)/(
                         LAIz[0:cantop+1] + eps)
     LWnet[0:cantop+1] = (LWdn[1:cantop+2] - LWdn[0:cantop+1] + LWup[0:cantop+1] - LWup[1:cantop+2])/(LAIz[0:cantop+1]+eps)
 
-    gr = 2 * 4 * leaf_emi * SIGMA * ( 1 - tau) * (T + NT) ** 3 / (LAIz + eps)
+    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - tau) * (T + DEG_TO_KELVIN) ** 3 / (LAIz + eps)
 
     if PlotFigs:
         Lcum = np.cumsum(np.flipud(LAIz))  # cumulative plant area index from canopy top
@@ -1027,7 +911,7 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
     C[2:2*M+1:2] = - (taud[1:M+1] + (1 - taud[1:M+1])*(1 - aL[1:M+1])*(1 - rd[1:M+1]))
 
     # rhs
-    LWsource = aL*SIGMA*(T + NT)**4
+    LWsource = aL*STEFAN_BOLTZMANN*(T + DEG_TO_KELVIN)**4
     # lowermost row 0
     D[0] = LWup0
     # rows 1,3,5,...,M-3, M-1
@@ -1094,10 +978,10 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
     LWleaf = np.zeros(len(taud))
     cantop = max(np.where(LAIz > 0)[0])  # node at canopy top
     LWleaf[0:cantop+1] = (1 - taud[0:cantop+1])*leaf_emi*(
-                          LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*SIGMA*(Tleaf[0:cantop+1] + NT)**4)/(
+                          LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*STEFAN_BOLTZMANN*(Tleaf[0:cantop+1] + DEG_TO_KELVIN)**4)/(
                           LAIz[0:cantop+1] + eps)
 
-    gr = 2 * 4 * leaf_emi * SIGMA * ( 1 - taud) * (Tleaf + NT) ** 3 / (LAIz + eps)
+    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - taud) * (Tleaf + DEG_TO_KELVIN) ** 3 / (LAIz + eps)
 
     if PlotFigs:
         plt.figure(99)
@@ -1137,217 +1021,6 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
         plt.legend()
     return LWleaf,  LWdn, LWup, gr
 
-def canopy_lw_ZhaoQualls2(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soil_emi=0.98, PlotFigs=False):
-    """
-    Estimates incident and absorbed LWradiation within plant canopies.
-    Includes multiple scattering among the canopy layers and soil surface.
-    INPUT:
-      LAIz: leaf-area index per layer (m2(leaf) m-2(ground)), Nx1-array. LAIz[-1] MUST be 0!
-      Clump: element clumping index (-), ]0..1[, scalar
-      leaf_angle_para: leaf-angle distribution parameter (-), scalar: 1=spherical, 0=vertical, '1000'=horizontal
-      Tleaf: leaf (or air) temperature (degC)
-      LWdn0: downwelling LW at canopy top (Wm-2)
-      LWup0: upwelling LW at soil surface (Wm-2)
-      leaf_emi: leaf emissivity (-)
-      soil_emi: soil surface emissivity (-)
-    OUTPUT:
-      LWleaf: longwave radiation absorbed per unit un-clumped leaf-area in a canopy layer(Wm-2(leaf))
-      LWdn: downward long-wave (Wm-2(ground))
-      LWup: upward long-wave (Wm-2(ground))
-    USES:
-      kdiffuse
-    REFERENCES:
-      Zhao & Qualls, 2005 Water Resources Research. Multi-layer Multiple scattering model
-      Estimates SW attenuation inc. multiple scattering within the canopy.
-      Campbell & Norman (1998): An introduction to environmental biophysics.
-      Spitters, (1986): Separating the diffuse and direct component of global
-      radiation and its implications for modeling canopy photosynthesis part
-      II: Calculation of canopy photosynthesis. Agric. For. Meteorol. 38, 231-242.
-      Wang & Leuning (1998): A two-leaf model for canopy conductance, photosynthesis and partitioning of
-      available energy I: Model description and comparison with a multi-layered model. Agric. For. Meteorol. 91, 89-111.
-      Juang, Katul et al. 2008: Investigating a hierarchy of Eulerian Closure Models for Scalar Transfer Inside Forested Canopies. BLM 128:1-32.
-      Flerchinger et al. 2009. Simulation of within-canopy radiation exchange, NJAS 57, 5-15
-
-    Samuli Launiainen (METLA) 2013-2015
-    
-    CONVERTED TO PYTHON / LAST EDIT: 15.5.2017
-    """
-
-    # original and computational grid
-    LAI = Clump*sum(LAIz)  # effective LAI, corrected for clumping (m2 m-2)
-    Lo = Clump*LAIz  # effective layerwise LAI (or PAI) in original grid
-
-    Lcumo = np.cumsum(np.flipud(Lo), 0)  # cumulative plant area index from canopy top
-    Lcumo = np.flipud(Lcumo)  # node 0 is canopy bottom, N is top
-
-    # --- create computation grid
-    N = np.size(Lo)  # nr of original layers
-    M = np.maximum(10, N)  # nr of comp. layers
-
-    L = np.ones([M+2])*LAI / M  # effective leaf-area density (m2m-3)
-    L[0] = 0.
-    L[M + 1] = 0.
-    Lcum = np.cumsum(np.flipud(L), 0)  # cumulative plant area from top
-    # interpolate T to comp. grid
-    T = np.flipud(np.interp(Lcum, np.flipud(Lcumo), np.flipud(Tleaf)))  # for some reason x needs to be increasing..?
-#    plt.figure()
-#    plt.plot(T,Lcum,'og')
-#    plt.plot(Tleaf,Lcumo,'or')
-
-    # ---- optical parameters
-    # back-scattering fraction, approximation, eq. (6-7)
-    if x == 1:  # spherical leaf distrib.
-        rd = 2./3.
-    elif x == 0:  # vertical leafs
-        rd = 0.5
-    elif x > 100:  # horizontal leafs
-        rd = 1.
-    else:
-        print "radiation.canopy_lw_ZhaoQualls: check leaf angle distr. "
-
-    rd = np.ones([M+2])*rd
-    rd[0] = 1.
-    rd[M+1] = 0.
-
-    aL = np.ones([M+2])*leaf_emi  # leaf emissivity
-    aL[0] = soil_emi
-    # aL[M+1] = 0.
-
-    # extinction coefficients for diffuse radiation
-    Kd = kdiffuse(LAI, x)
-
-    # propability of contact with canopy elements in each layer
-    taud = np.exp(-Kd*L)  # diffuse
-    taud[0] = 0.
-    taud[M+1] = 1.
-
-    # --- set up tridiagonal matrix A and solve LW without multiple scattering.
-    # Zhao & Qualls eq's. (16 - 25)
-    A = np.zeros([2*M+2, 2*M+2])
-    
-    #layer 0 = soil surface, M+1 is upper boundary 
-    A[0, 0] = 1.
-    
-    # middle rows
-    for k in range(1, M+1):
-        A[2*k-1, 2*k-2] = - (taud[k] + (1 - taud[k])*(1 - aL[k])*(1 - rd[k]))
-        A[2*k-1, 2*k-1] = - rd[k-1]*(taud[k] + (1 - taud[k])*(1 - aL[k])*(1 - rd[k]))*(1 - aL[k-1])*(1 - taud[k-1])
-        A[2*k-1, 2*k] = (1 - rd[k-1]*rd[k]*(1 - aL[k-1])*(1 - taud[k-1])*(1 - aL[k])*(1 - taud[k]))
-
-        A[2*k, 2*k-1] = (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
-        A[2*k, 2*k] = - rd[k+1]*(taud[k] + (1 - taud[k])*(1 - aL[k])*(1 - rd[k]))*(1 - aL[k+1])*(1 - taud[k+1])
-        A[2*k, 2*k+1] = -(taud[k] + (1 - taud[k])*(1 - aL[k])*(1 - rd[k]))
-
-    # uppermost node2*M+2
-    A[2*M+1, 2*M+1] = 1.
-    del k
-
-    # --- RHS vector C
-    C = np.zeros([2*M+2, 1])
-
-    LWsource = aL*SIGMA*(T + NT)**4
-
-    # lowermost row
-    C[0] = LWup0
-    n = 1  # dummy
-    for k in range(1, M+1):  # k=2:M-1,
-        C[n] = (1 - rd[k-1]*rd[k]*(1 - aL[k-1])*(1 - taud[k-1])*(1 - aL[k]))*(1 - taud[k]) *LWsource[k]
-        C[n+1] = (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1]))*(1 - taud[k+1])*LWsource[k]
-        # Ib(k+1) Ib(k):n sijaan koska tarvitaan kerrokseen tuleva
-        n = n + 2
-
-    # uppermost rows
-    C[2*M] = (1 - taud[M])*LWsource[M]
-    C[2*M+1] = LWdn0
-
-    # ---- solve A*SW = C
-    LW = np.linalg.solve(A, C)
-
-    # upward and downward hemispherical radiation (Wm-2 ground)
-    LWu0 = LW[0:2*M+2:2]
-    LWd0 = LW[1:2*M+2:2]
-    del A, C, LW
-
-    # ---- Compute multiple scattering, Zhao & Qualls, 2005. eq. (8 & 9)
-    # downwelling diffuse after multiple scattering
-    LWd = np.zeros([M+1])
-    for k in range(M-1, -1, -1):  # downwards from layer k+1 to layer k
-        X = LWd0[k+1] / (1 - rd[k]*rd[k+1]*(1-aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
-        Y = LWu0[k]*rd[k+1]*(1 - aL[k+1])*(1 - taud[k+1]) / (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
-        LWd[k+1] = X + Y
-    LWd[0] = LWd0[0]
-
-    # upwelling diffuse after multiple scattering
-    LWu = np.zeros([M+1])
-    for k in range(0, M, 1):  # upwards from layer k to layer k+1 
-        X = LWu0[k] / (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
-        Y = LWd0[k+1]*rd[k]*(1 - aL[k])*(1 - taud[k]) / (1 - rd[k]*rd[k+1]*(1 - aL[k])*(1 - taud[k])*(1 - aL[k+1])*(1 - taud[k+1]))
-        LWu[k] = X + Y
-    LWu[M] = LWu[M-1]
-
-    # --- NOW return values back to the original grid
-    Lcum = Lcum[0:M+1]
-    LWd = np.flipud(LWd)
-    LWu = np.flipud(LWu)
-    # plt.figure(99); plt.plot(LWd, -Lcum, 'r', LWu, -Lcum, 'g')
-
-    X = Lcumo
-    xi = Lcum
-    LWdn = np.interp(X, xi, LWd)
-    LWup = np.interp(X, xi, LWu)
-#    del X, xi
-
-    #---------------------------------------------------------------------
-    # check that interpolation is ok
-    #plt.figure(100)
-    #plt.plot(LWd,-xi,'r.-',LWdn,-X,'ro', LWu,-xi,'b-',LWup,-X,'bs')
-    #plt.title('r = dn, b = up' ); plt.ylabel('LAI eff (m2m-2)')
-    #---------------------------------------------------------------------
-
-    # absorbed net LW per unit un-clumped leaf area (Wm-2(leaf)),
-    # Flerchinger et al. 2009. NJAS 57, 5-15
-    taud = np.exp(-Kd*Lo)
-    eL = np.ones(len(taud))*leaf_emi
-    LWleaf = Clump*(1 - taud)*eL*(LWdn + LWup - 2*SIGMA*(Tleaf + NT)**4) / (Lo + eps)
-
-    if PlotFigs:
-        plt.figure()
-        plt.subplot(221)
-        plt.title("radiation.canopy_lw_ZhaoQualls", fontsize=8)
-    
-        plt.plot(LWdn, -X/Clump, 'bo', label='LWdn')
-        plt.plot(LWup, -X/Clump, 'ro', label='LWup')    
-        plt.plot(np.flipud(LWd0), -xi/Clump, 'go', label='LWdn0')
-        plt.plot(np.flipud(LWu0), -xi/Clump, 'co', label='LWup0')    
-        plt.ylabel("-Lcum eff.")
-        plt.xlabel("LW (Wm-2 )")
-        plt.legend()
-    
-        plt.subplot(222)
-        plt.plot(LWdn-LWup, -X/Clump, 'go',label='LWdn - LWup')
-        plt.plot(LWleaf, -X/Clump, 'ro',label='LWleaf')
-        plt.ylabel("-Lcum eff.")
-        plt.xlabel("LW (Wm-2 )")
-        plt.title('LWup0=%.1f, LWdn0=%.1f' % (LWup0, LWdn0))
-        plt.legend()
-        
-        plt.subplot(223)
-    
-        plt.plot(LWdn, range(len(X)), 'bo', label='LWdn')
-        plt.plot(LWup,range(len(X)), 'ro', label='LWup')    
-        plt.ylabel("N")
-        plt.xlabel("LW (Wm-2 )")
-        plt.legend()
-    
-        plt.subplot(224)
-        plt.plot((LWdn[1:] - LWdn[:-1] + LWup[:-1] - LWup[1:])/(LAIz[:-1]+eps),range(len(X)-1), 'go',label='LWnet')
-        plt.plot(LWleaf,range(len(X)), 'ro',label='LWleaf')
-        plt.ylabel("N")
-        plt.xlabel("LW (Wm-2 )")
-        plt.title('LWup0=%.1f, LWdn0=%.1f' % (LWup0, LWdn0))
-        plt.legend()
-    return LWleaf,  LWdn, LWup
-
 def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQualls", LAIz=None, leaf_emi=0.98, soil_emi=0.98):
     """
     Runs test script for SW and LW radiation methods.
@@ -1382,8 +1055,8 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     Tatm = 17
     Tsurf = 16
     T = T * LAIz / (LAIz + eps)
-    LWdn0 = 0.85*SIGMA*(Tatm + NT)**4
-    LWup0 = 0.98*SIGMA*(Tsurf + NT)**4
+    LWdn0 = 0.85*STEFAN_BOLTZMANN*(Tatm + DEG_TO_KELVIN)**4
+    LWup0 = 0.98*STEFAN_BOLTZMANN*(Tsurf + DEG_TO_KELVIN)**4
 #    print LWdn0, LWup0
     if method == "canopy_sw_ZhaoQualls":
         print "------TestRun of radiation.canopy_sw_ZhaoQualls with given LAI and CLUMP -----------"
@@ -1399,16 +1072,8 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
         print "------TestRun of radiation.canopy_lw------------"
         LWnet, LWdn, LWup, gr = canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi,PlotFigs=True)
         print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
-        
-    if method=="canopy_lw2": 
-        print "------TestRun of radiation.canopy_lw------------"
-        LWnet, LWdn, WLup = canopy_lw2(LAIz, Clump, T, LWdn0, LWup0, leaf_emi=leaf_emi,PlotFigs=True)
 
     if method == "canopy_lw_ZhaoQualls":
         print "------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------"
         LWnet, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi, soil_emi=soil_emi, PlotFigs=True)   
         print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
-
-    if method == "canopy_lw_ZhaoQualls2":
-        print "------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------"
-        LWnet, LWdn, WLup = canopy_lw_ZhaoQualls2(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi, soil_emi=soil_emi, PlotFigs=True)   

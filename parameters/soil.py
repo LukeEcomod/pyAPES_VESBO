@@ -3,7 +3,7 @@
 SOIL DISCRETIZATION AND PARAMETERS
 """
 import numpy as np
-from parameter_utils import fit_pF, peat_hydrol_properties
+from utilities import fit_pF, peat_hydrol_properties
 
 # thickness of layers with different characteristics
 thickness = [0.1, 0.1, 0.1, 0.1, 0.1, 0.5, 1.0]

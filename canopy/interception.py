@@ -7,26 +7,14 @@ Created on Thu Mar 01 13:21:29 2018
 
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from evapotranspiration import penman_monteith, e_sat
-from micromet import leaf_boundary_layer_conductance
-
-#: [kg m-3], Density of water
-RHO_WATER = 1000.0
-#: [kg mol\ :sup:`-1`\ ], molar mass of H\ :sub:`2`\ O
-MOLAR_MASS_H2O = 18.015e-3
-CP = 29.3  # J/mol/K, heat capacity of air at constant pressure
-SIGMA = 5.6697e-8  # W m-2 K-4 Stefan-Boltzmann const
-NT = 273.15
+from micromet import e_sat, leaf_boundary_layer_conductance
+from constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN
 
 class Interception():
     """
-    Big-leaf interception model for rain and snowfall
-    ****** Kersti! ********
-    We need to change this to be multi-layer; see APES Matlab-codes. 
-    But for simplicity let's first start with assumption that Tleaf == Tair and neglect
-    leaf energy budget.
+
     """
-    def __init__(self, p, LAI, MLinterception, LAIz):
+    def __init__(self, p, LAIz):
         """
         Args:
             dt: timestep [s]
@@ -47,101 +35,12 @@ class Interception():
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
         self.Tmelt = p['Tmelt']
-        # canopy closure [-]
-        self.cf = p['cf']
 
-        # state variables
-        self.W = np.minimum(p['w_ini'], p['wmax'] * LAI) # interception storage [m]
-        if MLinterception: # compute with multilayer scheme
-            self.W = self.W * LAIz
-            self.Tl_wet = None
+        # initial state
+        self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)
+        self.Tl_wet = None
 
         self._update()
-
-    def _big_leaf(self, dt, LAI, T, Prec, AE, H2O, P, Ra=25.0, U=2.0):
-        """
-        Args:
-            dt: timestep [s]
-            LAI: leaf area index [m\ :sup:`2`\ m\ :sup:`-2`\]
-            cf: canopy closure [-]
-            T: air temperature [degC]
-            Prec: precipitation rate [m s\ :sup:`-1`\]
-            AE: available energy at canopy level  [W m\ :sup:`-2`\]
-            H2O: mixing ratio [mol/mol]
-            P: ambient pressure [Pa]
-            Ra: canopy aerodynamic resistance [s m\ :sup:`-1`\]
-            U: wind speed  at hc [m/s] ----------------------------------------------- ???
-        Returns:
-            updates sate self.W
-            Trfall_rain: throughfall as rainfall [m]
-            Trfall_snow: throughfall as snowfall [m]
-            Interc: interception [m]
-            Evap: evaporation from canopy store [m]
-            MBE: mass balance error
-        """
-        # vapor pressure deficit [Pa]
-        esat, _, _ = e_sat(T)  # [Pa]
-        VPD = max(0.0, esat - H2O * P)
-
-        Prec = Prec * dt  # [m/s] -> [m]
-
-        """ --- state of precipitation --- """
-        # fraction as water [-]
-        if T >= self.Tmax:
-            fW = 1.0
-        elif T <= self.Tmin:
-            fW = 0.0
-        else:
-            fW = (T - self.Tmin) / (self.Tmax - self.Tmin)
-
-        # maximum interception storage capacity [m]
-        Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAI
-
-        """ 'potential' evaporation and sublimation rates """
-        if (Prec == 0) & (T <= self.Tmin):  # sublimation case
-            Ce = 0.01 * ((self.oldW + eps) / Wmax)**(-0.4)  # exposure coeff [-]
-            Sh = (1.79 + 3.0 * U**0.5)  # Sherwood numbner [-]
-            gi = Sh * self.oldW * 1000 * Ce / 7.68 + eps # [m/s]  # 7.68 == (2/3*rhoi*r**2/Dw)
-            erate = penman_monteith(AE, VPD, T, 1./Ra, gi, units='m', type='sublimation') * dt
-        elif (Prec == 0) & (T > self.Tmin):  # evaporation case
-            gs = 1e6
-            erate = penman_monteith(AE, VPD, T, gs, 1./Ra, units='m', type='evaporation') * dt
-        else:  # negelect evaporation during precipitation events
-            erate = 0.0
-
-        """ --- canopy water storage change --- """
-        W = self.oldW.copy()  # initiate
-
-        # snow unloading from canopy, ensures also that seasonal
-        # LAI development does not mess up computations
-        Unload = max(0.0, W - Wmax)
-        # update canopy storage [m]
-        W = W - Unload
-
-        # interception of rain or snow: asymptotic approach of saturation.
-        # Hedstrom & Pomeroy 1998. Hydrol. Proc 12, 1611-1625;
-        # Koivusalo & Kokkonen 2002 J.Hydrol. 262, 145-164.
-        Interc = (Wmax - W) * (1.0 - np.exp(-(1.0 / Wmax) * Prec))
-        #Interc = (Wmax - W) * (1.0 - np.exp(-(self.cf / Wmax) * Prec))
-        # update canopy storage [m]
-        W = W + Interc
-
-        # throughfall to field layer or snowpack
-        Trfall = Prec + Unload - Interc
-        Trfall_rain = fW * Trfall
-        Trfall_snow = (1 - fW) * Trfall
-
-        # evaporate from canopy and update storage [m]
-        Evap = np.minimum(erate, W)
-        W = W - Evap
-
-        # update state variables
-        self.W = W
-
-        # mass-balance error [m] ! self.W is old storage
-        MBE = (self.W - self.oldW) - (Prec - Evap - (Trfall_rain + Trfall_snow))
-
-        return Trfall_rain, Trfall_snow, Interc, Evap, MBE
 
     def _multi_layer(self, dt, lt, ef, LAIz, H2O, U, T, Rabs, Prec, P, Ebal, Tl_ave, gr):
         """
@@ -195,9 +94,8 @@ class Interception():
             Tl_wet = self.Tl_wet.copy()
 
         # radiative conductance mol m-2 s-1, Campbell & Norman, 1998
-        gr = gr / CP
-#        gr = 0.0  ########### LW already calculated with Tleaf (average not Tl_sl/Tl_sh)
-#        Tl_ave = 0.0 
+        gr = gr / SPECIFIC_HEAT_AIR
+
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O
 
@@ -220,7 +118,7 @@ class Interception():
 #        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl_wet - T, P)
 
         # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
-        es, s, _ = e_sat(Tl_wet)
+        es, s = e_sat(Tl_wet)
         Dleaf = es / P - H2O  #np.maximum(0.0, es / P - H2O)  # [mol/mol]
         s = s / P  # [mol/mol/degC]
 
@@ -234,12 +132,12 @@ class Interception():
 
             if Ebal:
                 # solve leaf temperature [degC]
-                Tl_wet[ic] = (Rabs[ic] + CP*gr[ic]*Tl_ave[ic] + CP*gb_h[ic]*T[ic] - L[ic]*gb_v[ic]*Dleaf[ic] 
-                  + L[ic]*s[ic]*gb_v[ic]*Told[ic]) / (CP*(gr[ic] + gb_h[ic]) + L[ic]*s[ic]*gb_v[ic])
+                Tl_wet[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - L[ic]*gb_v[ic]*Dleaf[ic] 
+                  + L[ic]*s[ic]*gb_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + L[ic]*s[ic]*gb_v[ic])
                 err = np.nanmax(abs(Tl_wet - Told))
 #                Tl_wet = 0.5 * Tl_wet + 0.5 * Told
 #                print ('iterNo', iterNo, 'err', err, 'Tl_wet', np.mean(Tl_wet))
-                es, s, _ = e_sat(Tl_wet)
+                es, s = e_sat(Tl_wet)
                 Dleaf = es / P - H2O  #np.maximum(0.0, es / P - H2O)  # [mol/mol]
                 s = s / P  # [mol/mol/degC]
                 if iterNo == itermax:
@@ -250,11 +148,11 @@ class Interception():
 
         """ --- energy and water fluxes for wet leaf --- """ ##### or sublimation/deposition ????????? GITHUB SPATHY!!
         # sensible heat flux [W m-2(wet leaf)]
-        Hw = CP * gb_h * (Tl_wet - T)
+        Hw = SPECIFIC_HEAT_AIR * gb_h * (Tl_wet - T)
         # non-isothermal radiative flux [W m-2 (wet leaf)]???
-        Frw = CP * gr *(Tl_wet - Tl_ave)
+        Frw = SPECIFIC_HEAT_AIR * gr *(Tl_wet - Tl_ave)
         # evaporation rate from wet leaf [m/s] (negative for condensation)
-        Ep = gb_v * Dleaf * MOLAR_MASS_H2O / RHO_WATER
+        Ep = gb_v * Dleaf * MOLAR_MASS_H2O / WATER_DENSITY
 
 #        # Assume no evaporation during rain (CHANGE when energy balance added)
 #        if Prec > 0.0:
@@ -339,7 +237,7 @@ class Interception():
         Trfall_snow = (1 - fW[-1]) * Trfall
 
         # H20 source/sink per ground area due to evaporation and condensation [mol m-2 s-1]
-        dqsource = (Evap + Cond) / dt / MOLAR_MASS_H2O * RHO_WATER
+        dqsource = (Evap + Cond) / dt / MOLAR_MASS_H2O * WATER_DENSITY
         # heat source [W m-2(ground)]
         dtsource = Heat / dt
         # latent heat flux [W m-2(ground)]
@@ -354,9 +252,6 @@ class Interception():
         # update state variables
         self.W = W
         self.Tl_wet = Tl_wet
-
-#        if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
-#            print " W " + str(sum(W)) + " Prec " + str(Prec * dt) +" Evap " + str(sum(Evap)) + " Tr " + str((Trfall_rain + Trfall_snow))
 
         # mass-balance error [m] ! self.W is old storage
         MBE = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - sum(Cond) - (Trfall_rain + Trfall_snow))
@@ -376,7 +271,7 @@ def latent_heat(T):
         L: latent heat of vaporization or sublimation depending on 'type'[J/kg]
     """
     # latent heat of vaporizati [J/kg]
-    Lv = 1e3 * (3147.5 - 2.37 * (T + NT))
+    Lv = 1e3 * (3147.5 - 2.37 * (T + DEG_TO_KELVIN))
     # latent heat sublimation [J/kg]
     Ls = Lv + 3.3e5
     L = np.where(T < 0, Ls, Lv)

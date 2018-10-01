@@ -6,25 +6,14 @@ Created on Tue Mar 13 11:59:23 2018
 """
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from canopy.evapotranspiration import e_sat
-from micromet import soil_boundary_layer_conductance
-
-#: [kg m-3], Density of water
-RHO_WATER = 1000.0
-#: [kg mol\ :sup:`-1`\ ], molar mass of H\ :sub:`2`\ O
-MOLAR_MASS_H2O = 18.015e-3
-CP = 29.3  # J/mol/K, heat capacity of air at constant pressure
-SIGMA = 5.6697e-8  # W m-2 K-4 Stefan-Boltzmann const
-NT = 273.15
-GAS_CONST = 8.314 # universal gas constant, Jmol-1
-GRAVITY = 9.81 # gravitational acceleration s/m2
-LMOLAR = 44100.0  # J/mol latent heat of vaporization at 20 deg C
+from micromet import e_sat, soil_boundary_layer_conductance
+from constants import *
 
 class ForestFloor():
     """
     Forest floor consisting of moss and/or bares soil
     """
-    def __init__(self, p, pp, MLM):
+    def __init__(self, p, pp):
 
         # Bryotypes
         brtypes = []
@@ -37,16 +26,15 @@ class ForestFloor():
         self.f_baresoil = 1.0 - f_bryo
         self.f_bryo = f_bryo
 
-        if MLM:
-            self.R10 = p['soilp']['R10']
-            self.Q10 = p['soilp']['Q10']
-            self.poros = p['soilp']['poros']
-            self.limitpara = p['soilp']['limitpara']
+        self.R10 = p['soilp']['R10']
+        self.Q10 = p['soilp']['Q10']
+        self.poros = p['soilp']['poros']
+        self.limitpara = p['soilp']['limitpara']
 
-            self.soil_alb = {'Par': pp['soil_Par_alb'],# soil (moss) Par-albedo [-]
-                             'Nir': pp['soil_Nir_alb']}  # soil (moss) Nir-albedo [-]
-            self.soil_emi = pp['soil_emi']
-            self.soil_zr = 0.01  ## INPUT!!!!!!!!
+        self.soil_alb = {'Par': pp['soil_Par_alb'],# soil (moss) Par-albedo [-]
+                         'Nir': pp['soil_Nir_alb']}  # soil (moss) Nir-albedo [-]
+        self.soil_emi = pp['soil_emi']
+        self.soil_zr = 0.01  ## INPUT!!!!!!!!
 
     def _run_water_energy_balance(self, dt, Prec, U, T, H2O, P, SWE,
                                   z_can, T_ave, T_soil, h_soil, z_soil, Kh, Kt,
@@ -86,7 +74,7 @@ class ForestFloor():
                 for bryo in self.Bryophytes:
                     ef, trfall, mbe = bryo.waterbalance(dt, Prec * 1e3, U, T, H2O, P=P)
                     Ebryo += bryo.f_cover * ef / MOLAR_MASS_H2O  # mol m-2 s-1
-                    LE_gr += bryo.f_cover * ef  / MOLAR_MASS_H2O * LMOLAR
+                    LE_gr += bryo.f_cover * ef  / MOLAR_MASS_H2O * LATENT_HEAT
                     Tf += bryo.f_cover * T
                     Trfall += bryo.f_cover * trfall * 1e-3
                     MBE += bryo.f_cover * mbe
@@ -207,7 +195,7 @@ class MossLayer():
             updates self.W
         """
         # VPD at air temperature; neglect condensation conditions
-        es, _, _ = e_sat(T)
+        es, _ = e_sat(T)
         D = np.maximum(0.0, es / P - H2O)  # mol / mol
 
         # initial water content
@@ -315,25 +303,25 @@ def baresoil_energybalance(z_can, U, T, H2O, P, T_ave, soil_alb, soil_emi, zr,
     # boundary layer conductances for H2O and heat [mol m-2 s-1]
     gb_h, _, gb_v = soil_boundary_layer_conductance(u=U, z=z_can, zo=zr, Ta=T, dT=0.0, P=P)  # OK to assume dt = 0.0?
     # radiative conductance [mol m-2 s-1]
-    gr = 4.0 * soil_emi * SIGMA * T_ave**3 / CP
+    gr = 4.0 * soil_emi * STEFAN_BOLTZMANN * T_ave**3 / SPECIFIC_HEAT_AIR
 
     # absorbed shortwave radiation
     SW_gr = (1 - soil_alb['Par']) * Par_gr + (1 - soil_alb['Nir']) * Nir_gr
 
     # Maximum LE
     # atm pressure head in equilibrium with atm. relative humidity
-    es_a, _, _ = e_sat(T)
+    es_a, _ = e_sat(T)
     RH = H2O * P / es_a  # air relative humidity above ground [-]
-    h_atm = GAS_CONST * (NT + T) * np.log(RH)/(MOLAR_MASS_H2O * GRAVITY)  # [m]
+    h_atm = GAS_CONSTANT * (DEG_TO_KELVIN + T) * np.log(RH)/(MOLAR_MASS_H2O * GRAVITY)  # [m]
     # maximum latent heat flux constrained by h_atm
-    LEmax = -LMOLAR * Kh * (h_atm - h_soil - z_soil) / dz_soil * RHO_WATER / MOLAR_MASS_H2O  # [W/m2]
+    LEmax = -LATENT_HEAT * Kh * (h_atm - h_soil - z_soil) / dz_soil * WATER_DENSITY / MOLAR_MASS_H2O  # [W/m2]
 
     # LE demand
     # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
-    es, s, _ = e_sat(T_surf)
+    es, s = e_sat(T_surf)
     Dsurf = es / P - H2O  # [mol/mol] - allows condensation
     s = s / P  # [mol/mol/degC]
-    LE = LMOLAR * gb_v * Dsurf
+    LE = LATENT_HEAT * gb_v * Dsurf
 
     if LE > LEmax:
         LE = LEmax
@@ -348,14 +336,14 @@ def baresoil_energybalance(z_can, U, T, H2O, P, T_ave, soil_alb, soil_emi, zr,
         Told = T_surf
         if Ebal:
             # solve leaf temperature [degC]
-            T_surf = (SW_gr + LWn + CP*gr*T_ave + CP*gb_h*T - LE + LMOLAR*s*gb_v*Told
-                      + Kt / dz_soil * T_soil) / (CP*(gr + gb_h) + LMOLAR*s*gb_v + Kt / dz_soil)
+            T_surf = (SW_gr + LWn + SPECIFIC_HEAT_AIR*gr*T_ave + SPECIFIC_HEAT_AIR*gb_h*T - LE + LATENT_HEAT*s*gb_v*Told
+                      + Kt / dz_soil * T_soil) / (SPECIFIC_HEAT_AIR*(gr + gb_h) + LATENT_HEAT*s*gb_v + Kt / dz_soil)
             err = np.nanmax(abs(T_surf - Told))
 #            print ('iterNo', iterNo, 'err', err, 'T_surf', T_surf)
-            es, s, _ = e_sat(T_surf)
+            es, s = e_sat(T_surf)
             Dsurf = es / P - H2O  # [mol/mol] - allows condensation
             s = s / P  # [mol/mol/degC]
-            LE = LMOLAR * gb_v * Dsurf
+            LE = LATENT_HEAT * gb_v * Dsurf
             if LE > LEmax:
                 LE = LEmax
                 s = 0.0
@@ -367,9 +355,9 @@ def baresoil_energybalance(z_can, U, T, H2O, P, T_ave, soil_alb, soil_emi, zr,
 
     """ --- energy and water fluxes --- """
     # sensible heat flux [W m-2]
-    Hw = CP * gb_h * (T_surf - T)
+    Hw = SPECIFIC_HEAT_AIR * gb_h * (T_surf - T)
     # non-isothermal radiative flux [W m-2]
-    Frw = CP * gr *(T_surf - T_ave)
+    Frw = SPECIFIC_HEAT_AIR * gr *(T_surf - T_ave)
     # ground heat flux [W m-2]
     Gw = Kt / dz_soil * (T_surf - T_soil)
     # evaporation rate [mol m-2 s-1]

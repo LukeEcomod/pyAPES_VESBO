@@ -1,7 +1,7 @@
 # README
 Branch for cleaned model codes for pyAPES development
 
-### Soil_model
+### SoilProfile
 Water flow:
 * Equilibrium within vertical column during each timestep 
 * OR Richards 1D equation 
@@ -13,14 +13,8 @@ Heat flow:
 -> soil temperature and ice content 
 ! neglects heat convection (heat transfer with water flow)
 
-### Canopy_model
-!REMOVE! - Simple canopy description (based on SpaFHy)
-* Big leaf interception 
-! Interception by shrubs separately?
-* Interception evaporation and tranpiration besad on Penman-Montieth
-* Wind speed amd net radiation at ground and canopy + boundary layer conductances
-
-OR Multilayer canopy description
+### Canopy
+Multilayer canopy description
 * Radiation model: canopy SW (PAR&NIR) and LW including multiple scattering in horizontally homogenous porous media Zhao & Qualls (2005, 2006), sunlit/shade leaves
 ! range of zenith angle?
 * Interception model: interception of rainfall and snow following approach by Tanaka (2002, Ecol. Mod.) 
@@ -47,6 +41,7 @@ see tools/dataprocessing_scripts
 
 ### Todos..
 
+* Documentation!
 * Updating bryophyte model (energy and water)
 * Description of soil respiration? branches etc..
 * Marklund biomass functions ok for drained peatlands?

@@ -10,7 +10,7 @@ Last edit: 3.7.2017 / Samuli
 
 import numpy as np
 import matplotlib.pyplot as plt
-from soil_water import wrc
+from water import wrc
 from tools.utilities import tridiag as thomas
 
 eps = np.finfo(float).eps  # machine epsilon

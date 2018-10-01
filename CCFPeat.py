@@ -8,28 +8,24 @@ import os
 import numpy as np
 import pandas as pd
 from tools.iotools import read_forcing
-from canopy.canopy_model import CanopyModel
-from soilprofile.soil_model import SoilModel
-from parameters.canopy_parameters import get_cpara
+from canopy.canopy import CanopyModel
+from soilprofile.soilprofile import SoilModel
+from parameters.canopy import get_cpara
 
 from copy import deepcopy
 
-def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014.txt", LAImax=None):
+def driver(create_ncf=False, dbhfile="letto2014.txt"):
     """
     """
 
     # Import general parameters
-    from parameters.general_parameters import gpara
+    from parameters.general import gpara
     # Import canopy model parameters
     cpara = get_cpara(dbhfile)
     # Import soil model parameters
-    from parameters.soil_parameters import spara
+    from parameters.soil import spara
 
-    if LAI_sensitivity:
-        from parameters.sensitivity_sampling import LAIcombinations
-        Nsim = len(LAIcombinations)
-    else:
-        Nsim = 1
+    Nsim = 1
 
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
@@ -40,12 +36,6 @@ def driver(create_ncf=False, LAI_sensitivity=False, dbhfile="letto2014.txt", LAI
     tasks = []
 
     for k in range(Nsim):
-        if LAI_sensitivity:
-            for pt in range(3):
-                cpara['plant_types'][pt].update({'LAImax': [LAIcombinations[k][pt]]})
-        elif LAImax != None:
-            for pt in range(len(LAImax)):
-                cpara['plant_types'][pt].update({'LAImax': [LAImax[pt]]})
         tasks.append(Model(gpara, cpara, spara, forcing, nsim=k))
 
     if create_ncf:
@@ -99,10 +89,7 @@ class Model():
         self.Nsim = nsim
 
         self.Nsoil_nodes = len(soil_para['z'])
-        if canopy_para['ctr']['multilayer_model']['ON']:
-            self.Ncanopy_nodes = canopy_para['grid']['Nlayers']
-        else:
-            self.Ncanopy_nodes = 1
+        self.Ncanopy_nodes = canopy_para['grid']['Nlayers']
 
         # create soil model instance
         self.soil_model = SoilModel(soil_para['z'], soil_para)

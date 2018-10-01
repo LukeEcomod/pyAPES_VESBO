@@ -8,7 +8,7 @@ import numpy as np
 
 class Photo_cycle():
     """
-    Ceasonal cycle of photosynthetic machinery.
+    Seasonal cycle of photosynthetic machinery.
     Adapted from:
         Mäkelä et al. 2004. Tree Physiology 24, 369–376; Formulation as in
         Kolari et al. 2007 Tellus.

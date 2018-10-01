@@ -7,11 +7,8 @@ and physical processes in atmospheric surface layer
 """
 import numpy as np
 from tools.utilities import central_diff, forward_diff, tridiag, smooth
+from constants import *
 eps = np.finfo(float).eps  # machine epsilon
-
-# Constants used in the model calculations.
-#: [-], von Karman constant
-VON_KARMAN = 0.41
 
 class Micromet():
     """
@@ -23,85 +20,34 @@ class Micromet():
        Massman 1987, BLM 40, 179 - 197.
        Magnani et al. 1998 Plant Cell Env.
     """
-    def __init__(self, z, lad, hc, p, MLM):
+    def __init__(self, z, lad, hc, p):
         """
         Args:
             z
             lad
             hc (float): canopy height [m]
             p - parameter dict
-                w - leaf length scale [m]
-                zm - wind speed measurement height above canopy [m]
                 zg - height above ground where Ug is computed [m]
                 zos - forest floor roughness length, ~ 0.1*roughness element height [m]
             MLM (boolean): compute in multilayer mode
         Returns:
-            Aerodynomics -object
+            Micromet -object
         """
 
         # parameters
-        self.w = p['w']  # leaf length scale [m]
-        self.zmeas = p['zmeas']  # wind speed measurement height above canopy [m]
-        self.zg = p['zg']  # height above ground where Ug is computed [m]
         self.zos = p['zos']  # forest floor roughness length [m]
-        if MLM:  # multilayer model
-            self.dPdx = p['dPdx']  # horizontal pressure gradient
-            self.Cd = p['Cd']  # drag coefficient
-            self.Utop = p['Utop']  # ensemble U/ustar
-            self.Ubot = p['Ubot']  # lower boundary
-            self.Sc = p['Sc']  # Schmidt numbers
-            self.dz = z[1] - z[0]
 
-        if MLM:
-            # initialize state variables
-            _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
-                    z, self.Cd, lad, hc, self.Utop + eps, self.Ubot, dPdx=self.dPdx)
+        self.dPdx = p['dPdx']  # horizontal pressure gradient
+        self.Cd = p['Cd']  # drag coefficient
+        self.Utop = p['Utop']  # ensemble U/ustar
+        self.Ubot = p['Ubot']  # lower boundary
+        self.Sc = p['Sc']  # Schmidt numbers
+        self.dz = z[1] - z[0]
 
-    def _run(self, LAI, hc, Uo):
-        """
-        non-multilayer approach (bulk aerodynamic resistance, wind profile)
-        Args:
-            LAI - one-sided leaf-area /plant area index (m2m-2)
-            hc - canopy height (m)
-            Uo - mean wind speed at height zm (ms-1)
-        Returns:
-            ra (array):
-                forest floor aerod. resistance (s m-1)
-                canopy aerodynamic resistance (s m-1)
-            U (array):
-                wind speed at hc (m s-1)
-                wind speed at zg (m s-1)
-        """
-        zm = hc + self.zmeas  # m
-        beta = 285.0  # s/m, from Campbell & Norman eq. (7.33) x 42.0 molm-3
-        alpha = LAI / 2.0  # wind attenuation coeff (Yi, 2008 eq. 23)
-        d = 0.66 * hc  # m
-        zom = 0.123 * hc  # m
-        zov = 0.1 * zom
-        zosv = 0.1 * self.zos
+        # initialize state variables
+        _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
+                z, self.Cd, lad, hc, self.Utop + eps, self.Ubot, dPdx=self.dPdx)
 
-        # solve ustar and U(hc) from log-profile above canopy
-        ustar = Uo * VON_KARMAN / np.log((zm - d) / zom) 
-        Uh = ustar / VON_KARMAN * np.log((hc - d) / zom)
-        
-        # U(zg) from exponential wind profile
-        zn = np.minimum(self.zg / hc, 1.0)  # zground can't be above canopy top
-        Ug = Uh * np.exp(alpha * (zn - 1.0))
-
-        # canopy aerodynamic & boundary-layer resistances (sm-1). Magnani et al. 1998 PCE eq. B1 & B5
-        #ra = 1. / (kv*ustar) * np.log((zm - d) / zom)
-        ra = 1./(VON_KARMAN**2.0 * Uo + eps) * np.log((zm - d) / zom) * np.log((zm - d) / zov)
-        rb = 1. / LAI * beta * ((self.w / (Uh  + eps))*(alpha / (1.0 - np.exp(-alpha / 2.0))))**0.5
-        ra = ra + rb
-
-        # soil aerodynamic resistance (sm-1)
-        ras = 1. / (VON_KARMAN**2.0 * Ug  + eps) * np.log(self.zg / self.zos) * np.log(self.zg / zosv)
-
-        ra = np.array([ras, ra])
-        U = np.array([Ug, Uh])
-        return ra, U
-
-    """ --- for multilayer model ---"""
     def normalized_flow_stats(self, z, lad, hc, Utop=None):
         """
         computes normalized mean velocity profile, shear stress and eddy diffusivity
@@ -390,7 +336,7 @@ def closure_1_model_scalar(dz, Ks, Source, ubc, lbc, scalar,
 def mixing_length(z, h, d, l_min=None):
     """
     computes mixing length: linear above the canopy, constant within and
-    decreases linearly close the ground (below z< alpha*h/kv)
+    decreases linearly close the ground (below z< alpha*h/VON_KARMAN)
     IN:
         z - computation grid, m
         h - canopy height, m
@@ -400,18 +346,17 @@ def mixing_length(z, h, d, l_min=None):
         lmix - mixing length, m
     """
     dz = z[1] - z[0]
-    kv = 0.4  # von Karman constant
 
     if not l_min:
         l_min = dz / 2.0
     
-    alpha = (h - d)*kv / h
+    alpha = (h - d)*VON_KARMAN / h
     I_F = np.sign(z - h) + 1.0
-    l_mix = alpha*h*(1 - I_F / 2) + (I_F / 2) * (kv*(z - d))
+    l_mix = alpha*h*(1 - I_F / 2) + (I_F / 2) * (VON_KARMAN*(z - d))
     
-    sc = (alpha*h) / kv
+    sc = (alpha*h) / VON_KARMAN
     ix = np.where(z < sc)
-    l_mix[ix] = kv*(z[ix] + dz / 2)
+    l_mix[ix] = VON_KARMAN*(z[ix] + dz / 2)
     l_mix = l_mix + l_min
 
     return l_mix
@@ -435,23 +380,19 @@ def leaf_boundary_layer_conductance(u, d, Ta, dT, P=101300.):
     Gaby Katul & Samuli Launiainen
     Note: the factor of 1.4 is adopted for outdoor environment, see Campbell and Norman, 1998, p. 89, 101.
     """
-    
+
+    u = np.maximum(u, eps)
+
     # print('U', u, 'd', d, 'Ta', Ta, 'P', P)
     factor1 = 1.4*2  # forced conv. both sides, 1.4 is correction for turbulent flow
     factor2 = 1.5  # free conv.; 0.5 comes from cooler surface up or warmer down
-    
-    Da_v = 2.4e-5  # Molecular diffusivity of "water vapor" in air at STP (20C and 101kPa) [m2/s]
-    Da_c = 1.57e-5  # Molecular diffusivity of "CO2" in air at STP [m2/s]
-    Da_T = 2.14e-5  # Molecular diffusivity of "heat" in air at STP [m2/s]
-    va = 1.51e-5  # air viscosity at STP [m2/s]
-    g = 9.81  # gravitational constant [m/s2]
 
     # -- Adjust diffusivity, viscosity, and air density to pressure/temp.
     t_adj = (101300.0 / P)*((Ta + 273.15) / 293.16)**1.75
-    Da_v = Da_v*t_adj
-    Da_c = Da_c*t_adj
-    Da_T = Da_T*t_adj
-    va = va*t_adj
+    Da_v = MOLECULAR_DIFFUSIVITY_H2O*t_adj
+    Da_c = MOLECULAR_DIFFUSIVITY_CO2*t_adj
+    Da_T = THERMAL_DIFFUSIVITY_AIR*t_adj
+    va = AIR_VISCOSITY*t_adj
     rho_air = 44.6*(P / 101300.0)*(273.15 / (Ta + 273.13))  # [mol/m3]
 
     # ----- Compute the leaf-level dimensionless groups
@@ -459,7 +400,7 @@ def leaf_boundary_layer_conductance(u, d, Ta, dT, P=101300.):
     Sc_v = va / Da_v  # Schmid numbers for water
     Sc_c = va / Da_c  # Schmid numbers for CO2
     Pr = va / Da_T  # Prandtl number
-    Gr = g*(d**3)*abs(dT) / (Ta + 273.15) / (va**2)  # Grashoff number
+    Gr = GRAVITY*(d**3)*abs(dT) / (Ta + 273.15) / (va**2)  # Grashoff number
 
     # ----- aerodynamic conductance for "forced convection"
     gb_T = (0.664*rho_air*Da_T*Re**0.5*(Pr)**0.33) / d  # [mol/m2/s]
@@ -501,12 +442,10 @@ def soil_boundary_layer_conductance(u, z, zo, Ta, dT, P=101300.):
     Samuli Launiainen, 18.3.2014
     to python by Kersti
     """
-    Da_v = 2.4e-5  # Molecular diffusivity of "water vapor" in air at STP (20C and 101kPa) [m2/s]
-    Da_c = 1.57e-5  # Molecular diffusivity of "CO2" in air at STP [m2/s]
-    Da_T = 2.14e-5  # Molecular diffusivity of "heat" in air at STP [m2/s]
+
     rho_air = 44.6*(P / 101300.0)*(273.15 / (Ta + 273.13))  # molar density of air [mol/m3]
 
-    delta = 5.0 * 9.81 * z * dT / ((Ta + 273.15) * u**2)
+    delta = 5.0 * GRAVITY * z * dT / ((Ta + 273.15) * u**2)
     if delta > 0:
         d = -0.75
     else:
@@ -514,7 +453,25 @@ def soil_boundary_layer_conductance(u, z, zo, Ta, dT, P=101300.):
     rb = (np.log(z/zo))**2 / (0.4**2*u)*(1 + delta)**d
 
     gb_h = rho_air * 1 / rb
-    gb_v = Da_v / Da_T * gb_h
-    gb_c = Da_c / Da_T * gb_h
+    gb_v = MOLECULAR_DIFFUSIVITY_H2O / THERMAL_DIFFUSIVITY_AIR * gb_h
+    gb_c = MOLECULAR_DIFFUSIVITY_CO2 / THERMAL_DIFFUSIVITY_AIR * gb_h
 
     return gb_h, gb_c, gb_v
+
+def e_sat(T):
+    """
+    Computes saturation vapor pressure (Pa), slope of vapor pressure curve
+    [Pa K-1]  and psychrometric constant [Pa K-1]
+    IN:
+        T - air temperature (degC)
+    OUT:
+        esa - saturation vapor pressure in Pa
+        s - slope of saturation vapor pressure curve (Pa K-1)
+    SOURCE:
+        Campbell & Norman, 1998. Introduction to Environmental Biophysics. (p.41)
+    """
+
+    esa = 611.0 * np.exp((17.502 * T) / (T + 240.97))  # Pa
+    s = 17.502 * 240.97 * esa / ((240.97 + T)**2)
+
+    return esa, s

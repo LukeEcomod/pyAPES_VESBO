@@ -7,7 +7,6 @@ Functions and classes for snowpack descriptions
 
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from evapotranspiration import penman_monteith
 
 class Snowpack():
     """
@@ -15,7 +14,7 @@ class Snowpack():
     Now simple degreeday model
     ! Add option for energy balance based description of two-layer snowpack?
     """
-    def __init__(self, p, cf):
+    def __init__(self, p):
         """
         Args:
             dt: timestep [s]
@@ -32,7 +31,7 @@ class Snowpack():
 
         # parameters:
         # melting and freezing coefficients [m/s]
-        self.kmelt = p['kmelt'] - 1.64 / (24 * 3600 * 1000) * cf  # Kuusisto E, 'Lumi Suomessa'
+        self.kmelt = p['kmelt']
         self.kfreeze = p['kfreeze']
         # max fraction of liquid water in snow [-]
         self.reten = p['retention']

@@ -3,7 +3,7 @@
 CANOPY MODEL PARAMETERS
 """
 from copy import deepcopy
-from parameter_utils import lad_profiles
+from parameters.utilities import lad_profiles
 
 def get_cpara(dbhfile):
 
@@ -11,43 +11,40 @@ def get_cpara(dbhfile):
 
     # initialize dictionary to store parameters
     cpara = {}
-    
+
+    # grid
+    grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
+            'Nlayers': 100  # number of layers in grid [-]
+            }
+
     # --- control flags (True/False) ---
-    ctr = {'multilayer_model': {'ON': True,  # compute in multilayer mode
-                                # In case ON:
-                                'MLinterception': True, #True,  # multilayer scheme for interception
-                                'Eflow': True,  # ensemble flow
-                                'WMA': False, # well-mixed assumption
-                                'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
-                                'Ebal': True,  # computes leaf temperature by solving energy balance (not supported yet)
-                                'SwModel': 'ZhaoQualls',
-                                'LwModel': 'ZhaoQualls'},#'Flerchinger'},  #
+    ctr = {'Eflow': True,  # ensemble flow
+           'WMA': False, # well-mixed assumption
+           'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
+           'Ebal': True,  # computes leaf temperature by solving energy balance (not supported yet)
+           'SwModel': 'ZhaoQualls',
+           'LwModel': 'ZhaoQualls',  #'Flerchinger'},  #
+           'WaterStress': False,  # TRUE NOT SUPPORTED YET!
            'seasonal_LAI': True,  # account for seasonal LAI dynamics
-           'pheno_cylcle': True  # account for phenological cycle
+           'pheno_cycle': True  # account for phenological cycle
            }
-    
+
     # --- site location ---
     loc = {'lat': 60.63,  # latitude
            'lon': 23.95  # longitude
            }
-    
+
     # --- aerodynamics ---
-    aero = {'w': 0.01,  # leaf length scale [m]
-            'zmeas': 2.0,  # wind speed measurement height above canopy [m]
-            'zg': 0.5,  # height above ground where Ug is computed [m]
-            'zos': 0.01,  # forest floor roughness length [m]
-            # multilayer model (1rst order canopy closure model)
+    aero = {'zos': 0.01,  # forest floor roughness length [m]
             'dPdx': 0.01,  # horizontal pressure gradient
             'Cd': 0.15,  # drag coefficient
             'Utop': 5.0,  # ensemble U/ustar
             'Ubot': 0.0,  # lower boundary
             'Sc': {'T': 2.0, 'H2O': 2.0, 'CO2': 2.0}  # Schmidt numbers
             }
-    
+
     # --- radiation ---
     radi = {'clump': 0.7,  # clumping index [-]
-            'kd': 0.78,
-            # additional parameters necessary for multilayer model
             'leaf_angle': 1.0,  # leaf-angle distribution [-]
             'Par_alb': 0.12,  # shoot Par-albedo [-]
             'soil_Par_alb': 0.05,  # soil (moss) Par-albedo [-]
@@ -56,21 +53,41 @@ def get_cpara(dbhfile):
             'soil_emi': 0.98,
             'leaf_emi': 0.98
             }
-    
+
     # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
     interc_snow = {'wmax': 0.15e-03, #0.5e-03,  # maximum interception storage capacity for rain [m per unit of LAI]
                    'wmaxsnow': 1.2e-03, #4.0e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
-                   'kmelt': 2.8934e-08,  # Melting coefficient [m degC-1 s-1]
-                   'kfreeze': 5.79e-09,  # Freezing  coefficient [m degC-1 s-1]
+                   'kmelt': 2.31e-08,  # Melting coefficient [m degC-1 s-1] (=2.0 mm/C/d)
+                   'kfreeze': 5.79e-09,  # Freezing  coefficient [m degC-1 s-1] (=0.5 mm/C/d)
                    'retention': 0.05,  # max fraction of liquid water in snow [-]
                    'Tmin': 0.0,  # temperature below which all is snow [degC]
                    'Tmax': 1.0,  # temperature above which all is water [degC]
                    'Tmelt': 0.0,  # temperature when melting starts [degC]
                    'w_ini': 0.0,  # initial canopy storage [m]
                    'swe_ini': 0.0,  # initial snow water equivalent [m]
-                   'cf': 0.6  # canopy closure [-]
                    }
-    
+
+    # --- forest floor ---
+    mossp0 = {'ground_coverage': 0.0,  # fraction of moss ground coverage [-]
+             'Wmax': 20.0,  # 
+             'Wmin': 1.5,  # 
+             'zr': 0.01,  # roughness height [m]
+             'Mdry': 0.060,  # 
+             # --- parameters to compute moss co2 exchange (only in MLM) ---
+             'LAI': 1.0,  # leaf area index [m2m-2]
+             'Amax': 1.8,  # max photo rate [umolm-2s-1]
+             'Q10': 2.0,  # temperature sensitivity [-]
+             'R10': 0.03,  # base respiration at 10degC [umolm-2s-1]
+             'qeff': 0.015  # 
+             }
+    soilp = {# --- parameters to compute soil respiration (only in MLM) ---
+            'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
+            'Q10': 2.0,  # temperature sensitivity [-]
+            'poros': 0.947,  # porosity [m3m-3]    ----> vesimallista?
+            'limitpara': [3.83, 4.43, 1.25, 0.854]  #Skopp respiration function param [a ,b, d, g]
+            }
+    ffloor = {'mossp': [mossp0], 'soilp': soilp}
+
     # --- default values for plant characteristics ---
     gamma = 1.5  # adjust shoot light response
     plant_default = {'phenop': {  # --- seasonal cycle of phenology ---
@@ -125,28 +142,23 @@ def get_cpara(dbhfile):
     spruce = deepcopy(plant_default)
     decid = deepcopy(plant_default)
     shrubs = deepcopy(plant_default)
-    
+
     # --- stand characteristics ---
-    # specify name and maximum leaf-area index, LAImax [m2/m2], and 
+    # specify name and maximum leaf-area index, LAImax [m2/m2], and
     # adjust values of 'phenop' and 'laip' if default values not suitable
     pine.update({'name': 'pine', 'LAImax': []}) #[2.1]})
     pine['phenop'].update({'fmin': 0.1})
     pine['laip'].update({'lai_min': 0.8})
-    
+
     spruce.update({'name': 'spruce', 'LAImax': []}) #[1.0]})
     spruce['phenop'].update({'fmin': 0.1})
     spruce['laip'].update({'lai_min': 0.8})
-    
+
     decid.update({'name': 'decid', 'LAImax': []}) #[1.0]})
-    
+
     shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
     shrubs['laip'].update({'lai_min': 0.5})
-    
-    # grid
-    grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
-            'Nlayers': 100  # number of layers in grid [-]
-            }
-    
+
     # normed leaf area density profiles
     quantiles = [1.0]  # quantiles used in creating species stand lad profiles
     hs = 0.5  # height of understory shrubs [m]
@@ -158,78 +170,29 @@ def get_cpara(dbhfile):
         spruce['LAImax'] = lai_s
     if decid['LAImax'] == []:
         decid['LAImax'] = lai_d
-    
-    # --- forest floor ---
-    mossp0 = {'ground_coverage': 0.0,  # fraction of moss ground coverage [-]
-             'Wmax': 20.0,  # 
-             'Wmin': 1.5,  # 
-             'zr': 0.01,  # roughness height [m]
-             'Mdry': 0.060,  # 
-             # --- parameters to compute moss co2 exchange (only in MLM) ---
-             'LAI': 1.0,  # leaf area index [m2m-2]
-             'Amax': 1.8,  # max photo rate [umolm-2s-1]
-             'Q10': 2.0,  # temperature sensitivity [-]
-             'R10': 0.03,  # base respiration at 10degC [umolm-2s-1]
-             'qeff': 0.015  # 
-             }
-    soilp = {# --- parameters to compute soil respiration (only in MLM) ---
-            'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
-            'Q10': 2.0,  # temperature sensitivity [-]
-            'poros': 0.947,  # porosity [m3m-3]    ----> vesimallista?
-            'limitpara': [3.83, 4.43, 1.25, 0.854]  #Skopp respiration function param [a ,b, d, g]
-            }
-    ffloor = {'mossp': [mossp0], 'soilp': soilp}
-    
-    if ctr['multilayer_model']['ON'] is False:
-        """parameters for simple (not multilayer) model"""
-        # --- physiology for calculation of transpiration and Efloor---
-        phys_para = {'ga': 40.0,  # [m s-1]          MISSÄ KÄYTETÄÄN?
-                     'q50': 50.0,  # half-sat. of leaf light response [W m-2]
-                     'kp': 0.6,  # attenuation coefficient for PAR [-]
-                     'rw': 0.20,  # transpiration moisture response parameter
-                     'rwmin': 0.02}  # transpiration moisture response parameter
-        # the light-saturated leaf-level stomatal conductances at vpd = 1 kPa [m s-1]
-        pine['gsref'] = 1.6e-6
-        spruce['gsref'] = 1.6e-6
-        decid['gsref'] = 2.6e-6
-        shrubs['gsref'] = 2.6e-6
-        # --- parameters describing canopy ---
-        canopy_para = {'hc': 16.0}  # canopy height [m]
-        # add to parameter dictionary
-        cpara.update({'phys_para': phys_para, 'canopy_para': canopy_para})
-        # plant types to list
-        plant_types = [pine, spruce, decid, shrubs]  # shrubs?? hs?
-    else:
-        """parameters for multilayer model"""
-        cpara.update({'grid': grid})
-        # adjust leaf gas-exchange parameters
-        gfact = 1.2  # coefficient for adjusting (?)
-        pine['photop'].update({'Vcmax': 55.0, 'Jmax': 105.0, 'Rd': 1.3,
-                               'La': 1600.0, 'm': gfact*2.5})
-        pine['photop']['tresp'].update({'Vcmax': [78, 200.0, 650.0],
-                                        'Jmax': [56, 200.0, 647.0]})
-        spruce['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.5,
-                                 'La': 1600.0, 'm': gfact*2.5})
-        spruce['photop']['tresp'].update({'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
-                                          'Jmax': [38.4, 202.0, 655.8]})
-        decid['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
-                                'La': 600.0, 'm': gfact*4.5})
-        decid['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
-                                         'Jmax': [42.8, 200.0, 637.0]})
-        decid['leafp'].update({'lt': 0.05})
-        shrubs['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
-                                'La': 600.0, 'm': gfact*4.5, 'kn': 0.3})
-        shrubs['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],
-                                         'Jmax': [42.8, 200.0, 637.0]})
-        plant_types = [pine, spruce, decid, shrubs]
-    
-    cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero,
+
+    # adjust leaf gas-exchange parameters
+    gfact = 1.2  # coefficient for adjusting (?)
+    pine['photop'].update({'Vcmax': 55.0, 'Jmax': 105.0, 'Rd': 1.3,
+                           'La': 1600.0, 'm': gfact*2.5})
+    pine['photop']['tresp'].update({'Vcmax': [78, 200.0, 650.0],
+                                    'Jmax': [56, 200.0, 647.0]})
+    spruce['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.5,
+                             'La': 1600.0, 'm': gfact*2.5})
+    spruce['photop']['tresp'].update({'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
+                                      'Jmax': [38.4, 202.0, 655.8]})
+    decid['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
+                            'La': 600.0, 'm': gfact*4.5})
+    decid['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
+                                     'Jmax': [42.8, 200.0, 637.0]})
+    decid['leafp'].update({'lt': 0.05})
+    shrubs['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
+                            'La': 600.0, 'm': gfact*4.5, 'kn': 0.3})
+    shrubs['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],
+                                     'Jmax': [42.8, 200.0, 637.0]})
+    plant_types = [pine, spruce, decid, shrubs]
+
+    cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero,'grid': grid,
                   'interc_snow': interc_snow, 'plant_types': plant_types, 'ffloor': ffloor})
-    
-    #        for computing aerodynamic resistances  -- yksiköt?
-    #        self.zmeas = 2.0
-    #        self.zground = 0.5
-    #        self.zo_ground = 0.01
-    #        self.soilrp = 300.0
 
     return cpara
