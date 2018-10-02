@@ -1,37 +1,44 @@
 # -*- coding: utf-8 -*-
 """
-Functions and classes for micrometeorological  transport processes 
-and physical processes in atmospheric surface layer
+.. module: micromet
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
 
-@author: L1656
+Describes flow and scalar profiles within canopy.
+Based on MatLab implementation by Samuli Launiainen.
+
+Created on Tue Oct 02 09:04:05 2018
+
+References:
+Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
+forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
 from tools.utilities import central_diff, forward_diff, tridiag, smooth
 from constants import *
 eps = np.finfo(float).eps  # machine epsilon
 
-class Micromet():
-    """
-    Computes wind speed at ground and canopy + boundary layer conductances
-    Computes wind speed at ground height assuming logarithmic profile above and
-    exponential within canopy.
-    Refs:
-       Cammalleri et al. 2010 Hydrol. Earth Syst. Sci
-       Massman 1987, BLM 40, 179 - 197.
-       Magnani et al. 1998 Plant Cell Env.
+class Micromet(object):
+    r""" Computes flow and scalar profiles within canopy.
     """
     def __init__(self, z, lad, hc, p):
-        """
+        r""" Initializes micromet object for computation of flow 
+        and scalar profiles within canopy.
+
         Args:
-            z
-            lad
-            hc (float): canopy height [m]
-            p - parameter dict
-                zg - height above ground where Ug is computed [m]
-                zos - forest floor roughness length, ~ 0.1*roughness element height [m]
-            MLM (boolean): compute in multilayer mode
+            z (array): canopy model nodes, height from soil surface (= 0.0) [m]
+            lad (array): leaf area density [m2 m-3]
+            hc (float): canopy heigth [m]
+            p (dict):
+                'zos': forest floor roughness length [m]
+                'dPdx': horizontal pressure gradient
+                'Cd': drag coefficient
+                'Utop': ensemble U/ustar [-]
+                'Ubot': lower boundary
+                'Sc' (dict): {'T','H2O','CO2'} Schmidt numbers
         Returns:
-            Micromet -object
+            self (object)
         """
 
         # parameters
@@ -49,13 +56,15 @@ class Micromet():
                 z, self.Cd, lad, hc, self.Utop + eps, self.Ubot, dPdx=self.dPdx)
 
     def normalized_flow_stats(self, z, lad, hc, Utop=None):
-        """
-        computes normalized mean velocity profile, shear stress and eddy diffusivity
-        within and above horizontally homogenous plant canopies using 1st order closure.
+        r""" Computes normalized mean velocity profile, shear stress and
+        eddy diffusivity within and above horizontally homogenous plant
+        canopies using 1st order closure.
+
         Args:
-            
-        Returns:
-            
+            z (array): canopy model nodes, height from soil surface (= 0.0) [m]
+            lad (array): leaf area density [m2 m-3]
+            hc (float): canopy heigth [m]
+            Utop (float): U/ustar [-], if None set to self.Utop
         """
         if Utop is None:
             Utop = self.Utop
@@ -64,6 +73,10 @@ class Micromet():
                 z, self.Cd, lad, hc, Utop + eps, self.Ubot, dPdx=self.dPdx)
 
     def update_state(self, ustaro):
+        r""" Updates wind speed profile.
+        Args:
+            ustaro (float): friction velocity [m s-1]
+        """
 
         U = self.U_n * ustaro
         U[0] = U[1]
@@ -75,8 +88,28 @@ class Micromet():
         return U
 
     def scalar_profiles(self, gam, H2O, CO2, T, P, source, lbc):
-        """
-        solves H2O and CO2 profiles: we need to add here T-profile as well
+        r""" Solves scalar profiles (H2O, CO2 and T) within canopy.
+
+        Args:
+            gam (float): weight for old value in iterations [-]
+            H2O (array): water vapor mixing ratio [mol mol-1]
+            CO2 (array): carbon dioxide mixing ratio [ppm]
+            T (array): ambient air temperature [degC]
+            P: ambient pressure [Pa]
+            source (dict):
+                'H2O' (array): water vapor source [mol m-3 s-1]
+                'CO2' (array): carbon dioxide source [umol m-3 s-1]
+                'T' (array): heat source [W m-3]
+            lbc (dict):
+                'H2O' (float): water vapor lower boundary [mol m-2 s-1]
+                'CO2' (float): carbon dioxide lower boundary [umol m-2 s-1]
+                'T' (float): heat lower boundary [W m-2]
+
+        Returns:
+            H2O (array): water vapor mixing ratio [mol mol-1]
+            CO2 (array): carbon dioxide mixing ratio [ppm]
+            T (array): ambient air temperature [degC]
+            err_h2o, err_co2, err_t (floats): maximum error for each scalar
         """
         # previous guess, not values of previous time step!
         H2O_prev = H2O.copy()

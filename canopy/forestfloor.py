@@ -1,20 +1,49 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar 13 11:59:23 2018
+.. module: forestfloor
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
 
-@author: L1656
+Describes forest floor consisting of bryophytes and/or baresoil
+Based on MatLab implementation by Samuli Launiainen.
+
+Created on Tue Mar 13 11:59:23 2018
 """
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
 from micromet import e_sat, soil_boundary_layer_conductance
 from constants import *
 
-class ForestFloor():
-    """
-    Forest floor consisting of moss and/or bares soil
+class ForestFloor(object):
+    r"""Describes forest floor consisting of bryophytes and/or baresoil.
     """
     def __init__(self, p, pp):
-
+        r""" Initializes forestfloor object consisting on bryophytes
+        and/or bare soil.
+        Args:
+            p (dict):
+                'mossp' (list):
+                    i. (dict): properties of bryotype i
+                        'ground_coverage': fraction of moss ground coverage [-]
+                        'Wmax'
+                        'Wmin'
+                        'zr': roughness height [m]
+                        'Mdry'
+                        'LAI': leaf area index [m2m-2]
+                        'Amax': max photo rate [umolm-2s-1]
+                        'Q10': temperature sensitivity [-]
+                        'R10': base respiration at 10degC [umolm-2s-1]
+                        'qeff'
+                'soilp' (dict):
+                    'R10': base heterotrophic respiration rate [umolm-2s-1]
+                    'Q10': temperature sensitivity [-]
+                    'poros': porosity [m3m-3]
+                    'limitpara' (list): Skopp respiration function param [a ,b, d, g]
+            pp (dict):
+                forestfloor albedo, emissivity, roughness height --- SHOULD CHANGE!
+        Returns:
+            self (object)
+        """
         # Bryotypes
         brtypes = []
         f_bryo = 0.0
@@ -36,30 +65,47 @@ class ForestFloor():
         self.soil_emi = pp['soil_emi']
         self.soil_zr = 0.01  ## INPUT!!!!!!!!
 
-    def _run_water_energy_balance(self, dt, Prec, U, T, H2O, P, SWE,
+    def run_water_energy_balance(self, dt, Prec, U, T, H2O, P, SWE,
                                   z_can, T_ave, T_soil, h_soil, z_soil, Kh, Kt,
                                   Par_gr, Nir_gr, LWn, Ebal):
-        """
-        Moss layer interception and evaporation
+        r"""Water and energy balance at forest floor.
+
         Args:
-            dt - timestep [s]
-            Rn - net radiation at forest floor
-            Prec - precipitation rate [mm s-1]
-            U - wind speed [m s-1]
-            T - air temperature [degC]
-            H2O - mixing ratio [mol mol-1]
-            P - ambient pressure [Pa]
+            dt: timestep [s]
+            Prec: throughfall to forest floor [m s-1]
+            U: wind speed from first node above ground, corresponds to z_can [m s-1]
+            T: air temperature at soil surface [degC]
+            H2O: mixing ratio at soil surface [mol mol-1]
+            P: ambient pressure [Pa]
+            SWE: snow water equivalent [m]
+            z_can: heigth of first node above ground [m]
+            T_ave: forest floor temperature used in LW computation [degC]
+            T_soil: temperature in first soil node [degC]
+            h_soil: water potential in first soil node [m]
+            z_soil: depth of first soil node [m]
+            Kh: hydraulic conductivity at first soil node [m s-1]
+            Kt:thermal conductivity at first soil node [W m-1 K-1]
+            Par_gr, Nir_gr: incident PAR and NIR at forest floor
+            LWn: net longwave radiation at forferst floor
+            Ebal (bool): solve energy balance
         Returns:
-            Evap - evaporation rate [mol m-2 s-1]
-            Trfall - trfall rate below moss layer [mm s-1]
+            Trfall
+            Ebryo: evaporation from bryo (mol m-2(ground)s-1) 
+            Esoil: soil evaporation (mol m-2(ground)s-1)
+            Gsoil: ground heat fluxes (Wm-2)
+            LE_gr: latent heat flux (Wm-2)
+            Hf: forest floor sensible heat flux (Wm-2)
+            Tf: forest floor temperature (degC)
+            MBE: water closure
+            energy_closure: energy closure
         """
         # initialize fluxes at forest floor
         Trfall = 0.0  # throughfall rate (m s-1)
         Ebryo = 0.0  # evaporation from bryo (mol m-2(ground)s-1) 
         Esoil = 0.0  # soil evaporation (mol m-2(ground)s-1)
         Hf = 0.0  # forest floor sensible heat flux (Wm-2)
-        Gsoil = 0.0  # ground heat fluxes (Wm-2)
-        LE_gr = 0.0  # latent heat fluxes (Wm-2)
+        Gsoil = 0.0  # ground heat flux (Wm-2)
+        LE_gr = 0.0  # latent heat flux (Wm-2)
         Tf = 0.0  # forest floor temperature (degC)
         Tbryo = 0.0  # bryophyte temperature (degC)
         Fr = 0.0  # radiative flux [W m-2]
@@ -96,13 +142,14 @@ class ForestFloor():
 
         return Trfall, Ebryo, Esoil, Gsoil, LE_gr, Hf, Tf, MBE, energy_closure
 
-    def _update(self):
-        # updates W of each bryo to old W
+    def update(self):
+        """Updates W of each bryotype to old W
+        """
         if self.f_bryo > 0.0:
             for bryo in self.Bryophytes:
-                bryo._update()
+                bryo.update()
 
-    def _run_CO2(self, dt, Par, T, Ts, Ws, SWE):
+    def run_CO2(self, dt, Par, T, Ts, Ws, SWE):
         """
         run forest floor model for one timestep
         Args:
@@ -285,7 +332,7 @@ class MossLayer():
 
         return gb + eps
 
-    def _update(self):
+    def update(self):
 #        print('Wold',self.Wold, 'W', self.W)
         self.Wold = self.W
 

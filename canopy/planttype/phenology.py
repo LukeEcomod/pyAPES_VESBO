@@ -1,24 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Functions and classes for plant phenology, seasonal cycle of photosynthetic 
+.. module: phenology
+    :synopsis: APES-model component
+.. moduleauthor:: Samuli Launiainen & Kersti Haahti
+
+Describes plant phenology, seasonal cycle of photosynthetic 
 capacity and leaf-area development.
+
+Created on Mon May 15 13:43:44 2017
 """
 
 import numpy as np
 
-class Photo_cycle():
-    """
-    Seasonal cycle of photosynthetic machinery.
-    Adapted from:
-        Mäkelä et al. 2004. Tree Physiology 24, 369–376; Formulation as in
+class Photo_cycle(object):
+    r"""Seasonal cycle of photosynthetic machinery.
+
+    References:
         Kolari et al. 2007 Tellus.
     """
     def __init__(self, p):
-        """
+        r""" Initializes photo cycle model.
+
         Args:
-            p - parameter dict
+            p (dict):
+                'Xo': initial delayed temperature [degC]
+                'fmin': minimum photocapacity [-]
+                'Tbase': base temperature [degC]
+                'tau': time constant [days]
+                'smax': threshold for full acclimation [degC]
         Returns:
-            Phenology -instance
+            self (object)
         """
         self.tau = p['tau']  # time constant (days)
         self.Tbase = p['Tbase']  # base temperature (degC)
@@ -29,44 +40,41 @@ class Photo_cycle():
         self.X = p['Xo']  # initial delayed temperature (degC)
         self.f = 1.0  # relative photocapacity
 
-    def _run(self, T, out=False):
-        """
-        computes new stage of temperature acclimation and phenology modifier.
-        Kolari et al. 2007 Tellus
+    def run(self, T, out=False):
+        r""" Computes new stage of temperature acclimation and phenology modifier.
+
         Args:
-            T - daily mean air temperature
-        Returns:
-            self.f - phenology modifier [0...1], updates object state
+            T (float): mean daily air temperature [degC]
+            out (bool): if true returns phenology modifier [0...1]
+
         Note: Call once per day
         """
         self.X = self.X + 1.0 / self.tau * (T - self.X)  # degC
 
         S = np.maximum(self.X - self.Tbase, 0.0)
-        # self.f = np.maximum(self.fmin, np.minimum(S / self.Smax, 1.0))  # peltoniemi et al 2015
-        self.f = np.maximum(self.fmin, np.minimum(0.065*S, 1.0))  # Kolari et al. 2007 Tellus
+        self.f = np.maximum(self.fmin, np.minimum(0.065*S, 1.0))
 
         if out:
             return self.f
 
-class LAI_cycle():
+class LAI_cycle(object):
+    r"""Dercribes seasonal cycle of leaf-area index (LAI)
     """
-    Seasonal cycle of leaf-area index (LAI)
-    """
-
     def __init__(self, p):
-        """
+        r""" Initializes LAI cycle model.
+
         Args:
-            p - parameter dict:
-                 'lai_min': minimum LAI, fraction of annual maximum [-]
-                 'lai_ini': initial LAI fraction, if None lai_ini = Lai_min * LAImax
-                 'DDsum0': degreedays at initial time [days]
-                 'Tbase': base temperature [degC]
-                 'ddo': degreedays at bud burst [days]
-                 'ddur': duration of recovery period [days]
-                 'sso': start doy of decrease, based on daylength
-                 'sdur': duration of decreasing period [days]
+            'laip' (dict): parameters forleaf-area seasonal dynamics
+                'lai_min': minimum LAI, fraction of annual maximum [-]
+                'lai_ini': initial LAI fraction, if None lai_ini = Lai_min * LAImax
+                'DDsum0': degreedays at initial time [days]
+                'Tbase': base temperature [degC]
+                'ddo': degreedays at bud burst [days]
+                'ddur': duration of recovery period [days]
+                'sso': start doy of decrease, based on daylength [days]
+                'sdur': duration of decreasing period [days]
         Returns:
-            Seasonal_LAI -instance
+            self (object)
         """
         self.LAImin = p['lai_min']  # minimum LAI, fraction of annual maximum
         self.ddo = p['ddo']
@@ -82,17 +90,14 @@ class LAI_cycle():
         self.Tbase = p['Tbase']  # [degC]
         self.DDsum = p['DDsum0']  # [degC]
 
-    def _run(self, doy, T, out=False):
-        """
-        computes relative LAI
+    def run(self, doy, T, out=False):
+        r"""Computes relative LAI based on seasonal cycle.
+
         Args:
-            self - object
-            doy - day of year
-            T - daily mean temperature
-        Returns:
-            updates state variables: self._growth_stage,
-            self._senec_stage, self.DDsum, self.f
-            returns self.f, LAI relative to annual maximum (if out=True)
+            T (float): mean daily air temperature [degC]
+            out (bool): if true returns LAI relative to annual maximum
+
+        Note: Call once per day
         """
         # update DDsum
         if doy == 1:  # reset in the beginning of the year

@@ -1,8 +1,20 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
-Functions and classes for PlantType
+.. module: planttype
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
 
-@author: L1656
+Describes plant seasonal cycle and dry leaf gas exchange.
+Based on MatLab implementation by Samuli Launiainen.
+
+Created on Tue Oct 02 09:04:05 2018
+
+References:
+Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
+forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
+
 """
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
@@ -10,21 +22,83 @@ from photo import leaf_interface
 from phenology import Photo_cycle, LAI_cycle
 from rootzone import RootUptake
 
-class PlantType():
-    """
-    PlantType -class.
-    Contains plant-specific properties, state variables and phenology functions
+class PlantType(object):
+    r""" Contains plant-specific properties, state variables and phenological
+    functions.
     """
 
     def __init__(self, z, p, dz_soil, ctr):
-        """
-        Creates PlantType
+        r""" Initialises a planttype object and submodel objects 
+        using given parameters.
+
         Args:
-            z - grid, evenly spaced, np.array
-            p - parameters (dict)
-            Switch_x - controls
+            z (array): canopy model nodes, height from soil surface (= 0.0) [m]
+            p (dict):
+                'name' (str): name of planttype
+                'LAImax' (float): leaf area index
+                'lad' (array): normalized leaf area density profile
+                'phenop' (dict): parameters for seasonal cycle of phenology
+                    'Xo': initial delayed temperature [degC]
+                    'fmin': minimum photocapacity [-]
+                    'Tbase': base temperature [degC]
+                    'tau': time constant [days]
+                    'smax': threshold for full acclimation [degC]
+                'laip' (dict): parameters forleaf-area seasonal dynamics
+                    'lai_min': minimum LAI, fraction of annual maximum [-]
+                    'lai_ini': initial LAI fraction, if None lai_ini = Lai_min * LAImax
+                    'DDsum0': degreedays at initial time [days]
+                    'Tbase': base temperature [degC]
+                    'ddo': degreedays at bud burst [days]
+                    'ddur': duration of recovery period [days]
+                    'sso': start doy of decrease, based on daylength [days]
+                    'sdur': duration of decreasing period [days]
+                'photop' (dict): leaf gas-exchange parameters
+                    'Vcmax': maximum carboxylation velocity [umolm-2s-1]
+                    'Jmax': maximum rate of electron transport [umolm-2s-1]
+                    'Rd': dark respiration rate [umolm-2s-1]
+                    'alpha': quantum yield parameter [mol/mol]
+                    'theta': co-limitation parameter of Farquhar-model
+                    'La': stomatal parameter (Lambda, m, ...) depending on model
+                    'm':
+                    'g0': residual conductance for CO2 [molm-2s-1]
+                    'kn':
+                    'beta':  co-limitation parameter of Farquhar-model
+                    'drp':
+                    'tresp' (dict): temperature sensitivity parameters
+                        'Vcmax': [Ha, Hd, Topt]; activation energy [kJmol-1], deactivation energy [kJmol-1], optimum temperature [degC]
+                        'Jmax': [Ha, Hd, Topt];
+                        'Rd': [Ha]; activation energy [kJmol-1)]
+                'leafp' (dict): leaf properties
+                    'lt': leaf lengthscale [m]
+                    'par_alb': leaf Par albedo [-]
+                    'nir_alb': leaf Nir albedo [-]
+                    'emi': leaf emissivity [-]
+                'rootp' (dict): root zone properties
+                    'root_depth': root depth [m]
+                    'beta': shape parameter for root distribution model
+                    'RAI_LAI_multiplier': multiplier for total fine root area index (RAI = 2*LAImax)
+                    'fine_radius': fine root radius [m]
+                    'radial_K': maximum bulk root membrane conductance in radial direction [s-1]
+            dz_soil (array): thickness of soilprofile layers, needed for rootzone [m]
+            ctr (dict): switches and specifications for computation
+                'StomaModel' (str): stomatal model e.g. 'MEDLYN_FARQUHAR'
+                'WaterStress' (bool): account for water stress in planttypes --- TRUE NOT SUPPORTED!
+                'seasonal_LAI' (bool): account for seasonal LAI dynamics
+                'pheno_cycle' (bool): account for phenological cycle
         Returns:
-            PlantType instance
+            self (object):
+                .name (str)
+                .pheno_state(float): phenology state [0...1]
+                .relative_LAI (float): LAI relative to annual maximum [0...1]
+                .lad (array): leaf area density [m2 m-3]
+                .lad_normed (array): normalized leaf area density [-]
+                ...
+                .Switch_pheno (bool): account for phenological cycle
+                .Switch_lai (bool): account for seasonal LAI dynamics
+                .Switch_WaterStress (bool): account for water stress in planttypes
+                .Pheno_Model (object): model for phenological cycle
+                .LAI_Model (object): model for seasonal development of LAI
+                .Roots (object): root properties
         """
 
         self.Switch_pheno = ctr['pheno_cycle']  # include phenology
@@ -44,7 +118,7 @@ class PlantType():
         if self.Switch_lai:
             # seasonality of leaf area
             self.LAI_Model = LAI_cycle(p['laip'])  # LAI model instance
-            self.relative_LAI = self.LAI_Model.f  # LAI relative to annual maximum [..1]
+            self.relative_LAI = self.LAI_Model.f  # LAI relative to annual maximum [0...1]
         else:
             self.relative_LAI = 1.0
 
@@ -58,12 +132,7 @@ class PlantType():
         self.Roots = RootUptake(p['rootp'], dz_soil, self.LAImax)
 
         self.dz = z[1] - z[0]
-        # plant height [m]
-        if len(np.where(self.lad_normed > 0)[0]) > 0:
-            f = np.where(self.lad_normed > 0)[0][-1]
-            self.hc = z[f]
-        else:
-            self.hc = 0.0
+
         # leaf gas-exchange parameters
         self.photop0 = p['photop']   # A-gs parameters at pheno_state = 1.0 (dict)
         self.photop = self.photop0.copy()  # current A-gs parameters (dict)
@@ -73,22 +142,23 @@ class PlantType():
 
         self.Tl_sh = None
 
-    def _update_daily(self, doy, T, PsiL=0.0):
-        """
-        Updates PlantType pheno_state, gas-exchange parameters, LAI & lad
+    def update_daily(self, doy, T, PsiL=0.0):
+        r""" Updates planttype pheno_state, gas-exchange parameters, LAI and lad.
+
         Args:
-            doy - day of year
-            T - daily air temperature [degC]
-            Psi_leaf - leaf (or soil) water potential, <0 [MPa]
-        NOTE: CALL ONCE PER DAY
+            doy (float): day of year [days]
+            Ta (float): mean daily air temperature [degC]
+            PsiL (float): leaf water potential [MPa] --- CHECK??
+
+        Note: Call once per day
         """
         PsiL = np.minimum(-1e-5, PsiL)
 
         if self.Switch_pheno:
-            self.pheno_state = self.Pheno_Model._run(T, out=True)
+            self.pheno_state = self.Pheno_Model.run(T, out=True)
 
         if self.Switch_lai:
-            self.relative_LAI =self.LAI_Model._run(doy, T, out=True)
+            self.relative_LAI =self.LAI_Model.run(doy, T, out=True)
             self.LAI = self.relative_LAI * self.LAImax
             self.lad = self.lad_normed * self.LAI
 
@@ -113,10 +183,24 @@ class PlantType():
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
     def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, df, Ebal, Tl_ave, gr):
+        r"""Computes dry leaf gas-exchange shale and sunlit leaves.
+
+        Args:
+            f_sl (array): sunlit fraction [-]
+            H2O (array): water vapor mixing ratio [mol mol-1]
+            CO2 (array): carbon dioxide mixing ratio [ppm]
+            T (array): ambient air temperature [degC]
+            U (array): mean wind speed [m s-1]
+            P: ambient pressure [Pa]
+            Q_sl1, Q_sh1 (arrays): incident PAR at sunlit and shaded leaves [umolm-2s-1]
+            SWabs_sl, SWabs_sh (arrays): absorbed SW (PAR + NIR) at sunlit and shaded leaves [Wm-2]
+            LWl (array): leaf net long-wave radiation [Wm-2]
+            df (array): dry leaf fraction [-]
+            Ebal (bool): solve dry leaf energy balance
+            Tl_ave (array): average leaf temperature used in LW computation [degC]
+            gr (array): radiative conductance [mol m-2 s-1]
         """
-        Compute leaf gas-exchange for PlantType
-        """
-        
+
         # initial guess for leaf temperature
         if self.Tl_sh is None or Ebal is False:
             Tl_sh = T.copy()

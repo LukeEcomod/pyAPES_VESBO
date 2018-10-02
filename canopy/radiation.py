@@ -1,28 +1,46 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar 06 11:06:37 2018
+.. module: radiation
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
 
-@author: L1656
+Describes distribution of within canopy radiation.
+Based on MatLab implementation by Samuli Launiainen.
+
+Created on Tue Oct 02 09:04:05 2018
+
+References:
+Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
+forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
 import pandas as pd
 eps = np.finfo(float).eps  # machine epsilon
 from tools.utilities import tridiag
 from matplotlib import pyplot as plt
-from constants import DEG_TO_RAD, PAR_TO_UMOL, DEG_TO_KELVIN, STEFAN_BOLTZMANN
+from constants import DEG_TO_RAD, PAR_TO_UMOL, DEG_TO_KELVIN, STEFAN_BOLTZMANN, SPECIFIC_HEAT_AIR
 
-class Radiation():
-    """
-    
+class Radiation(object):
+    r""" Describes distribution of within canopy radiation.
     """
     def __init__(self, p, ctr):
         """
         Args:
-            p - parameter dict
+            p (dict):
                 'clump': clumping index [-]
-                ?? leaf-angle distribution [-], shoot Par-albedo [-], soil (moss) Par-albedo [-]
+                'leaf_angle': leaf-angle distribution [-]
+                'Par_alb': shoot Par-albedo [-]
+                'soil_Par_alb': soil (moss) Par-albedo [-] --- SHOULD COME FROM ForestFloor
+                'Nir_alb': shoot NIR-albedo [-]
+                'soil_Nir_alb': soil (moss) NIR-albedo [-] --- SHOULD COME FROM ForestFloor
+                'soil_emi': 0.98,
+                'leaf_emi': 0.98
+            ctr (dict):
+                'SwModel' (str): model for shortwave radiation, e.g. 'ZHAOQUALLS'
+                'LwModel' (str): model for longwave radiation, e.g. 'ZHAOQUALLS'
         Returns:
-            Radiation -object
+            self (object)
         """
         # parameters
         self.clump = p['clump']
@@ -36,15 +54,17 @@ class Radiation():
         self.SWmodel = ctr['SwModel'].upper()
         self.LWmodel = ctr['LwModel'].upper()
 
-
     def SW_profiles(self, LAIz, zen, dirSW, diffSW, radtype):
-        """
+        r""" Computes distribution of within canopy shortwave radiation
+        using specified model.
+
         Args:
             LAIz (array): layewise one-sided leaf-area index [m2m-2]
             zen (float): solar zenith angle [rad]
             dirSW (float): direct Par [Wm-2]
             diffSW (float): diffuse Par [Wm-2]
             radtype (string): 'Nir' or 'Par'
+
         Returns:
             Q_sl (array): incident SW normal to sunlit leaves [W m-2]
             Q_sh (array): incident SW normal to shaded leaves [W m-2]
@@ -54,11 +74,16 @@ class Radiation():
             f_sl (array): sunlit fraction of leaves [-]: Note: to get sunlit fraction below
                 all vegetation f_sl[0] / clump
             SW_gr (float): incident SW at ground level [W m-2]
+
+        References:
+            Zhao W. & Qualls R.J. (2005). A multiple-layer canopy scattering model
+            to simulate shortwave radiation distribution within a homogenous plant 
+            canopy. Water Resources Res. 41, W08409, 1-16.
         """
         if self.SWmodel == 'ZHAOQUALLS':
             SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(
                 LAIz, self.clump, self.leaf_angle, zen, dirSW, diffSW, self.alb[radtype], self.soil_alb[radtype])
-        # OTHER MODELS??
+        # ADD OTHER MODELS??
 
         # incident SW at ground level
         SW_gr = (SWb[0] + SWd[0])
@@ -66,33 +91,33 @@ class Radiation():
         return Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, SW_gr
 
     def LW_profiles(self, LAIz, Tleaf, Tsurf, LWdn0):
-        """
-        Estimates long-wave radiation budget and net isothermal LW radiation within the canopy
-        Assumes canopy elements as black bodies (es=1.0) at local air temperature
-        T(z). Neglects scattering etc.
-        
-        INPUT: 
-           LAIz - 1-sided LAI in each layer (m2m2(ground))
-           CLUMP - clumping factor (-), [0...1]
-           T: leaf temperature (degC)
-           LWdn0 - downwelling LW above uppermost gridpoint (Wm-2(ground)). LWdn0=eatm*b*Tatm^4
-           LWup0 - upwelling LW at surface (Wm-2(ground)). LWup0=esurf*b*Tsurf^4
-        OUTPUT:
-           LWleaf - net isothermal long-wave absorbed by leaf (Wm-2 (leaf))
-           LWdn - downwelling LW (Wm-2)
-           LWup - upwelling LW (Wm-2)
-        SOURCE:
-           Modified from Flerchinger et al. 2009. Simulation of within-canopy radiation exchange, NJAS 57, 5-15.
-           Assumes Tcan(z) = T(z) and neglects scattering (canopy elements black bodies)
-        
-        Samuli Launiainen (Luke). Last edit: 12.5.2017
+        r""" Computes distribution of within canopy longwave radiation
+        using specified model.
+
+        Args:
+            LAIz (array): layewise one-sided leaf-area index [m2 m-2]
+            Tleaf (array): leaf temperature [degC]
+            Tsurf (float): soil surface temperature [degC]
+            LWdn0 (float): downwelling longwave raditiona above uppermost gridpoint [W m-2(ground)]
+        Returns:
+            LWleaf (array): leaf net longwave radiation [W m-2(leaf)]
+            LWdn (array): downwelling LW [W m-2]
+            LWup (array): upwelling LW [W m-2]
+            gr (array): radiative conductance [mol m-2 s-1]
+
+        References:
+            Flerchinger et al. 2009. Simulation of within-canopy radiation exchange,
+            NJAS 57, 5-15.
+            Zhao, W. and Qualls, R.J., 2006. Modeling of long‐wave and net radiation
+            energy distribution within a homogeneous plant canopy via multiple scattering
+            processes. Water resources research, 42(8).
         """
         LWup0 = self.soil_emi*STEFAN_BOLTZMANN*(Tsurf + DEG_TO_KELVIN)**4
         if self.LWmodel == 'FLERCHINGER':
             LWleaf, LWdn, LWup, gr = canopy_lw(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi)
         if self.LWmodel == 'ZHAOQUALLS':
             LWleaf, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi, soil_emi=self.soil_emi)
-        # ADD OTHER??
+        # ADD OTHER MODELS??
 
         return LWleaf, LWdn, LWup, gr
 
@@ -764,7 +789,7 @@ def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
                         LAIz[0:cantop+1] + eps)
     LWnet[0:cantop+1] = (LWdn[1:cantop+2] - LWdn[0:cantop+1] + LWup[0:cantop+1] - LWup[1:cantop+2])/(LAIz[0:cantop+1]+eps)
 
-    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - tau) * (T + DEG_TO_KELVIN) ** 3 / (LAIz + eps)
+    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - tau) * (T + DEG_TO_KELVIN) ** 3 / (LAIz + eps) / SPECIFIC_HEAT_AIR
 
     if PlotFigs:
         Lcum = np.cumsum(np.flipud(LAIz))  # cumulative plant area index from canopy top
@@ -981,7 +1006,7 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
                           LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*STEFAN_BOLTZMANN*(Tleaf[0:cantop+1] + DEG_TO_KELVIN)**4)/(
                           LAIz[0:cantop+1] + eps)
 
-    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - taud) * (Tleaf + DEG_TO_KELVIN) ** 3 / (LAIz + eps)
+    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - taud) * (Tleaf + DEG_TO_KELVIN) ** 3 / (LAIz + eps) / SPECIFIC_HEAT_AIR
 
     if PlotFigs:
         plt.figure(99)

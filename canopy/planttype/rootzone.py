@@ -1,23 +1,40 @@
 # -*- coding: utf-8 -*-
 """
+.. module: rootzone
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
+
+Describes roots of planttype.
+Based on MatLab implementation by Samuli Launiainen.
+
 Created on Tue Jul 24 10:49:59 2018
 
-@author: L1656
+References: --- SHOULD WE USE THIS??? Do we need to solve hroot???
+Volpe, V., Marani, M., Albertson, J.D. and Katul, G., 2013. Root controls 
+on water redistribution and carbon uptake in the soil–plant system under 
+current and future climate. Advances in Water resources, 60, pp.110-120.
 """
 
 import numpy as np
 import matplotlib as plt
 
-class RootUptake():
-    """
-    Do we need to solve hroot???
+class RootUptake(object):
+    r""" Describes roots of planttype.
     """
     def __init__(self, p, dz_soil, LAImax):
-        """
+        r""" Initializes rootuptake object.
+
         Args:
-            p - parameter dict
+            p (dict):
+                'root_depth': depth of rooting zone [m]
+                'beta': shape parameter for root distribution model
+                'RAI_LAI_multiplier': multiplier for total fine root area index (RAI = 2*LAImax)
+                'fine_radius': fine root radius [m]
+                'radial_K': maximum bulk root membrane conductance in radial direction [s-1]
+            dz_soil (array): thickness of soilprofile layers from top to bottom [m]
+            LAImax (float): maximum leaf area index [m2 m-2]
         Returns:
-            Roots -instance
+            self (object)
         """
         # parameters
         self.RAI = p['RAI_LAI_multiplier']*LAImax  # total fine root area index (m3/m2)
@@ -26,17 +43,20 @@ class RootUptake():
         self.radial_K = p['radial_K']  # maximum bulk root membrane conductance in radial direction [s-1]
 
         # state variables
-        
 
 def RootDistribution(beta, dz, root_depth):
-    """
-    Returns cumulative (Y) and root area density (R) distribution
-    with depth. sum(Y)=1.
-    Uses model of Gale and Grigal, 1987 Can. J. For.Res., 17, 829 - 834.
+    r""" Computes normalized root area density distribution with depth.
+
     Args:
-        beta: dimensionless factor
-        dz: soil layers from top to bottom [m]
+        beta: shape parameter for root distribution model
+        dz (array):  thickness soil layers from top to bottom [m]
         root_depth: depth of rooting zone [m]
+    Returns:
+        R (array): normalized root area density distribution with depth,
+            extends only to depth of rooting zone
+
+    Reference:
+        Gale and Grigal, 1987 Can. J. For.Res., 17, 829 - 834.
     """
     z = np.concatenate([[0.0], np.cumsum(dz)])
     z = np.concatenate([z[z < root_depth], [root_depth]])

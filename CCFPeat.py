@@ -1,9 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Mar 14 15:09:03 2018
+.. module: CCFPeat
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
 
-@author: L1656
+Model framework for soil-bottom layer-canopy-atmosphere interactions.
+Based on MatLab implementation by Samuli Launiainen.
+
+Created on Tue Oct 02 09:04:05 2018
+
+References:
+Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
+forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
+
 import os
 import numpy as np
 import pandas as pd
@@ -72,7 +83,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
 
     return output_file
 
-class Model():
+class Model(object):
     """
     """
     def __init__(self,
@@ -115,28 +126,30 @@ class Model():
                 print '{0}..\r'.format(s),
 
             # Soil moisture forcing for canopy model
-            Rew = 1.0
-            beta = 1.0
             Tsoil = self.forcing['Tair'].iloc[k]  # should come from soil model!
             Wsoil = self.soil_model.Wliq[0]  # certain depth?!
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
             if self.forcing['doy'].iloc[k] != self.forcing['doy'].iloc[k-1] or k == 0:
-                self.canopy_model._run_daily(
+                self.canopy_model.run_daily(
                         self.forcing['doy'].iloc[k],
                         self.forcing['Tdaily'].iloc[k])
 
+            # properties of first soil node
+            soilstate = {'depth': self.soil_model.grid['z'][0],
+                         'temperature': self.soil_model.T[0],
+                         'water_potential': self.soil_model.h[0],
+                         'hydraulic_conductivity': self.soil_model.Kv[0],
+                         'thermal_conductivity': self.soil_model.Lambda[0]}
+
             # run timestep loop
-            canopy_flux, canopy_state = self.canopy_model._run_timestep(
+            canopy_flux, canopy_state = self.canopy_model.run_timestep(
                     dt=self.dt,
                     forcing=self.forcing.iloc[k],
-                    beta=beta, Rew=Rew,
-                    Tsoil=Tsoil, Wsoil=Wsoil,
-                    Ts=self.soil_model.T[0], hs=self.soil_model.h[0],
-                    zs=self.soil_model.grid['z'][0], Kh=self.soil_model.Kv[0], Kt=self.soil_model.Lambda[0])
-#            print(self.soil_model.T[0], self.forcing['Tair'].iloc[k], self.soil_model.h[0], self.soil_model.grid['z'][0], 
-#                  self.soil_model.Kv[0], self.soil_model.Lambda[0], self.soil_model.Wliq[0])
+                    Tsoil=Tsoil, Wsoil=Wsoil,  # --- REMOVE??
+                    soil_state = soilstate)
+
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
             ubc_w = {'Prec': canopy_flux['potential_infiltration'],
@@ -145,9 +158,7 @@ class Model():
             rootsink = np.zeros(self.soil_model.Nlayers)
             rootsink[0:len(self.canopy_model.rad)] = self.canopy_model.rad * canopy_flux['transpiration']
             rootsink = rootsink / self.soil_model.grid['dz']
-#            rootsink[0] = canopy_flux['transpiration'] / self.soil_model.dz[0]  # ekasta layerista, ei väliä tasapainolaskennassa..
-            # temperature above soil surface
-#            ubc_T = {'type': 'temperature', 'value': self.forcing['Tair'].iloc[k]}
+
             ubc_T = {'type': 'flux', 'value': -canopy_flux['ground_heat_flux']}
 
             # run soil water and heat flow

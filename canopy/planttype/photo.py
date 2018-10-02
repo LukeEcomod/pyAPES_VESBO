@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """
+.. module: photo
+    :synopsis: APES-model component
+.. moduleauthor:: Samuli Launiainen & Kersti Haahti
+
+Describes leaf-scale functions for photosynthesis and stomatal control.
+Based on MatLab implementation by Samuli Launiainen.
+
 Created on Mon May 15 13:43:44 2017
-
-@author: slauniai
-
-photo module contains leaf-scale functions for photosynthesis and stomatal control
-
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 from canopy.micromet import leaf_boundary_layer_conductance, e_sat
@@ -96,8 +99,6 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
 
     # canopy nodes
     ic = np.where(abs(LW) > 0.0)
-    # radiative conductance (mol m-2 s-1), Campbell & Norman, 1998
-    gr = gr / SPECIFIC_HEAT_AIR
 
     T = np.array(T)
     Qp = np.array(Qp)

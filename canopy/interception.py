@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+.. module: interception
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
+
+Describes interteption in multilayer canopy.
+Based on MatLab implementation by Samuli Launiainen.
+
 Created on Thu Mar 01 13:21:29 2018
 
-@author: L1656
+References:
+Tanaka, K., 2002. Multi-layer model of CO2 exchange in a plant community 
+coupled with the water budget of leaf surfaces. Ecological Modelling, 147(1), pp.85-104.
 """
 
 import numpy as np
@@ -10,22 +19,22 @@ eps = np.finfo(float).eps  # machine epsilon
 from micromet import e_sat, leaf_boundary_layer_conductance
 from constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN
 
-class Interception():
-    """
-
+class Interception(object):
+    r"""Describes interteption in multilayer canopy.
     """
     def __init__(self, p, LAIz):
-        """
+        r""" Initializes interception object.
         Args:
-            dt: timestep [s]
-            p - parameter dict
-                'wmax':  maximum interception storage capacity for rain [m per unit of LAI]
+            p (dict):
+                'wmax': maximum interception storage capacity for rain [m per unit of LAI]
                 'wmaxsnow': maximum interception storage capacity for snow [m per unit of LAI]
                 'Tmin': temperature below which all is snow [degC]
                 'Tmax': temperature above which all is water [degC]
+                'Tmelt': temperature when melting starts [degC]
                 'w_ini': initial canopy storage [m]
+            LAIz (array): leaf area index per canopy layer [m\ :sup:`2`\ m\ :sup:`-2`\]
         Returns:
-            Interception -object
+            self (object)
         """
         # parameters:
         # maximum storage capacities [m per unit of LAI]
@@ -40,19 +49,13 @@ class Interception():
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)
         self.Tl_wet = None
 
-        self._update()
+        self.update()
 
-    def _multi_layer(self, dt, lt, ef, LAIz, H2O, U, T, Rabs, Prec, P, Ebal, Tl_ave, gr):
-        """
-        updates canopy liquid water storage by partitioning precipitation (Prec) to
-        interception and throughfall (rain and snow separately) at each layer
-        until soil surface or depth of snow. 
-        T_leaf assumed equal to T_air.
-        boundary layer conductances for heat and H2O are calculated from U(z) 
-        and leaf dimensions.
-        Rate of change of water stored at each layer (W) is as in 
-        Watanabe & Mizutani (1996) Agric. For. Meteorol. 80, 195-214 
-        Tanaka, 2002 Ecol. Mod. 147: 85-104
+    def run(self, dt, lt, LAIz, H2O, U, T, Rabs, Prec, P, Ebal, Tl_ave, gr):
+        r""" Computes interception and unloading of rain or snow,
+        evaporation and condensation are computed based on wet leaf water balance.
+
+        Rate of change of water stored at each canopy layer (W) is as in Tanaka, 2002:
             (1) dW(z)/dt = F(1-W(z)/Wmax(z))I(z) - (W(z)/Wmax(z))E(z), I(z)=dPrec/dz=Fa(z)dz(1-W(z)/Wmax(z))Prec(z+dz) when E>0 (evaporation)
             (2) dW(z)/dt = (1-W(z)/Wmax(z))(FI(z)-E(z)), I(z)=dPrec/dz=Fa(z)dz(1-W(z)/Wmax(z))Prec(z+dz) + a(z)dz(W(z)/Wmax(z))E(z) when E<0(condensation)
         a(z) is one-sided plant area density (m2m-3), F fraction of leaf area (0-1)
@@ -62,25 +65,29 @@ class Interception():
             dt: timestep [s]
             lt: leaf length scale for aerodynamic resistance [m]
                 NOTE: seems that lt order of 1-10 cm is appropriate for pine evaporation
-            ef: leaf emissivity
             LAIz (array): leaf area index per canopy layer [m\ :sup:`2`\ m\ :sup:`-2`\]
             H2O (array): mixing ratio for each layer [mol/mol]
             U (array): wind speed for each layer [m s-1]
             T (array): air temperature for each layer [degC]
-            Rabs (array): isothermal radiation balance at each layer [W m\ :sup:`-2`\]
+            Rabs (array): net radiation balance at each layer [W m\ :sup:`-2`\]
             Prec (float): precipitation rate above canopy [m s\ :sup:`-1`\]
             P (float): ambient pressure [Pa]
+            Ebal (bool): solve wet leaf energy balance
+            Tl_ave (array): average leaf temperature used in LW computation [degC]
+            gr (array): radiative conductance [mol m-2 s-1]
         Returns:
-            updates sate self.W (array)
-            LEwc: latent heat flux from wet fraction [W m-2], sum gives canopy value
             df: fraction of dry leaves per layer [-]
             Trfall_rain: throughfall as rainfall [m]
             Trfall_snow: throughfall as snowfall [m]
             Interc: interception [m]
             Evap: evaporation from canopy store [m]
-            MBE: mass balance error
-        
-        sources: APES WetLeaf_Module2()
+            Cond: condesation [m]
+            dqsource: H2O source from each layer [mol m-2(ground) s-1]
+            dtsource: heat source from each layer [W m-2(ground)]
+            frsource: fr source [W m-2(ground)]
+            LE: latent heat flux from each layer [W m-2(ground)]
+            Tl_wet: wet leaf temperature [degC]
+            MBE: water closure [m]
         """
 
         # number of canopy layers
@@ -92,9 +99,6 @@ class Interception():
             Tl_wet = T.copy()
         else:
             Tl_wet = self.Tl_wet.copy()
-
-        # radiative conductance mol m-2 s-1, Campbell & Norman, 1998
-        gr = gr / SPECIFIC_HEAT_AIR
 
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O
@@ -115,7 +119,6 @@ class Interception():
 
         # boundary layer conductances for H2O and heat [mol m-2 s-1]
         gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
-#        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl_wet - T, P)
 
         # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
         es, s = e_sat(Tl_wet)
@@ -258,7 +261,9 @@ class Interception():
 
         return df, Trfall_rain, Trfall_snow, sum(Interc), sum(Evap), sum(Cond), dqsource,  dtsource, Fr/dt, LE, Tl_wet, MBE
 
-    def _update(self):
+    def update(self):
+        """Updates interception storage W to old W
+        """
 
         self.oldW = self.W.copy()
 

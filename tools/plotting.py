@@ -64,12 +64,12 @@ def plot_fluxes(results, sim_idx=0):
     Data.ET = Data.ET / 1800 * 3600
     Data.GPP = -Data.GPP
 
-    variables=['canopy_NEE','canopy_GPP','canopy_Reco','canopy_transpiration','forcing_precipitation','canopy_moss_evaporation']
+    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','forcing_precipitation','canopy_moss_evaporation','canopy_baresoil_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_moss_evaporation) * 1e3 * 3600
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_moss_evaporation + Data.canopy_baresoil_evaporation) * 1e3 * 3600
     Data.canopy_GPP = Data.canopy_GPP * 44.01 * 1e-3
-    Data.canopy_Reco = Data.canopy_Reco * 44.01 * 1e-3
+    Data.canopy_respiration = Data.canopy_respiration * 44.01 * 1e-3
 
     dates = Data.index
 
@@ -90,7 +90,7 @@ def plot_fluxes(results, sim_idx=0):
     plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(345)
-    plot_xy(Data.Reco[ixReco], Data.canopy_Reco[ixReco], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
+    plot_xy(Data.Reco[ixReco], Data.canopy_respiration[ixReco], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(349)
     plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
@@ -102,7 +102,7 @@ def plot_fluxes(results, sim_idx=0):
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(6,7), sharex=ax)
-    plot_timeseries_df(Data, ['Reco','canopy_Reco'], colors=['k', pal[1]], xticks=False,
+    plot_timeseries_df(Data, ['Reco','canopy_respiration'], colors=['k', pal[1]], xticks=False,
                        labels=labels)
     plt.title('Reco [mg CO2 m-2 s-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
@@ -121,7 +121,7 @@ def plot_fluxes(results, sim_idx=0):
 
     plt.subplot(348, sharex=ax)
     plot_diurnal(Data.Reco[ixReco], color='k', legend=False)
-    plot_diurnal(Data.canopy_Reco[ixReco], color=pal[1], legend=False)
+    plot_diurnal(Data.canopy_respiration[ixReco], color=pal[1], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
@@ -296,11 +296,11 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
     else:
         for i in range(len(values_all)):
             plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i])
-        ymax = max([max(val) for val in values_all])
+        ymax = max([np.nanmax(val) for val in values_all])
 
     if limits:
         plt.xlim([data.index[0], data.index[-1]])
-        plt.ylim(min([min(val) for val in values_all]), ymax)
+        plt.ylim(min([np.nanmin(val) for val in values_all]), ymax)
 
     plt.ylabel(unit)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=xticks)

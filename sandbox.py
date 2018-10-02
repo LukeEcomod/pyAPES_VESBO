@@ -16,12 +16,13 @@ pal = sns.color_palette("hls", 5)
 
 results = read_results(outputfile)
 plot_results(results)
+plot_fluxes(results)
 
 plt.figure()
 plot_timeseries_xr(results.isel(soil=0), ['forcing_air_temperature','canopy_Tsurf','soil_temperature'])
 
 plt.figure()
-plot_timeseries_xr(results.isel(soil=0), ['canopy_ground_heat_flux','canopy_sensible_heat_flux'])
+plot_timeseries_xr(results.isel(soil=0), ['canopy_ground_heat_flux','canopy_soil_sensible_heat_flux'])
 
 plt.figure()
 plot_timeseries_xr(results.isel(soil=0), ['soil_heat_be'])
@@ -156,18 +157,18 @@ results['soil_pond_storage'].plot()
 
 
 plt.figure()
-results['canopy_energy_closure'].plot()
-results['canopy_Frsource'].plot()
+results['canopy_energy_closure_canopy'].plot()
+results['canopy_fr_source'].plot()
 plt.figure(1)
 results['canopy_Rabs'].mean(dim='date').plot()
 results['canopy_LWleaf'].mean(dim='date').plot()
 plt.figure(5)
 i=1
 results['canopy_Tleaf'].mean(dim='date').plot()
-#results['canopy_Tleaf_wet'].mean(dim='date').plot()
-#results['canopy_Tleaf_sl'].mean(dim='date').plot()
-#results['canopy_Tleaf_sh'].mean(dim='date').plot()
-results['canopy_T'].mean(dim='date').plot()
+results['canopy_Tleaf_wet'].mean(dim='date').plot()
+results['canopy_Tleaf_sl'].mean(dim='date').plot()
+results['canopy_Tleaf_sh'].mean(dim='date').plot()
+results['canopy_temperature'].mean(dim='date').plot()
 plt.legend(['Tleaf','Tleaf_wet','Tleaf_sl','Tleaf_sh','Tair'])
 plt.figure(4)
 idx=25
@@ -188,7 +189,7 @@ results['canopy_Tleaf'].isel(date=20).plot()
 plt.figure()
 results['canopy_IterWMA'].plot()
 #results['forcing_h2o'].plot()
-results['canopy_WMA'].plot()
+results['canopy_WMA_assumption'].plot()
 
 results['canopy_WMA'].sum()/len(results['canopy_WMA'])
 

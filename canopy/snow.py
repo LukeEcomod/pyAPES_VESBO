@@ -1,32 +1,36 @@
 # -*- coding: utf-8 -*-
 """
-Functions and classes for snowpack descriptions
+.. module: snow
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
 
-@author: L1656
+Describes temperature-based snow accumulation and melt.
+
+Created on Thu Mar 01 13:21:29 2018
+
+Note: implement energy balance approach!
 """
 
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
 
-class Snowpack():
-    """
-    Computes snowpack state and potential infiltration to soil
-    Now simple degreeday model
-    ! Add option for energy balance based description of two-layer snowpack?
+class Snowpack(object):
+    r"""Describes temperature-based snow accumulation and melt.
     """
     def __init__(self, p):
         """
         Args:
-            dt: timestep [s]
-            p parameter dict
+            p (dict):
                'kmelt':  melting coefficient [m degC-1 s-1]
-               'kfreeze':  freezing  coefficient [m degC-1 s-1]
-               'retention':  max fraction of liquid water in snow [-]
+               'kfreeze': freezing  coefficient [m degC-1 s-1]
+               'retention': max fraction of liquid water in snow [-]
                'Tmelt': temperature when melting starts [degC]
                'swe_ini':  initial snow water equivalent [m]
-            cf: canopy closure [-]
         Returns:
-            Snowpack -object
+            self (object)
+                .swe_ice: water equivalent of ice in snowpack [m]
+                .swe_liq: liquid water storage in snowpack [m]
+                .swe: snow water equivalent [m]
         """
 
         # parameters:
@@ -42,7 +46,7 @@ class Snowpack():
         self.swe_liq = 0.0  # liquid water storage in snowpack [m]
         self.swe = self.swe_liq + self.swe_ice  # snow water equivalent [m]
 
-        self._update()
+        self.update()
 
     def _run(self, dt, T, Trfall_rain, Trfall_snow):
         """
@@ -52,10 +56,8 @@ class Snowpack():
             Trfall_rain: throughfall as rainfall [m]
             Trfall_snow: throughfall as snowfall [m]
         Returns:
-            updates sate self.swe_ice, self.swe_liq
-            swe: snow water equivalent [m]
             Potinf: potential infiltration [m]
-            MBE: mass balance error
+            MBE: mass balance error [m]
         """
 
         """ --- initial conditions for calculating mass balance error --"""
@@ -79,13 +81,14 @@ class Snowpack():
         self.swe_ice = swei
         self.swe = self.swe_liq + self.swe_ice
 
-        # mass-balance error mm
+        # mass-balance error [m]
         MBE = (self.swe - self.oldswe) - (Trfall_rain + Trfall_snow - PotInf)
 
         return PotInf, MBE
 
-    def _update(self):
-
+    def update(self):
+        """Update snowpack state to old state
+        """
         self.oldswe_ice = self.swe_ice
         self.oldswe_liq = self.swe_liq
         self.oldswe =  self.swe
