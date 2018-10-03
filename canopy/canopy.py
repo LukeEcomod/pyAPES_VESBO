@@ -37,10 +37,10 @@ class CanopyModel(object):
         Args:
             cpara (dict):
                 'ctr' (dict): switches and specifications for computation
-                    'Eflow' (bool): ensemble flow assumption
-                    'WMA' (bool): well-mixed assumption (H2O, CO2, T)
+                    'Eflow' (bool): ensemble flow assumption (False solves U_normed on daily timestep)
+                    'WMA' (bool): well-mixed assumption (False solves H2O, CO2, T)
                     'StomaModel' (str): stomatal model e.g. 'MEDLYN_FARQUHAR'
-                    'Ebal' (bool): solve energy balance
+                    'Ebal' (bool): True solves energy balance
                     'SwModel' (str): model for shortwave radiation, e.g. 'ZHAOQUALLS'
                     'LwModel' (str): model for longwave radiation, e.g. 'ZHAOQUALLS'
                     'WaterStress' (bool): account for water stress in planttypes --- TRUE NOT SUPPORTED!
@@ -60,7 +60,7 @@ class CanopyModel(object):
                 'ffloor': ffloor
                     'mossp' (list):
                         i. (dict): properties of bryotype i
-                    'soilp' (dict): parameters to compute soil respiration (?)
+                    'soilp' (dict): parameters to compute soil respiration --- ???
             dz_soil (array): thickness of soilprofile layers, needed for rootzone
 
         Returns:
@@ -352,7 +352,7 @@ class CanopyModel(object):
             # CO2 flux at forest floor
             An_gr, R_gr = self.ForestFloor.run_CO2(
                     dt=dt,
-                    Par=Par_gr*PAR_TO_UMOL,
+                    Par=Par_gr * PAR_TO_UMOL,
                     T=T[1],  ## 1 or 0 ??
                     Ts=Tsoil,
                     Ws=Wsoil,

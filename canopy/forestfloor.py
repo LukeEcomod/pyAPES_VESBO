@@ -34,11 +34,12 @@ class ForestFloor(object):
                         'Q10': temperature sensitivity [-]
                         'R10': base respiration at 10degC [umolm-2s-1]
                         'qeff'
-                'soilp' (dict):
+                'soilp' (dict):  --- ALBEDO & ROUGHNESS??
                     'R10': base heterotrophic respiration rate [umolm-2s-1]
                     'Q10': temperature sensitivity [-]
                     'poros': porosity [m3m-3]
                     'limitpara' (list): Skopp respiration function param [a ,b, d, g]
+                --- LITTER ???
             pp (dict):
                 forestfloor albedo, emissivity, roughness height --- SHOULD CHANGE!
         Returns:

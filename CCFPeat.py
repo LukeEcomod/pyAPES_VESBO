@@ -13,6 +13,11 @@ References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
 forest CO2, H2O and energy flows by a vertically structured forest canopy – 
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
+
+To call model and read results:
+    from tools.iotools import read_results
+    outputfile = driver(create_ncf=True, dbhfile="letto2014.txt")
+    results = read_results(outputfile)
 """
 
 import os
@@ -125,6 +130,7 @@ class Model(object):
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
                 print '{0}..\r'.format(s),
 
+# Check Tsoil
             # Soil moisture forcing for canopy model
             Tsoil = self.forcing['Tair'].iloc[k]  # should come from soil model!
             Wsoil = self.soil_model.Wliq[0]  # certain depth?!

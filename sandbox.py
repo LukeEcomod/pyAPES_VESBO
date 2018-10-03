@@ -19,7 +19,7 @@ plot_results(results)
 plot_fluxes(results)
 
 plt.figure()
-plot_timeseries_xr(results.isel(soil=0), ['forcing_air_temperature','canopy_Tsurf','soil_temperature'])
+plot_timeseries_xr(results.isel(soil=0, canopy=0), ['forcing_air_temperature','canopy_temperature','canopy_Tsurf','soil_temperature'])
 
 plt.figure()
 plot_timeseries_xr(results.isel(soil=0), ['canopy_ground_heat_flux','canopy_soil_sensible_heat_flux'])
