@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-.. module: CCFPeat
+.. module: pyAPES
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
