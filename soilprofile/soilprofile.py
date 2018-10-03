@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-TEST SCRIPT FOR CREATING SIMPLE SOIL PROFILE OBJECT AND RUNNING SOIL HEAT AND WATER BUDGET MODELS
-Uses soil_water and soil_heat modules.
+.. module: soilprofile
+    :synopsis: APES-model component
+.. moduleauthor:: Kersti Haahti
+
+Soilprofile
+
+Created on Tue Oct 02 09:04:05 2018
 
 @author: slauniai
 
