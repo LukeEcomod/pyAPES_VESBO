@@ -19,7 +19,7 @@ def get_cpara(dbhfile):
 
     # --- control flags (True/False) ---
     ctr = {'Eflow': True,  # ensemble flow
-           'WMA': False, # well-mixed assumption
+           'WMA': True, # well-mixed assumption
            'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
            'Ebal': True,  # computes leaf temperature by solving energy balance
            'SwModel': 'ZhaoQualls',
@@ -68,7 +68,7 @@ def get_cpara(dbhfile):
                    }
 
     # --- forest floor ---
-    mossp0 = {'ground_coverage': 0.0,  # fraction of moss ground coverage [-]
+    mossp0 = {'ground_coverage': 1.0,  # fraction of moss ground coverage [-]
              'Wmax': 20.0,  # 
              'Wmin': 1.5,  # 
              'zr': 0.01,  # roughness height [m]

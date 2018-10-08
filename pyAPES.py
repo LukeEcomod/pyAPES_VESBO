@@ -16,6 +16,7 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 To call model and read results:
     from tools.iotools import read_results
+    from pyAPES import driver
     outputfile = driver(create_ncf=True, dbhfile="letto2014.txt")
     results = read_results(outputfile)
 """
@@ -72,7 +73,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
         for task in tasks:
             print('Running simulation number: {}' .format(task.Nsim))
             running_time = time.time()
-            results = task._run()
+            results = task.run()
             print('Running time %.2f seconds' % (time.time() - running_time))
             _write_ncf(nsim=task.Nsim, results=results, ncf=ncf)
 
@@ -83,7 +84,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
         ncf.close()
 
     else:
-        results = {task.Nsim: task._run() for task in tasks}
+        results = {task.Nsim: task.run() for task in tasks}
         output_file = results
 
     return output_file
@@ -104,11 +105,11 @@ class Model(object):
         self.forcing = forcing
         self.Nsim = nsim
 
-        self.Nsoil_nodes = len(soil_para['z'])
+        self.Nsoil_nodes = len(soil_para['grid']['dz'])
         self.Ncanopy_nodes = canopy_para['grid']['Nlayers']
 
         # create soil model instance
-        self.soil_model = SoilModel(soil_para['z'], soil_para)
+        self.soil_model = SoilModel(soil_para)
 
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para, self.soil_model.grid['dz'])
@@ -121,7 +122,7 @@ class Model(object):
                                        self.Ncanopy_nodes,
                                        self.Nplant_types)
 
-    def _run(self):
+    def run(self):
         """ Runs atmosphere-canopy-soil--continuum model"""
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
         for k in range(0, self.Nsteps):
@@ -133,7 +134,7 @@ class Model(object):
 # Check Tsoil
             # Soil moisture forcing for canopy model
             Tsoil = self.forcing['Tair'].iloc[k]  # should come from soil model!
-            Wsoil = self.soil_model.Wliq[0]  # certain depth?!
+            Wsoil = self.soil_model.WaterModel.Wtot[0]  # certain depth?!
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
@@ -144,10 +145,10 @@ class Model(object):
 
             # properties of first soil node
             soilstate = {'depth': self.soil_model.grid['z'][0],
-                         'temperature': self.soil_model.T[0],
-                         'water_potential': self.soil_model.h[0],
-                         'hydraulic_conductivity': self.soil_model.Kv[0],
-                         'thermal_conductivity': self.soil_model.Lambda[0]}
+                         'temperature': 10.,  #self.soil_model.T[0],
+                         'water_potential': self.soil_model.WaterModel.h[0],
+                         'hydraulic_conductivity': self.soil_model.WaterModel.Kv[0],
+                         'thermal_conductivity': 0.0}  #self.soil_model.Lambda[0]}
 
             # run timestep loop
             canopy_flux, canopy_state = self.canopy_model.run_timestep(
@@ -158,19 +159,18 @@ class Model(object):
 
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
-            ubc_w = {'Prec': canopy_flux['potential_infiltration'],
-                     'Evap': canopy_flux['baresoil_evaporation']}
-            # transpiration sink
-            rootsink = np.zeros(self.soil_model.Nlayers)
-            rootsink[0:len(self.canopy_model.rad)] = self.canopy_model.rad * canopy_flux['transpiration']
-            rootsink = rootsink / self.soil_model.grid['dz']
+            soil_forcing = {'potential_infiltration': canopy_flux['potential_infiltration'],
+                            'potential_evaporation': canopy_flux['baresoil_evaporation'],
+                            'atmospheric_pressure_head': -1000.0}  # should come from canopy? or set to large value?
+            # transpiration sink [m s-1]
+            rootsink =  self.canopy_model.rad * canopy_flux['transpiration']
 
             ubc_T = {'type': 'flux', 'value': -canopy_flux['ground_heat_flux']}
 
             # run soil water and heat flow
-            soil_flux, soil_state = self.soil_model._run(
+            soil_flux, soil_state = self.soil_model.run(
                     self.dt,
-                    ubc_w, ubc_T,
+                    soil_forcing,
                     water_sink=rootsink)
 
             forcing_state = {

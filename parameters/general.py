@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-09-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-06-10",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -52,22 +52,21 @@ gpara = {
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_respiration', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_IterWMA', 'number of iterations [-]', ('date', 'simulation')],
-#                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
+                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
                       ['soil_pond_storage', 'pond storage [m]', ('date', 'simulation')],
                       ['soil_ground_water_level', 'ground water level [m]', ('date', 'simulation')],
                       ['soil_infiltration', 'infiltration [m s-1]', ('date', 'simulation')],
                       ['soil_surface_runoff', 'surface runoff [m s-1]', ('date', 'simulation')],
                       ['soil_evaporation', 'evaporation from soil surface [m s-1]', ('date', 'simulation')],
-                      ['soil_subsurface_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
-                      ['soil_total_runoff', 'total runoff [m s-1]', ('date', 'simulation')],
+                      ['soil_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
                       ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
-#                      ['soil_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
+                      ['soil_volumetric_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
                       ['canopy_water_closure_canopy', 'interception model mass balance error [m]', ('date', 'simulation')],
                       ['canopy_water_closure_snow', 'snow model mass balance error [m]', ('date', 'simulation')],
                       ['canopy_water_closure_forestfloor', 'forest floor mass balance error [m]', ('date', 'simulation')],
                       ['canopy_energy_closure_canopy', 'energy closure in canopy [W m-2]', ('date', 'simulation')],
                       ['canopy_fr_source', 'Frsource in canopy [W m-2]', ('date', 'simulation')],
-                      ['soil_MBE', 'soil mass balance error [m]', ('date', 'simulation')],
+                      ['soil_water_closure', 'soil mass balance error [m]', ('date', 'simulation')],
                       ['soil_heat_be', 'soil heat balance error [W m2]', ('date', 'simulation')],
                       ['canopy_z', 'canopy model grid node elevations [m]', ('canopy')],
                       ['soil_z', 'soil model grid node elevations [m]', ('soil')]

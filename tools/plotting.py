@@ -36,7 +36,7 @@ def plot_results(results, sim_idx=0):
                        colors=pal[3:], xticks=False, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(713, sharex=ax)
     plot_timeseries_xr(results, ['canopy_moss_evaporation', 'canopy_baresoil_evaporation', 'canopy_transpiration', 'canopy_evaporation',
-                       'soil_subsurface_drainage', 'soil_surface_runoff'], sim_idx=sim_idx,
+                       'soil_drainage', 'soil_surface_runoff'], sim_idx=sim_idx,
                        colors=pal, cum=True, stack=True, xticks=False,
                        unit_conversion={'unit':'mm', 'conversion':1e3},)
     plt.subplot(714, sharex=ax)
@@ -46,7 +46,7 @@ def plot_results(results, sim_idx=0):
     plt.subplot(715, sharex=ax)
     plot_timeseries_df(weir, 'runf', unit_conversion = {'unit':'mm h-1', 'conversion':3600},
                        labels='measured runoff', colors=['k'], xticks=False)
-    plot_timeseries_xr(results, 'soil_total_runoff', colors=pal, xticks=False, sim_idx=sim_idx,
+    plot_timeseries_xr(results, 'soil_drainage', colors=pal, xticks=False, sim_idx=sim_idx,
                       unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(716, sharex=ax)
     plot_timeseries_xr(results, 'canopy_snow_water_equivalent', colors=['gray'], xticks=False, stack=True,
