@@ -72,7 +72,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
         for task in tasks:
             print('Running simulation number: {}' .format(task.Nsim))
             running_time = time.time()
-            results = task._run()
+            results = task.run()
             print('Running time %.2f seconds' % (time.time() - running_time))
             _write_ncf(nsim=task.Nsim, results=results, ncf=ncf)
 
@@ -83,7 +83,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
         ncf.close()
 
     else:
-        results = {task.Nsim: task._run() for task in tasks}
+        results = {task.Nsim: task.run() for task in tasks}
         output_file = results
 
     return output_file
@@ -121,7 +121,7 @@ class Model(object):
                                        self.Ncanopy_nodes,
                                        self.Nplant_types)
 
-    def _run(self):
+    def run(self):
         """ Runs atmosphere-canopy-soil--continuum model"""
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
         for k in range(0, self.Nsteps):
@@ -141,20 +141,33 @@ class Model(object):
                 self.canopy_model.run_daily(
                         self.forcing['doy'].iloc[k],
                         self.forcing['Tdaily'].iloc[k])
-
             # properties of first soil node
-            soilstate = {'depth': self.soil_model.grid['z'][0],
-                         'temperature': self.soil_model.T[0],
-                         'water_potential': self.soil_model.h[0],
-                         'hydraulic_conductivity': self.soil_model.Kv[0],
-                         'thermal_conductivity': self.soil_model.Lambda[0]}
+            canopy_forcing = {'depth': self.soil_model.grid['z'][0],
+                              'soil_temperature': self.soil_model.T[0],
+                              'soil_water_potential': self.soil_model.h[0],
+                              'soil_volumetric_water': self.soil_model.Wliq[0],
+                              'soil_pond_storage': self.soil_model.pond,
+                              'soil_hydraulic_conductivity': self.soil_model.Kv[0],
+                              'soil_thermal_conductivity': self.soil_model.Lambda[0],
+                              'wind_speed': self.forcing['U'].iloc[k],
+                              'air_temperature': self.forcing['Tair'].iloc[k],
+                              'precipitation': self.forcing['Prec'].iloc[k],
+                              'h2o': self.forcing['H2O'].iloc[k],
+                              'co2': self.forcing['CO2'].iloc[k],
+                              'PAR': {'direct': self.forcing['dirPar'].iloc[k],
+                                      'diffuse': self.forcing['diffPar'].iloc[k]},
+                              'NIR': {'direct': self.forcing['dirNir'].iloc[k],
+                                      'diffuse': self.forcing['diffNir'].iloc[k]},
+                              'lw_in': self.forcing['LWin'].iloc[k],
+                              'friction_velocity': self.forcing['Ustar'].iloc[k],
+                              'air_pressure': self.forcing['P'].iloc[k],
+                              'zenith_angle': self.forcing['Zen'].iloc[k]
+                              }
 
             # run timestep loop
             canopy_flux, canopy_state = self.canopy_model.run_timestep(
                     dt=self.dt,
-                    forcing=self.forcing.iloc[k],
-                    Tsoil=Tsoil, Wsoil=Wsoil,  # --- REMOVE??
-                    soil_state = soilstate)
+                    forcing=canopy_forcing)
 
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface

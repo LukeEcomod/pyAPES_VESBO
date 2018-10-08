@@ -8,6 +8,11 @@ Constants used in the model calculations.
 @author: ajkieloaho
 """
 
+import numpy as np
+
+#: machine epsilon
+EPS = np.finfo(float).eps
+
 #: [J mol\ :sup:`-1`\ ], latent heat of vaporization at 20\ :math:`^{\circ}`\ C
 LATENT_HEAT = 44100.0
 #: [kg mol\ :sup:`-1`\ ], molar mass of H\ :sub:`2`\ O
@@ -28,6 +33,8 @@ STEFAN_BOLTZMANN = 5.6697e-8
 VON_KARMAN = 0.41
 #: [K], zero degrees celsius in Kelvin
 DEG_TO_KELVIN = 273.15
+#: [K], zero degrees celsius in Kelvin
+NORMAL_TEMPERATURE = 273.15
 #: [mol m\ :sup:`-3`\ ], density of air at 20\ :math:`^{\circ}`\ C
 AIR_DENSITY = 41.6
 #: [m\ :sup:`2` s\ :sup:`-1`\ ], kinematic viscosity of air at 20\ :math:`^{\circ}`\ C

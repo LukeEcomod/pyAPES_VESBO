@@ -45,25 +45,24 @@ class Radiation(object):
         # parameters
         self.clump = p['clump']
         self.leaf_angle = p['leaf_angle']  # leaf-angle distribution [-]
-        self.alb = {'Par': p['Par_alb'],  # shoot Par-albedo [-]
-                    'Nir': p['Nir_alb']}  # shoot Nir-albedo [-]
-        self.soil_alb = {'Par': p['soil_Par_alb'],# soil (moss) Par-albedo [-]
-                         'Nir': p['soil_Nir_alb']}  # soil (moss) Nir-albedo [-]
-        self.soil_emi = p['soil_emi']
+        self.alb = {'PAR': p['Par_alb'],  # shoot Par-albedo [-]
+                    'NIR': p['Nir_alb']}  # shoot Nir-albedo [-]
+
         self.leaf_emi = p['leaf_emi']
         self.SWmodel = ctr['SwModel'].upper()
         self.LWmodel = ctr['LwModel'].upper()
 
-    def SW_profiles(self, LAIz, zen, dirSW, diffSW, radtype):
+    def SW_profiles(self, forcing, radtype):
         r""" Computes distribution of within canopy shortwave radiation
         using specified model.
 
         Args:
-            LAIz (array): layewise one-sided leaf-area index [m2m-2]
-            zen (float): solar zenith angle [rad]
-            dirSW (float): direct Par [Wm-2]
+            forcing (dict):
+                'LAIz': layewise one-sided leaf-area index [m2m-2]
+                'zenith_angle': (float): solar zenith angle [rad]
+                'dir_par'/'dir_nir' (float): direct Par [Wm-2]
             diffSW (float): diffuse Par [Wm-2]
-            radtype (string): 'Nir' or 'Par'
+            radtype (string): 'NIR' or 'PAR'
 
         Returns:
             Q_sl (array): incident SW normal to sunlit leaves [W m-2]
@@ -80,17 +79,31 @@ class Radiation(object):
             to simulate shortwave radiation distribution within a homogenous plant 
             canopy. Water Resources Res. 41, W08409, 1-16.
         """
-        if self.SWmodel == 'ZHAOQUALLS':
-            SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(
-                LAIz, self.clump, self.leaf_angle, zen, dirSW, diffSW, self.alb[radtype], self.soil_alb[radtype])
-        # ADD OTHER MODELS??
 
-        # incident SW at ground level
-        SW_gr = (SWb[0] + SWd[0])
+        if radtype == 'PAR' or radtype == 'NIR':
 
-        return Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, SW_gr
 
-    def LW_profiles(self, LAIz, Tleaf, Tsurf, LWdn0):
+            if self.SWmodel == 'ZHAOQUALLS':
+                SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(
+                    forcing['LAIz'],
+                    self.clump, self.leaf_angle,
+                    forcing['zenith_angle'],
+                    forcing[radtype]['direct'],
+                    forcing[radtype]['diffuse'],
+                    self.alb[radtype],
+                    forcing['ff_albedo'][radtype])
+
+            # ADD OTHER MODELS??
+
+            # incident SW at ground level
+            SW_gr = (SWb[0] + SWd[0])
+
+            return Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, SW_gr
+
+        else:
+            raise ValueError("Radiation type is not 'PAR' or 'NIR'")
+
+    def LW_profiles(self, forcing):
         r""" Computes distribution of within canopy longwave radiation
         using specified model.
 
@@ -99,6 +112,7 @@ class Radiation(object):
             Tleaf (array): leaf temperature [degC]
             Tsurf (float): soil surface temperature [degC]
             LWdn0 (float): downwelling longwave raditiona above uppermost gridpoint [W m-2(ground)]
+            LWup0 (float): upwelling longwave radiation below canopy (forest floor) [W m-2(ground)]
         Returns:
             LWleaf (array): leaf net longwave radiation [W m-2(leaf)]
             LWdn (array): downwelling LW [W m-2]
@@ -112,14 +126,24 @@ class Radiation(object):
             energy distribution within a homogeneous plant canopy via multiple scattering
             processes. Water resources research, 42(8).
         """
-        LWup0 = self.soil_emi*STEFAN_BOLTZMANN*(Tsurf + DEG_TO_KELVIN)**4
+
+        LAIz = forcing['LAIz']
+        Tleaf = forcing['leaf_temperature']
+        LWdn0 = forcing['lw_in']
+        LWup0 = forcing['ff_longwave']['radiation']
+
+
         if self.LWmodel == 'FLERCHINGER':
             LWleaf, LWdn, LWup, gr = canopy_lw(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi)
+
         if self.LWmodel == 'ZHAOQUALLS':
-            LWleaf, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi, soil_emi=self.soil_emi)
+            ff_emissivity = forcing['ff_longwave']['emissivity']
+            LWleaf, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, self.clump, self.leaf_angle, Tleaf, LWdn0, LWup0, leaf_emi=self.leaf_emi, soil_emi=ff_emissivity)
+
         # ADD OTHER MODELS??
 
         return LWleaf, LWdn, LWup, gr
+
 
 def solar_angles(lat, lon, jday, timezone=+2.0):
     """
