@@ -242,18 +242,21 @@ class CanopyModel(object):
         Switch_WMA = self.Switch_WMA
 
         # initialize canopy micrometeo, Tleaf and Tsurf
-# add forestfloor temperature to this
         T, H2O, CO2, Tleaf, Tsurf = self._init_state(forcing)
 
-        iter_no = 0
+# print
+        print(self.ForestFloor.bryotypes[0].water_content,
+              self.ForestFloor.bryotypes[0].water_potential,
+              forcing['soil_water_potential'])
 
+        iter_no = 0
         while (err_t > max_err or err_h2o > max_err or
                err_co2 > max_err or err_Tl > max_err or
                err_Ts > max_err) and iter_no <= max_iter:
 
             iter_no += 1
             Tleaf_prev = Tleaf.copy()
-#            Tsurf_prev = Tsurf  # self.temperature
+            Tsurf_prev = self.ForestFloor.temperature
 
             if self.Switch_Ebal:
                 """ --- compute LW profiles and net LW at leaf --- """
@@ -310,6 +313,15 @@ class CanopyModel(object):
             # canopy leaf temperature
             Tleaf = Tleaf_w * (1 - df) * self.lad
 
+## print
+#            if Switch_WMA:
+#                print('Here I am! {}: {}, {}, {}, {}'.format(
+#                        iter_no,
+#                        np.mean(SWabs_sh),
+#                        np.mean(SWabs_sl),
+#                        np.mean(Tleaf_prev),
+#                        np.mean(LWl)))
+
             """ --- leaf gas-exchange at each layer and for each PlantType --- """
             for pt in self.Ptypes:
 
@@ -321,9 +333,9 @@ class CanopyModel(object):
 
                 # --- update ---
                 # heat, h2o and co2 sink/source terms
-                tsource += dtsource  # W m-3
-                qsource += dqsource  # mol m-3 s-1
-                csource += dcsource  # umol m-3 s-1
+                tsource += dtsource  # [W m-3]
+                qsource += dqsource  # [mol m-3 s-1]
+                csource += dcsource  # [umol m-3 s-1]
                 lsource += dqsource * LATENT_HEAT
                 frsource += dFr  # [W m-3]
                 # dark respiration umol m-2 s-1
@@ -372,19 +384,19 @@ class CanopyModel(object):
                 }
 
 # check if it is good idea to keep forestfloor temperature as a class field!!!
-            ff_flxs, ff_stts = self.ForestFloor.run(
+            fluxes_ffloor, states_ffloor = self.ForestFloor.run(
                     dt=dt,
                     forcing=ff_forcing)
 
-            err_Ts = abs(ff_stts['temperature'] - self.ForestFloor.temperature)
-#            err_Ts = abs(Tsurf - Tsurf_prev)
+#            err_Ts = abs(ff_stts['temperature'] - self.ForestFloor.temperature)
+            err_Ts = abs(Tsurf_prev - self.ForestFloor.temperature)
 
 # check the sign of photosynthesis
 
-            if 'photosynthesis_bryo' in ff_flxs:
-                Fc_gr = -ff_flxs['photosynthesis_bryo'] + ff_flxs['respiration']
+            if 'photosynthesis_bryo' in fluxes_ffloor:
+                Fc_gr = -fluxes_ffloor['photosynthesis_bryo'] + fluxes_ffloor['respiration']
             else:
-                Fc_gr = ff_flxs['respiration']
+                Fc_gr = fluxes_ffloor['respiration']
 
             """  --- solve scalar profiles (H2O, CO2, T) """
             if Switch_WMA is False:
@@ -393,9 +405,22 @@ class CanopyModel(object):
                         source={'H2O': qsource,
                                 'CO2': csource,
                                 'T': tsource},
-                        lbc={'H2O': ff_flxs['evaporation'],
+                        lbc={'H2O': fluxes_ffloor['soil_evaporation'] + fluxes_ffloor['bryo_evaporation'],
                              'CO2': Fc_gr,
-                             'T': ff_flxs['sensible_heat']})
+                             'T': fluxes_ffloor['sensible_heat']})
+# print
+                if np.mean(H2O) < 0.0:
+                    print("water conc. {}, out: {}, {}, in: {}, {}, ff: {}, {}, {}, bt: {}, {}".format(
+                            iter_no,
+                            np.mean(H2O),
+                            err_h2o,
+                            fluxes_ffloor['bryo_evaporation'],
+                            np.mean(qsource),
+                            ff_forcing['air_temperature'],
+                            ff_forcing['lw_dn'],
+                            ff_forcing['h2o'],
+                            self.ForestFloor.bryotypes[0].water_content,
+                            self.ForestFloor.bryotypes[0].old_water_content))
 
                 if (iter_no > max_iter
                     or any(np.isnan(T))
@@ -419,14 +444,15 @@ class CanopyModel(object):
         self.ForestFloor.update()  # update old states to new states
 
         # ecosystem fluxes
+        # these go to canopy
         flux_co2 = np.cumsum(csource) * self.dz + Fc_gr  # umolm-2s-1
-        flux_latent_heat = np.cumsum(lsource) * self.dz + ff_flxs['latent_heat']  # Wm-2
-        flux_sensible_heat = np.cumsum(tsource) * self.dz + ff_flxs['sensible_heat']  # Wm-2
+        flux_latent_heat = np.cumsum(lsource) * self.dz + fluxes_ffloor['latent_heat']  # Wm-2
+        flux_sensible_heat = np.cumsum(tsource) * self.dz + fluxes_ffloor['sensible_heat']  # Wm-2
 
         # net ecosystem exchange umolm-2s-1
         NEE = flux_co2[-1]
         # ecosystem respiration umolm-2s-1
-        Reco = Rstand + ff_flxs['respiration']
+        Reco = Rstand + fluxes_ffloor['respiration']
         # ecosystem GPP umolm-2s-1
         GPP = - NEE + Reco
         # stand transpiration [m/dt]
@@ -437,57 +463,77 @@ class CanopyModel(object):
                           sum(tsource*self.dz) + sum(lsource*self.dz))  # sensible and latent heat flux
 
         # evaporation from moss layer [m s-1]
-        if 'bryo_evaporation' in ff_flxs:
-            Efloor = ff_flxs['bryo_evaporation'] * MOLAR_MASS_H2O * dt * 1e-3
+        if 'bryo_evaporation' in fluxes_ffloor:
+            Efloor = fluxes_ffloor['bryo_evaporation'] * MOLAR_MASS_H2O * 1e-3
         else:
             Efloor = 0.0
 
-        if 'soil_evaporation' in ff_flxs:
-            Esoil = ff_flxs['soil_evaporation'] * MOLAR_MASS_H2O * dt * 1e-3
+        if 'soil_evaporation' in fluxes_ffloor:
+            Esoil = fluxes_ffloor['soil_evaporation'] * MOLAR_MASS_H2O * 1e-3
 
         else:
             Esoil = 0.0
 
-        if 'water_closure_bryo' in ff_flxs:
-            water_closure_forestfloor = ff_flxs['water_closure_bryo']
+        if 'water_closure_bryo' in fluxes_ffloor:
+            water_closure_forestfloor = fluxes_ffloor['water_closure_bryo']
 
         else:
             water_closure_forestfloor = 0.0
 
-        # return state and fluxes in dictionary
-        state = {'interception_storage': sum(self.Interc_Model.W),
-                 'snow_water_equivalent': self.Snow_Model.swe,
-                 'LAI': self.LAI,
-                 'lad': self.lad,
-                 'sunlit_fraction': f_sl,
-                 'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.Ptypes])/self.LAI,
-                 'IterWMA': iter_no
-                 }
+        if 'capillar_water' not in fluxes_ffloor:
+            fluxes_ffloor['capillar_water'] = 0.0
 
-        fluxes = {'potential_infiltration': ff_flxs['throughfall'] / dt,
-                  'throughfall': (Trfall_rain + Trfall_snow) / dt,
-                  'interception': Interc / dt,
-                  'evaporation': Evap / dt,
-                  'condensation': Cond / dt,
-                  'transpiration': Tr / dt,
-                  'moss_evaporation': Efloor / dt,
-                  'baresoil_evaporation': Esoil / dt,
-                  'NEE': NEE,
-                  'GPP': GPP,
-                  'respiration': Reco,
-                  'LE': flux_latent_heat[-1],
-                  'co2_flux': flux_co2,  # [umol m-2 s-1]
-                  'latent_heat_flux': flux_latent_heat,  # [W m-2]
-                  'pt_transpiration': np.array([pt_st['E'] * MOLAR_MASS_H2O * 1e-3 for pt_st in pt_stats]),
-                  'pt_gpp': np.array([pt_st['An'] + pt_st['Rd'] for pt_st in pt_stats]),
-                  'pt_respiration': np.array([pt_st['Rd'] for pt_st in pt_stats]),
-                  'water_closure_canopy': MBE_interc,
-                  'water_closure_snow': MBE_snow,
-                  'water_closure_forestfloor': water_closure_forestfloor
-                  }
+        fluxes_ffloor.update({
+                'potential_infiltration': fluxes_ffloor['throughfall'] / dt,
+                'bryo_evaporation': Efloor,
+                'soil_evaporation': Esoil,
+                'water_closure_snow': MBE_snow,
+                'water_closure': water_closure_forestfloor,
+                'ground_heat_flux': fluxes_ffloor['ground_heat'],
+                'sensible_heat_flux': fluxes_ffloor['sensible_heat'],
+                'evaporation': Efloor + Esoil
+                })
+
+        states_ffloor.update({
+                'snow_water_equivalent': self.Snow_Model.swe,
+                })
+
+        # return state and fluxes in dictionary
+        state_canopy = {
+                'interception_storage': sum(self.Interc_Model.W),
+#                'snow_water_equivalent': self.Snow_Model.swe,  # moved to fluxes_ffloor
+                'LAI': self.LAI,
+                'lad': self.lad,
+                'sunlit_fraction': f_sl,
+                'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.Ptypes])/self.LAI,
+                'IterWMA': iter_no
+                }
+
+        fluxes_canopy = {
+#                'potential_infiltration': fluxes_ffloor['throughfall'] / dt,  # moved to fluxes_ffloor
+                'throughfall': (Trfall_rain + Trfall_snow) / dt,
+                'interception': Interc / dt,
+                'evaporation': Evap / dt,
+                'condensation': Cond / dt,
+                'transpiration': Tr / dt,
+#                'moss_evaporation': Efloor / dt,  # moved to fluxes_ffloor
+#                'baresoil_evaporation': Esoil / dt,  # moved to fluxes_ffloor
+                'NEE': NEE,
+                'GPP': GPP,
+                'respiration': Reco,
+                'LE': flux_latent_heat[-1],
+                'co2_flux': flux_co2,  # [umol m-2 s-1]
+                'latent_heat_flux': flux_latent_heat,  # [W m-2]
+                'pt_transpiration': np.array([pt_st['E'] * MOLAR_MASS_H2O * 1e-3 for pt_st in pt_stats]),
+                'pt_gpp': np.array([pt_st['An'] + pt_st['Rd'] for pt_st in pt_stats]),
+                'pt_respiration': np.array([pt_st['Rd'] for pt_st in pt_stats]),
+                'water_closure_canopy': MBE_interc,
+#                'water_closure_snow': MBE_snow,  # moved to fluxes_ffloor
+#                'water_closure_forestfloor': water_closure_forestfloor  # moved to fluxes_ffloor
+                }
 
         if self.Switch_WMA is False:
-            state.update({'h2o': H2O,
+            state_canopy.update({'h2o': H2O,
                           'co2': CO2,
                           'temperature': T,
                           'WMA_assumption': 1.0*Switch_WMA})
@@ -495,27 +541,31 @@ class CanopyModel(object):
         if self.Switch_Ebal:
 
             Tleaf_sl = np.where(self.lad > 0.0,
-                                sum([pt_st['Tleaf_sl'] for pt_st in pt_stats])/(self.lad + EPS),
+                                sum([pt_st['Tleaf_sl'] for pt_st in pt_stats]) / (self.lad + EPS),
                                 np.nan)
 
             Tleaf_sh = np.where(self.lad > 0.0,
                                 sum([pt_st['Tleaf_sh'] for pt_st in pt_stats]) / (self.lad + EPS),
-                                np.nan),
+                                np.nan)
 
-            state.update({'Tleaf_wet': np.where(self.lad > 0.0, Tleaf_w, np.nan),
-                          'Tleaf_sl': Tleaf_sl,
-                          'Tleaf_sh': Tleaf_sh,
-                          'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan),
-                          'Tsurf': Tsurf})
-            fluxes.update({'net_leaf_radiation': Rabs,
-                           'net_leaf_LW': LWl,
-                           'ground_heat_flux': ff_flxs['ground_heat'],
-                           'soil_sensible_heat_flux': ff_flxs['sensible_heat'],
-                           'sensible_heat_flux': flux_sensible_heat,  # [W m-2]
-                           'energy_closure_canopy': energy_closure,
-                           'fr_source': sum(frsource*self.dz)})
+            state_canopy.update({
+                    'Tleaf_wet': np.where(self.lad > 0.0, Tleaf_w, np.nan),
+                    'Tleaf_sl': Tleaf_sl,
+                    'Tleaf_sh': Tleaf_sh,
+                    'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan),
+                    'Tsurf': Tsurf
+                    })
 
-        return fluxes, state
+            fluxes_canopy.update({
+                    'net_leaf_radiation': Rabs,
+                    'net_leaf_LW': LWl,
+#                    'ground_heat_flux': fluxes_ffloor['ground_heat'],  # moved to fluxes_ffloor
+#                    'soil_sensible_heat_flux': fluxes_ffloor['sensible_heat'],  # moved to fluxes_ffloor
+                    'sensible_heat_flux': flux_sensible_heat,  # [W m-2]
+                    'energy_closure_canopy': energy_closure,
+                    'fr_source': sum(frsource * self.dz)})
+
+        return fluxes_canopy, state_canopy, fluxes_ffloor, states_ffloor
 
     def _init_state(self, forcing):
         """ initialize state variables """
@@ -525,6 +575,10 @@ class CanopyModel(object):
         CO2 = self.ones * ([forcing['co2']])
         Tleaf = T.copy() * self.lad / (self.lad + EPS)
         Tsurf = self.ForestFloor.old_temperature
+        self.ForestFloor.temperature = self.ForestFloor.old_temperature
+
+        for bryo in self.ForestFloor.bryotypes:
+            bryo.restore()
 
         return T, H2O, CO2, Tleaf, Tsurf
 

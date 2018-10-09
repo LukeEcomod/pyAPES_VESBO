@@ -80,6 +80,7 @@ class Radiation(object):
             canopy. Water Resources Res. 41, W08409, 1-16.
         """
 
+        radtype = radtype.upper()
         if radtype == 'PAR' or radtype == 'NIR':
 
 

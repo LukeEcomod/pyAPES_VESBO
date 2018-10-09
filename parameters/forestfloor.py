@@ -65,7 +65,7 @@ Pleurozium = {
                             'theta_r': 0.01,
                             'alpha': 0.13,
                             'n': 2.17,
-                            'saturated_conductivity': 1e3,  # unit?
+                            'saturated_conductivity': 1.16e-8,  # [m s-1]
                             'pore_connectivity': -2.37,
                             }
             }
@@ -99,7 +99,7 @@ Hylocomium = {
                             'theta_r': 0.02,
                             'alpha': 0.13,
                             'n': 2.17,
-                            'saturated_conductivity': 1e3,  # unit?
+                            'saturated_conductivity': 1.16e-8,  # [m s-1]
                             'pore_connectivity': -2.37
                             }
                 }
@@ -135,7 +135,7 @@ Sphagnum = {
                             'theta_r': 0.10,
                             'alpha': 0.10,
                             'n': 1.4,
-                            'saturated_conductivity': 3.5e-4,  # unit?
+                            'saturated_conductivity': 3.5e-4,  # [m s-1]
                             'pore_connectivity': -2.37
                             }
         }

@@ -171,14 +171,14 @@ class heat_and_water:
                 self.properties['water_retention'])
 
         # [kg m-2 s-1] or [mm s-1]
-        capillary_rise = capillarity(dt,
-                                     self.properties,
-                                     hydraulic_conductivity,
-                                     water_potential,
-                                     water_content,
-                                     self.states['soil_hydraulic_conductivity'],
-                                     self.states['soil_water_potential'],
-                                     self.states['soil_depth'])
+        capillary_rise = capillarity(dt=dt,
+                                     properties=self.properties,
+                                     hydraulic_conductivity=hydraulic_conductivity,
+                                     water_potential=water_potential,
+                                     water_content=water_content,
+                                     soil_hydraulic_conductivity=self.states['soil_hydraulic_conductivity'],
+                                     soil_water_potential=self.states['soil_water_potential'],
+                                     soil_depth=self.states['soil_depth'])
 
         # [kg m-2 s-1] or [mm s-1]
         capillary_rise = min(capillary_rise, max_recharge_rate)
@@ -364,6 +364,7 @@ def heat_and_water_exchange(properties,
             'thermal_conductivity': [Wm-1K-1]
             'pond recharge': [m]
     """
+    solver = solver.lower()
 
     precipitation = forcing['throughfall']  # [mm s-1]
 
@@ -594,7 +595,7 @@ def capillarity(dt,
                 water_potential,
                 water_content,
                 soil_hydraulic_conductivity,
-                soil_hydraulic_head,
+                soil_water_potential,
                 soil_depth):
     r""" Estimates liquid water flux from soil to moss
     :math:`q = -k(\\frac{\partial h}{\partial z}+1)` [mm s\ :sup:`-1`] to moss
@@ -727,7 +728,7 @@ def thermal_conduction(volumetric_water, method='donnel'):
         float: heat conductivity in [W m\ :sup:`-1` K\ :sup:`-1`\ ]
     """
 
-    method.lower()
+    method = method.lower()
 
     heat_conductivity = None
 
@@ -1065,8 +1066,16 @@ def effective_saturation(value, water_retention, input_unit):
         float: [-]
     """
 
+    options = set(['water_potential', 'volumetric_water'])
+
     if isinstance(input_unit, str):
-        input_unit.lower()
+        input_unit = input_unit.lower()
+    else:
+        raise ValueError("Input unit has to be string")
+
+    if input_unit not in options:
+        raise ValueError("Input unit options are: ".format(*options))
+
 
     if input_unit == 'water_potential':
         n = water_retention['n']

@@ -135,7 +135,6 @@ class ForestFloor(object):
         fluxes = {}
         states = {}
 
-        evaporation = 0.0
         soil_evaporation = 0.0  # soil evaporation (mol m-2(ground)s-1)
 
         sensible_heat = 0.0  # forest floor sensible heat flux (Wm-2)
@@ -176,6 +175,8 @@ class ForestFloor(object):
                 bryo_photosynthesis = 0.0  # [umol m-2 s-1]
                 bryo_respiration = 0.0  # [umol m-2 s-1]
 
+                bryo_capillary_rise = 0.0  # [m s-1]
+
                 for bryo in self.bryotypes:
 
                     # bryophyte's heat, water and carbon balance
@@ -183,8 +184,6 @@ class ForestFloor(object):
 
                     bryo_evaporation += bryo.coverage * flxs_bryo['evaporation'] / MOLAR_MASS_H2O
                     soil_evaporation += bryo.coverage * flxs_bryo['soil_evaporation'] / MOLAR_MASS_H2O
-
-                    evaporation += (bryo_evaporation + soil_evaporation)
 
                     throughfall += bryo.coverage * flxs_bryo['throughfall'] / WATER_DENSITY
                     capillar_water += bryo.coverage * flxs_bryo['capillar_water'] / WATER_DENSITY
@@ -208,21 +207,21 @@ class ForestFloor(object):
                 respiration += bryo_respiration
                 temperature += bryo_temperature
 
-                fluxes.update({'evaporation': evaporation,
-                               'evaporation_soil': soil_evaporation,
-                               'evaporation_bryo': bryo_evaporation,
-                               'latent_heat': latent_heat,
-                               'sensible_heat': sensible_heat,
-                               'ground_heat': ground_heat,
-                               'water_closure_bryo': bryo_water_closure,
-                               'energy_closure_bryo': bryo_energy_closure,
-                               'throughfall': throughfall,
-                               'capillar_water': capillar_water,
-                               'pond_recharge': pond_recharge,
-                               'photosynthesis_bryo': bryo_photosynthesis,
-                               'respiration_bryo': bryo_respiration,
-                               'respiration': respiration
-                               })
+                fluxes.update({
+                   'soil_evaporation': soil_evaporation,
+                   'bryo_evaporation': bryo_evaporation,
+                   'latent_heat': latent_heat,
+                   'sensible_heat': sensible_heat,
+                   'ground_heat': ground_heat,
+                   'water_closure_bryo': bryo_water_closure,
+                   'energy_closure_bryo': bryo_energy_closure,
+                   'throughfall': throughfall,
+                   'capillar_water': capillar_water,
+                   'pond_recharge': pond_recharge,
+                   'photosynthesis_bryo': bryo_photosynthesis,
+                   'respiration_bryo': bryo_respiration,
+                   'respiration': respiration
+                   })
 
                 states.update({'temperature': temperature,
                                'bryo_temperature': bryo_temperature,
@@ -252,19 +251,21 @@ class ForestFloor(object):
                 temperature += self.baresoil.coverage * stts_soil['temperature']
                 radiative_flux += self.baresoil.coverage * flxs_soil['radiative_flux']
 
-                fluxes.update({'evaporation': evaporation,
-                               'soil_evaporation': soil_evaporation,
-                               'latent_heat': latent_heat,
-                               'sensible_heat': sensible_heat,
-                               'ground_heat': ground_heat,
-                               'energy_closure_soil': soil_energy_closure,
-                               'radiative_flux': radiative_flux,
-                               'throughfall': throughfall,
-                               'respiration': respiration
-                               })
+                fluxes.update({
+                        'soil_evaporation': soil_evaporation,
+                        'latent_heat': latent_heat,
+                        'sensible_heat': sensible_heat,
+                        'ground_heat': ground_heat,
+                        'energy_closure_soil': soil_energy_closure,
+                        'radiative_flux': radiative_flux,
+                        'throughfall': throughfall,
+                        'respiration': respiration
+                        })
 
                 states.update({'temperature': temperature,
                                'soil_temperature': stts_soil['temperature']})
+
+        self.temperature = temperature
 
         return fluxes, states
 

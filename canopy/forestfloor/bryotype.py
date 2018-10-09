@@ -192,7 +192,7 @@ class BryoModel(object):
         self.old_temperature = self.temperature
 
     def update(self):
-        """ Updates old states to states after iteration
+        """ Updates old states to states after iteration.
         """
 
         self.old_carbon_pool = self.carbon_pool
@@ -200,6 +200,16 @@ class BryoModel(object):
         self.old_volumetric_water = self.volumetric_water
         self.old_water_potential = self.water_potential
         self.old_temperature = self.temperature
+
+    def restore(self):
+        """ Restore new states back to states before iteration.
+        """
+
+        self.carbon_pool = self.old_carbon_pool
+        self.water_content = self.old_water_content
+        self.volumetric_water = self.old_volumetric_water
+        self.water_potential = self.old_water_potential
+        self.temperature = self.old_temperature
 
     def run(self, dt, forcing, solver=False):
         r""" Calculates one timestep and updates states of BryoModel instance.
@@ -217,7 +227,7 @@ class BryoModel(object):
                 'air_pressure': [Pa]
                 'soil_depth': [m]
                 'soil_temperature': [\ :math:`^{\circ}`\ C]
-                'soil_water_potential': [Pa]
+                'soil_water_potential': [m]
                 'soil_hydraulic_conductivity': [m s\ :sup:`-1`\ ]
                 'soil_thermal_conductivity': [W m\ :sup:`-1`\  K\ :sup:`-1`\ ]
                 'nsteps' number of steps in odesolver
@@ -256,7 +266,7 @@ class BryoModel(object):
                        'nee': nee})
 
         # update bryophyte free carbon pool (g C m-2) of bryophyte
-        self.carbon_pool = self.carbon_pool + 1e3 * MOLAR_MASS_C * 1e-6 * nee
+        self.carbon_pool = self.old_carbon_pool + 1e3 * MOLAR_MASS_C * 1e-6 * nee
         states['carbon_pool'] = self.carbon_pool
 
         # compute soil evaporation through moss layer

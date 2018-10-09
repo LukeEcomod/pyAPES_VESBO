@@ -165,20 +165,21 @@ class Model(object):
                               }
 
             # run timestep loop
-            canopy_flux, canopy_state = self.canopy_model.run_timestep(
+            canopy_flux, canopy_state, ffloor_flux, ffloor_state = self.canopy_model.run_timestep(
                     dt=self.dt,
                     forcing=canopy_forcing)
 
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
-            ubc_w = {'Prec': canopy_flux['potential_infiltration'],
-                     'Evap': canopy_flux['baresoil_evaporation']}
+            ubc_w = {'Prec': ffloor_flux['potential_infiltration'],
+                     'Evap': ffloor_flux['soil_evaporation']}
+
             # transpiration sink
             rootsink = np.zeros(self.soil_model.Nlayers)
             rootsink[0:len(self.canopy_model.rad)] = self.canopy_model.rad * canopy_flux['transpiration']
             rootsink = rootsink / self.soil_model.grid['dz']
 
-            ubc_T = {'type': 'flux', 'value': -canopy_flux['ground_heat_flux']}
+            ubc_T = {'type': 'flux', 'value': -ffloor_flux['ground_heat_flux']}
 
             # run soil water and heat flow
             soil_flux, soil_state = self.soil_model._run(
@@ -194,15 +195,18 @@ class Model(object):
                     'co2': self.forcing['CO2'].iloc[k]}
 
             canopy_state.update(canopy_flux)
+            ffloor_state.update(ffloor_flux)
             soil_state.update(soil_flux)
 
-            self.results = _append_results('canopy', k, canopy_state, self.results)
-            self.results = _append_results('soil', k, soil_state, self.results)
             self.results = _append_results('forcing', k, forcing_state, self.results)
+            self.results = _append_results('canopy', k, canopy_state, self.results)
+            self.results = _append_results('ffloor', k, ffloor_state, self.results)
+            self.results = _append_results('soil', k, soil_state, self.results)
 
         print '100%'
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
         self.results = _append_results('soil', None, {'z': self.soil_model.grid['z']}, self.results)
+
         return self.results
 
 def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes, Nplant_types):
@@ -255,10 +259,13 @@ def _append_results(group, step, step_results, results):
     for key in step_results_keys:
         variable = group + '_' + key
 
+#        print(variable)
+
         if variable in results_keys:
             if variable == 'z':
                 results[variable] = step_results[key]
             else:
+#                print(type(step_results[key]))
                 results[variable][step] = step_results[key]
 
     return results
@@ -324,7 +331,7 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, for
     ncf = Dataset(ff, 'w')
     ncf.description = description
     ncf.history = 'created ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    ncf.source = 'APES_Jan2016'
+    ncf.source = 'pyAPES_beta2018'
 
     ncf.createDimension('date', date_dimension)
     ncf.createDimension('simulation', simulation_dimension)

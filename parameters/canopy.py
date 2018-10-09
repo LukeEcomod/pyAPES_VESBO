@@ -20,7 +20,7 @@ def get_cpara(dbhfile):
 
     # --- control flags (True/False) ---
     ctr = {'Eflow': True,  # ensemble flow
-           'WMA': False, # well-mixed assumption
+           'WMA': True, # well-mixed assumption
            'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
            'Ebal': True,  # computes leaf temperature by solving energy balance
            'SwModel': 'ZhaoQualls',
