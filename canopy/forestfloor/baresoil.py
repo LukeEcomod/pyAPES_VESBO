@@ -17,7 +17,7 @@ from canopy.micromet import e_sat
 from heat_and_water import soil_boundary_layer_conductance
 
 
-class BaresoilModel(object):
+class Baresoil(object):
     """ Represents bare soil cover-soil-atmosphere interactions
 
     """

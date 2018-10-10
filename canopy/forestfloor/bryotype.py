@@ -40,7 +40,7 @@ from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C
 EPS = np.finfo(float).eps  # machine epsilon
 
 
-class BryoModel(object):
+class Bryophyte(object):
     r""" Represents bryophyte community-soil-atmosphere interactions.
 
     Characteristics of BryoType object are stored in 'properties' dictionary.

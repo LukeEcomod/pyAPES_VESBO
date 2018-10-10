@@ -20,8 +20,8 @@ import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
 from canopy.micromet import e_sat
 from canopy.constants import EPS, WATER_DENSITY, MOLAR_MASS_H2O
-from bryotype import BryoModel
-from baresoil import BaresoilModel
+from bryotype import Bryophyte
+from baresoil import Baresoil
 from carbon import soil_respiration
 from heat_and_water import soil_boundary_layer_conductance
 from heat_and_water import bryophyte_shortwave_albedo, emitted_longwave_radiation
@@ -59,7 +59,7 @@ class ForestFloor(object):
             self (object)
         """
 
-        baresoil = BaresoilModel(properties['baresoil'])
+        baresoil = Baresoil(properties['baresoil'])
         self.baresoil = baresoil
 
         # Bryotypes
@@ -67,7 +67,7 @@ class ForestFloor(object):
 
         f_bryo = 0.0
         for br_para in properties['bryophytes']:
-            bryotypes.append(BryoModel(br_para))
+            bryotypes.append(Bryophyte(br_para))
             f_bryo += br_para['ground_coverage']
 
         self.bryotypes = bryotypes
