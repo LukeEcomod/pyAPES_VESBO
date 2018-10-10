@@ -4,6 +4,7 @@ CANOPY MODEL PARAMETERS
 """
 from copy import deepcopy
 from parameters.utilities import lad_profiles
+from forestfloor import forestfloor
 
 def get_cpara(dbhfile):
 
@@ -49,8 +50,6 @@ def get_cpara(dbhfile):
             'Par_alb': 0.12,  # shoot Par-albedo [-]
             'soil_Par_alb': 0.05,  # soil (moss) Par-albedo [-]
             'Nir_alb': 0.55,  # shoot NIR-albedo [-]
-            'soil_Nir_alb': 0.5,  # soil (moss) NIR-albedo [-]
-            'soil_emi': 0.98,
             'leaf_emi': 0.98
             }
 
@@ -68,25 +67,8 @@ def get_cpara(dbhfile):
                    }
 
     # --- forest floor ---
-    mossp0 = {'ground_coverage': 0.0,  # fraction of moss ground coverage [-]
-             'Wmax': 20.0,  # 
-             'Wmin': 1.5,  # 
-             'zr': 0.01,  # roughness height [m]
-             'Mdry': 0.060,  # 
-             # --- parameters to compute moss co2 exchange (only in MLM) ---
-             'LAI': 1.0,  # leaf area index [m2m-2]
-             'Amax': 1.8,  # max photo rate [umolm-2s-1]
-             'Q10': 2.0,  # temperature sensitivity [-]
-             'R10': 0.03,  # base respiration at 10degC [umolm-2s-1]
-             'qeff': 0.015  # 
-             }
-    soilp = {# --- parameters to compute soil respiration (only in MLM) ---
-            'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
-            'Q10': 2.0,  # temperature sensitivity [-]
-            'poros': 0.947,  # porosity [m3m-3]    ----> vesimallista?
-            'limitpara': [3.83, 4.43, 1.25, 0.854]  #Skopp respiration function param [a ,b, d, g]
-            }
-    ffloor = {'mossp': [mossp0], 'soilp': soilp}
+    # defined in parameters.forestfloor.py
+    ffloor = forestfloor
 
     # --- default values for plant characteristics ---
     gamma = 1.5  # adjust shoot light response

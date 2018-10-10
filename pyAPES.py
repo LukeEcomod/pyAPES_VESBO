@@ -144,27 +144,41 @@ class Model(object):
                 self.canopy_model.run_daily(
                         self.forcing['doy'].iloc[k],
                         self.forcing['Tdaily'].iloc[k])
-
             # properties of first soil node
-            soilstate = {'depth': self.soil.grid['z'][0],
-                         'temperature': self.soil.heat.T[0],
-                         'water_potential': self.soil.water.h[0],
-                         'hydraulic_conductivity': self.soil.water.Kv[0],
-                         'thermal_conductivity': self.soil.heat.thermal_conductivity[0]}
+
+            canopy_forcing = {'depth': self.soil.grid['z'][0],
+                              'soil_temperature': self.soil.heat.T[0],
+                              'soil_water_potential': self.soil.water.h[0],
+                              'soil_volumetric_water': self.soil.water.Wtot[0],
+                              'soil_pond_storage': self.soil.water.h_pond,
+                              'soil_hydraulic_conductivity': self.soil.water.Kv[0],
+                              'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],
+                              'wind_speed': self.forcing['U'].iloc[k],
+                              'air_temperature': self.forcing['Tair'].iloc[k],
+                              'precipitation': self.forcing['Prec'].iloc[k],
+                              'h2o': self.forcing['H2O'].iloc[k],
+                              'co2': self.forcing['CO2'].iloc[k],
+                              'PAR': {'direct': self.forcing['dirPar'].iloc[k],
+                                      'diffuse': self.forcing['diffPar'].iloc[k]},
+                              'NIR': {'direct': self.forcing['dirNir'].iloc[k],
+                                      'diffuse': self.forcing['diffNir'].iloc[k]},
+                              'lw_in': self.forcing['LWin'].iloc[k],
+                              'friction_velocity': self.forcing['Ustar'].iloc[k],
+                              'air_pressure': self.forcing['P'].iloc[k],
+                              'zenith_angle': self.forcing['Zen'].iloc[k]
+                              }
 
             # run timestep loop
-            canopy_flux, canopy_state = self.canopy_model.run_timestep(
+            canopy_flux, canopy_state, ffloor_flux, ffloor_state = self.canopy_model.run_timestep(
                     dt=self.dt,
-                    forcing=self.forcing.iloc[k],
-                    Tsoil=Tsoil, Wsoil=Wsoil,  # --- REMOVE??
-                    soil_state = soilstate)
+                    forcing=canopy_forcing)
 
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
-            soil_forcing = {'potential_infiltration': canopy_flux['potential_infiltration'],
-                            'potential_evaporation': canopy_flux['baresoil_evaporation'],
+            soil_forcing = {'potential_infiltration': ffloor_flux['potential_infiltration'],
+                            'potential_evaporation': ffloor_flux['soil_evaporation'],
                             'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
-                            'ground_heat_flux': -canopy_flux['ground_heat_flux']}
+                            'ground_heat_flux': -ffloor_flux['ground_heat_flux']}
 
             # transpiration sink [m s-1]
             rootsink =  self.canopy_model.rad * canopy_flux['transpiration']
@@ -183,15 +197,19 @@ class Model(object):
                     'co2': self.forcing['CO2'].iloc[k]}
 
             canopy_state.update(canopy_flux)
+            ffloor_state.update(ffloor_flux)
             soil_state.update(soil_flux)
 
-            self.results = _append_results('canopy', k, canopy_state, self.results)
-            self.results = _append_results('soil', k, soil_state, self.results)
             self.results = _append_results('forcing', k, forcing_state, self.results)
+            self.results = _append_results('canopy', k, canopy_state, self.results)
+            self.results = _append_results('ffloor', k, ffloor_state, self.results)
+            self.results = _append_results('soil', k, soil_state, self.results)
 
         print '100%'
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
+
         self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)
+
         return self.results
 
 def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes, Nplant_types):
@@ -244,10 +262,13 @@ def _append_results(group, step, step_results, results):
     for key in step_results_keys:
         variable = group + '_' + key
 
+#        print(variable)
+
         if variable in results_keys:
             if variable == 'z':
                 results[variable] = step_results[key]
             else:
+#                print(type(step_results[key]))
                 results[variable][step] = step_results[key]
 
     return results
@@ -313,7 +334,7 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, for
     ncf = Dataset(ff, 'w')
     ncf.description = description
     ncf.history = 'created ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    ncf.source = 'APES_Jan2016'
+    ncf.source = 'pyAPES_beta2018'
 
     ncf.createDimension('date', date_dimension)
     ncf.createDimension('simulation', simulation_dimension)
