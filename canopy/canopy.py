@@ -242,12 +242,8 @@ class CanopyModel(object):
         Switch_WMA = self.Switch_WMA
 
         # initialize canopy micrometeo, Tleaf and Tsurf
-        T, H2O, CO2, Tleaf, Tsurf = self._init_state(forcing)
+        T, H2O, CO2, Tleaf, Tsurf = self._restore(forcing)
 
-# print
-        print(self.ForestFloor.bryotypes[0].water_content,
-              self.ForestFloor.bryotypes[0].water_potential,
-              forcing['soil_water_potential'])
 
         iter_no = 0
         while (err_t > max_err or err_h2o > max_err or
@@ -398,6 +394,11 @@ class CanopyModel(object):
             else:
                 Fc_gr = fluxes_ffloor['respiration']
 
+            if 'bryo_evaporation' in fluxes_ffloor:
+                ff_evaporation = -fluxes_ffloor['soil_evaporation'] + fluxes_ffloor['bryo_evaporation']
+            else:
+                ff_evaporation = fluxes_ffloor['soil_evaporation']
+
             """  --- solve scalar profiles (H2O, CO2, T) """
             if Switch_WMA is False:
                 H2O, CO2, T, err_h2o, err_co2, err_t = self.Micromet_Model.scalar_profiles(
@@ -405,22 +406,21 @@ class CanopyModel(object):
                         source={'H2O': qsource,
                                 'CO2': csource,
                                 'T': tsource},
-                        lbc={'H2O': fluxes_ffloor['soil_evaporation'] + fluxes_ffloor['bryo_evaporation'],
+                        lbc={'H2O': ff_evaporation,
                              'CO2': Fc_gr,
                              'T': fluxes_ffloor['sensible_heat']})
 # print
+# print
+#                print(fluxes_ffloor['bryo_evaporation'] + fluxes_ffloor['soil_evaporation'], fluxes_ffloor['sensible_heat'])
                 if np.mean(H2O) < 0.0:
-                    print("water conc. {}, out: {}, {}, in: {}, {}, ff: {}, {}, {}, bt: {}, {}".format(
+                    print("water conc. {}, out: {}, {}, in: {}, {}, {}, {}".format(
                             iter_no,
                             np.mean(H2O),
                             err_h2o,
-                            fluxes_ffloor['bryo_evaporation'],
+                            fluxes_ffloor['bryo_evaporation'] + fluxes_ffloor['soil_evaporation'],
                             np.mean(qsource),
-                            ff_forcing['air_temperature'],
-                            ff_forcing['lw_dn'],
-                            ff_forcing['h2o'],
-                            self.ForestFloor.bryotypes[0].water_content,
-                            self.ForestFloor.bryotypes[0].old_water_content))
+                            np.mean(tsource),
+                            fluxes_ffloor['sensible_heat']))
 
                 if (iter_no > max_iter
                     or any(np.isnan(T))
@@ -432,7 +432,7 @@ class CanopyModel(object):
                     # reset values
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
-                    T, H2O, CO2, Tleaf, Tsurf = self._init_state(forcing)
+                    T, H2O, CO2, Tleaf, Tsurf = self._restore(forcing)
                     self.Interc_Model.Tl_wet = None
 
             else:
@@ -567,7 +567,7 @@ class CanopyModel(object):
 
         return fluxes_canopy, state_canopy, fluxes_ffloor, states_ffloor
 
-    def _init_state(self, forcing):
+    def _restore(self, forcing):
         """ initialize state variables """
 
         T = self.ones * ([forcing['air_temperature']])
@@ -575,10 +575,7 @@ class CanopyModel(object):
         CO2 = self.ones * ([forcing['co2']])
         Tleaf = T.copy() * self.lad / (self.lad + EPS)
         Tsurf = self.ForestFloor.old_temperature
-        self.ForestFloor.temperature = self.ForestFloor.old_temperature
-
-        for bryo in self.ForestFloor.bryotypes:
-            bryo.restore()
+        self.ForestFloor.restore()
 
         return T, H2O, CO2, Tleaf, Tsurf
 

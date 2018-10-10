@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-06-11",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-09-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -71,13 +71,13 @@ gpara = {
                       ['ffloor_sensible_heat_flux', 'sensible heat flux from forest floor [W m-2]', ('date', 'simulation')],
                       ['ffloor_water_closure', 'forest floor mass balance error [m]', ('date', 'simulation')],
                       ['ffloor_water_closure_snow', 'snow model mass balance error [m]', ('date', 'simulation')],
-                      ['ffloor_bryo_water_storage', 'water storage in bryophyte layer [kg m-2]', ('date', 'simulation')],
+                      ['ffloor_bryo_water_storage', 'water storage of bryophyte layer [kg m-2]', ('date', 'simulation')],
                       ['ffloor_bryo_temperature', 'bryophyte layer temperature [degC]', ('date', 'simulation')],
                       ['ffloor_bryo_evaporation', 'evaporation from bryophyte layer [m s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation', 'evaporation from forest floor [m s-1]', ('date', 'simulation')],
                       ['ffloor_soil_evaporation', 'soil evaporation [m s-1]', ('date', 'simulation')],
                       ['ffloor_temperature', 'forest floor temperature [degC]', ('date', 'simulation')],
-                      ['ffloor_capillar_water', 'bryphyte layer capillary rise [m s-1]', ('date', 'simulation')]
+                      ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')]
                       ]
         }
 

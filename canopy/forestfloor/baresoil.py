@@ -48,15 +48,21 @@ class BaresoilModel(object):
         """
         self.old_temperature = self.temperature
 
+    def restore(self):
+        """ Restores new states back to states before iteration.
+        """
+
+        self.temperature = self.old_temperature
+
     def run(self, dt, forcing):
         """ Calculates one timestep and updates states of BaresoilModel instance
         """
 
-        states, fluxes = heat_balance(forcing, self.properties)
+        states, fluxes = heat_balance(forcing, self.properties, self.temperature)
 
         return fluxes, states
 
-def heat_balance(forcing, properties):
+def heat_balance(forcing, properties, temperature):
     """ Solves bare soil surface temperature
 
     Uses linearized energy balance equation from soil conditions from
@@ -92,8 +98,10 @@ def heat_balance(forcing, properties):
     soil_emi = properties['optical_properties']['emissivity']
 
     dz_soil = - z_soil
+
+# change this either to baresoil temperature or baresoil old_temperature
     # initial guess for surface temperature
-    T_surf = T
+    T_surf = temperature
     # boundary layer conductances for H2O and heat [mol m-2 s-1]
     gb_h, _, gb_v = soil_boundary_layer_conductance(u=U, z=z_can, zo=zr, Ta=T, dT=0.0, P=P)  # OK to assume dt = 0.0?
     # radiative conductance [mol m-2 s-1]

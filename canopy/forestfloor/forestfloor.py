@@ -104,6 +104,17 @@ class ForestFloor(object):
 
         self.old_temperature = self.temperature
 
+    def restore(self):
+        """ Restores new states back to states before iteration.
+        """
+
+        self.temperature = self.old_temperature
+
+        for bryo in self.bryotypes:
+            bryo.restore()
+
+        self.baresoil
+
     def run(self, dt, forcing):
         r"""Water and energy balance at the forestfloor.
 
@@ -175,7 +186,7 @@ class ForestFloor(object):
                 bryo_photosynthesis = 0.0  # [umol m-2 s-1]
                 bryo_respiration = 0.0  # [umol m-2 s-1]
 
-                bryo_capillary_rise = 0.0  # [m s-1]
+                capillar_rise = 0.0  # [m s-1]
 
                 for bryo in self.bryotypes:
 
@@ -186,7 +197,7 @@ class ForestFloor(object):
                     soil_evaporation += bryo.coverage * flxs_bryo['soil_evaporation'] / MOLAR_MASS_H2O
 
                     throughfall += bryo.coverage * flxs_bryo['throughfall'] / WATER_DENSITY
-                    capillar_water += bryo.coverage * flxs_bryo['capillar_water'] / WATER_DENSITY
+                    capillar_rise += bryo.coverage * flxs_bryo['capillar_rise'] / WATER_DENSITY
                     pond_recharge += bryo.coverage * flxs_bryo['pond_recharge'] / WATER_DENSITY
 
                     latent_heat += bryo.coverage * flxs_bryo['latent_heat']
@@ -216,7 +227,7 @@ class ForestFloor(object):
                    'water_closure_bryo': bryo_water_closure,
                    'energy_closure_bryo': bryo_energy_closure,
                    'throughfall': throughfall,
-                   'capillar_water': capillar_water,
+                   'capillar_rise': capillar_rise,
                    'pond_recharge': pond_recharge,
                    'photosynthesis_bryo': bryo_photosynthesis,
                    'respiration_bryo': bryo_respiration,
@@ -238,7 +249,6 @@ class ForestFloor(object):
                 # soil surface energy balance
                 flxs_soil, stts_soil = self.baresoil.run(dt, forcing)
 
-                evaporation += self.baresoil.coverage * flxs_soil['evaporation']
                 soil_evaporation += self.baresoil.coverage * flxs_soil['evaporation']
                 throughfall += forcing['throughfall'] * self.baresoil.coverage
 

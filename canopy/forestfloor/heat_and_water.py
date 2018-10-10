@@ -469,7 +469,12 @@ def heat_and_water_exchange(properties,
     del tt
 
     if np.any(np.isnan(new_states)):
-        print('AAAAARGH!!!')
+        print('AAAAARGH!!! temp: {}, waterc: {}, evap: {}, h2o{}'.format(
+                new_states[0][-1],
+                new_states[1][-1],
+                new_states[5][-1],
+                forcing['h2o']
+                ))
 
     # new states in every solver timestep
     # [deg C]
@@ -572,7 +577,7 @@ def heat_and_water_exchange(properties,
         'heat_fluxes': heat_fluxes,  # [W m-2]
         'evaporation': evaporation_rate,  # [mm s-1]
         'pond_recharge': pond_recharge / dt,  # [mm s-1]
-        'capillar_water': new_capillar_water / dt,  # [mm s-1]
+        'capillar_rise': new_capillar_water / dt,  # [mm s-1]
         'throughfall': throughfall / dt,  # [mm s-1]
         }
 
@@ -616,7 +621,7 @@ def capillarity(dt,
         water_content: [g g\ :sup:`-1`\ ]
         soil_hydraulic_conductivity: [m s\ :sup:`-1`\ ]
             from 1st calculation node
-        soil_hydraulic_head: [m]
+        soil_water_potential: [m]
             from 1st calculation node
         soil_depth: [m]
 
@@ -633,7 +638,7 @@ def capillarity(dt,
     # [mm/s] or [kg/(m2 s)]
     capillary_rise = (1.0e3
                       * max(0.0,
-                            - k * ((water_potential - soil_hydraulic_head)
+                            - k * ((water_potential - soil_water_potential)
                                    / (properties['height'] - soil_depth) + 1.0)))
 
     capillary_rise = min(

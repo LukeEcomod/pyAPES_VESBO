@@ -11,6 +11,9 @@ implementation is done in MatLab by Samuli Launiainen.
 
 Created on Tue Mar 14 08:15:50 2017
 
+TODO:
+    only water_balance calculation.
+
 References:
 
 
@@ -139,15 +142,6 @@ class BryoModel(object):
             water_retention = properties['water_retention']
             water_retention['field_capacity'] = field_capacity
 
-        if 'optical_properties' not in properties:
-            optical_properties = []
-
-            optical_properties.append(properties['optical_properties']['albedo_PAR'])
-            optical_properties.append(properties['optical_properties']['albedo_NIR'])
-            optical_properties.append(properties['optical_properties']['emissivity'])
-
-            properties['optical_properties'] = optical_properties
-
         self.properties = properties
 
         # set initial conditions
@@ -202,7 +196,7 @@ class BryoModel(object):
         self.old_temperature = self.temperature
 
     def restore(self):
-        """ Restore new states back to states before iteration.
+        """ Restores new states back to states before iteration.
         """
 
         self.carbon_pool = self.old_carbon_pool
