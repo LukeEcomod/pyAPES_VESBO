@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-.. module: soilprofile.water
+.. module: soil.water
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
@@ -15,9 +15,8 @@ from scipy.interpolate import interp1d
 from tools.utilities import tridiag as thomas, spatial_average
 from constants import EPS
 
-class WaterModel(object):
-    r""" Represents soil water balance.
-    """
+class Water(object):
+
     def __init__(self, grid, profile_propeties, model_specs):
         r""" Initializes soil water balance model.
 
@@ -141,7 +140,7 @@ class WaterModel(object):
                          'pond_storage': self.h_pond}
 
         # solve water balance in 1D soil profile
-        if self.solution_type == 'Equilibrium':  # solving based on equilibrium
+        if self.solution_type == 'EQUILIBRIUM':  # solving based on equilibrium
             fluxes, state = waterStorage1D(t_final=dt,
                                            grid=self.grid,
                                            forcing=forcing,
@@ -233,13 +232,18 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
         cosalfa (float): - 1 for vertical water flow, 0 for horizontal transport
         steps (int or float): initial number of subtimesteps used to proceed to 't_final'
     Returns:
-        fluxes (dict):[m s-1]
+        fluxes (dict): [m s-1]
             'infiltration'
             'evaporation'
             'drainage'
             'transpiration'
             'surface_runoff'
             'water_closure'
+        state (dict):
+            'water_potential': [m]
+            'volumetric_water_content': [m3 m-3]
+            'ground_water_level': [m]
+            'pond_storage': [m]
         dto (float): timestep used for solving [s]
 
     References:

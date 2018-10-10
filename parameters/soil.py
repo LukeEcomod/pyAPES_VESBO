@@ -42,7 +42,7 @@ soil_properties = {'pF': {  # vanGenuchten water retention parameters
                   'saturated_conductivity_vertical': Kvsat,  # saturated vertical hydraulic conductivity [m s-1]
                   'saturated_conductivity_horizontal': Khsat,  # saturated horizontal hydraulic conductivity [m s-1]
                   'solid_heat_capacity': None,  # [J m-3 (solid) K-1] - if None, estimated from organic/mineral composition
-                  'fractions': {  # fractions of solid volume [-]
+                  'solid_composition': {  # fractions of solid volume [-]
                                'organic': [1.0 for i in range(N)],
                                'sand': [0.0 for i in range(N)],
                                'silt': [0.0 for i in range(N)],
@@ -57,27 +57,27 @@ soil_properties = {'pF': {  # vanGenuchten water retention parameters
 
 """ water model specs """
 water_model = {'solve': True,
-               'type': 'Richards',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
+               'type': 'Equilibrium',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
                'pond_storage_max': 0.01,  #  maximum pond depth [m]
                'initial_condition': {  # (dict) initial conditions
                                      'ground_water_level': -0.2,  # groundwater depth [m]
                                      'pond_storage': 0.  # initial pond depth at surface [m]
                                      },
-                'lower_boundary': {  # lower boundary condition (type, value, depth)
+               'lower_boundary': {  # lower boundary condition (type, value, depth)
                                   'type': 'impermeable',
                                   'value': None,
                                   'depth': -1.8
                                   },
-                'drainage_equation': {  # drainage equation and drainage parameters
-                                      'type': 'Hooghoudt',
-                                      'depth': 1.0,  # drain depth [m]
-                                      'spacing': 40.0,  # drain spacing [m]
-                                      'width': 1.0,  # drain width [m]
-                                      }
+               'drainage_equation': {  # drainage equation and drainage parameters
+                                     'type': 'Hooghoudt',
+                                     'depth': 1.0,  # drain depth [m]
+                                     'spacing': 40.0,  # drain spacing [m]
+                                     'width': 1.0,  # drain width [m]
+                                     }
                 }
 
 """ heat model specs """
-heat_model = {'solve': False,
+heat_model = {'solve': True,
               'initial_condition': {
                                    'temperature': 4.0,  # initial soil temperature [degC]
                                    },

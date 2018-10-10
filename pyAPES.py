@@ -24,9 +24,10 @@ To call model and read results:
 import os
 import numpy as np
 import pandas as pd
+import time
 from tools.iotools import read_forcing
 from canopy.canopy import CanopyModel
-from soilprofile.soilprofile import SoilModel
+from soil.soil import Soil
 from parameters.canopy import get_cpara
 
 from copy import deepcopy
@@ -56,7 +57,6 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
         tasks.append(Model(gpara, cpara, spara, forcing, nsim=k))
 
     if create_ncf:
-        import time
         timestr = time.strftime('%Y%m%d%H%M')
         filename = timestr + '_CCFPeat_results.nc'
 
@@ -84,8 +84,10 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
         ncf.close()
 
     else:
+        running_time = time.time()
         results = {task.Nsim: task.run() for task in tasks}
         output_file = results
+        print('Running time %.2f seconds' % (time.time() - running_time))
 
     return output_file
 
@@ -109,10 +111,10 @@ class Model(object):
         self.Ncanopy_nodes = canopy_para['grid']['Nlayers']
 
         # create soil model instance
-        self.soil_model = SoilModel(soil_para)
+        self.soil = Soil(soil_para)
 
         # create canopy model instance
-        self.canopy_model = CanopyModel(canopy_para, self.soil_model.grid['dz'])
+        self.canopy_model = CanopyModel(canopy_para, self.soil.grid['dz'])
 
         self.Nplant_types = len(self.canopy_model.Ptypes)
 
@@ -134,7 +136,7 @@ class Model(object):
 # Check Tsoil
             # Soil moisture forcing for canopy model
             Tsoil = self.forcing['Tair'].iloc[k]  # should come from soil model!
-            Wsoil = self.soil_model.WaterModel.Wtot[0]  # certain depth?!
+            Wsoil = self.soil.water.Wtot[0]  # certain depth?!
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
@@ -144,11 +146,11 @@ class Model(object):
                         self.forcing['Tdaily'].iloc[k])
 
             # properties of first soil node
-            soilstate = {'depth': self.soil_model.grid['z'][0],
-                         'temperature': 10.,  #self.soil_model.T[0],
-                         'water_potential': self.soil_model.WaterModel.h[0],
-                         'hydraulic_conductivity': self.soil_model.WaterModel.Kv[0],
-                         'thermal_conductivity': 0.0}  #self.soil_model.Lambda[0]}
+            soilstate = {'depth': self.soil.grid['z'][0],
+                         'temperature': self.soil.heat.T[0],
+                         'water_potential': self.soil.water.h[0],
+                         'hydraulic_conductivity': self.soil.water.Kv[0],
+                         'thermal_conductivity': self.soil.heat.thermal_conductivity[0]}
 
             # run timestep loop
             canopy_flux, canopy_state = self.canopy_model.run_timestep(
@@ -161,16 +163,16 @@ class Model(object):
             # potential infiltration and evaporation from ground surface
             soil_forcing = {'potential_infiltration': canopy_flux['potential_infiltration'],
                             'potential_evaporation': canopy_flux['baresoil_evaporation'],
-                            'atmospheric_pressure_head': -1000.0}  # should come from canopy? or set to large value?
+                            'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
+                            'ground_heat_flux': -canopy_flux['ground_heat_flux']}
+
             # transpiration sink [m s-1]
             rootsink =  self.canopy_model.rad * canopy_flux['transpiration']
 
-            ubc_T = {'type': 'flux', 'value': -canopy_flux['ground_heat_flux']}
-
             # run soil water and heat flow
-            soil_flux, soil_state = self.soil_model.run(
-                    self.dt,
-                    soil_forcing,
+            soil_flux, soil_state = self.soil.run(
+                    dt=self.dt,
+                    forcing=soil_forcing,
                     water_sink=rootsink)
 
             forcing_state = {
@@ -189,7 +191,7 @@ class Model(object):
 
         print '100%'
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
-        self.results = _append_results('soil', None, {'z': self.soil_model.grid['z']}, self.results)
+        self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)
         return self.results
 
 def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes, Nplant_types):

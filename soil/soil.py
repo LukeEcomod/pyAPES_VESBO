@@ -1,26 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-.. module: soilprofile
+.. module: soil
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
 Soilprofile
 
 Created on Tue Oct 02 09:04:05 2018
-
 """
 
 import numpy as np
 import pandas as pd
-import os
 from datetime import datetime
 from matplotlib import pyplot as plt
 from constants import EPS
 
-from water import WaterModel
-from heat import HeatModel
+from water import Water
+from heat import Heat
 
-class SoilModel(object):
+class Soil(object):
 
     def __init__(self, p):
         r""" Initializes soilprofile for 1D solutions of water and heat balance
@@ -40,7 +38,7 @@ class SoilModel(object):
                     'saturated_conductivity_horizontal' (list/array): [m s-1]
                     'dry_heat_capacity'  (list/array or None): [J m-3 (total volume) K-1]
                         ! if None, estimated from organic/mineral composition
-                    'fractions' (dict): fractions of solid volume [-]
+                    'solid_composition' (dict): fractions of solid volume [-]
                         'organic' (list/array)
                         'sand' (list/array)
                         'silt' (list/array)
@@ -104,11 +102,11 @@ class SoilModel(object):
         profile_properties = form_profile(z, p['grid']['zh'], p['soil_properties'],
                                           p['water_model']['lower_boundary'])
 
-        # initialize water and heat models
-        self.WaterModel = WaterModel(self.grid, profile_properties, p['water_model'])
+        # initialize water and heat intance
+        self.water = Water(self.grid, profile_properties, p['water_model'])
 
-        self.HeatModel = HeatModel(self.grid, profile_properties, p['heat_model'],
-                                   self._fill(self.WaterModel.Wtot, 0.0))
+        self.heat = Heat(self.grid, profile_properties, p['heat_model'],
+                                   self._fill(self.water.Wtot, 0.0))
 
     def run(self, dt, forcing, water_sink=None, heat_sink=None, lbc_water=None, lbc_heat=None, gwl=None):
         r""" Runs soil model for one timestep.
@@ -152,35 +150,35 @@ class SoilModel(object):
         fluxes = {}
 
         if self.solve_water:
-            water_fluxes = self.WaterModel.run(dt,
+            water_fluxes = self.water.run(dt,
                                                forcing,
                                                water_sink=water_sink,
                                                lower_boundary=lbc_water)
             fluxes.update(water_fluxes)
 
         elif gwl is not None:
-            self.WaterModel.update_state({'ground_water_level': gwl})
+            self.water.update_state({'ground_water_level': gwl})
 
-        state = {'water_potential': self._fill(self.WaterModel.h),
-                 'volumetric_water_content': self._fill(self.WaterModel.Wtot, 0.0),
-                 'hydraulic_conductivity': self._fill(self.WaterModel.Kv),
-                 'pond_storage': self.WaterModel.h_pond,
-                 'ground_water_level': self.WaterModel.gwl}
+        state = {'water_potential': self._fill(self.water.h),
+                 'volumetric_water_content': self._fill(self.water.Wtot, 0.0),
+                 'hydraulic_conductivity': self._fill(self.water.Kv),
+                 'pond_storage': self.water.h_pond,
+                 'ground_water_level': self.water.gwl}
 
         if self.solve_heat:
-#            energy_closure = self.HeatModel.run(dt,
-#                                               forcing,
-#                                               state['volumetric_water_content'],
-#                                               heat_sink=heat_sink,
-#                                               lower_boundary=lbc_heat)
-#
-            fluxes.update({'energy_closure': 0.0})
-        else:
-            self.HeatModel.update_state(Wtot=state['volumetric_water_content'])
+            heat_fluxes = self.heat.run(dt,
+                                             forcing,
+                                             state['volumetric_water_content'],
+                                             heat_sink=heat_sink,
+                                             lower_boundary=lbc_heat)
 
-        state.update({'volumetric_ice_content': self.HeatModel.Wice,
-                      'temperature': self.HeatModel.T,
-                      'thermal_conductivity': self.HeatModel.thermal_conductivity})
+            fluxes.update(heat_fluxes)
+        else:
+            self.heat.update_state(Wtot=state['volumetric_water_content'])
+
+        state.update({'volumetric_ice_content': self.heat.Wice,
+                      'temperature': self.heat.T,
+                      'thermal_conductivity': self.heat.thermal_conductivity})
 
         return fluxes, state
 
@@ -194,7 +192,7 @@ class SoilModel(object):
         """
         if len(x) < len(self.ones):
             x_filled = self.ones * value
-            x_filled[self.WaterModel.ix] = x
+            x_filled[self.water.ix] = x
             return x_filled
         else:
             return x
@@ -214,7 +212,7 @@ def form_profile(z, zh, p, lbc_water):
             'saturated_conductivity_horizontal' (list/array): [m s-1]
             'dry_heat_capacity'  (list/array or None): [J m-3 (total volume) K-1]
                 ! if None, estimated from organic/mineral composition
-            'fractions' (dict): fractions of solid volume [-]
+            'solid_composition' (dict): fractions of solid volume [-]
                 'organic' (list/array)
                 'sand' (list/array)
                 'silt' (list/array)
@@ -238,7 +236,7 @@ def form_profile(z, zh, p, lbc_water):
             'porosity' (array): soil porosity (=ThetaS) [m\ :sup:`3` m\ :sup:`-3`\ ]
             'dry_heat_capacity' (array): [J m-3 (total volume) K-1]
                 ! if nan, estimated from organic/mineral composition
-            'fractions' (dict): fractions of solid volume [-]
+            'solid_composition' (dict): fractions of solid volume [-]
                 'organic' (array)
                 'sand' (array)
                 'silt' (array)
@@ -255,7 +253,7 @@ def form_profile(z, zh, p, lbc_water):
     for depth in zh:
         ix += np.where(z < depth, 1, 0)
     for key in p.keys():
-        if (key == 'pF' or key == 'fractions'):
+        if (key == 'pF' or key == 'solid_composition'):
             prop.update({key: {}})
             for subkey in p[key].keys():
                 pp = np.array([p[key][subkey][int(ix[i])] for i in range(N)])
