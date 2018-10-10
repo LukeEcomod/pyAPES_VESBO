@@ -123,7 +123,7 @@ class CanopyModel(object):
         else:
             self.hc = 0.0
 
-        """ initialize submodel objects """
+        """ initialize submodel instance """
         # radiation
         self.Radi_Model = Radiation(cpara['radi'], cpara['ctr'])
 

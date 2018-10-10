@@ -73,3 +73,36 @@ def smooth(a, WSZ):
     stop = (np.cumsum(a[:-WSZ:-1])[::2] / r)[::-1]
     x = np.concatenate((start, out0, stop))
     return x
+
+def spatial_average(y, x=None, method='arithmetic'):
+    """
+    Calculates spatial average of quantity y, from node points to soil compartment edges
+    Args: 
+        y (array): quantity to average
+        x (array): grid,<0, monotonically decreasing [m]
+        method (str): flag for method 'arithmetic', 'geometric','dist_weighted'
+    Returns: 
+        f (array): averaged y, note len(f) = len(y) + 1
+    """
+
+    N = len(y)
+    f = np.empty(N+1)  # Between all nodes and at surface and bottom
+    if method is 'arithmetic':
+        f[1:-1] = 0.5*(y[:-1] + y[1:])
+        f[0] = y[0]
+        f[-1] = y[-1]
+
+    elif method is 'geometric':
+        f[1:-1] = np.sqrt(y[:-1] * y[1:])
+        f[0] = y[0]
+        f[-1] = y[-1]
+
+    elif method is 'dist_weighted':                                             # En ymmärrä, ei taida olla käyttössä
+        a = (x[0:-2] - x[2:])*y[:-2]*y[1:-1]
+        b = y[1:-1]*(x[:-2] - x[1:-1]) + y[:-2]*(x[1:-1] - x[2:])
+
+        f[1:-1] = a / b
+        f[0] = y[0]
+        f[-1] = y[-1]
+
+    return f
