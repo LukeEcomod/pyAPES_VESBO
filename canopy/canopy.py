@@ -134,7 +134,7 @@ class CanopyModel(object):
         self.Interc_Model = Interception(cpara['interc_snow'], self.lad * self.dz)
 
         # snow
-        self.Snow_Model = Snowpack(cpara['interc_snow'])
+#        self.Snow_Model = Snowpack(cpara['interc_snow'])  # moved inside forestfloor
 
         # forest floor
         self.ForestFloor = ForestFloor(cpara['ffloor'])
@@ -191,9 +191,7 @@ class CanopyModel(object):
             states (dict)
         """
 
-        P = forcing['air_pressure']
-
-        """ --- flow stats --- """
+        # --- flow stats ---
         if self.Switch_Eflow is False:
             # recompute normalized flow statistics in canopy with current meteo
             self.Micromet_Model.normalized_flow_stats(
@@ -204,11 +202,11 @@ class CanopyModel(object):
         # update U
         U = self.Micromet_Model.update_state(ustaro=forcing['friction_velocity'])
 
-        """ --- SW profiles within canopy --- """
+        # --- SW profiles within canopy ---
 
         # --- PAR ---
 
-        ff_albedo = self.ForestFloor.shortwave_albedo(self.Snow_Model.swe)
+        ff_albedo = self.ForestFloor.shortwave_albedo()
 
         forcing['ff_albedo'] = ff_albedo
         forcing['LAIz'] = self.lad * self.dz
@@ -234,7 +232,8 @@ class CanopyModel(object):
             SWabs_sh = 0.0
             Nir_gr = 0.0
 
-        """ --- iterative solution of H2O, CO2, T, Tleaf and Tsurf --- """
+        # --- iterative solution of H2O, CO2, T, Tleaf and Tsurf ---
+
         max_err = 0.01  # maximum relative error
         max_iter = 20  # maximum iterations
         gam = 0.5  # weight for old value in iterations
@@ -256,9 +255,7 @@ class CanopyModel(object):
 
             if self.Switch_Ebal:
                 """ --- compute LW profiles and net LW at leaf --- """
-                ff_longwave = self.ForestFloor.longwave_radiation(
-                        self.Snow_Model.swe,
-                        T[0])
+                ff_longwave = self.ForestFloor.longwave_radiation()
 
                 forcing.update({'leaf_temperature': Tleaf,
                                 'ff_longwave': ff_longwave})
@@ -283,7 +280,7 @@ class CanopyModel(object):
             # create empty list to append planttype results
             pt_stats = []
 
-            """ --- interception and interception evaporation --- """
+            # --- interception and interception evaporation ---
             # isothermal radiation balance at each layer,
             # sunlit and shaded leaves together [W m-2]
             Rabs = SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl  # zero if Ebal not solve
@@ -300,30 +297,24 @@ class CanopyModel(object):
                     Ebal=self.Switch_Ebal,
                     Tl_ave=Tleaf_prev,
                     gr=gr)
+
             # --- update ---
+
             # heat and h2o sink/source terms
             tsource += Hw / self.dz  # [W m-3]
             qsource += Ew / self.dz  # [mol m-3 s-1]
             lsource += LEw / self.dz
             frsource += dFr / self.dz  # [W m-3]
+
             # canopy leaf temperature
             Tleaf = Tleaf_w * (1 - df) * self.lad
-
-## print
-#            if Switch_WMA:
-#                print('Here I am! {}: {}, {}, {}, {}'.format(
-#                        iter_no,
-#                        np.mean(SWabs_sh),
-#                        np.mean(SWabs_sl),
-#                        np.mean(Tleaf_prev),
-#                        np.mean(LWl)))
 
             """ --- leaf gas-exchange at each layer and for each PlantType --- """
             for pt in self.Ptypes:
 
                 # --- sunlit and shaded leaves
                 pt_stats_i, dtsource, dqsource, dcsource, dRstand, dFr = pt.leaf_gasexchange(
-                        f_sl, H2O, CO2, T, U, P, Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
+                        f_sl, H2O, CO2, T, U, forcing['air_pressure'], Q_sl1*PAR_TO_UMOL, Q_sh1*PAR_TO_UMOL,
                         SWabs_sl=SWabs_sl, SWabs_sh=SWabs_sh, LWl=LWl, # only used if Ebal=True
                         df=df, Ebal=self.Switch_Ebal, Tl_ave=Tleaf_prev, gr=gr) # only used if Ebal=True
 
@@ -346,19 +337,12 @@ class CanopyModel(object):
 
             err_Tl = max(abs(Tleaf - Tleaf_prev))
 
-            """ --- snowpack ---"""
-            PotInf, MBE_snow = self.Snow_Model._run(
-                    dt=dt,
-                    T=T[0],
-                    Trfall_rain=Trfall_rain,
-                    Trfall_snow=Trfall_snow)
-
-# FORESTFLOOR
             """ --- forest floor --- """
             ff_forcing = {
                 'height': self.z[1],  # height to first calculation node
                 'depth': forcing['depth'],  # depth to first calculation node
-                'throughfall': PotInf,
+                'throughfall_rain': Trfall_rain,
+                'throughfall_snow': Trfall_snow,
                 'air_temperature': T[0],
                 'forestfloor_temperature': self.ForestFloor.temperature,
                 'soil_temperature': forcing['soil_temperature'],
@@ -374,53 +358,29 @@ class CanopyModel(object):
                 'wind_speed': U[1],  # windspeed above forestfloor ca. 30 cm
                 'air_pressure': forcing['air_pressure'],
                 'h2o': H2O[0],
-                'snow_water_equivalent': self.Snow_Model.swe,
                 'Ebal': self.Switch_Ebal,
                 'nsteps': 20
                 }
 
-# check if it is good idea to keep forestfloor temperature as a class field!!!
             fluxes_ffloor, states_ffloor = self.ForestFloor.run(
                     dt=dt,
                     forcing=ff_forcing)
 
-#            err_Ts = abs(ff_stts['temperature'] - self.ForestFloor.temperature)
             err_Ts = abs(Tsurf_prev - self.ForestFloor.temperature)
 
 # check the sign of photosynthesis
-
-            if 'photosynthesis_bryo' in fluxes_ffloor:
-                Fc_gr = -fluxes_ffloor['photosynthesis_bryo'] + fluxes_ffloor['respiration']
-            else:
-                Fc_gr = fluxes_ffloor['respiration']
-
-            if 'bryo_evaporation' in fluxes_ffloor:
-                ff_evaporation = -fluxes_ffloor['soil_evaporation'] + fluxes_ffloor['bryo_evaporation']
-            else:
-                ff_evaporation = fluxes_ffloor['soil_evaporation']
+            Fc_gr = -fluxes_ffloor['photosynthesis_bryo'] + fluxes_ffloor['respiration']
 
             """  --- solve scalar profiles (H2O, CO2, T) """
             if Switch_WMA is False:
                 H2O, CO2, T, err_h2o, err_co2, err_t = self.Micromet_Model.scalar_profiles(
-                        gam, H2O, CO2, T, P,
+                        gam, H2O, CO2, T, forcing['air_pressure'],
                         source={'H2O': qsource,
                                 'CO2': csource,
                                 'T': tsource},
-                        lbc={'H2O': ff_evaporation,
+                        lbc={'H2O': fluxes_ffloor['evaporation'],
                              'CO2': Fc_gr,
-                             'T': fluxes_ffloor['sensible_heat']})
-# print
-# print
-#                print(fluxes_ffloor['bryo_evaporation'] + fluxes_ffloor['soil_evaporation'], fluxes_ffloor['sensible_heat'])
-                if np.mean(H2O) < 0.0:
-                    print("water conc. {}, out: {}, {}, in: {}, {}, {}, {}".format(
-                            iter_no,
-                            np.mean(H2O),
-                            err_h2o,
-                            fluxes_ffloor['bryo_evaporation'] + fluxes_ffloor['soil_evaporation'],
-                            np.mean(qsource),
-                            np.mean(tsource),
-                            fluxes_ffloor['sensible_heat']))
+                             'T': fluxes_ffloor['sensible_heat_flux']})
 
                 if (iter_no > max_iter
                     or any(np.isnan(T))
@@ -439,69 +399,44 @@ class CanopyModel(object):
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
 
         """ --- update state variables --- """
-        self.Snow_Model.update()  # snow water equivalent SWE, SWEi, SWEl
         self.Interc_Model.update()  # interception storage
         self.ForestFloor.update()  # update old states to new states
 
-        # ecosystem fluxes
-        # these go to canopy
-        flux_co2 = np.cumsum(csource) * self.dz + Fc_gr  # umolm-2s-1
-        flux_latent_heat = np.cumsum(lsource) * self.dz + fluxes_ffloor['latent_heat']  # Wm-2
-        flux_sensible_heat = np.cumsum(tsource) * self.dz + fluxes_ffloor['sensible_heat']  # Wm-2
+        # --- Ecosystem fluxes ---
 
-        # net ecosystem exchange umolm-2s-1
+        flux_co2 = np.cumsum(csource) * self.dz + Fc_gr  # [umol m-2 s-1]
+        flux_latent_heat = np.cumsum(lsource) * self.dz + fluxes_ffloor['latent_heat_flux']  # Wm-2
+        flux_sensible_heat = np.cumsum(tsource) * self.dz + fluxes_ffloor['sensible_heat_flux']  # Wm-2
+
+        # net ecosystem exchange
+        # [umol m-2 s-1]
         NEE = flux_co2[-1]
-        # ecosystem respiration umolm-2s-1
+        # ecosystem respiration 
+        # [umol m-2 s-1]
         Reco = Rstand + fluxes_ffloor['respiration']
-        # ecosystem GPP umolm-2s-1
+        # ecosystem GPP 
+        # [umol m-2 s-1]
         GPP = - NEE + Reco
-        # stand transpiration [m/dt]
+        # stand transpiration
+        # [m s-1]
         Tr = sum([pt_st['E'] * MOLAR_MASS_H2O * 1e-3 * dt for pt_st in pt_stats])
 
         # energy closure of canopy  -- THIS IS EQUAL TO frsource (the error caused by linearizing sigma*ef*T^4)
         energy_closure =  sum((SWabs_sl*f_sl + SWabs_sh*(1 - f_sl) + LWl) * self.lad * self.dz) - (  # absorbed radiation
                           sum(tsource*self.dz) + sum(lsource*self.dz))  # sensible and latent heat flux
 
-        # evaporation from moss layer [m s-1]
-        if 'bryo_evaporation' in fluxes_ffloor:
-            Efloor = fluxes_ffloor['bryo_evaporation'] * MOLAR_MASS_H2O * 1e-3
-        else:
-            Efloor = 0.0
-
-        if 'soil_evaporation' in fluxes_ffloor:
-            Esoil = fluxes_ffloor['soil_evaporation'] * MOLAR_MASS_H2O * 1e-3
-
-        else:
-            Esoil = 0.0
-
-        if 'water_closure_bryo' in fluxes_ffloor:
-            water_closure_forestfloor = fluxes_ffloor['water_closure_bryo']
-
-        else:
-            water_closure_forestfloor = 0.0
-
-        if 'capillar_water' not in fluxes_ffloor:
-            fluxes_ffloor['capillar_water'] = 0.0
+        # --- RESULTS ---
 
         fluxes_ffloor.update({
-                'potential_infiltration': fluxes_ffloor['throughfall'] / dt,
-                'bryo_evaporation': Efloor,
-                'soil_evaporation': Esoil,
-                'water_closure_snow': MBE_snow,
-                'water_closure': water_closure_forestfloor,
-                'ground_heat_flux': fluxes_ffloor['ground_heat'],
-                'sensible_heat_flux': fluxes_ffloor['sensible_heat'],
-                'evaporation': Efloor + Esoil
-                })
-
-        states_ffloor.update({
-                'snow_water_equivalent': self.Snow_Model.swe,
+                'potential_infiltration': fluxes_ffloor['potential_infiltration'] / dt,
+                'bryo_evaporation': fluxes_ffloor['bryo_evaporation'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'soil_evaporation': fluxes_ffloor['soil_evaporation'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'evaporation': fluxes_ffloor['evaporation'] * MOLAR_MASS_H2O * 1e-3  # [m s-1]
                 })
 
         # return state and fluxes in dictionary
         state_canopy = {
                 'interception_storage': sum(self.Interc_Model.W),
-#                'snow_water_equivalent': self.Snow_Model.swe,  # moved to fluxes_ffloor
                 'LAI': self.LAI,
                 'lad': self.lad,
                 'sunlit_fraction': f_sl,
@@ -510,14 +445,11 @@ class CanopyModel(object):
                 }
 
         fluxes_canopy = {
-#                'potential_infiltration': fluxes_ffloor['throughfall'] / dt,  # moved to fluxes_ffloor
                 'throughfall': (Trfall_rain + Trfall_snow) / dt,
                 'interception': Interc / dt,
                 'evaporation': Evap / dt,
                 'condensation': Cond / dt,
                 'transpiration': Tr / dt,
-#                'moss_evaporation': Efloor / dt,  # moved to fluxes_ffloor
-#                'baresoil_evaporation': Esoil / dt,  # moved to fluxes_ffloor
                 'NEE': NEE,
                 'GPP': GPP,
                 'respiration': Reco,
@@ -528,8 +460,6 @@ class CanopyModel(object):
                 'pt_gpp': np.array([pt_st['An'] + pt_st['Rd'] for pt_st in pt_stats]),
                 'pt_respiration': np.array([pt_st['Rd'] for pt_st in pt_stats]),
                 'water_closure_canopy': MBE_interc,
-#                'water_closure_snow': MBE_snow,  # moved to fluxes_ffloor
-#                'water_closure_forestfloor': water_closure_forestfloor  # moved to fluxes_ffloor
                 }
 
         if self.Switch_WMA is False:
@@ -559,8 +489,6 @@ class CanopyModel(object):
             fluxes_canopy.update({
                     'net_leaf_radiation': Rabs,
                     'net_leaf_LW': LWl,
-#                    'ground_heat_flux': fluxes_ffloor['ground_heat'],  # moved to fluxes_ffloor
-#                    'soil_sensible_heat_flux': fluxes_ffloor['sensible_heat'],  # moved to fluxes_ffloor
                     'sensible_heat_flux': flux_sensible_heat,  # [W m-2]
                     'energy_closure_canopy': energy_closure,
                     'fr_source': sum(frsource * self.dz)})

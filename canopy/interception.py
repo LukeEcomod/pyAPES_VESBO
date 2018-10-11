@@ -43,7 +43,6 @@ class Interception(object):
         # quality of precipitation [degC]
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
-        self.Tmelt = p['Tmelt']
 
         # initial state
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)

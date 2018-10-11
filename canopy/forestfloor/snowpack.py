@@ -23,31 +23,42 @@ class Snowpack(object):
         # melting and freezing coefficients [m/s]
         self.kmelt = properties['kmelt']
         self.kfreeze = properties['kfreeze']
+
         # max fraction of liquid water in snow [-]
-        self.reten = properties['retention']
+        self.retention = properties['retention']
         self.Tmelt = properties['Tmelt']
 
         # state variables:
-        self.swe_ice = properties['swe_ini']  # water equivalent of ice in snowpack [m]
-        self.swe_liq = 0.0  # liquid water storage in snowpack [m]
-        self.swe = self.swe_liq + self.swe_ice  # snow water equivalent [m]
+        self.ice = properties['swe_ini']  # water equivalent of ice in snowpack [m]
+        self.liq = 0.0  # liquid water storage in snowpack [m]
+        self.swe = self.liq + self.ice  # snow water equivalent [m]
 
-        self.old_ice = self.swe_ice
-        self.old_liq = self.swe_liq
+        self.old_ice = self.ice
+        self.old_liq = self.liq
         self.old_swe = self.swe
+
+    def snowcover(self):
+        """ Returns true if there is snow cover else false
+        """
+        return self.swe > 0.0
 
 
     def update(self):
-        """
+        """ Updates new states to the snowpack.
         """
 
-        self.old_swe_ice = self.swe_ice
-        self.old_swe_liq = self.swe_liq
-        self.old_swe =  self.swe
+        self.old_ice = self.ice
+        self.old_liq = self.liq
+        self.old_swe = self.swe
 
     def restore(self):
+        """ Restores new states back to states before iteration.
         """
-        """
+
+        self.ice = self.old_ice
+        self.liq = self.old_liq
+        self.swe = self.old_swe
+
 
     def run(self, dt, forcing):
         """ Calculates one timestep and updates states of SnowpackModel instance
@@ -69,40 +80,44 @@ class Snowpack(object):
         """ --- melting and freezing in snopack --- """
         if forcing['air_temperature'] >= self.Tmelt:
             # [m]
-            Melt = np.minimum(self.old_swe_ice,
+            melt = np.minimum(self.old_ice,
                               self.kmelt * dt * (forcing['air_temperature'] - self.Tmelt))
-            Freeze = 0.0
+            freeze = 0.0
 
         else:
             # [m]
-            Melt = 0.0
-            Freeze = np.minimum(self.old_swe_liq,
+            melt = 0.0
+            freeze = np.minimum(self.old_liq,
                                 self.kfreeze * dt * (self.Tmelt - forcing['air_temperature']))  # m
 
         """ --- update state of snowpack and compute potential infiltration --- """
-        swe_ice = np.maximum(0.0,
-                             self.oldswe_ice + Trfall_snow + Freeze - Melt)
+        ice = np.maximum(0.0,
+                             self.old_ice + forcing['throughfall_snow'] + freeze - melt)
 
-        swe_liq = np.maximum(0.0,
-                             self.oldswe_liq + Trfall_rain - Freeze + Melt)
+        liq = np.maximum(0.0,
+                             self.old_liq + forcing['throughfall_rain'] - freeze + melt)
 
         # potential infiltration [m]
         pot_inf = np.maximum(0.0,
-                            swe_liq - swe_ice * self.reten)
+                            liq - ice * self.retention)
 
         # liquid water and ice in snow, and snow water equivalent [m]
-        self.swe_liq = np.maximum(0.0,
-                                  swe_liq - PotInf)
-        self.swe_ice = swe_ice
-        self.swe = self.swe_liq + self.swe_ice
+        self.liq = np.maximum(0.0,
+                                  liq - pot_inf)
+        self.ice = ice
+        self.swe = self.liq + self.ice
 
         # mass-balance error [m]
         water_closure = ((self.swe - self.old_swe)
-                         - (Trfall_rain + Trfall_snow - pot_inf))
+                         - (forcing['throughfall_rain'] + forcing['throughfall_snow'] - pot_inf))
 
 
-        return {'potential_infiltration': pot_inf,
-                'water_closure': water_closure}
+        fluxes = {'potential_infiltration': pot_inf,
+                  'water_closure': water_closure}
+
+        states = {'snow_water_equivalent': self.swe}
+
+        return fluxes, states
 
 # EOF
 

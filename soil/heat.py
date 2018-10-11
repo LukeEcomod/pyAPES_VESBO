@@ -64,7 +64,7 @@ class Heat(object):
         self.freezing_curve = profile_propeties['freezing_curve']
         self.solid_heat_capacity = profile_propeties['solid_heat_capacity']
         ix = np.where(np.isnan(self.solid_heat_capacity))[0]
-        self.solid_heat_capacity[ix] = solid_volumetric_heat_capacity(self.solid_composition['organic'])
+        self.solid_heat_capacity[ix] = solid_volumetric_heat_capacity(self.solid_composition['organic'][ix])
 
         # initialize state
         self.update_state(model_specs['initial_condition'], volumetric_water_content)
