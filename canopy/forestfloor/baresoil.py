@@ -22,22 +22,12 @@ class Baresoil(object):
 
     """
 
-    def __init__(self, properties, initial_temperature=None):
+    def __init__(self, properties, initial_conditions=None):
         self.properties = properties
-
         self.coverage = properties['ground_coverage']
-        self.poros = properties['porosity']
 
-        self.albedo = {
-                'PAR': properties['optical_properties']['albedo_PAR'],
-                'NIR': properties['optical_properties']['albedo_NIR']
-                }
-
-        self.emissivity = properties['optical_properties']['emissivity']
-        self.soil_zr = properties['roughness_length']
-
-        if initial_temperature is not None:
-            self.temperature = initial_temperature
+        if initial_conditions is not None:
+            self.temperature = initial_conditions['temperature']
         else:
             self.temperature = 10.
 

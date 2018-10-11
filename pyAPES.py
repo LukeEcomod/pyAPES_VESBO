@@ -133,11 +133,6 @@ class Model(object):
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
                 print '{0}..\r'.format(s),
 
-# Check Tsoil
-            # Soil moisture forcing for canopy model
-            Tsoil = self.forcing['Tair'].iloc[k]  # should come from soil model!
-            Wsoil = self.soil.water.Wtot[0]  # certain depth?!
-
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
             if self.forcing['doy'].iloc[k] != self.forcing['doy'].iloc[k-1] or k == 0:

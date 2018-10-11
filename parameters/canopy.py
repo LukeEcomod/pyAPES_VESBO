@@ -56,14 +56,9 @@ def get_cpara(dbhfile):
     # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
     interc_snow = {'wmax': 0.15e-03, #0.5e-03,  # maximum interception storage capacity for rain [m per unit of LAI]
                    'wmaxsnow': 1.2e-03, #4.0e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
-                   'kmelt': 2.31e-08,  # Melting coefficient [m degC-1 s-1] (=2.0 mm/C/d)
-                   'kfreeze': 5.79e-09,  # Freezing  coefficient [m degC-1 s-1] (=0.5 mm/C/d)
-                   'retention': 0.05,  # max fraction of liquid water in snow [-]
+                   'w_ini': 0.0,  # initial canopy storage [m]
                    'Tmin': 0.0,  # temperature below which all is snow [degC]
                    'Tmax': 1.0,  # temperature above which all is water [degC]
-                   'Tmelt': 0.0,  # temperature when melting starts [degC]
-                   'w_ini': 0.0,  # initial canopy storage [m]
-                   'swe_ini': 0.0,  # initial snow water equivalent [m]
                    }
 
     # --- forest floor ---

@@ -17,11 +17,14 @@ Note: roughness length z0 is [1/15 - 1/30] * x where x is height of element.
 Created on Tue Mar 13 11:59:23 2018
 """
 import numpy as np
-eps = np.finfo(float).eps  # machine epsilon
+
 from canopy.micromet import e_sat
 from canopy.constants import EPS, WATER_DENSITY, MOLAR_MASS_H2O
-from bryotype import Bryophyte
+
+from bryophyte import Bryophyte
 from baresoil import Baresoil
+from snowpack import Snowpack
+
 from carbon import soil_respiration
 from heat_and_water import soil_boundary_layer_conductance
 from heat_and_water import bryophyte_shortwave_albedo, emitted_longwave_radiation
@@ -59,23 +62,29 @@ class ForestFloor(object):
             self (object)
         """
 
-        baresoil = Baresoil(properties['baresoil'])
-        self.baresoil = baresoil
+        self.baresoil = Baresoil(properties['baresoil'],
+                                 properties['initial_conditions']['baresoil'])
+
+        self.snowpack = Snowpack(properties['snowpack'],
+                                 properties['initial_conditions']['snowpack'])
 
         # Bryotypes
         bryotypes = []
 
         f_bryo = 0.0
-        for br_para in properties['bryophytes']:
-            bryotypes.append(Bryophyte(br_para))
-            f_bryo += br_para['ground_coverage']
+        for bryo in properties['bryophytes']:
+            bryotypes.append(Bryophyte(bryo,
+                                       properties['initial_conditions']['bryophytes'][bryo['species']]))
+            f_bryo += bryo['ground_coverage']
 
         self.bryotypes = bryotypes
         # soil coverage: baresoil, bryotypes (and litter?)
 
         f_baresoil = 1.0 - f_bryo
 
-        assert (f_bryo + f_baresoil <= 1.0), "Forest floor coverage more than 1.0"
+        if f_bryo + f_baresoil > 1.0:
+            raise ValueError("The sum of bryophytes and baresoil coverages "
+                             + "more than one!")
 
         self.f_baresoil = f_baresoil
         self.baresoil.coverage = f_baresoil
@@ -91,8 +100,10 @@ class ForestFloor(object):
         self.old_temperature = self.temperature
 
     def update(self):
-        """ Updates new states to the forestfloor
+        """ Updates new states to the forestfloor.
         """
+
+        self.old_temperature = self.temperature
 
         if self.f_bryo > 0.0:
 
@@ -102,7 +113,7 @@ class ForestFloor(object):
         if self.f_baresoil > 0.0:
             self.baresoil.update()
 
-        self.old_temperature = self.temperature
+        self.snowpack.update()
 
     def restore(self):
         """ Restores new states back to states before iteration.
@@ -110,10 +121,16 @@ class ForestFloor(object):
 
         self.temperature = self.old_temperature
 
-        for bryo in self.bryotypes:
-            bryo.restore()
+        if self.f_bryo > 0.0:
 
-        self.baresoil
+            for bryo in self.bryotypes:
+                bryo.restore()
+
+        if self.f_baresoil > 0.0:
+
+            self.baresoil.restore()
+
+        self.snowpack.restore()
 
     def run(self, dt, forcing):
         r"""Water and energy balance at the forestfloor.
@@ -121,7 +138,8 @@ class ForestFloor(object):
         Args:
             dt: timestep [s]
             forcing (dict): states of microclimate
-                'throughfall': [mm s\ :sup:`-1`\ ]
+                'throughfall_rain': [mm s\ :sup:`-1`\ ]
+                'throughfall_snow': [mm s\ :sup:`-1`\ ]
                 'par': [W m\ :sup:`-2`\ ]
                 'nir': [W m\ :sup:`-2`\ ]
                 'lwdn': [W m\ :sup:`-2`\ ]
@@ -134,7 +152,6 @@ class ForestFloor(object):
                 'soil_water_potential': [Pa]
                 'soil_hydraulic_conductivity': [m s\ :sup:`-1`\ ]
                 'soil_thermal_conductivity': [W m\ :sup:`-1`\  K\ :sup:`-1`\ ]
-                'snow_water_equivalent': [m]
                 'nsteps' number of steps in odesolver
         Returns:
             fluxes (dict)
@@ -146,140 +163,154 @@ class ForestFloor(object):
         fluxes = {}
         states = {}
 
-        soil_evaporation = 0.0  # soil evaporation (mol m-2(ground)s-1)
+        # --- Forestfloor ---
 
-        sensible_heat = 0.0  # forest floor sensible heat flux (Wm-2)
-        ground_heat = 0.0  # ground heat flux (Wm-2)
-        latent_heat = 0.0  # latent heat flux (Wm-2)
-        temperature = 0.0  # forest floor temperature (degC)
+        sensible_heat = 0.0  # [W m-2]
+        ground_heat = 0.0  # [W m-2]
+        latent_heat = 0.0  # [W m-2]
+        temperature = 0.0  # [degC]
+        evaporation = 0.0  # [mol m-2(ground) s-1]
 
-        throughfall = 0.0  # throughfall rate (m s-1)
-
+        potential_infiltration = 0.0  # [m s-1]
         respiration = 0.0  # [umol m-2(ground) s-1]
+
+        # --- Soil ---
+
+        soil_evaporation = 0.0  # [mol m-2 s-1]
+
+        # baresoil
+        soil_temperature = 0.0  # [degC]
+        soil_energy_closure = 0.0  # [W m-2]
+        radiative_flux = 0.0  # [W m-2]
+
+        # --- Bryphytes ---
+
+        bryo_evaporation = 0.0  # [mol m-2 s-1]
+        capillar_rise = 0.0  # water movement due to capillar forces [m s-1]
+        pond_recharge = 0.0  # water moved from pond to moss [m s-1]
+
+        bryo_temperature = 0.0  # [degC]
+        bryo_water_storage = 0.0  # [kg m-2]
+        bryo_water_closure = 0.0  # [W m-2]
+        bryo_energy_closure = 0.0  # [W m-2]
+
+        bryo_carbon_pool = 0.0  # [g C m-2]
+        bryo_photosynthesis = 0.0  # [umol m-2 s-1]
+        bryo_respiration = 0.0  # [umol m-2 s-1]
+
+        # --- Snow ---
+
+        fluxes_snow, states_snow = self.snowpack.run(dt=dt, forcing=forcing)
+
+        # --- Soil respiration ---
 
         respiration, _ = soil_respiration(self.baresoil.properties,
                                           forcing['soil_temperature'],
                                           forcing['soil_volumetric_water'])
 
-        fluxes.update({'respiration': respiration})
+        if self.snowpack.snowcover():  # snow on the ground
 
-        # if there is snow cover forest floor is passed
-        if forcing['snow_water_equivalent'] > 0:  # snow on the ground
-            throughfall = forcing['throughfall']
+            potential_infiltration += fluxes_snow['potential_infiltration']
 
-        # calculation of forest floor heat and water balance
+            for bryo in self.bryotypes:
+                # if something goes wrong in snow melt check this!
+                bryo.temperature = 0.0
+                bryo_water_storage += bryo.water_storage
+                bryo_carbon_pool += bryo.carbon_pool
+
         else:
 
             # if there is bryophyte cover on the ground
             if self.f_bryo > 0.0:
 
-                bryo_evaporation = 0.0  # evaporation from bryo [mol m-2(ground)s-1]
-                capillar_water = 0.0  # water risen due to capillar forces [m s-1]
-                pond_recharge = 0.0  # water moved from pond to moss [m s-1]
-
-                bryo_temperature = 0.0  # bryophytes temperature [degC]
-                bryo_water_storage = 0.0  # bryophytes water storage [kg m-2]
-                bryo_water_closure = 0.0  # [W m-2]
-                bryo_energy_closure = 0.0  # [W m-2]
-
-                bryo_carbon_pool = 0.0  # [g C m-2]
-                bryo_photosynthesis = 0.0  # [umol m-2 s-1]
-                bryo_respiration = 0.0  # [umol m-2 s-1]
-
-                capillar_rise = 0.0  # [m s-1]
-
                 for bryo in self.bryotypes:
 
+                    if bryo.coverage == 0.0:
+                        continue
+
                     # bryophyte's heat, water and carbon balance
-                    flxs_bryo, stts_bryo = bryo.run(dt, forcing)
+                    fluxes_bryo, states_bryo = bryo.run(dt, forcing)
 
-                    bryo_evaporation += bryo.coverage * flxs_bryo['evaporation'] / MOLAR_MASS_H2O
-                    soil_evaporation += bryo.coverage * flxs_bryo['soil_evaporation'] / MOLAR_MASS_H2O
+                    bryo_evaporation += bryo.coverage * fluxes_bryo['evaporation'] / MOLAR_MASS_H2O
+                    soil_evaporation += bryo.coverage * fluxes_bryo['soil_evaporation'] / MOLAR_MASS_H2O
 
-                    throughfall += bryo.coverage * flxs_bryo['throughfall'] / WATER_DENSITY
-                    capillar_rise += bryo.coverage * flxs_bryo['capillar_rise'] / WATER_DENSITY
-                    pond_recharge += bryo.coverage * flxs_bryo['pond_recharge'] / WATER_DENSITY
+                    potential_infiltration += bryo.coverage * fluxes_bryo['throughfall'] / WATER_DENSITY
+                    capillar_rise += bryo.coverage * fluxes_bryo['capillar_rise'] / WATER_DENSITY
+                    pond_recharge += bryo.coverage * fluxes_bryo['pond_recharge'] / WATER_DENSITY
 
-                    latent_heat += bryo.coverage * flxs_bryo['latent_heat']
-                    sensible_heat += bryo.coverage * flxs_bryo['sensible_heat']
-                    ground_heat += bryo.coverage * flxs_bryo['ground_heat']
+                    latent_heat += bryo.coverage * fluxes_bryo['latent_heat']
+                    sensible_heat += bryo.coverage * fluxes_bryo['sensible_heat']
+                    ground_heat += bryo.coverage * fluxes_bryo['ground_heat']
 
-                    bryo_water_closure += bryo.coverage * flxs_bryo['water_closure']
-                    bryo_energy_closure += bryo.coverage * flxs_bryo['energy_closure']
+                    bryo_water_closure += bryo.coverage * fluxes_bryo['water_closure']
+                    bryo_energy_closure += bryo.coverage * fluxes_bryo['energy_closure']
 
-                    bryo_temperature += bryo.coverage * stts_bryo['temperature']
-                    bryo_water_storage += bryo.coverage * stts_bryo['water_storage'] / WATER_DENSITY
+                    bryo_temperature += bryo.coverage * states_bryo['temperature']
+                    bryo_water_storage += bryo.coverage * states_bryo['water_storage'] / WATER_DENSITY
 
-                    # In carbon calculations are per bryophyte coverage
-                    bryo_photosynthesis += flxs_bryo['photosynthesis_rate']
-                    bryo_respiration += flxs_bryo['respiration_rate']
-                    bryo_carbon_pool += stts_bryo['carbon_pool']
+                    # In carbon calculations are per bryophyte's coverage
+                    bryo_photosynthesis += fluxes_bryo['photosynthesis_rate']
+                    bryo_respiration += fluxes_bryo['respiration_rate']
+                    bryo_carbon_pool += states_bryo['carbon_pool']
 
                 respiration += bryo_respiration
                 temperature += bryo_temperature
-
-                fluxes.update({
-                   'soil_evaporation': soil_evaporation,
-                   'bryo_evaporation': bryo_evaporation,
-                   'latent_heat': latent_heat,
-                   'sensible_heat': sensible_heat,
-                   'ground_heat': ground_heat,
-                   'water_closure_bryo': bryo_water_closure,
-                   'energy_closure_bryo': bryo_energy_closure,
-                   'throughfall': throughfall,
-                   'capillar_rise': capillar_rise,
-                   'pond_recharge': pond_recharge,
-                   'photosynthesis_bryo': bryo_photosynthesis,
-                   'respiration_bryo': bryo_respiration,
-                   'respiration': respiration
-                   })
-
-                states.update({'temperature': temperature,
-                               'bryo_temperature': bryo_temperature,
-                               'bryo_water_storage': bryo_water_storage,
-                               'bryo_carbon_pool': bryo_carbon_pool
-                               })
+                evaporation += bryo_evaporation
 
             if self.f_baresoil > 0.0:
 
-                # water and energy closure
-                soil_energy_closure = 0.0
-                radiative_flux = 0.0  # radiative flux [W m-2]
+                # baresoil surface energy balance
+                fluxes_soil, states_soil = self.baresoil.run(dt, forcing)
 
-                # soil surface energy balance
-                flxs_soil, stts_soil = self.baresoil.run(dt, forcing)
+                soil_evaporation += self.baresoil.coverage * fluxes_soil['evaporation']
+                evaporation += soil_evaporation
 
-                soil_evaporation += self.baresoil.coverage * flxs_soil['evaporation']
-                throughfall += forcing['throughfall'] * self.baresoil.coverage
+                latent_heat += self.baresoil.coverage * fluxes_soil['latent_heat']
+                sensible_heat += self.baresoil.coverage * fluxes_soil['sensible_heat']
+                ground_heat += self.baresoil.coverage * fluxes_soil['ground_heat']
 
-                latent_heat += self.baresoil.coverage * flxs_soil['latent_heat']
-                sensible_heat += self.baresoil.coverage * flxs_soil['sensible_heat']
-                ground_heat += self.baresoil.coverage * flxs_soil['ground_heat']
+                radiative_flux += self.baresoil.coverage * fluxes_soil['radiative_flux']
+                soil_energy_closure += self.baresoil.coverage * fluxes_soil['energy_closure']
 
-                soil_energy_closure += self.baresoil.coverage * flxs_soil['energy_closure']
+                potential_infiltration += self.baresoil.coverage * forcing['throughfall_rain']
 
-                temperature += self.baresoil.coverage * stts_soil['temperature']
-                radiative_flux += self.baresoil.coverage * flxs_soil['radiative_flux']
-
-                fluxes.update({
-                        'soil_evaporation': soil_evaporation,
-                        'latent_heat': latent_heat,
-                        'sensible_heat': sensible_heat,
-                        'ground_heat': ground_heat,
-                        'energy_closure_soil': soil_energy_closure,
-                        'radiative_flux': radiative_flux,
-                        'throughfall': throughfall,
-                        'respiration': respiration
-                        })
-
-                states.update({'temperature': temperature,
-                               'soil_temperature': stts_soil['temperature']})
+                soil_temperature += states_soil['temperature']
+                temperature += self.baresoil.coverage * states_soil['temperature']
 
         self.temperature = temperature
 
+        fluxes.update({
+                'evaporation': evaporation,
+                'soil_evaporation': soil_evaporation,
+                'bryo_evaporation': bryo_evaporation,
+                'latent_heat_flux': latent_heat,
+                'sensible_heat_flux': sensible_heat,
+                'ground_heat_flux': ground_heat,
+                'water_closure_bryo': bryo_water_closure,
+                'water_closure_snow': fluxes_snow['water_closure'],
+                'energy_closure_bryo': bryo_energy_closure,
+                'energy_closure_soil': soil_energy_closure,
+                'radiative_flux': radiative_flux,
+                'potential_infiltration': potential_infiltration,
+                'capillar_rise': capillar_rise,
+                'pond_recharge': pond_recharge,
+                'photosynthesis_bryo': bryo_photosynthesis,
+                'respiration_bryo': bryo_respiration,
+                'respiration': respiration,
+                })
+
+        states.update(states_snow)
+        states.update({
+                'temperature': temperature,
+                'bryo_temperature': bryo_temperature,
+                'soil_temperature': soil_temperature,
+                'bryo_water_storage': bryo_water_storage,
+                'bryo_carbon_pool': bryo_carbon_pool
+                })
+
         return fluxes, states
 
-    def shortwave_albedo(self, snow_water_equivalent):
+    def shortwave_albedo(self):
         """ Forestfloor albdedo for shortwave radiation.
 
         Returns:
@@ -288,9 +319,10 @@ class ForestFloor(object):
                 'NIR_albedo': [-]
         """
 
-        if snow_water_equivalent > 0.0:
-            return {'PAR': 0.8,
-                    'NIR': 0.8}
+        if self.snowpack.snowcover():
+            par_albedo = self.snowpack.properties['optical_properties']['albedo_par']
+            nir_albedo = self.snowpack.properties['optical_properties']['albedo_nir']
+
         else:
             par_albedo = 0.0
             nir_albedo = 0.0
@@ -298,6 +330,9 @@ class ForestFloor(object):
             if self.f_bryo > 0.0:
 
                 for bryo in self.bryotypes:
+                    if bryo.coverage == 0.0:
+                        continue
+
                     bryo_albedo = bryophyte_shortwave_albedo(
                             water_content=bryo.water_content,
                             properties=bryo.properties)
@@ -306,13 +341,14 @@ class ForestFloor(object):
                     nir_albedo += bryo.coverage * bryo_albedo['NIR']
 
             if self.f_baresoil > 0.0:
+
                 bare_albedo = self.baresoil.albedo
-                par_albedo += bare_albedo['PAR']
-                nir_albedo += bare_albedo['NIR']
+                par_albedo += self.baresoil.coverage * bare_albedo['PAR']
+                nir_albedo += self.baresoil.coverage * bare_albedo['NIR']
 
-            return {'PAR': par_albedo, 'NIR': nir_albedo}
+        return {'PAR': par_albedo, 'NIR': nir_albedo}
 
-    def longwave_radiation(self, snow_water_equivalent, air_temperature):
+    def longwave_radiation(self):
         """ Forestfloor longwave radiation.
 
         Args:
@@ -322,8 +358,12 @@ class ForestFloor(object):
             (float): [W m-2]
         """
 
-        if snow_water_equivalent > 0.0:
-            return emitted_longwave_radiation(air_temperature, 0.97)
+        if self.snowpack.snowcover():
+
+            lw_radiation = emitted_longwave_radiation(self.temperature,
+                                                      self.snowpack.properties)
+
+            emissivity = self.snowpack.properties['optical_properties']['emissivity']
 
         else:
             lw_radiation = 0.0
@@ -333,22 +373,28 @@ class ForestFloor(object):
 
                 for bryo in self.bryotypes:
 
-                    lw_radiation += (bryo.coverage
-                                     * emitted_longwave_radiation(
-                                             bryo.temperature,
-                                             bryo.properties))
+                    if bryo.coverage == 0.0:
+                        continue
 
-                    emissivity += bryo.properties['optical_properties']['emissivity']
+                    lw_radiation += (
+                            bryo.coverage
+                            * emitted_longwave_radiation(
+                                bryo.temperature,
+                                bryo.properties))
+
+                    emissivity += (bryo.coverage
+                                   * bryo.properties['optical_properties']['emissivity'])
 
             if self.f_baresoil > 0.0:
 
-                lw_radiation += emitted_longwave_radiation(
-                        self.baresoil.temperature,
-                        self.baresoil.emissivity)
+                lw_radiation += (self.baresoil.coverage
+                                 * emitted_longwave_radiation(
+                                         self.baresoil.temperature,
+                                         self.baresoil.properties))
 
-                emissivity += self.f_baresoil * self.baresoil.emissivity
+                emissivity += self.baresoil.coverage * self.baresoil.emissivity
 
-            return {'radiation': lw_radiation, 'emissivity': emissivity}
+        return {'radiation': lw_radiation, 'emissivity': emissivity}
 
 
 # EOF

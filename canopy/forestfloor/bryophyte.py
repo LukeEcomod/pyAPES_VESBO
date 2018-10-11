@@ -165,6 +165,8 @@ class Bryophyte(object):
                     properties['max_water_content']
                     + properties['min_water_content']) / 2.0
 
+        self.water_storage = self.water_content * properties['dry_mass']
+
         #: [m\ :sup:`3` m\ :sup:`-3`\ ]
         self.volumetric_water = (
             self.water_content / WATER_DENSITY * properties['bulk_density'])
@@ -181,6 +183,7 @@ class Bryophyte(object):
 
         self.old_carbon_pool = self.carbon_pool
         self.old_water_content = self.water_content
+        self.old_water_storage = self.water_storage
         self.old_volumetric_water = self.volumetric_water
         self.old_water_potential = self.water_potential
         self.old_temperature = self.temperature
@@ -191,6 +194,7 @@ class Bryophyte(object):
 
         self.old_carbon_pool = self.carbon_pool
         self.old_water_content = self.water_content
+        self.old_water_storage = self.water_storage
         self.old_volumetric_water = self.volumetric_water
         self.old_water_potential = self.water_potential
         self.old_temperature = self.temperature
@@ -201,6 +205,7 @@ class Bryophyte(object):
 
         self.carbon_pool = self.old_carbon_pool
         self.water_content = self.old_water_content
+        self.water_storage = self.old_water_storage
         self.volumetric_water = self.old_volumetric_water
         self.water_potential = self.old_water_potential
         self.temperature = self.old_temperature
@@ -243,6 +248,7 @@ class Bryophyte(object):
         # update state variables
         self.temperature = states['temperature']
         self.water_content = states['water_content']
+        self.water_storage = states['water_storage']
         self.volumetric_water = states['volumetric_water']
         self.water_potential = states['water_potential']
 
