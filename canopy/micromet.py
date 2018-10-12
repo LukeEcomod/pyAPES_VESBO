@@ -125,7 +125,7 @@ class Micromet(object):
                                      scalar='H2O',
                                      T=T[-1], P=P)
         # relative error
-        err_h2o = max(abs((H2O - H2O_prev) / H2O))
+        err_h2o = max(abs((H2O - H2O_prev) / H2O_prev))
         # new H2O
         H2O = gam * H2O_prev + (1 - gam) * H2O
 
@@ -138,7 +138,7 @@ class Micromet(object):
                                      scalar='CO2',
                                      T=T[-1], P=P)
         # relative error
-        err_co2 = max(abs((CO2 - CO2_prev) / CO2))
+        err_co2 = max(abs((CO2 - CO2_prev) / CO2_prev))
         # new CO2
         CO2 = gam * CO2_prev + (1 - gam) * CO2
 
@@ -154,6 +154,9 @@ class Micromet(object):
         err_t = max(abs(T - T_prev))
         # new T
         T = gam * T_prev + (1 - gam) * T
+# TESTING
+#        CO2 = CO2_prev
+#        err_co2 = 0.0
 
         return H2O, CO2, T, err_h2o, err_co2, err_t
 
@@ -285,8 +288,89 @@ def closure_1_model_scalar(dz, Ks, Source, ubc, lbc, scalar,
     NOTE:
         assumes constant dz and Dirchlet upper boundary condition
     Gaby Katul & Samuli Launiainen, 2009 - 2017
+    Kersti: code condensed, forward difference (more stable?)
     """
-    epsi = 1e-5
+
+    dz = float(dz)
+    N = len(Ks)
+    rho_a = P / (287.05*(T + 273.15))  # air density, kg/m3
+
+#TESTING
+#    Source = smooth(Source, 10)
+
+    CF = rho_a / (29e-3)  # mol m-3, molar conc. of air
+
+    if scalar.upper() == 'CO2':  # [umol] -> [mol]
+        ubc = 1e-6 * ubc
+        Source = 1e-6 * Source
+        lbc = 1e-6 * lbc
+
+    if scalar.upper() == 'T':
+        CF = 1004.0 * rho_a  # cp*rho_a,  J m-3 K-1
+
+    # --- Set elements of tridiagonal matrix ---
+    a = np.zeros(N)  # sub diagonal
+    b = np.zeros(N)  # diagonal
+    g = np.zeros(N)  # super diag
+    f = np.zeros(N)  # rhs
+
+    # intermediate nodes
+    a[1:-1] = Ks[1:-1] / (dz**2)
+    b[1:-1] = -2 * Ks[1:-1] / (dz**2) - (Ks[2:] - Ks[1:-1]) / (dz**2)
+    g[1:-1] = Ks[1:-1] / (dz**2) + (Ks[2:] - Ks[1:-1]) / (dz**2)
+    f[1:-1] = -Source[1:-1] / CF
+
+    # uppermost node, Dirchlet boundary
+    a[-1] = 0.0
+    b[-1] = 1.0
+    g[-1] = 0.0
+    f[-1] = ubc
+
+    # lowermost node
+    if not lbc_dirchlet:  # flux-based
+        a[0] = 0.0
+        b[0] = 1.
+        g[0] = -1.
+        f[0] = (lbc / CF)*dz / (Ks[0] + eps)
+
+    else:  #  fixed concentration/temperature
+        a[0] = 0.0
+        b[0] = 1.
+        g[0] = 0.0
+        f[0] = lbc
+
+    x = tridiag(a, b, g, f)
+
+    if scalar.upper() == 'CO2':  # [mol] -> [umol]
+        x = 1e6*x
+
+    return x
+
+def closure_1_model_scalar2(dz, Ks, Source, ubc, lbc, scalar,
+                           T=20.0, P=101300.0, lbc_dirchlet=False):
+    """
+    Solves stationary scalar profiles in 1-D grid
+    INPUT:
+        dz - grid size (m), float
+        Ks - eddy diffusivity (m2s-1), array
+        Source - sink/source term, CO2 (umolm-3s-1), H2O (molm-3s-1), T (Wm-3),
+            array
+        ubc - upper boundary condition, value of CO2 (ppm), H2O (mol/mol)
+            or T (degC) at highest gridpoint
+        lbc - lower boundary condition, flux or value:
+            flux: CO2 (umol m-2 s-1), H2O (mol m-2 s-1), T (Wm-2).
+            value: CO2 (ppm), H2O (mol/mol), T (degC)
+        scalar - 'CO2', 'H2O', 'T', string
+        T - air temperature (degC), optional
+        P - pressure (Pa)
+        lbc_dirchlet - True for Dirchlet lower boundary
+    OUT:
+        Ca - mixing ratio profile (ppm)
+    NOTE:
+        assumes constant dz and Dirchlet upper boundary condition
+    Gaby Katul & Samuli Launiainen, 2009 - 2017
+    """
+    epsi = eps #1e-5
     dz = float(dz)
     N = len(Ks)
     rho_a = P / (287.05*(T + 273.15))  # air density, kg/m3

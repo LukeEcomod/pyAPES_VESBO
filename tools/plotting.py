@@ -353,7 +353,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
         normed (boolean): normalized profiles
         quantiles (list): cumulative frequency limits for grouping trees, e.g. [0.5, 1.0]
     """
-    from parameters.parameter_utils import model_trees
+    from parameters.utilities import model_trees
 
     z = np.linspace(0, 30.0, 100)
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,

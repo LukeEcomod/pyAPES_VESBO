@@ -343,7 +343,7 @@ class CanopyModel(object):
                 'depth': forcing['depth'],  # depth to first calculation node
                 'throughfall_rain': Trfall_rain,
                 'throughfall_snow': Trfall_snow,
-                'air_temperature': T[0],
+                'air_temperature': T[1],
                 'forestfloor_temperature': self.ForestFloor.temperature,
                 'soil_temperature': forcing['soil_temperature'],
                 'soil_water_potential': forcing['soil_water_potential'],
@@ -357,7 +357,7 @@ class CanopyModel(object):
                 'lw_net': LWd[0] - LWu[0],
                 'wind_speed': U[1],  # windspeed above forestfloor ca. 30 cm
                 'air_pressure': forcing['air_pressure'],
-                'h2o': H2O[0],
+                'h2o': H2O[1],
                 'Ebal': self.Switch_Ebal,
                 'nsteps': 20
                 }
@@ -387,16 +387,24 @@ class CanopyModel(object):
                     or err_t > 50.0
                     or any(np.isnan(H2O))
                     or any(np.isnan(CO2))):
+                    if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
+                        print '\nMaximum iterations reached but error tolerable.'
+                        break
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
-
+                    print '\nSwitches to WMA assumption, iter_no:'+ str(iter_no)
+                    print('T', np.mean(T), err_t, np.mean(tsource), fluxes_ffloor['sensible_heat_flux'])
+                    print('h2o',np.mean(H2O), err_h2o, np.mean(qsource), fluxes_ffloor['evaporation'])
+                    print('co2',np.mean(CO2), err_co2, np.mean(csource), Fc_gr)
                     # reset values
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
                     T, H2O, CO2, Tleaf, Tsurf = self._restore(forcing)
                     self.Interc_Model.Tl_wet = None
-
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
+            if Switch_WMA and iter_no == 1:
+                plt.figure(1)
+                plt.plot(tsource, self.z, label='lbc=%5.3f' % fluxes_ffloor['sensible_heat_flux'])
 
         """ --- update state variables --- """
         self.Interc_Model.update()  # interception storage

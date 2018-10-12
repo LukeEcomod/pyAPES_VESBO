@@ -131,8 +131,11 @@ def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
     # tress species lad profiles
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles, normed=True, dbhfile=dbhfile, plot=plot)
     # understory shrubs
-    lad_g = np.ones([len(z), 1])
-    lad_g[z > hs] = 0.0
+    lad_g = np.zeros([len(z), 1])
+    lad_g[z < hs] = 1.0
+    lad_g[0] = 0.0
+    if sum(lad_g) < 1.0:
+        lad_g[1] = 1.0
     lad_g = lad_g / np.maximum(sum(lad_g * z[1]), eps)
 
     return lad_p, lad_s, lad_d, lad_g, lai_p, lai_s, lai_d
