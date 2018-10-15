@@ -320,8 +320,8 @@ class ForestFloor(object):
         """
 
         if self.snowpack.snowcover():
-            par_albedo = self.snowpack.properties['optical_properties']['albedo_par']
-            nir_albedo = self.snowpack.properties['optical_properties']['albedo_nir']
+            par_albedo = self.snowpack.properties['optical_properties']['albedo_PAR']
+            nir_albedo = self.snowpack.properties['optical_properties']['albedo_NIR']
 
         else:
             par_albedo = 0.0
@@ -342,9 +342,9 @@ class ForestFloor(object):
 
             if self.f_baresoil > 0.0:
 
-                bare_albedo = self.baresoil.albedo
-                par_albedo += self.baresoil.coverage * bare_albedo['PAR']
-                nir_albedo += self.baresoil.coverage * bare_albedo['NIR']
+                bare_optical = self.baresoil.properties['optical_properties']
+                par_albedo += self.baresoil.coverage * bare_optical['albedo_PAR']
+                nir_albedo += self.baresoil.coverage * bare_optical['albedo_NIR']
 
         return {'PAR': par_albedo, 'NIR': nir_albedo}
 
@@ -392,7 +392,8 @@ class ForestFloor(object):
                                          self.baresoil.temperature,
                                          self.baresoil.properties))
 
-                emissivity += self.baresoil.coverage * self.baresoil.emissivity
+                emissivity += (self.baresoil.coverage 
+                               * self.baresoil.properties['optical_properties']['emissivity'])
 
         return {'radiation': lw_radiation, 'emissivity': emissivity}
 

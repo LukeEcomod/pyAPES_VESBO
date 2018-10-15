@@ -235,8 +235,8 @@ class CanopyModel(object):
         # --- iterative solution of H2O, CO2, T, Tleaf and Tsurf ---
 
         max_err = 0.01  # maximum relative error
-        max_iter = 20  # maximum iterations
-        gam = 0.5  # weight for old value in iterations
+        max_iter = 25  # maximum iterations
+        gam = 0.5  # weight for new value in iterations
         err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
         Switch_WMA = self.Switch_WMA
 
@@ -373,6 +373,11 @@ class CanopyModel(object):
 
             """  --- solve scalar profiles (H2O, CO2, T) """
             if Switch_WMA is False:
+                # to recognize oscillation
+                if iter_no > 1:
+                    T_prev2 = T_prev.copy()
+                T_prev = T.copy()
+
                 H2O, CO2, T, err_h2o, err_co2, err_t = self.Micromet_Model.scalar_profiles(
                         gam, H2O, CO2, T, forcing['air_pressure'],
                         source={'H2O': qsource,
@@ -382,19 +387,44 @@ class CanopyModel(object):
                              'CO2': Fc_gr,
                              'T': fluxes_ffloor['sensible_heat_flux']})
 
-                if (iter_no > max_iter
+                # to recognize oscillation
+                if iter_no > 5 and np.mean((T_prev - T)**2) > np.mean((T_prev2 - T)**2):
+#PRINT
+#                    print(iter_no, np.mean(T), np.mean(T_prev), np.mean(T_prev2))
+                    T = (T_prev + T) / 2
+                    gam = max(gam / 2, 0.25)
+#PRINT & PLOT
+                if iter_no >= 15:
+#                    print '\niter_no:'+ str(iter_no)
+#                    print('T', np.mean(T), err_t, np.sum(tsource)* self.dz, fluxes_ffloor['sensible_heat_flux'], gam)
+                    plt.figure(2)
+                    plt.plot(iter_no, np.mean(T), 'ok')
+
+                if (iter_no == max_iter
                     or any(np.isnan(T))
-                    or err_t > 50.0
                     or any(np.isnan(H2O))
                     or any(np.isnan(CO2))):
+
                     if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
-                        print '\nMaximum iterations reached but error tolerable.'
+                        if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
+#PRINT
+                            print '\nMaximum iterations reached but error tolerable: ' + str(max(err_t, err_h2o, err_co2, err_Tl, err_Ts))
                         break
+
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
+#PRINT
                     print '\nSwitches to WMA assumption, iter_no:'+ str(iter_no)
-                    print('T', np.mean(T), err_t, np.mean(tsource), fluxes_ffloor['sensible_heat_flux'])
-                    print('h2o',np.mean(H2O), err_h2o, np.mean(qsource), fluxes_ffloor['evaporation'])
-                    print('co2',np.mean(CO2), err_co2, np.mean(csource), Fc_gr)
+                    print('T', np.mean(T), err_t, np.sum(tsource)* self.dz, fluxes_ffloor['sensible_heat_flux'])
+                    if iter_no > 1:
+#PRINT & PLOT
+                        print(np.mean(T_prev2),np.mean(T_prev),np.mean(T), gam)
+                        plt.figure()
+                        plt.plot(self.z, T_prev2)
+                        plt.plot(self.z, T_prev)
+                        plt.plot(self.z, T)
+                        plt.legend(['T_{i-2}', 'T_{i-1}', 'T_{i}'])
+#                    print('h2o',np.mean(H2O), err_h2o, np.sum(qsource)* self.dz, fluxes_ffloor['evaporation'])
+#                    print('co2',np.mean(CO2), err_co2, np.sum(csource)* self.dz, Fc_gr)
                     # reset values
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
@@ -402,9 +432,11 @@ class CanopyModel(object):
                     self.Interc_Model.Tl_wet = None
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
+#PLOT
             if Switch_WMA and iter_no == 1:
-                plt.figure(1)
+                plt.figure(99)
                 plt.plot(tsource, self.z, label='lbc=%5.3f' % fluxes_ffloor['sensible_heat_flux'])
+                plt.legend(frameon=False)
 
         """ --- update state variables --- """
         self.Interc_Model.update()  # interception storage

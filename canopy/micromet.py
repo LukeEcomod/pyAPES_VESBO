@@ -15,7 +15,7 @@ forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
-from tools.utilities import central_diff, forward_diff, tridiag, smooth
+from tools.utilities import central_diff, forward_diff, tridiag, smooth, spatial_average
 from constants import *
 eps = np.finfo(float).eps  # machine epsilon
 
@@ -124,10 +124,10 @@ class Micromet(object):
                                      lbc=lbc['H2O'],
                                      scalar='H2O',
                                      T=T[-1], P=P)
+        # new H2O
+        H2O = (1 - gam) * H2O_prev + gam * H2O
         # relative error
         err_h2o = max(abs((H2O - H2O_prev) / H2O_prev))
-        # new H2O
-        H2O = gam * H2O_prev + (1 - gam) * H2O
 
         # --- CO2 ---
         CO2 = closure_1_model_scalar(dz=self.dz,
@@ -137,10 +137,10 @@ class Micromet(object):
                                      lbc=lbc['CO2'],
                                      scalar='CO2',
                                      T=T[-1], P=P)
+        # new CO2
+        CO2 = (1 - gam) * CO2_prev + gam * CO2
         # relative error
         err_co2 = max(abs((CO2 - CO2_prev) / CO2_prev))
-        # new CO2
-        CO2 = gam * CO2_prev + (1 - gam) * CO2
 
         # --- T ---
         T = closure_1_model_scalar(dz=self.dz,
@@ -150,13 +150,12 @@ class Micromet(object):
                                    lbc=lbc['T'],
                                    scalar='T',
                                    T=T[-1], P=P)
+        # new T
+        T = (1 - gam) * T_prev + gam * T
+        T[T > T_prev] = np.minimum(1.1 * T_prev[T > T_prev], T[T > T_prev])
+        T[T < T_prev] = np.maximum(0.9 * T_prev[T < T_prev], T[T < T_prev])
         # absolut error
         err_t = max(abs(T - T_prev))
-        # new T
-        T = gam * T_prev + (1 - gam) * T
-# TESTING
-#        CO2 = CO2_prev
-#        err_co2 = 0.0
 
         return H2O, CO2, T, err_h2o, err_co2, err_t
 
@@ -295,10 +294,9 @@ def closure_1_model_scalar(dz, Ks, Source, ubc, lbc, scalar,
     N = len(Ks)
     rho_a = P / (287.05*(T + 273.15))  # air density, kg/m3
 
-#TESTING
-#    Source = smooth(Source, 10)
-
     CF = rho_a / (29e-3)  # mol m-3, molar conc. of air
+
+    Ks = spatial_average(Ks, method='arithmetic')  # length N+1
 
     if scalar.upper() == 'CO2':  # [umol] -> [mol]
         ubc = 1e-6 * ubc
@@ -315,10 +313,10 @@ def closure_1_model_scalar(dz, Ks, Source, ubc, lbc, scalar,
     f = np.zeros(N)  # rhs
 
     # intermediate nodes
-    a[1:-1] = Ks[1:-1] / (dz**2)
-    b[1:-1] = -2 * Ks[1:-1] / (dz**2) - (Ks[2:] - Ks[1:-1]) / (dz**2)
-    g[1:-1] = Ks[1:-1] / (dz**2) + (Ks[2:] - Ks[1:-1]) / (dz**2)
-    f[1:-1] = -Source[1:-1] / CF
+    a[1:-1] = Ks[1:-2]
+    b[1:-1] = - (Ks[1:-2] + Ks[2:-1])
+    g[1:-1] = Ks[2:-1]
+    f[1:-1] = - Source[1:-1] / CF * dz**2
 
     # uppermost node, Dirchlet boundary
     a[-1] = 0.0
@@ -331,7 +329,7 @@ def closure_1_model_scalar(dz, Ks, Source, ubc, lbc, scalar,
         a[0] = 0.0
         b[0] = 1.
         g[0] = -1.
-        f[0] = (lbc / CF)*dz / (Ks[0] + eps)
+        f[0] = (lbc / CF)*dz / (Ks[1] + eps)
 
     else:  #  fixed concentration/temperature
         a[0] = 0.0
