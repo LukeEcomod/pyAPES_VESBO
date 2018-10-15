@@ -84,9 +84,46 @@ gpara = {
                       ['ffloor_bryo_temperature', 'temperature (bryophyte) [degC]', ('date', 'simulation')],
                       ['ffloor_soil_temperature', 'temperature (soil) [degC]', ('date', 'simulation')],
                       ['ffloor_bryo_water_storage', 'water storage (bryophytes) [kg m-2]', ('date', 'simulation')],
-                      ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')]
-                      ]
+                      ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')],
+                      ]}
+
+logging_configuration = {
+        'filename': 'pyAPES.log',
+        'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+        'level': 'DEBUG'
         }
+
+
+def file_handler(filename, mode='a', encoding=None):
+    import os, logging
+
+    if not os.path.exists(filename):
+        open(filename, mode).close()
+
+    return logging.FileHandler(filename, mode, encoding)
+
+#logging_configuration = {
+#        'version': 1,
+#        'disable_existing_loggers': False,
+#        'formatters': {
+#                'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
+#                },
+#        'handlers': {
+#                'file': {
+##                        '()': file_handler,
+#                        'class': 'logging.FileHandler',
+#                        'level': 'DEBUG',
+#                        'formatter': 'default',
+#                        'filename': 'pyAPES.log',
+#                        'mode': 'w+',
+##                        'encoding': 'utf-8',
+#                        },
+#                },
+##        'root': {
+##                'handlers:': ['file'],
+##                'level': 'DEBUG',
+##                },
+#        }
 
 
 #  output_folder: "results"

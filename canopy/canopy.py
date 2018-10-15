@@ -27,6 +27,9 @@ from planttype.planttype import PlantType
 from forestfloor.forestfloor import ForestFloor
 from snow import Snowpack
 
+
+import logging
+
 class CanopyModel(object):
     r""" Represents canopy-soil-atmosphere interactions.
 
@@ -190,6 +193,8 @@ class CanopyModel(object):
             fluxes (dict)
             states (dict)
         """
+
+#        logger = logging.getLogger(__name__)
 
         # --- flow stats ---
         if self.Switch_Eflow is False:
@@ -397,6 +402,7 @@ class CanopyModel(object):
 
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
+                logging.debug('Scalar profiles switched off')
 
         """ --- update state variables --- """
         self.Interc_Model.update()  # interception storage

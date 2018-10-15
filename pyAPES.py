@@ -24,6 +24,9 @@ To call model and read results:
 import os
 import numpy as np
 import pandas as pd
+import logging
+from logging.config import dictConfig
+
 import time
 from tools.iotools import read_forcing
 from canopy.canopy import CanopyModel
@@ -32,18 +35,37 @@ from parameters.canopy import get_cpara
 
 from copy import deepcopy
 
+
 def driver(create_ncf=False, dbhfile="letto2014.txt"):
     """
     """
 
+
     # Import general parameters
-    from parameters.general import gpara
+    from parameters.general import gpara, logging_configuration
     # Import canopy model parameters
     cpara = get_cpara(dbhfile)
     # Import soil model parameters
     from parameters.soil import spara
 
+#    log_file = logging_configuration['handlers']['file']['filename']
+#    if not os.path.exists(log_file):
+#            open(log_file, 'w+')
+
+#    for handler in logging.root.handlers[:]:
+#        logging.root.removeHandler(handler)
+
+#    logging.config.dictConfig(logging_configuration)
+
+#    mpl_logger = logging.getLogger('matplotlib')
+#    mpl_logger.setLevel(logging.WARNING)
+
+    initialize_logger(logging_configuration)
+    logger = logging.getLogger(__name__)
+
     Nsim = 1
+
+    logger.info('pyAPES started. Number of simulations: {}'.format(Nsim))
 
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
@@ -58,7 +80,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
 
     if create_ncf:
         timestr = time.strftime('%Y%m%d%H%M')
-        filename = timestr + '_CCFPeat_results.nc'
+        filename = timestr + '_pyAPES_results.nc'
 
         ncf, _ = initialize_netcdf(
                 gpara['variables'],
@@ -90,6 +112,23 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
         print('Running time %.2f seconds' % (time.time() - running_time))
 
     return output_file
+
+def initialize_logger(config):
+    """ Initializes logging of pyAPES.
+
+    I couldn't figure out how to force logging.config.dictConfig
+    to work with:
+        if not os.path.exists:
+            open(filename, 'w+')
+    """
+
+    logging.basicConfig(
+            level=config['level'],
+            filename=config['filename'],
+            format=config['format'])
+    mpl_logger = logging.getLogger('matplotlib')
+    mpl_logger.setLevel(logging.WARNING)
+
 
 class Model(object):
     """
