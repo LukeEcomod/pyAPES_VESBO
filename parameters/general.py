@@ -87,11 +87,11 @@ gpara = {
                       ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')],
                       ]}
 
-logging_configuration = {
-        'filename': 'pyAPES.log',
-        'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
-        'level': 'DEBUG'
-        }
+#logging_configuration = {
+#        'filename': 'pyAPES.log',
+#        'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+#        'level': 'DEBUG'
+#        }
 
 
 def file_handler(filename, mode='a', encoding=None):
@@ -102,28 +102,33 @@ def file_handler(filename, mode='a', encoding=None):
 
     return logging.FileHandler(filename, mode, encoding)
 
-#logging_configuration = {
-#        'version': 1,
-#        'disable_existing_loggers': False,
-#        'formatters': {
-#                'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
-#                },
-#        'handlers': {
-#                'file': {
-##                        '()': file_handler,
-#                        'class': 'logging.FileHandler',
-#                        'level': 'DEBUG',
-#                        'formatter': 'default',
-#                        'filename': 'pyAPES.log',
-#                        'mode': 'w+',
-##                        'encoding': 'utf-8',
-#                        },
-#                },
-##        'root': {
-##                'handlers:': ['file'],
-##                'level': 'DEBUG',
-##                },
-#        }
+logging_configuration = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+                'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
+                },
+        'handlers': {
+                'console': {
+                        'class' : 'logging.StreamHandler',
+                        'formatter': 'default',
+#                        'stream': 'ext://sys.stdout',
+                        },
+                'file': {
+#                        '()': file_handler,
+                        'class': 'logging.FileHandler',
+                        'level': 'DEBUG',
+                        'formatter': 'default',
+                        'filename': 'pyAPES.log',
+#                        'mode': 'a',
+#                        'encoding': 'utf-8',
+                        },
+                },
+        'root': {
+                'handlers:': ['file', 'console'],
+                'level': 'DEBUG',
+                },
+        }
 
 
 #  output_folder: "results"

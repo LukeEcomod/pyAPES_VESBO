@@ -52,15 +52,15 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
 #    if not os.path.exists(log_file):
 #            open(log_file, 'w+')
 
-#    for handler in logging.root.handlers[:]:
-#        logging.root.removeHandler(handler)
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
-#    logging.config.dictConfig(logging_configuration)
+    logging.config.dictConfig(logging_configuration)
 
-#    mpl_logger = logging.getLogger('matplotlib')
-#    mpl_logger.setLevel(logging.WARNING)
+    mpl_logger = logging.getLogger('matplotlib')
+    mpl_logger.setLevel(logging.WARNING)
 
-    initialize_logger(logging_configuration)
+#    initialize_logger(logging_configuration)
     logger = logging.getLogger(__name__)
 
     Nsim = 1
