@@ -46,7 +46,6 @@ class Interception(object):
 
         # initial state
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)
-        self.Tl_wet = None
 
         self.update()
 
@@ -94,10 +93,7 @@ class Interception(object):
         ic = np.where(LAIz > 0)
 
         # initial guess for wet leaf temperature
-        if self.Tl_wet is None or Ebal is False:
-            Tl_wet = T.copy()
-        else:
-            Tl_wet = self.Tl_wet.copy()
+        Tl_wet = self.Tl_wet.copy()
 
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O

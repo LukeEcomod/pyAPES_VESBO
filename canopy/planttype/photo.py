@@ -109,7 +109,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     Tl = np.array(Tl)
     gr=np.array(gr)
 
-    Tl_ini = T.copy()  #Tl.copy()
+    Tl_ini = Tl.copy()
 
     # vapor pressure
     esat, s = e_sat(Tl)

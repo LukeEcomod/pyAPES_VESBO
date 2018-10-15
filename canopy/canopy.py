@@ -240,8 +240,8 @@ class CanopyModel(object):
         err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
         Switch_WMA = self.Switch_WMA
 
-        # initialize canopy micrometeo, Tleaf and Tsurf
-        T, H2O, CO2, Tleaf, Tsurf = self._restore(forcing)
+        # initialize state variables
+        T, H2O, CO2, Tleaf = self._restore(forcing)
 
 
         iter_no = 0
@@ -389,21 +389,11 @@ class CanopyModel(object):
 
                 # to recognize oscillation
                 if iter_no > 5 and np.mean((T_prev - T)**2) > np.mean((T_prev2 - T)**2):
-#PRINT
-#                    print(iter_no, np.mean(T), np.mean(T_prev), np.mean(T_prev2))
                     T = (T_prev + T) / 2
                     gam = max(gam / 2, 0.25)
-#PRINT & PLOT
-                if iter_no >= 15:
-#                    print '\niter_no:'+ str(iter_no)
-#                    print('T', np.mean(T), err_t, np.sum(tsource)* self.dz, fluxes_ffloor['sensible_heat_flux'], gam)
-                    plt.figure(2)
-                    plt.plot(iter_no, np.mean(T), 'ok')
 
-                if (iter_no == max_iter
-                    or any(np.isnan(T))
-                    or any(np.isnan(H2O))
-                    or any(np.isnan(CO2))):
+                if (iter_no == max_iter or any(np.isnan(T))
+                    or any(np.isnan(H2O)) or any(np.isnan(CO2))):
 
                     if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
                         if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
@@ -413,30 +403,16 @@ class CanopyModel(object):
 
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
 #PRINT
-                    print '\nSwitches to WMA assumption, iter_no:'+ str(iter_no)
+                    print '\nSwitched to WMA assumption, iter_no:'+ str(iter_no)
                     print('T', np.mean(T), err_t, np.sum(tsource)* self.dz, fluxes_ffloor['sensible_heat_flux'])
-                    if iter_no > 1:
-#PRINT & PLOT
-                        print(np.mean(T_prev2),np.mean(T_prev),np.mean(T), gam)
-                        plt.figure()
-                        plt.plot(self.z, T_prev2)
-                        plt.plot(self.z, T_prev)
-                        plt.plot(self.z, T)
-                        plt.legend(['T_{i-2}', 'T_{i-1}', 'T_{i}'])
 #                    print('h2o',np.mean(H2O), err_h2o, np.sum(qsource)* self.dz, fluxes_ffloor['evaporation'])
 #                    print('co2',np.mean(CO2), err_co2, np.sum(csource)* self.dz, Fc_gr)
                     # reset values
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
-                    T, H2O, CO2, Tleaf, Tsurf = self._restore(forcing)
-                    self.Interc_Model.Tl_wet = None
+                    T, H2O, CO2, Tleaf = self._restore(forcing)
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
-#PLOT
-            if Switch_WMA and iter_no == 1:
-                plt.figure(99)
-                plt.plot(tsource, self.z, label='lbc=%5.3f' % fluxes_ffloor['sensible_heat_flux'])
-                plt.legend(frameon=False)
 
         """ --- update state variables --- """
         self.Interc_Model.update()  # interception storage
@@ -522,8 +498,7 @@ class CanopyModel(object):
                     'Tleaf_wet': np.where(self.lad > 0.0, Tleaf_w, np.nan),
                     'Tleaf_sl': Tleaf_sl,
                     'Tleaf_sh': Tleaf_sh,
-                    'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan),
-                    'Tsurf': Tsurf
+                    'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan)
                     })
 
             fluxes_canopy.update({
@@ -542,9 +517,12 @@ class CanopyModel(object):
         H2O = self.ones * ([forcing['h2o']])
         CO2 = self.ones * ([forcing['co2']])
         Tleaf = T.copy() * self.lad / (self.lad + EPS)
-        Tsurf = self.ForestFloor.old_temperature
         self.ForestFloor.restore()
+        self.Interc_Model.Tl_wet = T.copy()
+        for pt in self.Ptypes:
+            pt.Tl_sh = T.copy()
+            pt.Tl_sl = T.copy()
 
-        return T, H2O, CO2, Tleaf, Tsurf
+        return T, H2O, CO2, Tleaf
 
 # EOF
