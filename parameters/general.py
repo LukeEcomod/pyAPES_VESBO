@@ -94,39 +94,51 @@ gpara = {
 #        }
 
 
-def file_handler(filename, mode='a', encoding=None):
-    import os, logging
-
-    if not os.path.exists(filename):
-        open(filename, mode).close()
-
-    return logging.FileHandler(filename, mode, encoding)
+#def file_handler(filename, mode='a', encoding=None):
+#    import os, logging
+#
+#    if not os.path.exists(filename):
+#        open(filename, mode).close()
+#
+#    return logging.FileHandler(filename, mode, encoding)
 
 logging_configuration = {
         'version': 1,
         'disable_existing_loggers': False,
         'formatters': {
                 'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
+                'model': {'format': '%(levelname)s %(name)s %(funcName)s %(message)s'},
                 },
         'handlers': {
                 'console': {
                         'class' : 'logging.StreamHandler',
-                        'formatter': 'default',
-#                        'stream': 'ext://sys.stdout',
+                        'formatter': 'model',
+                        'level': 'DEBUG'  # CRITICAL, ERROR, WARNING, INFO, DEBUG
                         },
                 'file': {
-#                        '()': file_handler,
                         'class': 'logging.FileHandler',
-                        'level': 'DEBUG',
-                        'formatter': 'default',
+                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'formatter': 'model',
                         'filename': 'pyAPES.log',
-#                        'mode': 'a',
-#                        'encoding': 'utf-8',
+                        'mode': 'w',  # a == append, w == overwrite
                         },
                 },
-        'root': {
-                'handlers:': ['file', 'console'],
-                'level': 'DEBUG',
+        'loggers': {
+                'pyAPES': {
+                        'handlers': ['file', 'console'],
+                        'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagate': True,
+                        },
+                'canopy':{
+                        'handlers': ['file', 'console'],
+                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagate': True,
+                        },
+                'soil':{
+                        'handlers': ['file', 'console'],
+                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagate': True,
+                        },
                 },
         }
 

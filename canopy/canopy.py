@@ -25,12 +25,10 @@ from micromet import Micromet
 from interception import Interception
 from planttype.planttype import PlantType
 from forestfloor.forestfloor import ForestFloor
-from snow import Snowpack
-
 
 import logging
+# logger = logging.getLogger('pyAPES.'+__name__)
 
-logger = logging.getLogger(__name__)
 
 class CanopyModel(object):
     r""" Represents canopy-soil-atmosphere interactions.
@@ -91,6 +89,7 @@ class CanopyModel(object):
                 .Snow_Model (object): snow model
                 .ForestFloor (object): forest floor object (bryotype/baresoil)
         """
+        logger = logging.getLogger(__name__)
 
         # --- site location ---
         self.location = cpara['loc']
@@ -104,6 +103,11 @@ class CanopyModel(object):
         self.Switch_Eflow = cpara['ctr']['Eflow']
         self.Switch_WMA = cpara['ctr']['WMA']
         self.Switch_Ebal = cpara['ctr']['Ebal']
+
+        logger.debug('Eflow: %s, WMA: %s, Ebal: %s',
+                    self.Switch_Eflow,
+                    self.Switch_WMA,
+                    self.Switch_Ebal)
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
@@ -195,6 +199,7 @@ class CanopyModel(object):
             fluxes (dict)
             states (dict)
         """
+        logger = logging.getLogger(__name__)
 
         # --- flow stats ---
         if self.Switch_Eflow is False:
@@ -394,6 +399,10 @@ class CanopyModel(object):
                     or any(np.isnan(CO2))):
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
 
+# logging
+                    logger.debug('%s Scalar profiles switched off',
+                                 forcing['date'])
+
                     # reset values
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
@@ -402,7 +411,6 @@ class CanopyModel(object):
 
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
-                logger.debug('Scalar profiles switched off')
 
         """ --- update state variables --- """
         self.Interc_Model.update()  # interception storage

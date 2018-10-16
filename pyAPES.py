@@ -24,25 +24,30 @@ To call model and read results:
 import os
 import numpy as np
 import pandas as pd
-import logging
-from logging.config import dictConfig
-
 import time
+
 from tools.iotools import read_forcing
 from canopy.canopy import CanopyModel
 from soil.soil import Soil
 from parameters.canopy import get_cpara
 
-from copy import deepcopy
+import logging
+from logging.config import dictConfig
+from parameters.general import logging_configuration
+dictConfig(logging_configuration)
 
+#mpl_logger = logging.getLogger('matplotlib')
+#mpl_logger.setLevel(logging.WARNING)
 
 def driver(create_ncf=False, dbhfile="letto2014.txt"):
     """
     """
-
+#    import logging
+#    from parameters.general import logging_configuration
+#    logging.config.dictConfig(logging_configuration)
 
     # Import general parameters
-    from parameters.general import gpara, logging_configuration
+    from parameters.general import gpara
     # Import canopy model parameters
     cpara = get_cpara(dbhfile)
     # Import soil model parameters
@@ -52,21 +57,18 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
 #    if not os.path.exists(log_file):
 #            open(log_file, 'w+')
 
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-
-    logging.config.dictConfig(logging_configuration)
-
-    mpl_logger = logging.getLogger('matplotlib')
-    mpl_logger.setLevel(logging.WARNING)
-
+    # --- Logging ---
+#    logging.config.dictConfig(logging_configuration)
+#    mpl_logger = logging.getLogger('matplotlib')
+#    mpl_logger.setLevel(logging.WARNING)
 #    initialize_logger(logging_configuration)
+
     logger = logging.getLogger(__name__)
 
     Nsim = 1
 
-    logger.info('pyAPES started. Number of simulations: {}'.format(Nsim))
-
+    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
+#    logging.info('pyAPES started. Number of simulations: {}'.format(Nsim))
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
                            gpara['start_time'],
@@ -93,41 +95,25 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
                 description=dbhfile)
 
         for task in tasks:
-            print('Running simulation number: {}' .format(task.Nsim))
+            logger.info('Running simulation number: {}' .format(task.Nsim))
             running_time = time.time()
             results = task.run()
-            print('Running time %.2f seconds' % (time.time() - running_time))
+            logger.info('Running time %.2f seconds' % (time.time() - running_time))
             _write_ncf(nsim=task.Nsim, results=results, ncf=ncf)
 
             del results
 
         output_file = "results/" + filename
-        print('Ready! Results are in: ' + output_file)
+        logger.info('Ready! Results are in: ' + output_file)
         ncf.close()
 
     else:
         running_time = time.time()
         results = {task.Nsim: task.run() for task in tasks}
         output_file = results
-        print('Running time %.2f seconds' % (time.time() - running_time))
+        logger.info('Running time %.2f seconds' % (time.time() - running_time))
 
     return output_file
-
-def initialize_logger(config):
-    """ Initializes logging of pyAPES.
-
-    I couldn't figure out how to force logging.config.dictConfig
-    to work with:
-        if not os.path.exists:
-            open(filename, 'w+')
-    """
-
-    logging.basicConfig(
-            level=config['level'],
-            filename=config['filename'],
-            format=config['format'])
-    mpl_logger = logging.getLogger('matplotlib')
-    mpl_logger.setLevel(logging.WARNING)
 
 
 class Model(object):
@@ -165,9 +151,10 @@ class Model(object):
 
     def run(self):
         """ Runs atmosphere-canopy-soil--continuum model"""
+
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
         for k in range(0, self.Nsteps):
-            # print str(k)
+
             if k in k_steps[:-1]:
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
                 print '{0}..\r'.format(s),
@@ -199,7 +186,8 @@ class Model(object):
                               'lw_in': self.forcing['LWin'].iloc[k],
                               'friction_velocity': self.forcing['Ustar'].iloc[k],
                               'air_pressure': self.forcing['P'].iloc[k],
-                              'zenith_angle': self.forcing['Zen'].iloc[k]
+                              'zenith_angle': self.forcing['Zen'].iloc[k],
+                              'date': self.forcing.index[k]
                               }
 
             # run timestep loop
@@ -315,7 +303,7 @@ def _write_ncf(nsim=None, results=None, ncf=None):
         results (dict): calculation results from group
         ncf (object): netCDF4-file handle
     """
-
+    logger = logging.getLogger(__name__)
     keys = results.keys()
     variables = ncf.variables.keys()
 
@@ -332,7 +320,7 @@ def _write_ncf(nsim=None, results=None, ncf=None):
             else:
                 ncf[key][:, nsim] = results[key]
 
-    print("Writing results of simulation number: {} is finished".format(nsim))
+    logger.info("Writing results of simulation number: {} is finished".format(nsim))
 
 def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, forcing, filepath='results', filename='climoss.nc',
                       description='Simulation results'):
