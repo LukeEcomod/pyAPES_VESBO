@@ -151,9 +151,12 @@ class Micromet(object):
                                    T=T[-1], P=P)
         # new T
         T = (1 - gam) * T_prev + gam * T
-        # limit change to T_prev +/- 10%
-        T[T > T_prev] = np.minimum(1.1 * T_prev[T > T_prev], T[T > T_prev])
-        T[T < T_prev] = np.maximum(0.9 * T_prev[T < T_prev], T[T < T_prev])
+        # limit change to T_prev +/- 5degC
+        T[T > T_prev] = np.minimum(T_prev[T > T_prev] + 2.0, T[T > T_prev])
+        T[T < T_prev] = np.maximum(T_prev[T < T_prev] - 2.0, T[T < T_prev])
+#        # limit change to T_prev +/- 10%
+#        T[T > T_prev] = np.minimum(1.1 * T_prev[T > T_prev], T[T > T_prev])
+#        T[T < T_prev] = np.maximum(0.9 * T_prev[T < T_prev], T[T < T_prev])
         # absolut error
         err_t = max(abs(T - T_prev))
 

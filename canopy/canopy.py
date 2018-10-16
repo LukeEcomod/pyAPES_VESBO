@@ -392,8 +392,7 @@ class CanopyModel(object):
                     T = (T_prev + T) / 2
                     gam = max(gam / 2, 0.25)
 
-                if (iter_no == max_iter or any(np.isnan(T))
-                    or any(np.isnan(H2O)) or any(np.isnan(CO2))):
+                if (iter_no == max_iter):
 
                     if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
                         if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
@@ -405,6 +404,7 @@ class CanopyModel(object):
 #PRINT
                     print '\nSwitched to WMA assumption, iter_no:'+ str(iter_no)
                     print('T', np.mean(T), err_t, np.sum(tsource)* self.dz, fluxes_ffloor['sensible_heat_flux'])
+                    print(err_t, err_h2o, err_co2, err_Tl, err_Ts)
 #                    print('h2o',np.mean(H2O), err_h2o, np.sum(qsource)* self.dz, fluxes_ffloor['evaporation'])
 #                    print('co2',np.mean(CO2), err_co2, np.sum(csource)* self.dz, Fc_gr)
                     # reset values
