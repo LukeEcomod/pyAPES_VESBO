@@ -109,3 +109,5 @@ sand*.py
 /results
 
 .DS_Store
+
+*.log
