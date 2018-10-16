@@ -13,9 +13,10 @@ from canopy.constants import STEFAN_BOLTZMANN, LATENT_HEAT, DEG_TO_KELVIN
 from canopy.constants import MOLAR_MASS_H2O, WATER_DENSITY, GRAVITY
 from canopy.constants import SPECIFIC_HEAT_AIR, SPECIFIC_HEAT_H2O, GAS_CONSTANT
 from canopy.micromet import e_sat
-
 from heat_and_water import soil_boundary_layer_conductance
 
+import logging
+logger = logging.getLogger(__name__)
 
 class Baresoil(object):
     """ Represents bare soil cover-soil-atmosphere interactions
@@ -134,7 +135,6 @@ def heat_balance(forcing, properties, temperature):
             T_surf = (SW_gr + LWn + SPECIFIC_HEAT_AIR*gr*T_ave + SPECIFIC_HEAT_AIR*gb_h*T - LE + LATENT_HEAT*s*gb_v*Told
                       + Kt / dz_soil * T_soil) / (SPECIFIC_HEAT_AIR*(gr + gb_h) + LATENT_HEAT*s*gb_v + Kt / dz_soil)
             err = abs(T_surf - Told)
-#            print ('iterNo', iterNo, 'err', err, 'T_surf', T_surf)
             es, s = e_sat(T_surf)
             Dsurf = es / P - H2O  # [mol/mol] - allows condensation
             s = s / P  # [mol/mol/degC]
@@ -143,13 +143,18 @@ def heat_balance(forcing, properties, temperature):
                 LE = LEmax
                 s = 0.0
             if iterNo == itermax:
-                print 'Maximum number of iterations reached in surface energy module'
-                print('err', err, 'T_surf', T_surf)
+                logger.debug('%s (iteration %s) Maximum number of iterations reached: T_baresoil = %.2f, err = %.2f',
+                             forcing['date'],
+                             forcing['iteration'],
+                             T_surf, err)
         else:
             err = 0.0
 
     if abs(T_surf - temperature) > 20:
-        print 'Unrealistic baresoil temperature %5.3f, set to previous value' % T_surf
+        logger.debug('%s (iteration %s) Unrealistic baresoil temperature %.2f set to previous value %.2f',
+             forcing['date'],
+             forcing['iteration'],
+             T_surf, temperature)
         T_surf = temperature
 
     """ --- energy and water fluxes --- """

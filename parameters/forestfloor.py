@@ -30,7 +30,7 @@ initial_conditions = {
         }
 
 baresoil = {
-        'ground_coverage': 0.0,
+        'ground_coverage': 1.0,
         'porosity': 0.947,  # porosity [m3m-3]    ----> vesimallista?
         'roughness_length':  0.01, # check right value
         'optical_properties': {
@@ -105,7 +105,7 @@ Pleurozium = {
 #        "water_retention_parameters": [0.445, 0.02, 0.103, 2.229, 1.17e-4, -2.487],
 Hylocomium = {
         "species": "Hylocomium splendens",  # (Hedw.) B.S.G.
-        "ground_coverage": 1.0,
+        "ground_coverage": 0.0,
         "height": 0.06,  # Soudziloskaia et al (2013)
         "roughness_height": 0.01,
         "leaf_area_index": 1.212,

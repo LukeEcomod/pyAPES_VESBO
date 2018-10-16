@@ -16,10 +16,12 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
 import pandas as pd
+import logging
 eps = np.finfo(float).eps  # machine epsilon
 from tools.utilities import tridiag
 from matplotlib import pyplot as plt
 from constants import DEG_TO_RAD, PAR_TO_UMOL, DEG_TO_KELVIN, STEFAN_BOLTZMANN, SPECIFIC_HEAT_AIR
+logger = logging.getLogger(__name__)
 
 class Radiation(object):
     r""" Describes distribution of within canopy radiation.
@@ -42,6 +44,7 @@ class Radiation(object):
         Returns:
             self (object)
         """
+
         # parameters
         self.clump = p['clump']
         self.leaf_angle = p['leaf_angle']  # leaf-angle distribution [-]
@@ -51,6 +54,8 @@ class Radiation(object):
         self.leaf_emi = p['leaf_emi']
         self.SWmodel = ctr['SwModel'].upper()
         self.LWmodel = ctr['LwModel'].upper()
+        logger.info('Shortwave radiation model: %s', self.SWmodel)
+        logger.info('Longwave radiation model: %s', self.LWmodel)
 
     def SW_profiles(self, forcing, radtype):
         r""" Computes distribution of within canopy shortwave radiation

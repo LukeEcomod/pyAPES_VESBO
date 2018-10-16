@@ -261,6 +261,7 @@ class ForestFloor(object):
             if self.f_baresoil > 0.0:
 
                 # baresoil surface energy balance
+                forcing.update({'forestfloor_temperature': self.temperature})
                 fluxes_soil, states_soil = self.baresoil.run(dt, forcing)
 
                 soil_evaporation += self.baresoil.coverage * fluxes_soil['evaporation']

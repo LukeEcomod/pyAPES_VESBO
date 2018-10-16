@@ -16,7 +16,7 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 
 import numpy as np
-
+from copy import deepcopy
 from matplotlib import pyplot as plt
 from constants import PAR_TO_UMOL, MOLAR_MASS_H2O, LATENT_HEAT, EPS
 
@@ -27,8 +27,7 @@ from planttype.planttype import PlantType
 from forestfloor.forestfloor import ForestFloor
 
 import logging
-# logger = logging.getLogger('pyAPES.'+__name__)
-
+logger = logging.getLogger(__name__)
 
 class CanopyModel(object):
     r""" Represents canopy-soil-atmosphere interactions.
@@ -89,7 +88,6 @@ class CanopyModel(object):
                 .Snow_Model (object): snow model
                 .ForestFloor (object): forest floor object (bryotype/baresoil)
         """
-        logger = logging.getLogger(__name__)
 
         # --- site location ---
         self.location = cpara['loc']
@@ -104,7 +102,7 @@ class CanopyModel(object):
         self.Switch_WMA = cpara['ctr']['WMA']
         self.Switch_Ebal = cpara['ctr']['Ebal']
 
-        logger.debug('Eflow: %s, WMA: %s, Ebal: %s',
+        logger.info('Eflow: %s, WMA: %s, Ebal: %s',
                     self.Switch_Eflow,
                     self.Switch_WMA,
                     self.Switch_Ebal)
@@ -200,6 +198,7 @@ class CanopyModel(object):
             states (dict)
         """
         logger = logging.getLogger(__name__)
+        ff_forcing = deepcopy(forcing)
 
         # --- flow stats ---
         if self.Switch_Eflow is False:
@@ -252,7 +251,6 @@ class CanopyModel(object):
 
         # initialize state variables
         T, H2O, CO2, Tleaf = self._restore(forcing)
-
 
         iter_no = 0
         while (err_t > max_err or err_h2o > max_err or
@@ -348,29 +346,19 @@ class CanopyModel(object):
             err_Tl = max(abs(Tleaf - Tleaf_prev))
 
             """ --- forest floor --- """
-            ff_forcing = {
-                'height': self.z[1],  # height to first calculation node
-                'depth': forcing['depth'],  # depth to first calculation node
-                'throughfall_rain': Trfall_rain,
-                'throughfall_snow': Trfall_snow,
-                'air_temperature': T[1],
-                'forestfloor_temperature': self.ForestFloor.temperature,
-                'soil_temperature': forcing['soil_temperature'],
-                'soil_water_potential': forcing['soil_water_potential'],
-                'soil_volumetric_water': forcing['soil_volumetric_water'],
-                'soil_hydraulic_conductivity': forcing['soil_hydraulic_conductivity'],
-                'soil_thermal_conductivity': forcing['soil_thermal_conductivity'],
-                'soil_pond_storage': forcing['soil_pond_storage'],
-                'par': Par_gr,
-                'nir': Nir_gr,
-                'lw_dn': LWd[0],
-                'lw_net': LWd[0] - LWu[0],
-                'wind_speed': U[1],  # windspeed above forestfloor ca. 30 cm
-                'air_pressure': forcing['air_pressure'],
-                'h2o': H2O[1],
-                'Ebal': self.Switch_Ebal,
-                'nsteps': 20
-                }
+            ff_forcing.update({'height': self.z[1],  # height to first calculation node
+                               'throughfall_rain': Trfall_rain,
+                               'throughfall_snow': Trfall_snow,
+                               'air_temperature': T[1],
+                               'par': Par_gr,
+                               'nir': Nir_gr,
+                               'lw_dn': LWd[0],
+                               'lw_net': LWd[0] - LWu[0],
+                               'wind_speed': U[1],  # windspeed above forestfloor ca. 30 cm
+                               'h2o': H2O[1],
+                               'Ebal': self.Switch_Ebal,
+                               'nsteps': 20,
+                               'iteration': iter_no})
 
             fluxes_ffloor, states_ffloor = self.ForestFloor.run(
                     dt=dt,
