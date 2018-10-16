@@ -109,7 +109,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     Tl = np.array(Tl)
     gr=np.array(gr)
 
-    Tl_ini = T.copy()  #Tl.copy()
+    Tl_ini = Tl.copy()
 
     # vapor pressure
     esat, s = e_sat(Tl)
@@ -153,7 +153,7 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
             Dleaf = np.maximum(eps, esat / P - H2O)  # mol/mol
             if iterNo == itermax:
                 print 'Maximum number of iterations reached in dry leaf module'
-                print('err', err, 'Tl', np.mean(Tl), np.mean(SWabs), np.mean(LW), np.mean(H2O), np.mean(CO2))
+                print('err', err, 'Tl', np.mean(Tl))
         else:
             err = 0.0
 

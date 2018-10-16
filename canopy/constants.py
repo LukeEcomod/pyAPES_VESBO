@@ -21,6 +21,8 @@ MOLAR_MASS_H2O = 18.015e-3
 MOLAR_MASS_CO2 = 44.01e-3
 #: [kg mol\ :sup:`-1`\ ], molar mass of C
 MOLAR_MASS_C = 12.01e-3
+#: [kg mol\ :sup:`-1`\ ], molar mass of air
+MOLAR_MASS_AIR = 29.0e-3
 #: [J kg\ :sup:`-1` K\ :sup:`-1`\ ], specific heat of H\ :sub:`2`\ O
 SPECIFIC_HEAT_H2O = 4.18e3
 #: [J kg\ :sup:`-1` K\ :sup:`-1`\ ], specific heat of organic matter

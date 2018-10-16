@@ -174,13 +174,13 @@ class CanopyModel(object):
 
         Args:
             dt: timestep [s]
-            forcing (dataframe): meteorological and soil forcing data
+            forcing (dataframe): meteorological and soil forcing data  !! NOT UP TO DATE
                 'precipitation': precipitation rate [m s-1]
                 'air_temperature': air temperature [\ :math:`^{\circ}`\ C]
                 'dir_par': direct fotosynthetically active radiation [W m-2]
                 'dif_par': diffuse fotosynthetically active radiation [W m-2]
                 'dir_nir': direct near infrared radiation [W m-2]
-                'dif_mir': diffuse near infrare active radiation [W m-2]
+                'dif_nir': diffuse near infrare active radiation [W m-2]
                 'lw_in': Downwelling long wave radiation [W m-2]
                 'wind_speed': wind speed [m s-1]
                 'friction_velocity': friction velocity [m s-1]
@@ -245,13 +245,13 @@ class CanopyModel(object):
         # --- iterative solution of H2O, CO2, T, Tleaf and Tsurf ---
 
         max_err = 0.01  # maximum relative error
-        max_iter = 20  # maximum iterations
-        gam = 0.5  # weight for old value in iterations
+        max_iter = 25  # maximum iterations
+        gam = 0.5  # weight for new value in iterations
         err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
         Switch_WMA = self.Switch_WMA
 
-        # initialize canopy micrometeo, Tleaf and Tsurf
-        T, H2O, CO2, Tleaf, Tsurf = self._restore(forcing)
+        # initialize state variables
+        T, H2O, CO2, Tleaf = self._restore(forcing)
 
 
         iter_no = 0
@@ -353,7 +353,7 @@ class CanopyModel(object):
                 'depth': forcing['depth'],  # depth to first calculation node
                 'throughfall_rain': Trfall_rain,
                 'throughfall_snow': Trfall_snow,
-                'air_temperature': T[0],
+                'air_temperature': T[1],
                 'forestfloor_temperature': self.ForestFloor.temperature,
                 'soil_temperature': forcing['soil_temperature'],
                 'soil_water_potential': forcing['soil_water_potential'],
@@ -367,7 +367,7 @@ class CanopyModel(object):
                 'lw_net': LWd[0] - LWu[0],
                 'wind_speed': U[1],  # windspeed above forestfloor ca. 30 cm
                 'air_pressure': forcing['air_pressure'],
-                'h2o': H2O[0],
+                'h2o': H2O[1],
                 'Ebal': self.Switch_Ebal,
                 'nsteps': 20,
                 'date': forcing['date']
@@ -384,6 +384,11 @@ class CanopyModel(object):
 
             """  --- solve scalar profiles (H2O, CO2, T) """
             if Switch_WMA is False:
+                # to recognize oscillation
+                if iter_no > 1:
+                    T_prev2 = T_prev.copy()
+                T_prev = T.copy()
+
                 H2O, CO2, T, err_h2o, err_co2, err_t = self.Micromet_Model.scalar_profiles(
                         gam, H2O, CO2, T, forcing['air_pressure'],
                         source={'H2O': qsource,
@@ -393,23 +398,31 @@ class CanopyModel(object):
                              'CO2': Fc_gr,
                              'T': fluxes_ffloor['sensible_heat_flux']})
 
-                if (iter_no > max_iter
-                    or any(np.isnan(T))
-                    or err_t > 50.0
-                    or any(np.isnan(H2O))
-                    or any(np.isnan(CO2))):
+                # to recognize oscillation
+                if iter_no > 5 and np.mean((T_prev - T)**2) > np.mean((T_prev2 - T)**2):
+                    T = (T_prev + T) / 2
+                    gam = max(gam / 2, 0.25)
+
+                if (iter_no == max_iter):
+
+                    if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
+                        if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
+# logging
+                            logger.debug('%s Maximum iterations reached but error tolerable < 0.05',
+                                         forcing['date'])
+                        break
+
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
 
 # logging
-                    logger.debug('%s Scalar profiles switched off',
-                                 forcing['date'])
+                    logger.debug('%s Switched to WMA assumption: err_T %.4f, err_H2O %.4f, err_CO2 %.4f, err_Tl %.4f, err_Ts %.4f',
+                                 forcing['date'],
+                                 err_t, err_h2o, err_co2, err_Tl, err_Ts)
 
                     # reset values
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.
-                    T, H2O, CO2, Tleaf, Tsurf = self._restore(forcing)
-                    self.Interc_Model.Tl_wet = None
-
+                    T, H2O, CO2, Tleaf = self._restore(forcing)
             else:
                 err_h2o, err_co2, err_t = 0.0, 0.0, 0.0
 
@@ -497,8 +510,7 @@ class CanopyModel(object):
                     'Tleaf_wet': np.where(self.lad > 0.0, Tleaf_w, np.nan),
                     'Tleaf_sl': Tleaf_sl,
                     'Tleaf_sh': Tleaf_sh,
-                    'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan),
-                    'Tsurf': Tsurf
+                    'Tleaf': np.where(self.lad > 0.0, Tleaf, np.nan)
                     })
 
             fluxes_canopy.update({
@@ -517,9 +529,12 @@ class CanopyModel(object):
         H2O = self.ones * ([forcing['h2o']])
         CO2 = self.ones * ([forcing['co2']])
         Tleaf = T.copy() * self.lad / (self.lad + EPS)
-        Tsurf = self.ForestFloor.old_temperature
         self.ForestFloor.restore()
+        self.Interc_Model.Tl_wet = T.copy()
+        for pt in self.Ptypes:
+            pt.Tl_sh = T.copy()
+            pt.Tl_sl = T.copy()
 
-        return T, H2O, CO2, Tleaf, Tsurf
+        return T, H2O, CO2, Tleaf
 
 # EOF

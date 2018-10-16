@@ -50,6 +50,9 @@ class Baresoil(object):
 
         states, fluxes = heat_balance(forcing, self.properties, self.temperature)
 
+        # update state variables
+        self.temperature = states['temperature']
+
         return fluxes, states
 
 def heat_balance(forcing, properties, temperature):
@@ -130,7 +133,7 @@ def heat_balance(forcing, properties, temperature):
             # solve leaf temperature [degC]
             T_surf = (SW_gr + LWn + SPECIFIC_HEAT_AIR*gr*T_ave + SPECIFIC_HEAT_AIR*gb_h*T - LE + LATENT_HEAT*s*gb_v*Told
                       + Kt / dz_soil * T_soil) / (SPECIFIC_HEAT_AIR*(gr + gb_h) + LATENT_HEAT*s*gb_v + Kt / dz_soil)
-            err = np.nanmax(abs(T_surf - Told))
+            err = abs(T_surf - Told)
 #            print ('iterNo', iterNo, 'err', err, 'T_surf', T_surf)
             es, s = e_sat(T_surf)
             Dsurf = es / P - H2O  # [mol/mol] - allows condensation
@@ -144,6 +147,10 @@ def heat_balance(forcing, properties, temperature):
                 print('err', err, 'T_surf', T_surf)
         else:
             err = 0.0
+
+    if abs(T_surf - temperature) > 20:
+        print 'Unrealistic baresoil temperature %5.3f, set to previous value' % T_surf
+        T_surf = temperature
 
     """ --- energy and water fluxes --- """
     # sensible heat flux [W m-2]

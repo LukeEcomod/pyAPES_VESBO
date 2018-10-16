@@ -140,8 +140,6 @@ class PlantType(object):
         self.leafp = p['leafp']  # leaf properties (dict)
         self.StomaModel = ctr['StomaModel']
 
-        self.Tl_sh = None
-
     def update_daily(self, doy, T, PsiL=0.0):
         r""" Updates planttype pheno_state, gas-exchange parameters, LAI and lad.
 
@@ -201,21 +199,13 @@ class PlantType(object):
             gr (array): radiative conductance [mol m-2 s-1]
         """
 
-        # initial guess for leaf temperature
-        if self.Tl_sh is None or Ebal is False:
-            Tl_sh = T.copy()
-            Tl_sl = T.copy()
-        else:
-            Tl_sh = self.Tl_sh.copy()
-            Tl_sl = self.Tl_sh.copy()
-
         # --- sunlit leaves
-        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sl, Q_sl1,
+        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sl, Q_sl1,
                             SWabs_sl, LWl, U, Tl_ave, gr, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
 
         # --- shaded leaves
-        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, Tl_sh, Q_sh1,
+        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sh, Q_sh1,
                             SWabs_sh, LWl, U, Tl_ave, gr, P=P, model=self.StomaModel,
                             Ebal=Ebal, dict_output=True)
 
