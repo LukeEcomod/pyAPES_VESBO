@@ -369,7 +369,8 @@ class CanopyModel(object):
                 'air_pressure': forcing['air_pressure'],
                 'h2o': H2O[0],
                 'Ebal': self.Switch_Ebal,
-                'nsteps': 20
+                'nsteps': 20,
+                'date': forcing['date']
                 }
 
             fluxes_ffloor, states_ffloor = self.ForestFloor.run(
