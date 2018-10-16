@@ -2,9 +2,10 @@
 """
 .. module: forestfloor
     :synopsis: APES-model component
-.. moduleauthor:: Kersti Haahti
+.. moduleauthor:: Antti-Jussi Kieloaho
 
-Describes forest floor consisting of bryophytes and/or baresoil
+Describes forest floor consisting of bryophytes, baresoil and snowpack.
+
 Based on MatLab implementation by Samuli Launiainen.
 
 

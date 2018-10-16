@@ -25,7 +25,10 @@ from micromet import Micromet
 from interception import Interception
 from planttype.planttype import PlantType
 from forestfloor.forestfloor import ForestFloor
-from snow import Snowpack
+
+import logging
+# logger = logging.getLogger('pyAPES.'+__name__)
+
 
 class CanopyModel(object):
     r""" Represents canopy-soil-atmosphere interactions.
@@ -86,6 +89,7 @@ class CanopyModel(object):
                 .Snow_Model (object): snow model
                 .ForestFloor (object): forest floor object (bryotype/baresoil)
         """
+        logger = logging.getLogger(__name__)
 
         # --- site location ---
         self.location = cpara['loc']
@@ -99,6 +103,11 @@ class CanopyModel(object):
         self.Switch_Eflow = cpara['ctr']['Eflow']
         self.Switch_WMA = cpara['ctr']['WMA']
         self.Switch_Ebal = cpara['ctr']['Ebal']
+
+        logger.debug('Eflow: %s, WMA: %s, Ebal: %s',
+                    self.Switch_Eflow,
+                    self.Switch_WMA,
+                    self.Switch_Ebal)
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
@@ -165,13 +174,13 @@ class CanopyModel(object):
 
         Args:
             dt: timestep [s]
-            forcing (dataframe): meteorological and soil forcing data
+            forcing (dataframe): meteorological and soil forcing data  !! NOT UP TO DATE
                 'precipitation': precipitation rate [m s-1]
                 'air_temperature': air temperature [\ :math:`^{\circ}`\ C]
                 'dir_par': direct fotosynthetically active radiation [W m-2]
                 'dif_par': diffuse fotosynthetically active radiation [W m-2]
                 'dir_nir': direct near infrared radiation [W m-2]
-                'dif_mir': diffuse near infrare active radiation [W m-2]
+                'dif_nir': diffuse near infrare active radiation [W m-2]
                 'lw_in': Downwelling long wave radiation [W m-2]
                 'wind_speed': wind speed [m s-1]
                 'friction_velocity': friction velocity [m s-1]
@@ -190,6 +199,7 @@ class CanopyModel(object):
             fluxes (dict)
             states (dict)
         """
+        logger = logging.getLogger(__name__)
 
         # --- flow stats ---
         if self.Switch_Eflow is False:
@@ -396,17 +406,18 @@ class CanopyModel(object):
 
                     if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
                         if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
-#PRINT
-                            print '\nMaximum iterations reached but error tolerable: ' + str(max(err_t, err_h2o, err_co2, err_Tl, err_Ts))
+# logging
+                            logger.debug('%s Maximum iterations reached but error tolerable < 0.05',
+                                         forcing['date'])
                         break
 
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
-#PRINT
-                    print '\nSwitched to WMA assumption, iter_no:'+ str(iter_no)
-                    print('T', np.mean(T), err_t, np.sum(tsource)* self.dz, fluxes_ffloor['sensible_heat_flux'])
-                    print(err_t, err_h2o, err_co2, err_Tl, err_Ts)
-#                    print('h2o',np.mean(H2O), err_h2o, np.sum(qsource)* self.dz, fluxes_ffloor['evaporation'])
-#                    print('co2',np.mean(CO2), err_co2, np.sum(csource)* self.dz, Fc_gr)
+
+# logging
+                    logger.debug('%s Switched to WMA assumption: err_T %.4f, err_H2O %.4f, err_CO2 %.4f, err_Tl %.4f, err_Ts %.4f',
+                                 forcing['date'],
+                                 err_t, err_h2o, err_co2, err_Tl, err_Ts)
+
                     # reset values
                     iter_no = 0
                     err_t, err_h2o, err_co2, err_Tl, err_Ts = 999., 999., 999., 999., 999.

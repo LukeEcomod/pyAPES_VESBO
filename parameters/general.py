@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-09-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-06-30",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -84,8 +84,62 @@ gpara = {
                       ['ffloor_bryo_temperature', 'temperature (bryophyte) [degC]', ('date', 'simulation')],
                       ['ffloor_soil_temperature', 'temperature (soil) [degC]', ('date', 'simulation')],
                       ['ffloor_bryo_water_storage', 'water storage (bryophytes) [kg m-2]', ('date', 'simulation')],
-                      ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')]
-                      ]
+                      ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')],
+                      ]}
+
+#logging_configuration = {
+#        'filename': 'pyAPES.log',
+#        'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+#        'level': 'DEBUG'
+#        }
+
+
+#def file_handler(filename, mode='a', encoding=None):
+#    import os, logging
+#
+#    if not os.path.exists(filename):
+#        open(filename, mode).close()
+#
+#    return logging.FileHandler(filename, mode, encoding)
+
+logging_configuration = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+                'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
+                'model': {'format': '%(levelname)s %(name)s %(funcName)s %(message)s'},
+                },
+        'handlers': {
+                'console': {
+                        'class' : 'logging.StreamHandler',
+                        'formatter': 'model',
+                        'level': 'DEBUG'  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        },
+                'file': {
+                        'class': 'logging.FileHandler',
+                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'formatter': 'model',
+                        'filename': 'pyAPES.log',
+                        'mode': 'w',  # a == append, w == overwrite
+                        },
+                },
+        'loggers': {
+                'pyAPES': {
+                        'handlers': ['file', 'console'],
+                        'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagate': True,
+                        },
+                'canopy':{
+                        'handlers': ['file', 'console'],
+                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagate': True,
+                        },
+                'soil':{
+                        'handlers': ['file', 'console'],
+                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagate': True,
+                        },
+                },
         }
 
 
