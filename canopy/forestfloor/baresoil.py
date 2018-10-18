@@ -81,28 +81,31 @@ def heat_balance(forcing, properties, temperature):
     Kh = forcing['soil_hydraulic_conductivity']
     Kt = forcing['soil_thermal_conductivity']
 
-    Par_gr = forcing['par']
-    Nir_gr = forcing['nir']
-
-    LWn = forcing['lw_net']
-    Ebal = forcing['Ebal']  # energy balance switch
-
-    albedo_par = properties['optical_properties']['albedo_PAR']
-    albedo_nir = properties['optical_properties']['albedo_NIR']
     soil_emi = properties['optical_properties']['emissivity']
+    # radiative conductance [mol m-2 s-1]
+    gr = 4.0 * soil_emi * STEFAN_BOLTZMANN * T_ave**3 / SPECIFIC_HEAT_AIR
+
+    Ebal = forcing['Ebal']  # energy balance switch
+    if Ebal:
+        albedo_par = properties['optical_properties']['albedo_PAR']
+        albedo_nir = properties['optical_properties']['albedo_NIR']
+        # absorbed shortwave radiation
+        SW_gr = (1 - albedo_par) * forcing['par'] + (1 - albedo_nir) * forcing['nir']
+        # net longwave radiation
+        LWn = forcing['lw_dn'] - forcing['lw_up']
+        # initial guess for surface temperature
+        T_surf = temperature
+    else:
+        SW_gr, LWn = 0.0, 0.0
+        # set temperature to average of soil and air
+        T_surf = T_ave
 
     dz_soil = - z_soil
 
 # change this either to baresoil temperature or baresoil old_temperature
-    # initial guess for surface temperature
-    T_surf = temperature
+    
     # boundary layer conductances for H2O and heat [mol m-2 s-1]
     gb_h, _, gb_v = soil_boundary_layer_conductance(u=U, z=z_can, zo=zr, Ta=T, dT=0.0, P=P)  # OK to assume dt = 0.0?
-    # radiative conductance [mol m-2 s-1]
-    gr = 4.0 * soil_emi * STEFAN_BOLTZMANN * T_ave**3 / SPECIFIC_HEAT_AIR
-
-    # absorbed shortwave radiation
-    SW_gr = (1 - albedo_par) * Par_gr + (1 - albedo_nir) * Nir_gr
 
     # Maximum LE
     # atm pressure head in equilibrium with atm. relative humidity
@@ -156,6 +159,8 @@ def heat_balance(forcing, properties, temperature):
              forcing['iteration'],
              T_surf, temperature)
         T_surf = temperature
+        es, s = e_sat(T_surf)
+        Dsurf = es / P - H2O  # [mol/mol] - allows condensation
 
     """ --- energy and water fluxes --- """
     # sensible heat flux [W m-2]

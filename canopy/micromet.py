@@ -15,6 +15,10 @@ forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
+
+import logging
+logger = logging.getLogger(__name__)
+
 from tools.utilities import central_diff, forward_diff, tridiag, smooth, spatial_average
 from constants import *
 
@@ -69,7 +73,7 @@ class Micromet(object):
             Utop = self.Utop
 
         _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
-                z, self.Cd, lad, hc, Utop + EPS, self.Ubot, dPdx=self.dPdx)
+                z, self.Cd, lad, hc, Utop + EPS, self.Ubot, dPdx=self.dPdx, U_ini=self.U_n)
 
     def update_state(self, ustaro):
         r""" Updates wind speed profile.
@@ -86,7 +90,7 @@ class Micromet(object):
 
         return U
 
-    def scalar_profiles(self, gam, H2O, CO2, T, P, source, lbc):
+    def scalar_profiles(self, gam, H2O, CO2, T, P, source, lbc, Ebal):
         r""" Solves scalar profiles (H2O, CO2 and T) within canopy.
 
         Args:
@@ -118,7 +122,7 @@ class Micromet(object):
         # --- H2O ---
         H2O = closure_1_model_scalar(dz=self.dz,
                                      Ks=self.Km * self.Sc['H2O'],
-                                     source=source['H2O'],
+                                     source=source['h2o'],
                                      ubc=H2O[-1],
                                      lbc=lbc['H2O'],
                                      scalar='H2O',
@@ -131,7 +135,7 @@ class Micromet(object):
         # --- CO2 ---
         CO2 = closure_1_model_scalar(dz=self.dz,
                                      Ks=self.Km * self.Sc['CO2'],
-                                     source=source['CO2'],
+                                     source=source['co2'],
                                      ubc=CO2[-1],
                                      lbc=lbc['CO2'],
                                      scalar='CO2',
@@ -141,28 +145,29 @@ class Micromet(object):
         # relative error
         err_co2 = max(abs((CO2 - CO2_prev) / CO2_prev))
 
-        # --- T ---
-        T = closure_1_model_scalar(dz=self.dz,
-                                   Ks=self.Km * self.Sc['T'],
-                                   source=source['T'],
-                                   ubc=T[-1],
-                                   lbc=lbc['T'],
-                                   scalar='T',
-                                   T=T[-1], P=P)
-        # new T
-        T = (1 - gam) * T_prev + gam * T
-        # limit change to T_prev +/- 5degC
-        T[T > T_prev] = np.minimum(T_prev[T > T_prev] + 2.0, T[T > T_prev])
-        T[T < T_prev] = np.maximum(T_prev[T < T_prev] - 2.0, T[T < T_prev])
-#        # limit change to T_prev +/- 10%
-#        T[T > T_prev] = np.minimum(1.1 * T_prev[T > T_prev], T[T > T_prev])
-#        T[T < T_prev] = np.maximum(0.9 * T_prev[T < T_prev], T[T < T_prev])
-        # absolut error
-        err_t = max(abs(T - T_prev))
+        if Ebal:
+            # --- T ---
+            T = closure_1_model_scalar(dz=self.dz,
+                                       Ks=self.Km * self.Sc['T'],
+                                       source=source['sensible_heat'],
+                                       ubc=T[-1],
+                                       lbc=lbc['T'],
+                                       scalar='T',
+                                       T=T[-1], P=P)
+            # new T
+            T = (1 - gam) * T_prev + gam * T
+            # limit change to T_prev +/- 2degC
+            T[T > T_prev] = np.minimum(T_prev[T > T_prev] + 2.0, T[T > T_prev])
+            T[T < T_prev] = np.maximum(T_prev[T < T_prev] - 2.0, T[T < T_prev])
+    
+            # absolut error
+            err_t = max(abs(T - T_prev))
+        else:
+            err_t = 0.0
 
         return H2O, CO2, T, err_h2o, err_co2, err_t
 
-def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None):
+def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None, U_ini=None):
     """
     Computes normalized mean velocity profile, shear stress and eddy diffusivity
     within and above horizontally homogenous plant canopies using 1st order closure.
@@ -189,16 +194,23 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None):
     lad = 0.5*lad  # frontal plant-area density is half of one-sided
     dz = z[1] - z[2]
     N = len(z)
-    U = np.linspace(Ubot, Utop, N)
+    if U_ini is None:
+        U = np.linspace(Ubot, Utop, N)
+    else:
+        U = U_ini.copy()
 
     nn1 = max(2, np.floor(N/20))  # window for moving average smoothing
 
     # --- Start iterative solution
     err = 999.9
-    eps1 = 0.1
+    iter_max = 20
+    eps1 = 0.5
     dPdx_m = 0.0
 
-    while err > 0.01:
+    iter_no = 0.0
+
+    while err > 0.01 and iter_no < iter_max:
+        iter_no += 1
         Fd = Cd*lad*U**2  # drag force
         d = sum(z*Fd) / sum(Fd)  # displacement height
         l_mix = mixing_length(z, hc, d)  # m
@@ -220,7 +232,7 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None):
         upd = (a1 / (dz*dz) + a2 / (2*dz))  # upper diagonal
         dia = (-a1*2 / (dz*dz) + a3)  # diagonal
         lod = (a1 / (dz*dz) - a2 / (2*dz))  # subdiagonal
-        rhs = np.ones(N) * dPdx_m
+        rhs = np.ones(N) * dPdx  #_m ???
 
         # upper BC
         upd[-1] = 0.
@@ -248,13 +260,16 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None):
 
         # --- Use successive relaxations in iterations
         U = eps1*Un + (1.0 - eps1)*U
-        dPdx_m = eps1*dPdx + (1.0 - eps1)*dPdx_m
+        dPdx_m = eps1*dPdx + (1.0 - eps1)*dPdx_m  # ???
+        if iter_no == iter_max:
+            logger.debug('Maximum number of iterations reached: U_n = %.2f, err = %.2f',
+                         np.mean(U), err)
 
     # ---- return values
     tau = tau / tau[-1]  # normalized shear stress
     zo = (z[-1] - d)*np.exp(-0.4*U[-1])  # roughness length
 
-    y = forward_diff(Un, dz)
+    y = forward_diff(U, dz)
     Kmr = l_mix**2 * abs(y)  # eddy diffusivity
     Km = smooth(Kmr, nn1)
 
@@ -265,7 +280,7 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None):
 #    plt.subplot(223); plt.plot(l_mix, z, 'r-'); plt.title('l mix')
 #    plt.subplot(224); plt.plot(Km, z, 'r-', Kmr, z, 'b-'); plt.title('Km')    
 
-    return tau, Un, Km, l_mix, d, zo
+    return tau, U, Km, l_mix, d, zo
 
 def closure_1_model_scalar(dz, Ks, source, ubc, lbc, scalar,
                            T=20.0, P=101300.0, lbc_dirchlet=False):

@@ -148,7 +148,7 @@ class ForestFloor(object):
                 'air_temperature': [\ :math:`^{\circ}`\ C]
                 'precipitation_temperature': [\ :math:`^{\circ}`\ C]
                 'air_pressure': [Pa]
-                'soil_depth': [m]
+                'depth': [m]
                 'soil_temperature': [\ :math:`^{\circ}`\ C]
                 'soil_water_potential': [Pa]
                 'soil_hydraulic_conductivity': [m s\ :sup:`-1`\ ]
@@ -202,6 +202,7 @@ class ForestFloor(object):
         # --- Snow ---
 
         fluxes_snow, states_snow = self.snowpack.run(dt=dt, forcing=forcing)
+        forcing.update({'throughfall_ffloor': fluxes_snow['potential_infiltration']})
 
         # --- Soil respiration ---
 
@@ -212,6 +213,9 @@ class ForestFloor(object):
         if self.snowpack.snowcover():  # snow on the ground
 
             potential_infiltration += fluxes_snow['potential_infiltration']
+            # some groundheat flux to keep soil temperatures reasonable
+            ground_heat += 0.01 * forcing['soil_thermal_conductivity'] / abs(forcing['depth']) * (
+                           forcing['air_temperature'] - forcing['soil_temperature'])
 
             for bryo in self.bryotypes:
                 # if something goes wrong in snow melt check this!
@@ -274,7 +278,7 @@ class ForestFloor(object):
                 radiative_flux += self.baresoil.coverage * fluxes_soil['radiative_flux']
                 soil_energy_closure += self.baresoil.coverage * fluxes_soil['energy_closure']
 
-                potential_infiltration += self.baresoil.coverage * forcing['throughfall_rain']
+                potential_infiltration += self.baresoil.coverage * forcing['throughfall_ffloor']
 
                 soil_temperature += states_soil['temperature']
                 temperature += self.baresoil.coverage * states_soil['temperature']

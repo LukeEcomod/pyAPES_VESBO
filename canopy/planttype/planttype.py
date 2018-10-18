@@ -21,6 +21,7 @@ eps = np.finfo(float).eps  # machine epsilon
 from photo import leaf_interface
 from phenology import Photo_cycle, LAI_cycle
 from rootzone import RootUptake
+from canopy.constants import LATENT_HEAT
 
 class PlantType(object):
     r""" Contains plant-specific properties, state variables and phenological
@@ -180,7 +181,7 @@ class PlantType(object):
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, f_sl, H2O, CO2, T, U, P, Q_sl1, Q_sh1, SWabs_sl, SWabs_sh, LWl, df, Ebal, Tl_ave, gr):
+    def leaf_gasexchange(self, H2O, CO2, T, U, df, forcing):
         r"""Computes dry leaf gas-exchange shale and sunlit leaves.
 
         Args:
@@ -190,7 +191,7 @@ class PlantType(object):
             T (array): ambient air temperature [degC]
             U (array): mean wind speed [m s-1]
             P: ambient pressure [Pa]
-            Q_sl1, Q_sh1 (arrays): incident PAR at sunlit and shaded leaves [umolm-2s-1]
+            Q_sl1, Q_sh1 (arrays): incident PAR at sunlit and shaded leaves [Wm-2]
             SWabs_sl, SWabs_sh (arrays): absorbed SW (PAR + NIR) at sunlit and shaded leaves [Wm-2]
             LWl (array): leaf net long-wave radiation [Wm-2]
             df (array): dry leaf fraction [-]
@@ -198,38 +199,36 @@ class PlantType(object):
             Tl_ave (array): average leaf temperature used in LW computation [degC]
             gr (array): radiative conductance [mol m-2 s-1]
         """
-
         # --- sunlit leaves
-        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sl, Q_sl1,
-                            SWabs_sl, LWl, U, Tl_ave, gr, P=P, model=self.StomaModel,
-                            Ebal=Ebal, dict_output=True)
+        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sl, U,
+                            forcing, leaftype='sunlit', model=self.StomaModel)
 
         # --- shaded leaves
-        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sh, Q_sh1,
-                            SWabs_sh, LWl, U, Tl_ave, gr, P=P, model=self.StomaModel,
-                            Ebal=Ebal, dict_output=True)
+        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sh, U,
+                            forcing, leaftype='shaded', model=self.StomaModel)
 
-        if Ebal:
+        if forcing['Ebal']:
             self.Tl_sh= sh['Tl'].copy()
             self.Tl_sl = sl['Tl'].copy()
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
-        pt_stats = self._integrate(sl, sh, f_sl)
+        f_sl = forcing['radiation']['PAR']['sunlit']['fraction']
+        pt_stats, layer_stats = self._integrate(sl, sh, f_sl, df)
 
         # --- sink/source terms
-        dtsource = df * (f_sl*sl['H'] + (1 - f_sl)*sh['H'])*self.lad  # W m-3
-        dqsource = df * (f_sl*sl['E'] + (1.0 - f_sl)*sh['E'])*self.lad  # mol m-3 s-1
-        dcsource = - df *(f_sl*sl['An'] + (1.0 - f_sl)*sh['An'])*self.lad  #umol m-3 s-1
-        dRstand = np.sum(df * (f_sl*sl['Rd'] + (1.0 - f_sl)*sh['Rd'])*self.lad*self.dz)  # add dark respiration umol m-2 s-1
-        Frw = df * (f_sl*sl['Fr'] + (1 - f_sl)*sh['Fr'])*self.lad
+        sources = {'h2o': layer_stats['transpiration'],  # [mol m-3 s-1]
+                   'co2': -layer_stats['net_co2'],  # [umol m-3 s-1]
+                   'sensible_heat': layer_stats['sensible_heat'],  # [W m-3]
+                   'latent_heat': layer_stats['transpiration'] * LATENT_HEAT,  # [W m-3]
+                   'fr': layer_stats['fr']}  # [W m-3]
 
-        return pt_stats, dtsource, dqsource, dcsource, dRstand, Frw
+        return pt_stats, sources
 
-    def _integrate(self, sl, sh, f_sl):
+    def _integrate(self, sl, sh, f_sl, df):
         """
         integrates layerwise statistics (per unit leaf area) to plant level
         Arg:
-            sl, sh - dict of leaf-level outputs for sunlit and shaded leaves:         
+            sl, sh - dict of leaf-level outputs for sunlit and shaded leaves:
             
             x = {'An': An, 'Rd': Rd, 'E': fe, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
                  'Cs': Cs, 'gs_v': gsv, 'gs_c': gs_opt, 'gb_v': gb_v}
@@ -237,24 +236,18 @@ class PlantType(object):
             y - plant level statistics
         """
         # plant fluxes, weight factors is sunlit and shaded LAI at each layer
-        f1 = f_sl*self.lad*self.dz
-        f2 = (1.0 - f_sl)*self.lad*self.dz
+        f1 = df * f_sl * self.lad
+        f2 = df * (1.0 - f_sl) * self.lad
 
-        keys = ['An', 'Rd', 'E']
-        y = {k: np.nansum(sl[k]*f1 + sh[k]*f2) for k in keys}
-        del keys
+        keys = ['net_co2', 'dark_respiration', 'transpiration', 'sensible_heat', 'fr']
+        pt_stats = {k: np.sum((sl[k]*f1 + sh[k]*f2) * self.dz) for k in keys}  # flux per m-2(ground)
 
-        # effective statistics; layerwise fluxes weighted by An
-        g1 = f1 * sl['An'] / np.maximum(eps, np.nansum(f1 * sl['An'] + f2 * sh['An']))
-        g2 = f2 * sh['An'] / np.maximum(eps, np.nansum(f1 * sl['An'] + f2 * sh['An']))
-        # print sum(g1 + g2)        
-        keys = ['Tl', 'Ci', 'Cs', 'gs_v', 'gb_v']
+        layer_stats = {k: sl[k]*f1 + sh[k]*f2 for k in keys}  # flux per m-3
 
-        y.update({k: np.nansum(sl[k]*g1 + sh[k]*g2) for k in keys})
-        # print y
-        y.update({'Tleaf': f_sl * sl['Tl'] + (1.0 - f_sl) * sh['Tl']})
-        y.update({'Tleaf_sl': sl['Tl'] * self.lad})
-        y.update({'Tleaf_sh': sh['Tl'] * self.lad})
+        # leaf temperatures
+        pt_stats.update({'Tleaf': f_sl * sl['Tl'] + (1.0 - f_sl) * sh['Tl']})  # dry leaf temperature
+        pt_stats.update({'Tleaf_sl': sl['Tl'] * self.lad})
+        pt_stats.update({'Tleaf_sh': sh['Tl'] * self.lad})
 
-        return y
+        return pt_stats, layer_stats
 

@@ -68,7 +68,6 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     Nsim = 1
 
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
-#    logging.info('pyAPES started. Number of simulations: {}'.format(Nsim))
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
                            gpara['start_time'],
@@ -141,7 +140,7 @@ class Model(object):
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para, self.soil.grid['dz'])
 
-        self.Nplant_types = len(self.canopy_model.Ptypes)
+        self.Nplant_types = len(self.canopy_model.planttypes)
 
         self.results = _create_results(gen_para['variables'],
                                        self.Nsteps,
@@ -198,9 +197,11 @@ class Model(object):
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
             soil_forcing = {'potential_infiltration': ffloor_flux['potential_infiltration'],
-                            'potential_evaporation': ffloor_flux['soil_evaporation'],
+                            'potential_evaporation': (ffloor_flux['soil_evaporation']
+                                                      + ffloor_flux['capillar_rise']),
                             'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
-                            'ground_heat_flux': -ffloor_flux['ground_heat_flux']}
+                            'ground_heat_flux': -ffloor_flux['ground_heat_flux'],
+                            'date': self.forcing.index[k]}
 
             # transpiration sink [m s-1]
             rootsink =  self.canopy_model.rad * canopy_flux['transpiration']

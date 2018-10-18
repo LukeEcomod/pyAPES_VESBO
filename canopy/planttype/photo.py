@@ -13,13 +13,15 @@ Created on Mon May 15 13:43:44 2017
 import numpy as np
 import matplotlib.pyplot as plt
 from canopy.micromet import leaf_boundary_layer_conductance, e_sat
-eps = np.finfo(float).eps  # machine epsilon
+
+import logging
+logger = logging.getLogger(__name__)
 
 from canopy.constants import *
 H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]
 TN = 25.0 + DEG_TO_KELVIN  # reference temperature [K]
 
-def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr, P=101300.0, model='CO_OPTI', Ebal=True,
+def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit', model='CO_OPTI',
                    dict_output=True):
     """
     Entry-point to coupled leaf gas-exchange and energy balance functions.
@@ -97,24 +99,24 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
     # -- parameters -----
     lt = leafp['lt']
 
-    # canopy nodes
-    ic = np.where(abs(LW) > 0.0)
-
-    T = np.array(T)
-    Qp = np.array(Qp)
-    U = np.array(U)
-    H2O = np.array(H2O, ndmin=1)
-    CO2 = np.array(CO2, ndmin=1)
-    Rabs = np.array(SWabs + LW, ndmin=1)  # isothermal net radiation (Wm-2)
-    Tl = np.array(Tl)
-    gr=np.array(gr)
-
-    Tl_ini = Tl.copy()
+    P = forcing['air_pressure']
+    Tl_ave = forcing['leaf_temperature']
+    Qp = forcing['radiation']['PAR'][leaftype]['incident'] * PAR_TO_UMOL
+    Ebal = forcing['Ebal']
+    if Ebal:
+        gr = forcing['radiation']['LW']['gr']
+        Rabs = (forcing['radiation']['PAR'][leaftype]['absorbed']
+                + forcing['radiation']['NIR'][leaftype]['absorbed']
+                + forcing['radiation']['LW']['net_leaf'])
+        # canopy nodes
+        ic = np.where(abs(forcing['radiation']['LW']['net_leaf']) > 0.0)
+    else:
+        gr = 0.0
 
     # vapor pressure
     esat, s = e_sat(Tl)
     s = s / P  # slope of esat, mol/mol / degC
-    Dleaf = np.maximum(eps, esat / P - H2O)  # mol/mol
+    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
 
     itermax = 20
     err = 999.0
@@ -150,10 +152,13 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
             # vapor pressure
             esat, s = e_sat(Tl)
             s = s / P  # slope of esat, mol/mol / degC
-            Dleaf = np.maximum(eps, esat / P - H2O)  # mol/mol
+            Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
             if iterNo == itermax:
-                print 'Maximum number of iterations reached in dry leaf module'
-                print('err', err, 'Tl', np.mean(Tl))
+                logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_%s = %.2f, err = %.2f',
+                             forcing['date'],
+                             forcing['iteration'],
+                             leaftype,
+                             np.mean(Tl), err)
         else:
             err = 0.0
 
@@ -166,8 +171,14 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, Qp, SWabs, LW, U, Tl_ave, gr,
 #        print('leafinterface: ', Tl, Qp, Dleaf, CO2, gb_c, gb_v )
 
     if dict_output:  # return dict
-        x = {'An': An, 'Rd': Rd, 'E': E, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
-             'Cs': Cs, 'gs_v': gsv, 'gs_c': gs_opt, 'gb_v': gb_v}
+#        x = {'An': An, 'Rd': Rd, 'E': E, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
+#             'Cs': Cs, 'gs_v': gsv, 'gs_c': gs_opt, 'gb_v': gb_v}
+        x = {'net_co2': An,
+             'dark_respiration': Rd,
+             'transpiration': E,
+             'sensible_heat': H,
+             'fr': Fr,
+             'Tl': Tl}
         return x
     else:  # return 11 arrays
         return An, Rd, E, H, Fr, Tl, Ci, Cs, gsv, gs_opt, gb_v
@@ -241,7 +252,7 @@ def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
         NUM2 = np.sqrt(H2O_CO2_RATIO*VPD*La*k1_c**2 * (cs - Tau_c)*(k2_c + Tau_c) * ((k2_c + (cs - 2*H2O_CO2_RATIO*VPD*La))**2)*(k2_c + (cs - H2O_CO2_RATIO*VPD*La)))
         DEN2 = H2O_CO2_RATIO*VPD*La*((k2_c + cs)**2) * (k2_c + (cs - H2O_CO2_RATIO*VPD*La))
 
-        gs_opt = (NUM1 / DEN1) + (NUM2 / DEN2) + eps
+        gs_opt = (NUM1 / DEN1) + (NUM2 / DEN2) + EPS
 
         ci = (1. / (2 *gs_opt)) * (-k1_c - k2_c*gs_opt + cs*gs_opt + Rd + np.sqrt((k1_c + k2_c*gs_opt - cs*gs_opt - Rd)**2 \
             - 4*gs_opt*(-k1_c*Tau_c - k2_c*cs*gs_opt - k2_c*Rd)))

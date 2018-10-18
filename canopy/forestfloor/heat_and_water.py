@@ -366,7 +366,7 @@ def heat_and_water_exchange(properties,
     """
     solver = solver.lower()
 
-    precipitation = forcing['throughfall_rain']  # [mm s-1]
+    precipitation = forcing['throughfall_ffloor'] * WATER_DENSITY  # [m s-1] -> [mm s-1]
 
     # store previous dt value for computing water closure;
     # noticed later this is as input moss_water_content

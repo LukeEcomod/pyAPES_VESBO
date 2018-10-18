@@ -30,36 +30,31 @@ def get_cpara(dbhfile):
            'pheno_cycle': True  # account for phenological cycle
            }
 
-    # --- site location ---
-    loc = {'lat': 60.63,  # latitude
-           'lon': 23.95  # longitude
-           }
-
-    # --- aerodynamics ---
-    aero = {'zos': 0.01,  # forest floor roughness length [m]
-            'dPdx': 0.01,  # horizontal pressure gradient
-            'Cd': 0.15,  # drag coefficient
-            'Utop': 5.0,  # ensemble U/ustar
-            'Ubot': 0.0,  # lower boundary
-            'Sc': {'T': 2.0, 'H2O': 2.0, 'CO2': 2.0}  # Schmidt numbers
-            }
+    # --- micrometeo ---
+    micromet = {'zos': 0.01,  # forest floor roughness length [m]
+                'dPdx': 0.01,  # horizontal pressure gradient
+                'Cd': 0.15,  # drag coefficient
+                'Utop': 5.0,  # ensemble U/ustar
+                'Ubot': 0.0,  # lower boundary
+                'Sc': {'T': 2.0, 'H2O': 2.0, 'CO2': 2.0}  # Schmidt numbers
+                }
 
     # --- radiation ---
-    radi = {'clump': 0.7,  # clumping index [-]
-            'leaf_angle': 1.0,  # leaf-angle distribution [-]
-            'Par_alb': 0.12,  # shoot Par-albedo [-]
-            'soil_Par_alb': 0.05,  # soil (moss) Par-albedo [-]
-            'Nir_alb': 0.55,  # shoot NIR-albedo [-]
-            'leaf_emi': 0.98
-            }
+    radiation = {'clump': 0.7,  # clumping index [-]
+                 'leaf_angle': 1.0,  # leaf-angle distribution [-]
+                 'Par_alb': 0.12,  # shoot Par-albedo [-]
+                 'Nir_alb': 0.55,  # shoot NIR-albedo [-]
+                 'leaf_emi': 0.98
+                 }
 
-    # --- interception and snowmodel ---  SADANNAN KORJAUSKERTOIMET?
-    interc_snow = {'wmax': 0.15e-03, #0.5e-03,  # maximum interception storage capacity for rain [m per unit of LAI]
-                   'wmaxsnow': 1.2e-03, #4.0e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
-                   'w_ini': 0.0,  # initial canopy storage [m]
-                   'Tmin': 0.0,  # temperature below which all is snow [degC]
-                   'Tmax': 1.0,  # temperature above which all is water [degC]
-                   }
+    # --- interception ---  SADANNAN KORJAUSKERTOIMET?
+    interception = {'wmax': 0.15e-03, #0.5e-03,  # maximum interception storage capacity for rain [m per unit of LAI]
+                    'wmaxsnow': 1.2e-03, #4.0e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
+                    'w_ini': 0.0,  # initial canopy storage [m]
+                    'Tmin': 0.0,  # temperature below which all is snow [degC]
+                    'Tmax': 1.0,  # temperature above which all is water [degC]
+                    'lt': 0.1  # leaf length scale for aerodynamic resistance [m] NOTE: seems that lt order of 1-10 cm is appropriate for pine evaporation
+                    }
 
     # --- forest floor ---
     # defined in parameters.forestfloor.py
@@ -169,7 +164,7 @@ def get_cpara(dbhfile):
                                      'Jmax': [42.8, 200.0, 637.0]})
     plant_types = [pine, spruce, decid, shrubs]
 
-    cpara.update({'ctr': ctr, 'loc': loc, 'radi': radi, 'aero': aero,'grid': grid,
-                  'interc_snow': interc_snow, 'plant_types': plant_types, 'ffloor': ffloor})
+    cpara.update({'ctr': ctr, 'grid': grid, 'radiation': radiation, 'micromet': micromet,
+                  'interception': interception, 'plant_types': plant_types, 'ffloor': ffloor})
 
     return cpara

@@ -71,7 +71,7 @@ water_model = {'solve': True,
                'drainage_equation': {  # drainage equation and drainage parameters
                                      'type': 'Hooghoudt',
                                      'depth': 1.0,  # drain depth [m]
-                                     'spacing': 40.0,  # drain spacing [m]
+                                     'spacing': 45.0,  # drain spacing [m]
                                      'width': 1.0,  # drain width [m]
                                      }
                 }

@@ -151,9 +151,9 @@ class Soil(object):
 
         if self.solve_water:
             water_fluxes = self.water.run(dt,
-                                               forcing,
-                                               water_sink=water_sink,
-                                               lower_boundary=lbc_water)
+                                          forcing,
+                                          water_sink=water_sink,
+                                          lower_boundary=lbc_water)
             fluxes.update(water_fluxes)
 
         elif gwl is not None:
@@ -167,10 +167,10 @@ class Soil(object):
 
         if self.solve_heat:
             heat_fluxes = self.heat.run(dt,
-                                             forcing,
-                                             state['volumetric_water_content'],
-                                             heat_sink=heat_sink,
-                                             lower_boundary=lbc_heat)
+                                        forcing,
+                                        state['volumetric_water_content'],
+                                        heat_sink=heat_sink,
+                                        lower_boundary=lbc_heat)
 
             fluxes.update(heat_fluxes)
         else:

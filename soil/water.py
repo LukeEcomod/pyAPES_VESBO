@@ -15,6 +15,9 @@ from scipy.interpolate import interp1d
 from tools.utilities import tridiag as thomas, spatial_average
 from constants import EPS
 
+import logging
+logger = logging.getLogger(__name__)
+
 class Water(object):
 
     def __init__(self, grid, profile_propeties, model_specs):
@@ -53,6 +56,7 @@ class Water(object):
         Returns:
             self (object)
         """
+
         # lower boundary condition
         self.lbc = model_specs['lower_boundary']
 
@@ -76,19 +80,31 @@ class Water(object):
 
         # model specs
         self.h_pond_max = model_specs['pond_storage_max']
+
         if model_specs['solve']:
             self.solution_type = model_specs['type'].upper()
             if self.solution_type == 'EQUILIBRIUM':
                 # interpolated functions for soil column ground water dpeth vs. water storage
                 self.wsto_gwl_functions = gwl_Wsto(self.grid['dz'], self.pF)
+            else:
+                self.solution_type = 'RICHARDS EQUATION'
+            info = 'Water balance in soil solved using: %s' % self.solution_type
             # drainage equation
             if 'drainage_equation' in model_specs:
                 self.drainage_equation = model_specs['drainage_equation']
                 self.drainage_equation['type'] = model_specs['drainage_equation']['type'].upper()
+                if self.drainage_equation['type'] != 'HOOGHOUDT':
+                    raise ValueError("Unknown drainage equation type %s"
+                                     % self.drainage_equation['type'])
+                info += ' & %s' % self.drainage_equation['type']
             else:
                 self.drainage_equation = {'type': None}
             # Keep track of dt used in solution
             self.subdt = None
+        else:
+            info = 'Water balance in soil not solved.'
+
+        logger.info(info)
 
     def run(self, dt, forcing, water_sink=None, lower_boundary=None):
         r""" Runs soil water balance.
@@ -459,28 +475,36 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
 
             # check solution, if problem continues break
             if any(abs(h_iter - h_iterold) > 1.0) or any(np.isnan(h_iter)):
-                dt = dt / 3.0
-                if dt > 10:
-                    dt = max(dt, 30)
+                if dt / 3.0 > 11.0:
+                    dt = max(dt / 3.0, 30.0)
+                    logger.debug('%s (iteration %s) Solution blowing up, retry with dt = %.1f s',
+                                 forcing['date'],
+                                 iterNo, dt)
                     iterNo = 0
-                    h_iter = h_old.copy()  #h_iterold.copy()
-                    W_iter = W_old.copy()  #W_iterold.copy()
-                    print 'soil_water.waterflow1D: Solution blowing up, new dt = ' + str(dt)
+                    h_iter = h_old.copy()
+                    W_iter = W_old.copy()
                     continue
                 else:  # convergence not reached with dt=30s, break
-                    print 'soil_water.waterflow1D: Problem with solution, blow up'
+                    logger.debug('%s (iteration %s) No solution found (blow up), h and Wtot set to old values.',
+                                 forcing['date'],
+                                 iterNo)
+                    h_iter = h_old.copy()
+                    W_iter = W_old.copy()
                     break
 
             # if problems reaching convergence devide time step and retry
             if iterNo == 20:
-                dt = dt / 3.0
-                if dt > 10:
-                    dt = max(dt, 30)
+                if dt / 3.0 > 11.0:
+                    dt = max(dt / 3.0, 30.0)
+                    logger.debug('%s (iteration %s) More than 20 iterations, retry with dt = %.1f s',
+                                 forcing['date'],
+                                 iterNo, dt)
                     iterNo = 0
-                    print 'soil_water.waterflow1D: More than 20 iterations, new dt = ' + str(dt)
                     continue
                 else:  # convergence not reached with dt=30s, break
-                    print 'soil_water.waterflow1D: Solution not converging'
+                    logger.debug('%s (iteration %s) Solution not converging, err_W: %.5f, err_h: %.5f',
+                                 forcing['date'],
+                                 iterNo, err1, err2)
                     break
 
             # errors for determining convergence
@@ -520,7 +544,6 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
 
         """ solution time and new timestep """
         t += dt
-#        print 'soil_water.waterflow1D: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo)
 
         dt_old = dt  # save temporarily
         # select new time step based on convergence

@@ -55,7 +55,8 @@ class Radiation(object):
         self.SWmodel = ctr['SwModel'].upper()
         self.LWmodel = ctr['LwModel'].upper()
         logger.info('Shortwave radiation model: %s', self.SWmodel)
-        logger.info('Longwave radiation model: %s', self.LWmodel)
+        if ctr['Ebal']:
+            logger.info('Longwave radiation model: %s', self.LWmodel)
 
     def SW_profiles(self, forcing, radtype):
         r""" Computes distribution of within canopy shortwave radiation
@@ -88,9 +89,8 @@ class Radiation(object):
         radtype = radtype.upper()
         if radtype == 'PAR' or radtype == 'NIR':
 
-
             if self.SWmodel == 'ZHAOQUALLS':
-                SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(
+                SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_gr, f_sl, alb = canopy_sw_ZhaoQualls(
                     forcing['LAIz'],
                     self.clump, self.leaf_angle,
                     forcing['zenith_angle'],
@@ -101,10 +101,11 @@ class Radiation(object):
 
             # ADD OTHER MODELS??
 
-            # incident SW at ground level
-            SW_gr = (SWb[0] + SWd[0])
+            results = {'sunlit':{'incident': Q_sl, 'absorbed': q_sl, 'fraction': f_sl},
+                       'shaded':{'incident': Q_sh, 'absorbed': q_sh},
+                       'ground': SWb[0] + SWd[0]}
 
-            return Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, SW_gr
+            return results
 
         else:
             raise ValueError("Radiation type is not 'PAR' or 'NIR'")
@@ -148,7 +149,9 @@ class Radiation(object):
 
         # ADD OTHER MODELS??
 
-        return LWleaf, LWdn, LWup, gr
+        results = {'net_leaf': LWleaf, 'down': LWdn, 'up': LWup, 'gr': gr}
+
+        return results
 
 
 def solar_angles(lat, lon, jday, timezone=+2.0):

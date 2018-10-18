@@ -66,12 +66,12 @@ class Snowpack(object):
         Args:
             dt: timestep [s]
             T: air temperature [degC]
-            Trfall_rain: throughfall as rainfall [m]
-            Trfall_snow: throughfall as snowfall [m]
+            Trfall_rain: throughfall as rainfall [m s-1]
+            Trfall_snow: throughfall as snowfall [m s-1]
 
         Returns:
-            Potinf: potential infiltration [m]
-            MBE: mass balance error [m]
+            Potinf: potential infiltration [m s-1]
+            MBE: mass balance error [m s-1]
         """
 
         """ --- initial conditions for calculating mass balance error --"""
@@ -92,10 +92,10 @@ class Snowpack(object):
 
         """ --- update state of snowpack and compute potential infiltration --- """
         ice = np.maximum(0.0,
-                             self.old_ice + forcing['throughfall_snow'] + freeze - melt)
+                             self.old_ice + forcing['throughfall_snow'] * dt + freeze - melt)
 
         liq = np.maximum(0.0,
-                             self.old_liq + forcing['throughfall_rain'] - freeze + melt)
+                             self.old_liq + forcing['throughfall_rain'] * dt - freeze + melt)
 
         # potential infiltration [m]
         pot_inf = np.maximum(0.0,
@@ -109,11 +109,11 @@ class Snowpack(object):
 
         # mass-balance error [m]
         water_closure = ((self.swe - self.old_swe)
-                         - (forcing['throughfall_rain'] + forcing['throughfall_snow'] - pot_inf))
+                         - (forcing['throughfall_rain'] * dt + forcing['throughfall_snow'] * dt - pot_inf))
 
 
-        fluxes = {'potential_infiltration': pot_inf,
-                  'water_closure': water_closure}
+        fluxes = {'potential_infiltration': pot_inf / dt,
+                  'water_closure': water_closure / dt}
 
         states = {'snow_water_equivalent': self.swe}
 

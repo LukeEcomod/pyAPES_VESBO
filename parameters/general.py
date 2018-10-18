@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-06-11",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-09-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -35,8 +35,8 @@ gpara = {
                       ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-                      ['canopy_net_leaf_LW', 'net leaf longwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
-                      ['canopy_net_leaf_radiation', 'leaf net radiation [W m-2]', ('date', 'simulation', 'canopy')],
+                      ['canopy_leaf_net_LW', 'net leaf longwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
+                      ['canopy_leaf_SW_absorbed', 'leaf absorbed shortwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m s-1]', ('date', 'simulation')],
                       ['canopy_co2_flux', 'co2 flux [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
                       ['canopy_latent_heat_flux', 'latent heat flux [W m-2]', ('date', 'simulation', 'canopy')],
@@ -57,11 +57,11 @@ gpara = {
                       ['soil_volumetric_water_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
                       ['soil_volumetric_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
                       ['soil_thermal_conductivity', 'thermal conductivity [W m-1 K-1]', ('date', 'simulation', 'soil')],
-                      ['canopy_water_closure_canopy', 'interception model mass balance error [m]', ('date', 'simulation')],
-                      ['canopy_energy_closure_canopy', 'energy closure in canopy [W m-2]', ('date', 'simulation')],
+                      ['canopy_water_closure', 'interception model mass balance error [m s-1]', ('date', 'simulation')],
+                      ['canopy_energy_closure', 'energy closure in canopy [W m-2]', ('date', 'simulation')],
                       ['canopy_fr_source', 'Frsource in canopy [W m-2]', ('date', 'simulation')],
-                      ['soil_water_closure', 'soil mass balance error [m]', ('date', 'simulation')],
-                      ['soil_energy_closure', 'soil heat balance error [W m2]', ('date', 'simulation')],
+                      ['soil_water_closure', 'soil water balance error [m s-1]', ('date', 'simulation')],
+                      ['soil_energy_closure', 'soil heat balance error [W m-2]', ('date', 'simulation')],
                       ['canopy_z', 'canopy model grid node elevations [m]', ('canopy')],
                       ['soil_z', 'soil model grid node elevations [m]', ('soil')],
                       ['ffloor_potential_infiltration', 'potential infiltration to soil [m s-1]', ('date', 'simulation')],
@@ -69,10 +69,10 @@ gpara = {
                       ['ffloor_ground_heat_flux', 'ground heat flux (forest floor) [W m-2]', ('date', 'simulation')],
                       ['ffloor_sensible_heat_flux', 'sensible heat flux (forest floor) [W m-2]', ('date', 'simulation')],
                       ['ffloor_latent_heat_flux', 'latent heat flux (forest floor) [W m-2]', ('date', 'simulation')],
-                      ['ffloor_water_closure_snow', "water balance error (snowcover) [m]", ('date', 'simulation')],
-                      ['ffloor_water_closure_bryo', "water balance error (bryophytes) [m]", ('date', 'simulation')],
-                      ['ffloor_energy_closure_bryo', "energy balance error (bryophytes) [m]", ('date', 'simulation')],
-                      ['ffloor_energy_closure_soil', "energy balance error (soil) [m]", ('date', 'simulation')],
+                      ['ffloor_water_closure_snow', "water balance error (snowcover) [m s-1]", ('date', 'simulation')],
+                      ['ffloor_water_closure_bryo', "water balance error (bryophytes) [m s-1]", ('date', 'simulation')],
+                      ['ffloor_energy_closure_bryo', "energy balance error (bryophytes) [W m-2]", ('date', 'simulation')],
+                      ['ffloor_energy_closure_soil', "energy balance error (soil) [W m-2]", ('date', 'simulation')],
                       ['ffloor_bryo_carbon_pool', 'carbon pool (bryophyte) [kg C m-2]', ('date', 'simulation')],
                       ['ffloor_bryo_photosynthesis', 'photosynthesis rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_bryo_respiration', 'respiration rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],

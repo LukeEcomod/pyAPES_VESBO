@@ -17,6 +17,9 @@ from constants import K_WATER, K_ICE, K_AIR, K_ORG, K_SAND, K_SILT, K_CLAY
 from constants import CV_AIR, CV_WATER, CV_ICE, CV_ORGANIC, CV_MINERAL
 from constants import LATENT_HEAT_FREEZING, FREEZING_POINT_H2O, ICE_DENSITY
 
+import logging
+logger = logging.getLogger(__name__)
+
 class Heat(object):
 
     def __init__(self, grid, profile_propeties, model_specs, volumetric_water_content):
@@ -71,8 +74,13 @@ class Heat(object):
 
         # model specs
         if model_specs['solve']:
+            info = 'Heat balance in soil solved.'
             # Keep track of dt used in solution
             self.subdt = None
+        else:
+            info = 'Heat balance in soil not solved.'
+
+        logger.info(info)
 
     def run(self, dt, forcing, volumetric_water_content, heat_sink=None, lower_boundary=None):
         r""" Runs soil heat balance.
@@ -118,7 +126,8 @@ class Heat(object):
                                                sink=heat_sink,
                                                ubc=upper_boundary,
                                                lbc=self.lbc,
-                                               steps=dt / self.subdt)
+                                               steps=dt / self.subdt,
+                                               date=forcing['date'])
 
         self.update_state(state, volumetric_water_content)
 
@@ -153,7 +162,7 @@ class Heat(object):
 """ Soil heat transfer in 1D """
 
 def heatflow1D(t_final, grid, T_ini, Wtot, poros, solid_composition, cs, bedrockL, fp,
-               sink, ubc, lbc, steps=10):
+               sink, ubc, lbc, steps=10, date=None):
     r""" Solves soil heat conduction in 1-D using implicit finite difference solution
     of heat equation. Neglects heat convection (heat transfer with water flow).
 
@@ -316,29 +325,34 @@ def heatflow1D(t_final, grid, T_ini, Wtot, poros, solid_composition, cs, bedrock
 
             # if problems reaching convergence devide time step and retry
             if iterNo == 20:
-                dt = dt / 3.0
-                if dt > 10:
-                    dt = max(dt, 30)
+                if dt / 3.0 > 101.0:
+                    dt = max(dt / 3.0, 300.0)
+                    logger.debug('%s (iteration %s) More than 20 iterations, retry with dt = %.1f s',
+                                 date, iterNo, dt)
                     iterNo = 0
                     T_iter = T_old.copy()
                     Wice_iter = Wice_old.copy()
-                    #print 'soil_heat.heatflow_1D: More than 20 iterations, new dt = ' + str(dt) + 'Terr1 = ' + str(err1)+ 'Terr2 = ' + str(err2)
                     continue
-                else:  # convergence not reached with dt=30s, break
-                    #print 'soil_heat.heatflow_1D: Solution not converging' + 'Terr1 = ' + str(err1)+ 'Terr2 = ' + str(err2) + 'Tair = ' + str(T_sur)
+                else:  # convergence not reached with dt=300.0s, break
+                    logger.debug('%s (iteration %s) Solution not converging, err_T: %.5f, err_Wice: %.5f, dt = %.1f s',
+                                 date, iterNo, err1, err2, dt)
                     break
             # check solution, if problem continues break
             elif any(np.isnan(T_iter)):
-                dt = dt / 3.0
-                if dt > 10:
-                    dt = max(dt, 30)
+                if dt / 3.0 > 101.0:
+                    dt = max(dt / 3.0, 300.0)
+                    logger.debug('%s (iteration %s) Solution blowing up, retry with dt = %.1f s',
+                                 date, iterNo, dt)
                     iterNo = 0
                     T_iter = T_old.copy()
                     Wice_iter = Wice_old.copy()
-                    #print 'soil_heat.heatflow_1D: Solution blowing up, new dt = ' + str(dt)
                     continue
-                else:  # convergence not reached with dt=30s, break
-                    #print 'soil_heat.heatflow_1D: Problem with solution, blow up'
+                else:  # convergence not reached with dt=300.0s, break
+                    logger.debug('%s (iteration %s) No solution found (blow up), T and Wice set to old values.',
+                                 date,
+                                 iterNo)
+                    T_iter = T_old.copy()
+                    Wice_iter = Wice_old.copy()
                     break
 
             # errors for determining convergence
@@ -364,17 +378,16 @@ def heatflow1D(t_final, grid, T_ini, Wtot, poros, solid_composition, cs, bedrock
 
         """ solution time and new timestep """
         t += dt
-#        print 'soil_heat.heatflow_1D: t = ' + str(t) + ' dt = ' + str(dt) + ' iterNo = ' + str(iterNo) + 'Terr1 = ' + str(err1)
 
         dt_old = dt  # save temporarily
         # select new time step based on convergence
         if iterNo <= 3:
-            dt = dt * 2
+            dt = dt * 2.0
         elif iterNo >= 6:
-            dt = dt / 2
+            dt = dt / 2.0
 
-        # limit to minimum of 30s
-        dt = max(dt, 30)
+        # limit to minimum of 300s
+        dt = max(dt, 300.0)
 
         # save dto for output to be used in next run of heatflow1D()
         if dt_old == t_final or t_final > t:
