@@ -31,7 +31,6 @@ initial_conditions = {
 
 baresoil = {
         'ground_coverage': 0.0,
-        'porosity': 0.947,  # porosity [m3m-3]    ----> vesimallista?
         'roughness_length':  0.01, # check right value
         'optical_properties': {
                 'emissivity': 0.98,
