@@ -12,7 +12,7 @@ import numpy as np
 from canopy.constants import EPS
 
 
-def soil_respiration(properties, Ts, Wliq):
+def soil_respiration(properties, Ts, Wliq, Wair):
     """ Soil respiration beneath forestfloor
 
     Heterotrophic and autotrophic respiration rate (CO2-flux) based on
@@ -27,7 +27,6 @@ def soil_respiration(properties, Ts, Wliq):
             'Q10'
             'poros'
             'limitpara'
-
         Ts - soil temperature [degC]
         Wliq - soil vol. moisture content [m3 m-3]
     Returns:
@@ -38,20 +37,16 @@ def soil_respiration(properties, Ts, Wliq):
     # sp = {'Yolo':[3.83, 4.43, 1.25, 0.854],
     #       'Valentine': [1.65,6.15,0.385,1.03]}
 
-    poros = properties['porosity']
-    limitpara = properties['respiration']['limitpara']
-    r10 = properties['respiration']['R10']
-    q10 = properties['respiration']['Q10']
-
-    Wliq = np.minimum(poros, Wliq)
-    poros_air = poros - Wliq + EPS  # air filled porosity
+    limitpara = properties['limitpara']
+    r10 = properties['R10']
+    q10 = properties['Q10']
 
     # unrestricted respiration rate
     base_respiration = r10 * np.power(q10, (Ts - 10.0) / 10.0)
 
     # moisture response (substrate diffusion, oxygen limitation)
     modifier = np.minimum(limitpara[0] * Wliq**limitpara[2],
-                          limitpara[1] * poros_air**limitpara[3])  # ]0...1]
+                          limitpara[1] * Wair**limitpara[3])  # ]0...1]
     modifier = np.minimum(modifier, 1.0)
 
     respiration = base_respiration * modifier

@@ -206,9 +206,10 @@ class ForestFloor(object):
 
         # --- Soil respiration ---
 
-        respiration, _ = soil_respiration(self.baresoil.properties,
+        respiration, _ = soil_respiration(self.baresoil.properties['respiration'],
                                           forcing['soil_temperature'],
-                                          forcing['soil_volumetric_water'])
+                                          forcing['soil_volumetric_water'],
+                                          forcing['soil_volumetric_air'])
 
         if self.snowpack.snowcover():  # snow on the ground
 

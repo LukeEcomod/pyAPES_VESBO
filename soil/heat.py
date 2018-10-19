@@ -140,7 +140,7 @@ class Heat(object):
             state (dict):
                 'temperature' (float):  [degC]
         Returns:
-            updates .T, .Wice, .Wliq, .thermal_conductivity
+            updates .T, .Wice, .Wliq, .Wair, .thermal_conductivity
         """
         if 'temperature' in state:
             if isinstance(state['temperature'], float):
@@ -155,6 +155,7 @@ class Heat(object):
             self.Wliq = state['volumetric_liquid_water_content']
         else:
             self.Wliq = Wtot - self.Wice
+        self.Wair = self.porosity - Wtot
         self.thermal_conductivity = thermal_conductivity(self.porosity, self.Wliq, self.Wice,
                                                          solid_composition=self.solid_composition,
                                                          bedrockL=self.bedrock_thermal_conductivity)
