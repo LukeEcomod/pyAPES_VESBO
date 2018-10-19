@@ -31,6 +31,8 @@ from canopy.canopy import CanopyModel
 from soil.soil import Soil
 from parameters.canopy import get_cpara
 
+from parameters.sensitivity import parameters
+
 import logging
 from logging.config import dictConfig
 from parameters.general import logging_configuration
@@ -53,15 +55,8 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     # Import soil model parameters
     from parameters.soil import spara
 
-#    log_file = logging_configuration['handlers']['file']['filename']
-#    if not os.path.exists(log_file):
-#            open(log_file, 'w+')
-
-    # --- Logging ---
-#    logging.config.dictConfig(logging_configuration)
-#    mpl_logger = logging.getLogger('matplotlib')
-#    mpl_logger.setLevel(logging.WARNING)
-#    initialize_logger(logging_configuration)
+    param_space = []
+    for param in parameters:
 
     logger = logging.getLogger(__name__)
 
