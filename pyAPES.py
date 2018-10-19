@@ -25,13 +25,15 @@ import os
 import numpy as np
 import pandas as pd
 import time
+from copy import deepcopy as copy
+
 
 from tools.iotools import read_forcing
 from canopy.canopy import CanopyModel
 from soil.soil import Soil
 from parameters.canopy import get_cpara
 
-from parameters.sensitivity import parameters
+from parameters.sensitivity import parameters, iterate_parameters
 
 import logging
 from logging.config import dictConfig
@@ -55,12 +57,19 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     # Import soil model parameters
     from parameters.soil import spara
 
-    param_space = []
-    for param in parameters:
+    Nsim = parameters['count']
+
+    default_params = {
+            'canopy': cpara,
+            'soil': spara
+            }
+
+    param_space = [iterate_parameters(parameters, copy(default_params), count) for count in range(Nsim)]
+
 
     logger = logging.getLogger(__name__)
 
-    Nsim = 1
+#    Nsim = 1
 
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
     # Read forcing
@@ -72,7 +81,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     tasks = []
 
     for k in range(Nsim):
-        tasks.append(Model(gpara, cpara, spara, forcing, nsim=k))
+        tasks.append(Model(gpara, param_space[k]['canopy'], param_space[k]['soil'], forcing, nsim=k))
 
     if create_ncf:
         timestr = time.strftime('%Y%m%d%H%M')
