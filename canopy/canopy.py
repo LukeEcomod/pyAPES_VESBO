@@ -54,9 +54,9 @@ class CanopyModel(object):
                 'radiation' (dict): radiation model parameters
                 'micromet' (dict): micromet model parameters --- ROUGHNESS HEIGHT SHOULD from ffloor?
                 'interception' (dict): interception and snow model parameters
-                'plant_types' (list):
+                'planttypes' (list):
                     i. (dict): properties of planttype i
-                'ffloor': forestfloor parameters
+                'forestfloor': forestfloor parameters
                     'bryophytes'(list):
                         i. (dict): properties of bryotype i
                     'baresoil' (dict): baresoil parameters
@@ -107,8 +107,7 @@ class CanopyModel(object):
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
-        for k in range(len(cpara['plant_types'])):
-            p = cpara['plant_types'][k]
+        for p in cpara['planttypes'].values():
             for n in range(len(p['LAImax'])):
                 pp = p.copy()
                 pp['LAImax'] = p['LAImax'][n]
@@ -135,7 +134,7 @@ class CanopyModel(object):
 
         self.interception = Interception(cpara['interception'], self.lad * self.dz)
 
-        self.forestfloor = ForestFloor(cpara['ffloor'])
+        self.forestfloor = ForestFloor(cpara['forestfloor'])
 
     def run_daily(self, doy, Ta, PsiL=0.0):
         r""" Computatations at daily timestep.
@@ -412,8 +411,8 @@ class CanopyModel(object):
 
         fluxes_ffloor.update({
                 'potential_infiltration': fluxes_ffloor['potential_infiltration'],
-                'bryo_evaporation': fluxes_ffloor['bryo_evaporation'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
-                'soil_evaporation': fluxes_ffloor['soil_evaporation'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'evaporation_bryo': fluxes_ffloor['evaporation_bryo'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'evaporation_soil': fluxes_ffloor['evaporation_soil'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
                 'evaporation': fluxes_ffloor['evaporation'] * MOLAR_MASS_H2O * 1e-3  # [m s-1]
                 })
 

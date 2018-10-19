@@ -198,7 +198,7 @@ class Model(object):
             """ Water and Heat in soil """
             # potential infiltration and evaporation from ground surface
             soil_forcing = {'potential_infiltration': ffloor_flux['potential_infiltration'],
-                            'potential_evaporation': (ffloor_flux['soil_evaporation']
+                            'potential_evaporation': (ffloor_flux['evaporation_soil']
                                                       + ffloor_flux['capillar_rise']),
                             'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
                             'ground_heat_flux': -ffloor_flux['ground_heat_flux'],

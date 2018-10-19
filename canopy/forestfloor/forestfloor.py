@@ -73,9 +73,9 @@ class ForestFloor(object):
         bryotypes = []
 
         f_bryo = 0.0
-        for bryo in properties['bryophytes']:
+        for key, bryo in properties['bryophytes'].items():
             bryotypes.append(Bryophyte(bryo,
-                                       properties['initial_conditions']['bryophytes'][bryo['species']]))
+                                       properties['initial_conditions']['bryophytes'][key]))
             f_bryo += bryo['ground_coverage']
 
         self.bryotypes = bryotypes
@@ -288,8 +288,8 @@ class ForestFloor(object):
 
         fluxes.update({
                 'evaporation': evaporation,
-                'soil_evaporation': soil_evaporation,
-                'bryo_evaporation': bryo_evaporation,
+                'evaporation_soil': soil_evaporation,
+                'evaporation_bryo': bryo_evaporation,
                 'latent_heat_flux': latent_heat,
                 'sensible_heat_flux': sensible_heat,
                 'ground_heat_flux': ground_heat,
@@ -309,10 +309,10 @@ class ForestFloor(object):
         states.update(states_snow)
         states.update({
                 'temperature': temperature,
-                'bryo_temperature': bryo_temperature,
-                'soil_temperature': soil_temperature,
-                'bryo_water_storage': bryo_water_storage,
-                'bryo_carbon_pool': bryo_carbon_pool
+                'temperature_bryo': bryo_temperature,
+                'temperature_soil': soil_temperature,
+                'water_storage_bryo': bryo_water_storage,
+                'carbon_pool_bryo': bryo_carbon_pool
                 })
 
         return fluxes, states

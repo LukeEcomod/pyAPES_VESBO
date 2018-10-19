@@ -14,15 +14,15 @@ initial_conditions = {
                 'snow_water_equivalent': 0.0
                 },
         'bryophytes': {
-                'Hylocomium splendens': {
+                'hylocomium': {
                         'temperature': 10.0,
                         'water_content': 8.0
                         },
-                'Pleurozium schreberi': {
+                'pleurozium': {
                         'temperature': 10.0,
                         'water_content': 8.0
                         },
-                'Sphagnum fuscum': {
+                'sphagnum': {
                         'temperature': 10.0,
                         'water_content': 8.0
                         }
@@ -173,7 +173,9 @@ Sphagnum = {
         }
 
 # check that ground coverages sum to 1.0
-forestfloor = {'bryophytes': [Hylocomium, Pleurozium, Sphagnum],
+forestfloor = {'bryophytes': {'hylocomium': Hylocomium,
+                              'pleurozium': Pleurozium,
+                              'sphagnum': Sphagnum},
                'baresoil': baresoil,
                'snowpack': snowpack,
                'initial_conditions': initial_conditions

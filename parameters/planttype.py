@@ -4,107 +4,293 @@ Created on Fri Oct 19 10:23:58 2018
 
 @author: Kersti Haahti
 """
+from parameters.utilities import lad_profiles
 
-    # --- default values for plant characteristics ---
-    gamma = 1.5  # adjust shoot light response
-    plant_default = {'phenop': {  # --- seasonal cycle of phenology ---
-                                'Xo': 0.0,  # initial delayed temperature [degC]
-                                'fmin': 0.01,  # minimum photocapacity [-]
-                                'Tbase': -4.67,  # base temperature [degC]
-                                'tau': 8.33,  # time constant [days]
-                                'smax': 18.5  #threshold for full acclimation [degC]
-                                },
-                    'laip': {  # --- leaf-area seasonal dynamics ---
-                             'lai_min': 0.1,  # minimum LAI, fraction of annual maximum [-]
-                             'lai_ini': None,  # initial LAI fraction, if None lai_ini = Lai_min * LAImax
-                             'DDsum0': 0.0,  # degreedays at initial time [days]
-                             'Tbase': 5.0,  # base temperature [degC]
-                             'ddo': 45.0,  # degreedays at bud burst [days]
-                             'ddur': 23.0,  # duration of recovery period [days]
-                             'sso': 240.0,  # start doy of decrease, based on daylength
-                             'sdur': 30.0, # duration of decreasing period [days]
-                             },
-                    'photop': {  # --- leaf gas-exchange parameters ---
-                            'Vcmax': None,  # maximum carboxylation velocity [umolm-2s-1]
-                            'Jmax': None,  # maximum rate of electron transport [umolm-2s-1]
-                            'Rd': None,  # dark respiration rate [umolm-2s-1]
-                            'alpha': gamma * 0.2,  # quantum yield parameter [mol/mol]
-                            'theta': 0.7,  # co-limitation parameter of Farquhar-model
-                            'La':None,  # stomatal parameter (Lambda, m, ...) depending on model
-                            'm':None,
-                            'g0': 1.0e-3,  # residual conductance for CO2 [molm-2s-1]
-                            'kn': 0.6,
-                            'beta': 0.95,  # co-limitation parameter of Farquhar-model
-                            'drp': 0.7,
-                            'tresp': {  # --- temperature sensitivity parameters ---
-                                    'Vcmax': [],  # [Ha, Hd, Topt]; activation energy [kJmol-1], deactivation energy [kJmol-1], optimum temperature [degC]
-                                    'Jmax': [],  # [Ha, Hd, Topt];
-                                    'Rd': [33.0]}  #[Ha]; activation energy [kJmol-1)]
-                            },
-                    'leafp': {  # --- leaf properties ---
-                            'lt': 0.02,  # leaf lengthscale [m]
-                            'par_alb': 0.12,  # leaf Par albedo [-]
-                            'nir_alb': 0.55,  # leaf Nir albedo [-]
-                            'emi': 0.98  # leaf emissivity [-]
-                            },
-                    'rootp': {  # --- root zone properties ----
-                            'root_depth': 0.2,  # root depth [m]
-                            'beta': 0.943,  # shape parameter for root distribution model. Y=1-beta.^z_in_cm; Y=cumulative distribution (Gale & Grigal 1987)
-                            'RAI_LAI_multiplier': 2.0,  # multiplier for total fine root area index (RAI = 2*LAImax)
-                            'fine_radius': 2e-3,  # fine root radius [m]
-                            'radial_K': 5e-8  # maximum bulk root membrane conductance in radial direction [s-1]
-                            },
-                    }
-    pine = deepcopy(plant_default)  # initialize with default
-    spruce = deepcopy(plant_default)
-    decid = deepcopy(plant_default)
-    shrubs = deepcopy(plant_default)
-
-    # --- stand characteristics ---
-    # specify name and maximum leaf-area index, LAImax [m2/m2], and
-    # adjust values of 'phenop' and 'laip' if default values not suitable
-    pine.update({'name': 'pine', 'LAImax': []}) #[2.1]})
-    pine['phenop'].update({'fmin': 0.1})
-    pine['laip'].update({'lai_min': 0.8})
-
-    spruce.update({'name': 'spruce', 'LAImax': []}) #[1.0]})
-    spruce['phenop'].update({'fmin': 0.1})
-    spruce['laip'].update({'lai_min': 0.8})
-
-    decid.update({'name': 'decid', 'LAImax': []}) #[1.0]})
-
-    shrubs.update({'name': 'shrubs', 'LAImax': [0.7]})
-    shrubs['laip'].update({'lai_min': 0.5})
+def get_planttypes(dbhfile, grid):
+    """
+    Returns: 
+        planttypes (list):
+            i. planttype_i (dict):
+                'name' (str): name of planttype
+                'LAImax' (list): leaf area index of planttype groups
+                'lad' (list of arrays): normalized leaf area density profiles of planttype groups
+                'phenop' (dict): parameters for seasonal cycle of phenology
+                    'Xo': initial delayed temperature [degC]
+                    'fmin': minimum photocapacity [-]
+                    'Tbase': base temperature [degC]
+                    'tau': time constant [days]
+                    'smax': threshold for full acclimation [degC]
+                'laip' (dict): parameters forleaf-area seasonal dynamics
+                    'lai_min': minimum LAI, fraction of annual maximum [-]
+                    'lai_ini': initial LAI fraction, if None lai_ini = Lai_min * LAImax
+                    'DDsum0': degreedays at initial time [days]
+                    'Tbase': base temperature [degC]
+                    'ddo': degreedays at bud burst [days]
+                    'ddur': duration of recovery period [days]
+                    'sso': start doy of decrease, based on daylength [days]
+                    'sdur': duration of decreasing period [days]
+                'photop' (dict): leaf gas-exchange parameters
+                    'Vcmax': maximum carboxylation velocity [umolm-2s-1]
+                    'Jmax': maximum rate of electron transport [umolm-2s-1]
+                    'Rd': dark respiration rate [umolm-2s-1]
+                    'alpha': quantum yield parameter [mol/mol]
+                    'theta': co-limitation parameter of Farquhar-model
+                    'La': stomatal parameter (Lambda, m, ...) depending on model
+                    'm':
+                    'g0': residual conductance for CO2 [molm-2s-1]
+                    'kn':
+                    'beta':  co-limitation parameter of Farquhar-model
+                    'drp':
+                    'tresp' (dict): temperature sensitivity parameters
+                        'Vcmax': [Ha, Hd, Topt]; activation energy [kJmol-1], deactivation energy [kJmol-1], optimum temperature [degC]
+                        'Jmax': [Ha, Hd, Topt];
+                        'Rd': [Ha]; activation energy [kJmol-1)]
+                'leafp' (dict): leaf properties
+                    'lt': leaf lengthscale [m]
+                    'par_alb': leaf Par albedo [-]
+                    'nir_alb': leaf Nir albedo [-]
+                    'emi': leaf emissivity [-]
+                'rootp' (dict): root zone properties
+                    'root_depth': root depth [m]
+                    'beta': shape parameter for root distribution model
+                    'RAI_LAI_multiplier': multiplier for total fine root area index (RAI = 2*LAImax)
+                    'fine_radius': fine root radius [m]
+                    'radial_K': maximum bulk root membrane conductance in radial direction [s-1]
+    """
 
     # normed leaf area density profiles
-    quantiles = [1.0]  # quantiles used in creating species stand lad profiles
-    hs = 0.5  # height of understory shrubs [m]
-    pine['lad'], spruce['lad'], decid['lad'], shrubs['lad'], lai_p, lai_s, lai_d = lad_profiles(
-            grid, dbhfile, quantiles, hs, plot=False)
-    if pine['LAImax'] == []:
-        pine['LAImax'] = lai_p
-    if spruce['LAImax'] == []:
-        spruce['LAImax'] = lai_s
-    if decid['LAImax'] == []:
-        decid['LAImax'] = lai_d
+    quantiles = [1.0]  # quantiles used in creating tree lad profiles (groups of same planttype)
 
-    # adjust leaf gas-exchange parameters
-    gfact = 1.2  # coefficient for adjusting (?)
-    pine['photop'].update({'Vcmax': 55.0, 'Jmax': 105.0, 'Rd': 1.3,
-                           'La': 1600.0, 'm': gfact*2.5})
-    pine['photop']['tresp'].update({'Vcmax': [78, 200.0, 650.0],
-                                    'Jmax': [56, 200.0, 647.0]})
-    spruce['photop'].update({'Vcmax': 60.0, 'Jmax': 114.0, 'Rd': 1.5,
-                             'La': 1600.0, 'm': gfact*2.5})
-    spruce['photop']['tresp'].update({'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
-                                      'Jmax': [38.4, 202.0, 655.8]})
-    decid['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
-                            'La': 600.0, 'm': gfact*4.5})
-    decid['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
-                                     'Jmax': [42.8, 200.0, 637.0]})
-    decid['leafp'].update({'lt': 0.05})
-    shrubs['photop'].update({'Vcmax': 50.0, 'Jmax': 95.0, 'Rd': 1.3,
-                            'La': 600.0, 'm': gfact*4.5, 'kn': 0.3})
-    shrubs['photop']['tresp'].update({'Vcmax': [77.0, 200.0, 636.7],
-                                     'Jmax': [42.8, 200.0, 637.0]})
-    plant_types = [pine, spruce, decid, shrubs]
+    hs = 0.5  # height of understory shrubs [m]
+    lai_shrubs = [0.7]
+
+    lad_pine, lad_spruce, lad_decid, lad_shrubs, lai_pine, lai_spruce, lai_decid = lad_profiles(
+            grid, dbhfile, quantiles, hs, plot=False)
+
+#    #define LAI other than derived from dbhfile (must be of len(quantiles))
+#    lai_pine = []
+#    lai_spruce = []
+#    lai_decid = []
+
+    gamma = 1.5  # adjust shoot light response
+    gfact = 1.2  # coefficient for adjusting leaf gas-exchange parameters
+
+    Pine = {
+            'name': 'pine',
+            'LAImax': lai_pine,
+            'lad': lad_pine,
+            'phenop': {
+                'Xo': 0.0,
+                'fmin': 0.1,
+                'Tbase': -4.67,
+                'tau': 8.33,
+                'smax': 18.5
+                },
+            'laip': {
+                'lai_min': 0.8,
+                'lai_ini': None,
+                'DDsum0': 0.0,
+                'Tbase': 5.0,
+                'ddo': 45.0,
+                'ddur': 23.0,
+                'sso': 240,
+                'sdur': 30.0
+                },
+            'photop': {
+                'Vcmax': 55.0,
+                'Jmax': 105.0,
+                'Rd': 1.3,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 1600.0,
+                'm': gfact * 2.5,
+                'g0': 1.0e-3,
+                'kn': 0.6,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [78.0, 200.0, 650.0],
+                    'Jmax': [56.0, 200.0, 647.0],
+                    'Rd': [33.0]
+                    }
+                },
+            'leafp': {
+                'lt': 0.02,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                },
+            'rootp': {
+                'root_depth': 0.2,
+                'beta': 0.943,
+                'RAI_LAI_multiplier': 2.0,
+                'fine_radius': 2.0e-3,
+                'radial_K': 5.0e-8,
+                }
+            }
+
+    Spruce = {
+            'name': 'spruce',
+            'LAImax': lai_spruce,
+            'lad': lad_spruce,
+            'phenop': {
+                'Xo': 0.0,
+                'fmin': 0.1,
+                'Tbase': -4.67,
+                'tau': 8.33,
+                'smax': 18.5
+                },
+            'laip': {
+                'lai_min': 0.8,
+                'lai_ini': None,
+                'DDsum0': 0.0,
+                'Tbase': 5.0,
+                'ddo': 45.0,
+                'ddur': 23.0,
+                'sso': 240,
+                'sdur': 30.0
+                },
+            'photop': {
+                'Vcmax': 60.0,
+                'Jmax': 114.0,
+                'Rd': 1.5,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 1600.0,
+                'm': gfact * 2.5,
+                'g0': 1.0e-3,
+                'kn': 0.6,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
+                    'Jmax': [38.4, 202.0, 655.8],
+                    'Rd': [33.0]
+                    }
+                },
+            'leafp': {
+                'lt': 0.02,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                },
+            'rootp': {
+                'root_depth': 0.2,
+                'beta': 0.943,
+                'RAI_LAI_multiplier': 2.0,
+                'fine_radius': 2.0e-3,
+                'radial_K': 5.0e-8,
+                }
+            }
+
+    Decidious = {
+            'name': 'decidious',
+            'LAImax': lai_decid,
+            'lad': lad_decid,
+            'phenop': {
+                'Xo': 0.0,
+                'fmin': 0.01,
+                'Tbase': -4.67,
+                'tau': 8.33,
+                'smax': 18.5
+                },
+            'laip': {
+                'lai_min': 0.1,
+                'lai_ini': None,
+                'DDsum0': 0.0,
+                'Tbase': 5.0,
+                'ddo': 45.0,
+                'ddur': 23.0,
+                'sso': 240,
+                'sdur': 30.0
+                },
+            'photop': {
+                'Vcmax': 50.0,
+                'Jmax': 95.0,
+                'Rd': 1.3,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 600.0,
+                'm': gfact * 4.5,
+                'g0': 1.0e-3,
+                'kn': 0.6,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
+                },
+            'leafp': {
+                'lt': 0.05,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                },
+            'rootp': {
+                'root_depth': 0.2,
+                'beta': 0.943,
+                'RAI_LAI_multiplier': 2.0,
+                'fine_radius': 2.0e-3,
+                'radial_K': 5.0e-8,
+                }
+            }
+
+    Shrubs = {
+            'name': 'shrubs',
+            'LAImax': lai_shrubs,
+            'lad': lad_shrubs,
+            'phenop': {
+                'Xo': 0.0,
+                'fmin': 0.01,
+                'Tbase': -4.67,
+                'tau': 8.33,
+                'smax': 18.5
+                },
+            'laip': {
+                'lai_min': 0.5,
+                'lai_ini': None,
+                'DDsum0': 0.0,
+                'Tbase': 5.0,
+                'ddo': 45.0,
+                'ddur': 23.0,
+                'sso': 240,
+                'sdur': 30.0
+                },
+            'photop': {
+                'Vcmax': 50.0,
+                'Jmax': 95.0,
+                'Rd': 1.3,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 600.0,
+                'm': gfact * 4.5,
+                'g0': 1.0e-3,
+                'kn': 0.3,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
+                },
+            'leafp': {
+                'lt': 0.02,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                },
+            'rootp': {
+                'root_depth': 0.2,
+                'beta': 0.943,
+                'RAI_LAI_multiplier': 2.0,
+                'fine_radius': 2.0e-3,
+                'radial_K': 5.0e-8,
+                }
+            }
+
+    planttypes = {'pine': Pine, 'spruce': Spruce, 'decidious': Decidious, 'shrubs': Shrubs}
+
+    return planttypes
