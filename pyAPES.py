@@ -32,6 +32,7 @@ from tools.iotools import read_forcing
 from canopy.canopy import CanopyModel
 from soil.soil import Soil
 from parameters.canopy import get_cpara
+from parameters.soil import get_spara
 
 from parameters.sensitivity import parameters, iterate_parameters
 
@@ -43,7 +44,7 @@ dictConfig(logging_configuration)
 #mpl_logger = logging.getLogger('matplotlib')
 #mpl_logger.setLevel(logging.WARNING)
 
-def driver(create_ncf=False, dbhfile="letto2014.txt"):
+def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt"):
     """
     """
 #    import logging
@@ -55,7 +56,7 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     # Import canopy model parameters
     cpara = get_cpara(dbhfile)
     # Import soil model parameters
-    from parameters.soil import spara
+    spara = get_spara(soiltype)
 
     Nsim = parameters['count']
 

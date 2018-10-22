@@ -38,7 +38,7 @@ class Soil(object):
                     'saturated_conductivity_horizontal' (list/array): [m s-1]
                     'dry_heat_capacity'  (list/array or None): [J m-3 (total volume) K-1]
                         ! if None, estimated from organic/mineral composition
-                    'solid_composition' (dict): fractions of solid volume [-]
+                    'solid_composition' (dict): volume fractions of solid volume [-]
                         'organic' (list/array)
                         'sand' (list/array)
                         'silt' (list/array)
