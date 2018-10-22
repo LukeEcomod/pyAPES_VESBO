@@ -4,6 +4,7 @@ GENERAL PARAMETERS
 """
 
 gpara = {
+        'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
         'end_time' : "2010-06-11",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]

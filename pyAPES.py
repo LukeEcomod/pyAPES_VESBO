@@ -27,25 +27,27 @@ import pandas as pd
 import time
 from copy import deepcopy as copy
 
-
 from tools.iotools import read_forcing
 from canopy.canopy import CanopyModel
 from soil.soil import Soil
-from parameters.canopy import get_cpara
 
+from parameters.canopy import get_cpara
 from parameters.sensitivity import parameters, iterate_parameters
+from parameters.general import logging_configuration
 
 import logging
 from logging.config import dictConfig
-from parameters.general import logging_configuration
+
 dictConfig(logging_configuration)
 
 #mpl_logger = logging.getLogger('matplotlib')
 #mpl_logger.setLevel(logging.WARNING)
 
-def driver(create_ncf=False, dbhfile="letto2014.txt"):
+
+def driver(create_ncf=False, parallel=False, dbhfile="letto2014.txt"):
     """
     """
+
 #    import logging
 #    from parameters.general import logging_configuration
 #    logging.config.dictConfig(logging_configuration)
@@ -86,30 +88,48 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     if create_ncf:
         timestr = time.strftime('%Y%m%d%H%M')
         filename = timestr + '_pyAPES_results.nc'
+        if not parallel:
 
-        ncf, _ = initialize_netcdf(
-                gpara['variables'],
-                Nsim,
-                tasks[k].Nsoil_nodes,
-                tasks[k].Ncanopy_nodes,
-                tasks[k].Nplant_types,
-                forcing,
-                filename=filename,
-                description=dbhfile)
+            ncf, _ = initialize_netcdf(
+                    gpara['variables'],
+                    Nsim,
+                    tasks[k].Nsoil_nodes,
+                    tasks[k].Ncanopy_nodes,
+                    tasks[k].Nplant_types,
+                    forcing,
+                    filename=filename,
+                    description=dbhfile)
 
-        for task in tasks:
-            logger.info('Running simulation number: {}' .format(task.Nsim))
-            running_time = time.time()
-            results = task.run()
-            logger.info('Running time %.2f seconds' % (time.time() - running_time))
-            _write_ncf(nsim=task.Nsim, results=results, ncf=ncf)
+            for task in tasks:
+                logger.info('Running simulation number: {}' .format(task.Nsim))
+                running_time = time.time()
+                results = task.run()
+                logger.info('Running time %.2f seconds' % (time.time() - running_time))
+                _write_ncf(nsim=task.Nsim, results=results, ncf=ncf)
 
-            del results
+                del results
 
-        output_file = "results/" + filename
-        logger.info('Ready! Results are in: ' + output_file)
-        ncf.close()
+            output_file = "results/" + filename
+            logger.info('Ready! Results are in: ' + output_file)
+            ncf.close()
 
+        elif parallel:
+            from parallelAPES import drive_parallel
+            pyAPES_folder = os.getcwd()
+            filepath = os.path.join(pyAPES_folder, "results/")
+            ncf_param = {'variables': gpara['variables'],
+                         'Nsim': Nsim,
+                         'Nsoil_nodes': len(spara['grid']['dz']),
+                         'Ncanopy_nodes': cpara['grid']['Nlayers'],
+                         'Nplant_types': len(cpara['planttypes']),
+                         'forcing': forcing,
+                         'file_name': filename,
+                         'output_path': filepath,
+                         }
+
+            flag = drive_parallel(tasks=tasks, Nsim=Nsim, ncf_param=ncf_param)
+            if flag == 'DONE':
+                output_file = filepath = os.path.join(pyAPES_folder, "results", filename)
     else:
         running_time = time.time()
         results = {task.Nsim: task.run() for task in tasks}
@@ -328,7 +348,14 @@ def _write_ncf(nsim=None, results=None, ncf=None):
 
     logger.info("Writing results of simulation number: {} is finished".format(nsim))
 
-def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, forcing, filepath='results', filename='climoss.nc',
+def initialize_netcdf(variables,
+                      sim,
+                      soil_nodes,
+                      canopy_nodes,
+                      plant_nodes,
+                      forcing,
+                      filepath='results/',
+                      filename='climoss.nc',
                       description='Simulation results'):
     """ Climoss netCDF4 format output file initialization
 
@@ -344,6 +371,7 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, for
     from netCDF4 import Dataset, date2num
     from datetime import datetime
 
+
     # dimensions
     date_dimension = None
     simulation_dimension = sim
@@ -351,7 +379,8 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, for
     canopy_dimension = canopy_nodes
     ptypes_dimension = plant_nodes
 
-#    filepath = os.path.join(climoss_path, filepath)
+    pyAPES_folder = os.getcwd()
+    filepath = os.path.join(pyAPES_folder, filepath)
 
     if not os.path.exists(filepath):
         os.makedirs(filepath)
@@ -390,3 +419,45 @@ def initialize_netcdf(variables, sim, soil_nodes, canopy_nodes, plant_nodes, for
 
 #    print("netCDF4 path: " + ff)
     return ncf, ff
+
+class _ParaApes(object):
+    """
+    """
+
+    def __init__(self,
+                 Nsim,
+                 tasks):
+        self.Nsim = Nsim
+        self.tasks = tasks
+
+    def run(self, ncf_param):
+        """
+        """
+        result_queue = JoinableQueue()
+        writing_process = Process(target=_result_writer, args=(result_queue, ncf_param))
+
+        writing_process.deamon = True
+        writing_process.start()
+
+        for task in self.tasks:
+
+            results = task.run()
+            result_queue.put({'Nsim': task.Nsim, 'data': deepcopy(results)})
+
+            del results
+
+#        processes = []
+#        for task in self.tasks:
+#            process = Process(target=_worker, args={task, result_queue})
+#            process.start()
+#            processes.append(process)
+#
+#        for process in processes:
+#            process.join()
+
+        result_queue.put({'Nsim': -999, 'data': 'DONE'})
+        result_queue.join()
+
+        print('DONE')
+
+        return ncf_param['output_path']
