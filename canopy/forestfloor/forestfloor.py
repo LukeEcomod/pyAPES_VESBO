@@ -221,8 +221,8 @@ class ForestFloor(object):
             for bryo in self.bryotypes:
                 # if something goes wrong in snow melt check this!
                 bryo.temperature = 0.0
-                bryo_water_storage += bryo.water_storage
-                bryo_carbon_pool += bryo.carbon_pool
+                bryo_water_storage += bryo.coverage * bryo.old_water_storage / WATER_DENSITY
+                bryo_carbon_pool += bryo.old_carbon_pool
 
         else:
 

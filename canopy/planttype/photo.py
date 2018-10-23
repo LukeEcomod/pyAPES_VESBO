@@ -113,9 +113,12 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
     else:
         gr = 0.0
 
+    Tl_ini = Tl.copy()
+
     # vapor pressure
     esat, s = e_sat(Tl)
     s = s / P  # slope of esat, mol/mol / degC
+    s[esat / P < H2O] = EPS
     Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
 
     itermax = 20
@@ -149,18 +152,35 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
             Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - LATENT_HEAT*geff_v[ic]*Dleaf[ic] 
                   + LATENT_HEAT*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + LATENT_HEAT*s[ic]*geff_v[ic])
             err = np.nanmax(abs(Tl - Told))
+
+            if (err < 0.01 or iterNo == itermax) and abs(np.mean(T) - np.mean(Tl)) > 20.0:
+                logger.debug('%s (iteration %s:%s) Unrealistic %s leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f, %.2f',
+                     forcing['date'],
+                     forcing['iteration'], iterNo,
+                     leaftype,
+                     np.mean(Tl), np.mean(T),
+                     np.mean(forcing['radiation']['LW']['net_leaf']), np.mean(Tl_ave), np.mean(Tl_ini), np.mean(H2O))
+                Tl = T.copy()
+                Ebal = False  # recompute without solving leaf temperature
+                err = 999.
+
+            elif iterNo == itermax and err > 0.05:
+                logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_%s = %.2f (err = %.2f)',
+                         forcing['date'],
+                         forcing['iteration'],
+                         leaftype,
+                         np.mean(Tl), err)
+
             # vapor pressure
             esat, s = e_sat(Tl)
             s = s / P  # slope of esat, mol/mol / degC
+            s[esat / P < H2O] = EPS
             Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
-            if iterNo == itermax:
-                logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_%s = %.2f, err = %.2f',
-                             forcing['date'],
-                             forcing['iteration'],
-                             leaftype,
-                             np.mean(Tl), err)
+
         else:
             err = 0.0
+
+
 
     # outputs
     H = SPECIFIC_HEAT_AIR*gb_h*(Tl - T)  # Wm-2

@@ -13,7 +13,7 @@ gpara = {
                       ['forcing_h2o','H2O concentration [mol mol-1]', ('date', 'simulation')],
                       ['forcing_co2','CO2 concentration [ppm]', ('date', 'simulation')],
                       ['forcing_wind_speed','wind speed [m s-1]', ('date', 'simulation')],
-                      ['canopy_WMA_assumption','WMA assumed (1=True, 0=Flase)', ('date', 'simulation')],
+                      ['canopy_WMA_assumption','WMA assumed (1=True, 0=False)', ('date', 'simulation')],
                       ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
                       ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
                       ['canopy_temperature','air temperature []degC]', ('date', 'simulation', 'canopy')],

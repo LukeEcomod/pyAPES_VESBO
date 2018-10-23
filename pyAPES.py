@@ -99,7 +99,8 @@ def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt"):
                 description=dbhfile)
 
         for task in tasks:
-            logger.info('Running simulation number: {}' .format(task.Nsim))
+            logger.info('Running simulation number (start time %s): %s' % (
+                        time.strftime('%Y-%m-%d %H:%M'), task.Nsim))
             running_time = time.time()
             results = task.run()
             logger.info('Running time %.2f seconds' % (time.time() - running_time))

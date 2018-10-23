@@ -149,16 +149,25 @@ class Interception(object):
                 Tl_wet[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - L[ic]*gb_v[ic]*Dleaf[ic] 
                   + L[ic]*s[ic]*gb_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + L[ic]*s[ic]*gb_v[ic])
                 err = np.nanmax(abs(Tl_wet - Told))
-#                Tl_wet = 0.5 * Tl_wet + 0.5 * Told
-#                print ('iterNo', iterNo, 'err', err, 'Tl_wet', np.mean(Tl_wet))
-                es, s = e_sat(Tl_wet)
-                Dleaf = es / P - H2O  #np.maximum(0.0, es / P - H2O)  # [mol/mol]
-                s = s / P  # [mol/mol/degC]
-                if iterNo == itermax:
+
+                if (err < 0.01 or iterNo == itermax) and abs(np.mean(T) - np.mean(Tl_wet)) > 20.0:
+                    logger.debug('%s (iteration %s:%s) Unrealistic wet leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f',
+                         forcing['date'],
+                         forcing['iteration'], iterNo,
+                         np.mean(Tl_wet), np.mean(T),
+                         np.mean(forcing['radiation']['LW']['net_leaf']), np.mean(Tl_ave), np.mean(self.Tl_wet))
+                    Tl_wet = T.copy()
+
+                elif iterNo == itermax:
                     logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_wet = %.2f, err = %.2f',
                              forcing['date'],
                              forcing['iteration'],
                              np.mean(Tl_wet), err)
+
+                es, s = e_sat(Tl_wet)
+                Dleaf = es / P - H2O  #np.maximum(0.0, es / P - H2O)  # [mol/mol]
+                s = s / P  # [mol/mol/degC]
+
             else:
                 err = 0.0
 
@@ -268,7 +277,7 @@ class Interception(object):
         # update state variables
         self.W = W
         self.Tl_wet = Tl_wet
-        self.df =df
+        self.df = df
 
         # mass-balance error [m] ! self.W is old storage
         water_closure = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - sum(Cond) - (Trfall_rain + Trfall_snow))
