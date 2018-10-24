@@ -218,7 +218,8 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
         else:
             for var in variables:
                 values_all.append(result[var].values)
-                labels.append(result[var].units.split('[')[0])
+        for var in variables:
+            labels.append(result[var].units.split('[')[0])
         title = ''
 
     unit = '[' + results[0][variables[0]].units.split('[')[-1]
