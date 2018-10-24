@@ -9,6 +9,10 @@ Based on MatLab implementation by Samuli Launiainen.
 
 Created on Thu Mar 01 13:21:29 2018
 
+Note:
+    migrated to python3
+    - absolute imports
+
 References:
 Tanaka, K., 2002. Multi-layer model of CO2 exchange in a plant community 
 coupled with the water budget of leaf surfaces. Ecological Modelling, 147(1), pp.85-104.
@@ -16,8 +20,8 @@ coupled with the water budget of leaf surfaces. Ecological Modelling, 147(1), pp
 
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from micromet import e_sat, leaf_boundary_layer_conductance
-from constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN
+from .micromet import e_sat, leaf_boundary_layer_conductance
+from .constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN
 
 import logging
 logger = logging.getLogger(__name__)

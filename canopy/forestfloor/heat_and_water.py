@@ -1,14 +1,18 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Mon Oct  1 10:23:08 2018
+
+Note:
+    migrated to python3
+    - absolute import
 
 @author: ajkieloaho
 """
 
 import numpy as np
 from scipy.integrate import odeint
-from odesolver import solver_array, ForwardEuler_array
+from .odesolver import solver_array, ForwardEuler_array
 from canopy.constants import *
 
 EPS = np.finfo(float).eps  # machine epsilon

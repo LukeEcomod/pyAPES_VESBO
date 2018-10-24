@@ -9,18 +9,25 @@ Based on MatLab implementation by Samuli Launiainen.
 
 Created on Tue Oct 02 09:04:05 2018
 
+Note:
+    migrated to python3
+    - absolute import
+    - added parenthesis to print
+    - list(range(...)) forward-compatible: from builtins import range, import can be removed later
+
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
 forest CO2, H2O and energy flows by a vertically structured forest canopy – 
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
+from builtins import range
 import numpy as np
 import pandas as pd
 import logging
 eps = np.finfo(float).eps  # machine epsilon
 from tools.utilities import tridiag
 from matplotlib import pyplot as plt
-from constants import DEG_TO_RAD, PAR_TO_UMOL, DEG_TO_KELVIN, STEFAN_BOLTZMANN, SPECIFIC_HEAT_AIR
+from .constants import DEG_TO_RAD, PAR_TO_UMOL, DEG_TO_KELVIN, STEFAN_BOLTZMANN, SPECIFIC_HEAT_AIR
 logger = logging.getLogger(__name__)
 
 class Radiation(object):
@@ -846,14 +853,14 @@ def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
         plt.legend()
         
         plt.subplot(223)
-        plt.plot(LWdn, range(len(Lcum)), 'bo', label='LWdn')
-        plt.plot(LWup,range(len(Lcum)), 'ro', label='LWup')    
+        plt.plot(LWdn, list(range(len(Lcum))), 'bo', label='LWdn')
+        plt.plot(LWup, list(range(len(Lcum))), 'ro', label='LWup')    
         plt.ylabel("N")
         plt.xlabel("LW (Wm-2 )")
         plt.legend()
     
         plt.subplot(224)
-        plt.plot(LWleaf,range(len(Lcum)), 'ro',label='LWleaf')
+        plt.plot(LWleaf,list(range(len(Lcum))), 'ro',label='LWleaf')
 #        plt.plot(LWnet,range(len(Lcum)), 'go',label='LWnet')
         plt.ylabel("N")
         plt.xlabel("LW (Wm-2 )")
@@ -928,7 +935,7 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
     elif x > 100:  # horizontal leafs
         rd = 1.
     else:
-        print "radiation.canopy_lw_ZhaoQualls: check leaf angle distr. "
+        print("radiation.canopy_lw_ZhaoQualls: check leaf angle distr.")
 
     rd = np.ones([M+2])*rd
     rd[0] = 1.
@@ -1064,14 +1071,14 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
         
         plt.subplot(223)
     
-        plt.plot(LWdn, range(len(X)), 'bo', label='LWdn')
-        plt.plot(LWup,range(len(X)), 'ro', label='LWup')    
+        plt.plot(LWdn, list(range(len(X))), 'bo', label='LWdn')
+        plt.plot(LWup, list(range(len(X))), 'ro', label='LWup')    
         plt.ylabel("N")
         plt.xlabel("LW (Wm-2 )")
         plt.legend()
     
         plt.subplot(224)
-        plt.plot(LWleaf,range(len(X)), 'ro',label='LWleaf')
+        plt.plot(LWleaf,list(range(len(X))), 'ro',label='LWleaf')
 #        plt.plot((LWdn[1:] - LWdn[:-1] + LWup[:-1] - LWup[1:])/(LAIz[:-1] + eps), range(len(X)-1), 'go',label='LWnet')
         plt.ylabel("N")
         plt.xlabel("LW (Wm-2 )")
@@ -1117,21 +1124,21 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     LWup0 = 0.98*STEFAN_BOLTZMANN*(Tsurf + DEG_TO_KELVIN)**4
 #    print LWdn0, LWup0
     if method == "canopy_sw_ZhaoQualls":
-        print "------TestRun of radiation.canopy_sw_ZhaoQualls with given LAI and CLUMP -----------"
+        print("------TestRun of radiation.canopy_sw_ZhaoQualls with given LAI and CLUMP -----------")
         SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")                                                                         
 #        print SWb,SWd,SWu,Q_sl,Q_sh,q_sl,q_sh,q_soil,f_sl,alb
         
     if method == "canopy_sw_Spitters":
-        print "------TestRun of radiation.canopy_sw_Spitters with given LAI and predefined lad profile-----------"
+        print("------TestRun of radiation.canopy_sw_Spitters with given LAI and predefined lad profile-----------")
         SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")
         # print SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb  
     
     if method=="canopy_lw": 
-        print "------TestRun of radiation.canopy_lw------------"
+        print("------TestRun of radiation.canopy_lw------------")
         LWnet, LWdn, LWup, gr = canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi,PlotFigs=True)
         print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
 
     if method == "canopy_lw_ZhaoQualls":
-        print "------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------"
+        print("------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------")
         LWnet, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi, soil_emi=soil_emi, PlotFigs=True)   
         print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))

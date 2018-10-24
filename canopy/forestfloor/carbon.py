@@ -1,9 +1,13 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Mon Oct  1 10:23:28 2018
 
 Module contains functions to calculate carbon exchange in bryophytes.
+
+Note:
+    migrated to python3
+    - no changes made
 
 @author: ajkieloaho
 """

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 .. module: bryotype
@@ -17,6 +17,11 @@ TODO:
 References:
 
 
+Note:
+    migrated to python3
+    - absolute imports
+    - one dictionary comprhension changed
+
 CHANGES (13.-14.7.2017 SL):
     * BryoType: added state variables 'hydraulic_conductivity',
         'thermal_conductivity', 'carbon_pool'
@@ -31,9 +36,9 @@ CHANGES (13.-14.7.2017 SL):
 from sys import version_info
 import numpy as np
 
-from heat_and_water import heat_and_water_exchange, evaporation_through
-from heat_and_water import convert_hydraulic_parameters
-from carbon import carbon_exchange
+from .heat_and_water import heat_and_water_exchange, evaporation_through
+from .heat_and_water import convert_hydraulic_parameters
+from .carbon import carbon_exchange
 
 from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C
 
@@ -290,11 +295,7 @@ class Bryophyte(object):
 
         # unit conversion: 1000 kg m-2 s-1 = mm s-1
 
-        if version_info.major < 3:
-            soil_evaporation = {key: value * MOLAR_MASS_H2O for (key, value) in soil_evaporation.items()}
-
-        else:
-            soil_evaporation = {key: value * MOLAR_MASS_H2O for (key, value) in soil_evaporation}
+        soil_evaporation = {key: value * MOLAR_MASS_H2O for (key, value) in soil_evaporation}
 
         fluxes.update(soil_evaporation)
 

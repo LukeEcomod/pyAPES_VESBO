@@ -8,6 +8,10 @@ Describes forest floor consisting of bryophytes, baresoil and snowpack.
 
 Based on MatLab implementation by Samuli Launiainen.
 
+Note:
+    migrated to python3
+    - absolute imports
+    - dictionary.items() in for-loops
 
 Note: roughness length z0 is [1/15 - 1/30] * x where x is height of element.
         given at the moment as a parameter, but for mosses this is problematic.
@@ -22,13 +26,13 @@ import numpy as np
 from canopy.micromet import e_sat
 from canopy.constants import EPS, WATER_DENSITY, MOLAR_MASS_H2O
 
-from bryophyte import Bryophyte
-from baresoil import Baresoil
-from snowpack import Snowpack
+from .bryophyte import Bryophyte
+from .baresoil import Baresoil
+from .snowpack import Snowpack
 
-from carbon import soil_respiration
-from heat_and_water import soil_boundary_layer_conductance
-from heat_and_water import bryophyte_shortwave_albedo, emitted_longwave_radiation
+from .carbon import soil_respiration
+from .heat_and_water import soil_boundary_layer_conductance
+from .heat_and_water import bryophyte_shortwave_albedo, emitted_longwave_radiation
 
 class ForestFloor(object):
     r"""Describes forest floor consisting of bryophytes and/or baresoil.
@@ -73,7 +77,7 @@ class ForestFloor(object):
         bryotypes = []
 
         f_bryo = 0.0
-        for key, bryo in properties['bryophytes'].items():
+        for key, bryo in properties['bryophytes']:
             bryotypes.append(Bryophyte(bryo,
                                        properties['initial_conditions']['bryophytes'][key]))
             f_bryo += bryo['ground_coverage']

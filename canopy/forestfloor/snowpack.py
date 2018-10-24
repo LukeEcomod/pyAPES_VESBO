@@ -3,6 +3,10 @@
 """
 Created on Thu Oct  4 08:54:17 2018
 
+Note:
+    migrated to python3
+    - no changes
+
 @author: ajkieloaho
 """
 

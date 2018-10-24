@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from canopy.micromet import leaf_boundary_layer_conductance, e_sat
 
 import logging
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 from canopy.constants import *
 H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]

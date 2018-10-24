@@ -1,7 +1,12 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Oct  4 08:44:28 2018
+
+
+NOTE:
+    migrated to python3
+    - only absolute imports
 
 @author: ajkieloaho
 """
@@ -13,7 +18,7 @@ from canopy.constants import STEFAN_BOLTZMANN, LATENT_HEAT, DEG_TO_KELVIN
 from canopy.constants import MOLAR_MASS_H2O, WATER_DENSITY, GRAVITY
 from canopy.constants import SPECIFIC_HEAT_AIR, SPECIFIC_HEAT_H2O, GAS_CONSTANT
 from canopy.micromet import e_sat
-from heat_and_water import soil_boundary_layer_conductance
+from .heat_and_water import soil_boundary_layer_conductance
 
 import logging
 logger = logging.getLogger(__name__)

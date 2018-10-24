@@ -1,14 +1,19 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Oct 18 15:31:23 2018
+
+Note:
+    migrated to python3
+    - absolute import
 
 @author: ajkieloaho
 """
 
 import numpy as np
 from canopy.constants import EPS, MOLAR_MASS_H2O
-from heat_and_water import saturation_vapor_pressure
+from .heat_and_water import saturation_vapor_pressure
+
 
 def water_exchage(self, dt, forcing, properties):
     """

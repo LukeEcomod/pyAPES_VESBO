@@ -11,7 +11,7 @@ ranges = {}
 
 # parameter sets of simulations
 parameters = {
-        'count': 4,
+        'count': 8,
         'canopy': {
 #                'forestfloor': {
 #                        'bryophytes': {
@@ -30,10 +30,10 @@ parameters = {
 #                                },
                 'planttypes': {
                         'pine': {
-                                'LAImax': ([2.1], [2.1], [1.5], [1.5])
+                                'LAImax': ([2.1], [2.1], [1.9], [1.9], [1.7], [1.7], [1.5], [1.5])
                                 },
                         'shrubs': {
-                                'LAImax': ([0.6], [0.4], [0.2], [0.0])
+                                'LAImax': ([0.6], [0.4], [0.2], [0.0], [0.6], [0.4], [0.2], [0.0])
                                 }
                         }
         }
