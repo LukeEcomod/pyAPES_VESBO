@@ -56,17 +56,17 @@ def get_parameters(name=None):
                                                 'height': (0.045)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.0),
+                                                'ground_coverage': (0.1),
                                                 'height': (0.095)
                                                 }
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (1.0)
+                                        'ground_coverage': (0.9)
                                         }
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.7])
+                                        'LAImax': ([0.49])
                                         }
                                 }
                 }
@@ -87,17 +87,17 @@ def get_parameters(name=None):
                                                 'height': (0.045)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.3),
+                                                'ground_coverage': (0.5),
                                                 'height': (0.095)
                                                 }
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (0.7)
+                                        'ground_coverage': (0.5)
                                         }
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.7])
+                                        'LAImax': ([0.8])
                                         }
                                 }
                 }
@@ -128,7 +128,7 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.7])
+                                        'LAImax': ([0.65])
                                         }
                                 }
                 }

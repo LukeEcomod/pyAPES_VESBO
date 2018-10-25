@@ -326,7 +326,6 @@ class CanopyModel(object):
                                'iteration': iter_no})
 
             fluxes_ffloor, states_ffloor = self.forestfloor.run(
-
                     dt=dt,
                     forcing=ff_forcing)
 
@@ -355,18 +354,21 @@ class CanopyModel(object):
                     T = (T_prev + T) / 2
                     gam = max(gam / 2, 0.25)
 
-                if (iter_no == max_iter):
+                if (iter_no == max_iter or any(np.isnan(T)) or
+                    any(np.isnan(H2O)) or any(np.isnan(CO2))):
 
-                    if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
+                    if (any(np.isnan(T)) or any(np.isnan(H2O)) or any(np.isnan(CO2))):
+                        logger.debug('%s Solution of profiles blowing up, T nan %s, H2O nan %s, CO2 nan %s',
+                                         forcing['date'],
+                                         any(np.isnan(T)), any(np.isnan(H2O)), any(np.isnan(CO2)))
+                    elif max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
                         if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
-# logging
                             logger.debug('%s Maximum iterations reached but error tolerable < 0.05',
                                          forcing['date'])
                         break
 
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
 
-# logging
                     logger.debug('%s Switched to WMA assumption: err_T %.4f, err_H2O %.4f, err_CO2 %.4f, err_Tl %.4f, err_Ts %.4f',
                                  forcing['date'],
                                  err_t, err_h2o, err_co2, err_Tl, err_Ts)
