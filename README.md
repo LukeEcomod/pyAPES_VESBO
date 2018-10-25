@@ -1,6 +1,15 @@
 # README
 Branch for cleaned model codes for pyAPES development
 
+## Migration to Python3
+https://docs.python.org/3.0/whatsnew/3.0.html
+Code is mainly written so that it works in both python 2.7 and 3.?
+* main things so far:
+  - print is a function. Brackets are needed
+  - views and iterators instead of lists. Casting needed (list()) if list needed.
+  - iterating through dictionary: dict.items() or dict.keys() or dict.values() no more used, use: for 'k, v in dict'-instead, (note: k, v are views!)
+  - absolute import vs. relative import: from .foo import spam if you want to import from same level.
+
 ### SoilProfile
 Water flow:
 * Equilibrium within vertical column during each timestep 
