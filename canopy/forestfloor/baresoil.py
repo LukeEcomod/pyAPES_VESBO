@@ -115,10 +115,11 @@ def heat_balance(forcing, properties, temperature):
     # Maximum LE
     # atm pressure head in equilibrium with atm. relative humidity
     es_a, _ = e_sat(T)
-    RH = H2O * P / es_a  # air relative humidity above ground [-]
+    RH = min(1.0, H2O * P / es_a)  # air relative humidity above ground [-]
     h_atm = GAS_CONSTANT * (DEG_TO_KELVIN + T) * np.log(RH)/(MOLAR_MASS_H2O * GRAVITY)  # [m]
     # maximum latent heat flux constrained by h_atm
-    LEmax = -LATENT_HEAT * Kh * (h_atm - h_soil - z_soil) / dz_soil * WATER_DENSITY / MOLAR_MASS_H2O  # [W/m2]
+    LEmax = max(0.0,
+                -LATENT_HEAT * Kh * (h_atm - h_soil - z_soil) / dz_soil * WATER_DENSITY / MOLAR_MASS_H2O)  # [W/m2]
 
     # LE demand
     # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
@@ -158,7 +159,7 @@ def heat_balance(forcing, properties, temperature):
         else:
             err = 0.0
 
-    if abs(T_surf - temperature) > 20:
+    if abs(T_surf - temperature) > 20:  # into iteration loop? chech photo or interception
         logger.debug('%s (iteration %s) Unrealistic baresoil temperature %.2f set to previous value %.2f',
              forcing['date'],
              forcing['iteration'],
@@ -166,6 +167,9 @@ def heat_balance(forcing, properties, temperature):
         T_surf = temperature
         es, s = e_sat(T_surf)
         Dsurf = es / P - H2O  # [mol/mol] - allows condensation
+        LE = LATENT_HEAT * gb_v * Dsurf
+        if LE > LEmax:
+            LE = LEmax
 
     """ --- energy and water fluxes --- """
     # sensible heat flux [W m-2]
@@ -175,7 +179,7 @@ def heat_balance(forcing, properties, temperature):
     # ground heat flux [W m-2]
     Gw = Kt / dz_soil * (T_surf - T_soil)
     # evaporation rate [mol m-2 s-1]
-    Ep = gb_v * Dsurf
+    Ep = LE / LATENT_HEAT  #gb_v * Dsurf
 
     # energy closure
     closure = SW_gr + LWn - Hw - LE - Gw

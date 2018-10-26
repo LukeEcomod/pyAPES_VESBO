@@ -1033,7 +1033,7 @@ def evaporation_through(properties,
                           / ambient_pressure)
 
     # [-, fraction]
-    relative_humidity = (atm_partial_pressure_h2o
+    relative_humidity = min(1.0, atm_partial_pressure_h2o
                          / saturation_vapor_pressure(air_temperature))
 
     # [m], in equilibrium with atmospheric relative humidity
@@ -1044,7 +1044,7 @@ def evaporation_through(properties,
         / (MOLAR_MASS_H2O * GRAVITY))
 
     # [mol/(m2 s)]: 1e3 is water density kgm-3: 1e-3 kgm-3 / (kg/mol) x m/s = mol m-2 s-1
-    evaporative_supply = (
+    evaporative_supply = max(0.0,
         1e3 / MOLAR_MASS_H2O * soil_hydraulic_conductivity
         * ((atm_hydraulic_head - soil_hydraulic_head) / soil_depth - 1.0))
 

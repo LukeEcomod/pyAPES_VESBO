@@ -32,8 +32,9 @@ from canopy.canopy import CanopyModel
 from soil.soil import Soil
 
 from parameters.canopy import get_cpara
-from parameters.sensitivity import parameters, iterate_parameters
-from parameters.general import logging_configuration
+from parameters.soil import get_spara
+
+from parameters.sensitivity import get_parameters, iterate_parameters
 
 import logging
 from logging.config import dictConfig
@@ -43,9 +44,10 @@ from logging.config import dictConfig
 #mpl_logger = logging.getLogger('matplotlib')
 #mpl_logger.setLevel(logging.WARNING)
 
-logger = logging.getLogger(__name__)
 
-def driver(create_ncf=False, dbhfile="letto2014.txt"):
+
+def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt",
+           parameter_set_name=None):
     """
     """
 
@@ -58,7 +60,9 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     # Import canopy model parameters
     cpara = get_cpara(dbhfile)
     # Import soil model parameters
-    from parameters.soil import spara
+    spara = get_spara(soiltype)
+    # Impport sensitivity parameters
+    parameters = get_parameters(parameter_set_name)
 
     Nsim = parameters['count']
 
@@ -70,8 +74,6 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
     param_space = [iterate_parameters(parameters, copy(default_params), count) for count in range(Nsim)]
 
     logger = logging.getLogger(__name__)
-
-#    Nsim = 1
 
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
@@ -101,7 +103,8 @@ def driver(create_ncf=False, dbhfile="letto2014.txt"):
                 description=dbhfile)
 
         for task in tasks:
-            logger.info('Running simulation number: {}' .format(task.Nsim))
+            logger.info('Running simulation number (start time %s): %s' % (
+                        time.strftime('%Y-%m-%d %H:%M'), task.Nsim))
             running_time = time.time()
             results = task.run()
             logger.info('Running time %.2f seconds' % (time.time() - running_time))

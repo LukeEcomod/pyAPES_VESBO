@@ -182,14 +182,13 @@ def plot_timeseries_pt(results, variable, sim_idx=0, unit_conversion={'unit':Non
                        stack=stack, cum=cum, sim_idx=sim_idx,
                        unit_conversion=unit_conversion, labels=labels, legend=legend, limits=limits)
 
-def plot_timeseries_xr(results, variables, sim_idx=0, unit_conversion = {'unit':None, 'conversion':1.0},
+def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conversion':1.0},
                        colors=default, xticks=True, stack=False, cum=False, labels=None, limits=True, legend=True):
     """
     Plot timeseries from xarray results.
     Args:
         results (xarray or list of xarray): xarray dataset or list of xarray datasets
         variables (str or list of str): variable names to plot
-        sim_idx (int): index of simulation in xarray dataset
         unit_converrsion (dict):
             'unit' (str): unit of plotted variable (if different from unit in dataset)
             'conversion' (float): conversion needed to get to 'unit'
@@ -200,26 +199,27 @@ def plot_timeseries_xr(results, variables, sim_idx=0, unit_conversion = {'unit':
         labels (list of str): labels corresponding to results[0], results[1],...
     """
     if type(results) != list:
-        results = [results]
+        if 'simulation' in results.dims:
+            results = [results.sel(simulation=i) for i in results.simulation.values]
+        else:
+            results = [results]
+    else:
+        results = [result.isel(simulation=0) for result in results]
     if type(variables) != list:
         variables = [variables]
-    if len(results) > 1 & len(variables) > 1:
-        print "Provide either multiple results and one variable or one result and multiple variables"
+
     values_all=[]
+    labels=[]
     for result in results:
         if cum:
-            values = yearly_cumulative(result.isel(simulation=sim_idx), variables)
+            values = yearly_cumulative(result, variables)
             for k in range(len(values)):
                 values_all.append(values[k])
         else:
             for var in variables:
-                values_all.append(result[var].isel(simulation=sim_idx).values)
-    if len(results) > 1:
-        if labels == None:
-            labels = [result.description for result in results]
-        title = results[0][variables[0]].units.split('[')[0]
-    else:
-        labels = [results[0][var].units.split('[')[0] for var in variables]
+                values_all.append(result[var].values)
+        for var in variables:
+            labels.append(result[var].units.split('[')[0])
         title = ''
 
     unit = '[' + results[0][variables[0]].units.split('[')[-1]
@@ -247,7 +247,7 @@ def plot_timeseries_xr(results, variables, sim_idx=0, unit_conversion = {'unit':
     plt.setp(plt.gca().axes.get_xticklabels(), visible=xticks)
     plt.xlabel('')
     if legend:
-        plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
+        plt.legend(frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
                        labels=None, colors=default, xticks=True, stack=False, cum=False, limits=True,legend=True):

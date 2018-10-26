@@ -261,8 +261,8 @@ class Bryophyte(object):
 
         # [umol m-2(ground) s-1]
         cflx = carbon_exchange(self.properties,
-                               self.old_water_content,
-                               self.old_temperature,
+                               self.water_content,  # old
+                               self.temperature,  # old
                                forcing['par'])
 
         nee = -cflx['photosynthesis_rate'] + cflx['respiration_rate']
@@ -282,8 +282,8 @@ class Bryophyte(object):
         # [mol m-2 s-1]
         soil_evaporation = evaporation_through(
             self.properties,
-            self.old_volumetric_water,
-            self.old_temperature,
+            self.volumetric_water,  # old
+            self.temperature,  # old
             forcing['air_temperature'],
             h2o,
             forcing['wind_speed'],
