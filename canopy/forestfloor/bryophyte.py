@@ -33,16 +33,13 @@ CHANGES (13.-14.7.2017 SL):
         and carbon_exchange
 """
 
-from sys import version_info
 import numpy as np
 
 from .heat_and_water import heat_and_water_exchange, evaporation_through
 from .heat_and_water import convert_hydraulic_parameters
 from .carbon import carbon_exchange
 
-from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C
-
-EPS = np.finfo(float).eps  # machine epsilon
+from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C, EPS
 
 
 class Bryophyte(object):
@@ -216,7 +213,7 @@ class Bryophyte(object):
         self.temperature = self.old_temperature
 
     def run(self, dt, forcing, solver=False):
-        r""" Calculates one timestep and updates states of BryoModel instance.
+        r""" Calculates one timestep and updates states of Bryophyte instance.
 
         Args:
             dt: timestep [s]
@@ -295,7 +292,7 @@ class Bryophyte(object):
 
         # unit conversion: 1000 kg m-2 s-1 = mm s-1
 
-        soil_evaporation = {key: value * MOLAR_MASS_H2O for (key, value) in soil_evaporation}
+        soil_evaporation = {key: value * MOLAR_MASS_H2O for key, value in soil_evaporation.items()}
 
         fluxes.update(soil_evaporation)
 

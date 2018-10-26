@@ -55,7 +55,7 @@ def soil_respiration(properties, Ts, Wliq, Wair):
 
     respiration = base_respiration * modifier
 
-    return respiration, modifier
+    return respiration
 
 
 def carbon_exchange(properties,
