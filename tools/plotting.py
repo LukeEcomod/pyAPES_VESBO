@@ -64,10 +64,10 @@ def plot_fluxes(results, sim_idx=0):
     Data.ET = Data.ET / 1800 * 3600
     Data.GPP = -Data.GPP
 
-    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','forcing_precipitation','ffloor_evaporation_bryo','ffloor_evaporation_soil']
+    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.ffloor_evaporation_bryo + Data.ffloor_evaporation_soil) * 1e3 * 3600
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation) * 1e3 * 3600
     Data.canopy_GPP = Data.canopy_GPP * 44.01 * 1e-3
     Data.canopy_respiration = Data.canopy_respiration * 44.01 * 1e-3
 
@@ -80,9 +80,9 @@ def plot_fluxes(results, sim_idx=0):
     months = Data.index.month
     fmonth = 4
     lmonth = 9
-    ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
-    ixGPP = np.where((months >= fmonth) & (months <= lmonth))[0]
-    ixReco = np.where((months >= fmonth) & (months <= lmonth))[0]
+    ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
+    ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
+    ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
     labels=['Measured', 'Modelled']
 
     plt.figure(figsize=(10,6))

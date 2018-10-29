@@ -5,8 +5,8 @@ GENERAL PARAMETERS
 
 gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2010-10-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2011-05-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -14,7 +14,7 @@ gpara = {
                       ['forcing_co2','CO2 concentration [ppm]', ('date', 'simulation')],
                       ['forcing_wind_speed','wind speed [m s-1]', ('date', 'simulation')],
                       ['canopy_WMA_assumption','WMA assumed (1=True, 0=False)', ('date', 'simulation')],
-#                      ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
+                      ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
                       ['canopy_temperature','air temperature []degC]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
@@ -75,11 +75,14 @@ gpara = {
                       ['ffloor_carbon_pool_bryo', 'carbon pool (bryophyte) [kg C m-2]', ('date', 'simulation')],
                       ['ffloor_photosynthesis_bryo', 'photosynthesis rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_respiration_bryo', 'respiration rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
+                      ['ffloor_respiration_litter', 'respiration rate (litter) [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_respiration', 'respiration rate [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation', 'evaporation (forest floor) [m s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation_bryo', 'evaporation (bryophytes) [m s-1]', ('date', 'simulation')],
+                      ['ffloor_evaporation_litter', 'evaporation (litter) [m s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation_soil', 'evaporation (soil) [m s-1]', ('date', 'simulation')],
                       ['ffloor_temperature', 'temperature (forest floor) [degC]', ('date', 'simulation')],
+                      ['ffloor_temperature_litter', 'temperature (litter) [degC]', ('date', 'simulation')],
                       ['ffloor_temperature_bryo', 'temperature (bryophyte) [degC]', ('date', 'simulation')],
                       ['ffloor_temperature_soil', 'temperature (soil) [degC]', ('date', 'simulation')],
                       ['ffloor_water_storage_bryo', 'water storage (bryophytes) [kg m-2]', ('date', 'simulation')],

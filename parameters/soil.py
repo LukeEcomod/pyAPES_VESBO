@@ -26,7 +26,7 @@ def get_spara(soiltype):
     
     """ water model specs """
     water_model = {'solve': True,
-                   'type': 'Equilibrium',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
+                   'type': 'Richards',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
                    'pond_storage_max': 0.05,  #  maximum pond depth [m]
                    'initial_condition': {  # (dict) initial conditions
                                          'ground_water_level': -0.2,  # groundwater depth [m]
