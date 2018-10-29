@@ -173,7 +173,7 @@ class Model(object):
 
             if k in k_steps[:-1]:
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
-                print('{0}..\r'.format(s), end='')
+                print('{0}..'.format(s), end=' ')
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)

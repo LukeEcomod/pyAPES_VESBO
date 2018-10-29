@@ -195,19 +195,13 @@ class Litter(object):
 
 
         # calculate respiration
-<<<<<<< HEAD
-        respiration = soil_respiration(self.properties,
+
+        respiration = soil_respiration(self.properties['respiration'],
                                 self.temperature,
                                 self.volumetric_water,
-                                self.volumetric_air
-                                )
-=======
-        respiration, _ = soil_respiration(self.properties['respiration'],
-                                       self.temperature,
-                                       self.volumetric_water,
-                                       self.volumetric_air)
+                                self.volumetric_air)
+
         respiration = respiration * self.coverage
->>>>>>> c5aa41fd7036dbd9806f1f1b9681fa5a9a1aabbd
 
         fluxes.update({'respiration_rate': respiration})
 
