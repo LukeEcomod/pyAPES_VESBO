@@ -6,7 +6,8 @@ https://docs.python.org/3.0/whatsnew/3.0.html
 Code is mainly written so that it works in both python 2.7 and 3.?
 * main things so far:
   - print is a function. Brackets are needed
-  - views and iterators instead of lists. Casting needed (list()) if list needed.
+  - views and iterators instead of lists casting needed (wrap inside a list() call).
+   * this is especially needed if you are iterating through dict.items(), dict.keys(), and dict.values() AND 
   - absolute import vs. relative import: from .foo import spam if you want to import from same level.
 
 ### SoilProfile
