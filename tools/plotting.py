@@ -2,14 +2,19 @@
 """
 Created on Tue Mar 20 15:09:06 2018
 
-@author: L1656
+Note:
+    migrated to python3
+    - absolute imports
+    - range() is not wrapped in list as consumed in for-each-loop
+
+@author: Kersti Haahti
 """
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from timeseries_tools import diurnal_cycle, yearly_cumulative
-from iotools import read_forcing, xarray_to_df
+from .timeseries_tools import diurnal_cycle, yearly_cumulative
+from .iotools import read_forcing, xarray_to_df
 
 import seaborn as sns
 pal = sns.color_palette("hls", 6)
@@ -409,7 +414,7 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
         plt.fill_between(var_diurnal['hour'], var_diurnal['25th'], var_diurnal['75th'],
                          color=color, alpha=0.4, label='25...75%')
     plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label)
-    print 'Daily sum :' + str(sum(var_diurnal['median'])) + ' mm/d'
+    print('Daily sum :' + str(sum(var_diurnal['median'])) + ' mm/d')
     plt.title(title)
     plt.xticks(np.linspace(0,24,4))
     plt.xlabel('Time [h]')

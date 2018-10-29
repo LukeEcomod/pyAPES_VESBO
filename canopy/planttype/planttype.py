@@ -10,6 +10,10 @@ Based on MatLab implementation by Samuli Launiainen.
 
 Created on Tue Oct 02 09:04:05 2018
 
+Note:
+    migrated to python3
+    - absolute imports
+
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
 forest CO2, H2O and energy flows by a vertically structured forest canopy – 
@@ -18,9 +22,9 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from photo import leaf_interface
-from phenology import Photo_cycle, LAI_cycle
-from rootzone import RootUptake
+from .photo import leaf_interface
+from .phenology import Photo_cycle, LAI_cycle
+from .rootzone import RootUptake
 from canopy.constants import LATENT_HEAT
 
 class PlantType(object):

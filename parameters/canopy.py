@@ -3,8 +3,8 @@
 CANOPY MODEL PARAMETERS
 """
 
-from planttype import get_planttypes
-from forestfloor import forestfloor
+from .planttype import get_planttypes
+from .forestfloor import forestfloor
 
 def get_cpara(dbhfile):
 

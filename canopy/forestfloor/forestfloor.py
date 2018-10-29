@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 .. module: forestfloor
@@ -77,7 +78,7 @@ class ForestFloor(object):
         bryotypes = []
 
         f_bryo = 0.0
-        for key, bryo in properties['bryophytes']:
+        for key, bryo in properties['bryophytes'].items():
             bryotypes.append(Bryophyte(bryo,
                                        properties['initial_conditions']['bryophytes'][key]))
             f_bryo += bryo['ground_coverage']

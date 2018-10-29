@@ -9,6 +9,10 @@ Based on MatLab implementation by Samuli Launiainen.
 
 Created on Tue Oct 02 09:04:05 2018
 
+Note:
+    migrated to python3
+    - absolute imports
+
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
 forest CO2, H2O and energy flows by a vertically structured forest canopy – 
@@ -20,7 +24,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from tools.utilities import central_diff, forward_diff, tridiag, smooth, spatial_average
-from constants import *
+from .constants import *
 
 class Micromet(object):
     r""" Computes flow and scalar profiles within canopy.

@@ -12,6 +12,7 @@ Created on Thu Mar 01 13:21:29 2018
 Note:
     migrated to python3
     - absolute imports
+    - in for-loop range() does not need to be wrapped in list()
 
 References:
 Tanaka, K., 2002. Multi-layer model of CO2 exchange in a plant community 
@@ -192,7 +193,7 @@ class Interception(object):
 
         # Unloading in canopy, ensures also that seasonal
         # LAI development does not mess up computations
-        for n in reversed(range(0, N)):  # start from highest grid point
+        for n in reversed(range(N)):  # start from highest grid point
             Unload = max(W[n] - Wmax[n], 0.0)  # unloading from layer n
             W[n] -= Unload  # update storage of layer n
             if n != 0:
@@ -213,12 +214,12 @@ class Interception(object):
         Trfall = 0.0  # throughfall below canopy [m]
 
         if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
-            for t in range(0, Nsteps):
+            for t in range(Nsteps):
                 Ir = np.zeros(N)  # interception rate [m/s]
                 dW = np.zeros(N)  # change in storage [m]
                 P = np.zeros(N+1)  # precipitation rate to layer [m/s]
                 P[-1] = Prec  # above canopy equals precipitation rate [m/s]
-                for n in reversed(range(0, N)):  # start from highest grid point
+                for n in reversed(range(N)):  # start from highest grid point
                     if Ep[n] >= 0:  # evaporation case
                         # change in storage [m]
                         dW[n] = (F * P[n+1] / (F * P[n+1] + Ep[n] + eps) * Wmax[n] - W[n]) \

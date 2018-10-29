@@ -4,6 +4,11 @@
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
+Note:
+    migrated to python3
+    - absolute imports
+    - dict comprehension: dict.keys are not wrapped in a list
+
 Represents soil water balance.
 
 Created on Thu Oct 04 09:04:05 2018
@@ -13,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from tools.utilities import tridiag as thomas, spatial_average
-from constants import EPS
+from .constants import EPS
 
 import logging
 logger = logging.getLogger(__name__)
@@ -1086,7 +1091,7 @@ def wrc(pF, x=None, var=None):
         return None
 
     elif x is None:
-        print 'soil_cores.wrc: To draw curve give only one pF -parameter set'
+        print('soil_cores.wrc: To draw curve give only one pF -parameter set')
         return None
 
     if var is 'Th':
@@ -1151,7 +1156,7 @@ def unsat_conductivity(pF, x=None, var=None, Ksat=1):
         return None
 
     elif x is None:
-        print 'hydrCond: To draw curve give only one pF -parameter set'
+        print('hydrCond: To draw curve give only one pF -parameter set')
         return None
 
     # this computes and returns

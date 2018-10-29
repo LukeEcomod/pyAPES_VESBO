@@ -2,7 +2,11 @@
 """
 General utility functions
 
-@author: L1656
+Note:
+    migrated to python3
+    - nothing changed
+
+@author: Kersti Haahti
 """
 
 import numpy as np

@@ -4,6 +4,10 @@ I/O tools for handling CCFPeat simulations.
 
 Created on Fri Jun 08 10:32:44 2018
 
+Note:
+    migrated to python3
+    - print >>out to print(file=out)
+
 @author: Kersti Haahti
 """
 
@@ -135,7 +139,7 @@ def save_df_to_csv(df, fn, readme='', fp="forcing/", timezone = +2):
     Readme += "\n\nyyyy, mo, dd, hh, mm: datetime [UTC + %.1f]" % timezone
     Readme += readme
     outF = open(fp + fn + "_readme.txt", "w")
-    print >>outF, Readme
+    print(Readme, file=outF)
     outF.close()
 
 def xarray_to_df(results, variables, sim_idx=0):

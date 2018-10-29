@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 .. module: constants
@@ -6,6 +6,10 @@
 .. moduleauthor:: Kersti Haahti
 
 Constants used in soilprofile module.
+
+Note:
+    migrated to python3
+    - nothing changed
 
 Created on Wed Oct 03 15:29:40 2018
 """

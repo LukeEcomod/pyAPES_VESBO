@@ -9,6 +9,11 @@ Based on MatLab implementation by Samuli Launiainen.
 
 Created on Tue Oct 02 09:04:05 2018
 
+Note:
+    migrated to python3
+    - print on same line
+    - dict.keys(), but these are iterated after in for-each-loop
+
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
 forest CO2, H2O and energy flows by a vertically structured forest canopy – 
@@ -37,10 +42,11 @@ from parameters.soil import get_spara
 from parameters.sensitivity import get_parameters, iterate_parameters
 
 import logging
+from parameters.general import logging_configuration
 from logging.config import dictConfig
 
-#dictConfig(logging_configuration)
 
+dictConfig(logging_configuration)
 #mpl_logger = logging.getLogger('matplotlib')
 #mpl_logger.setLevel(logging.WARNING)
 
@@ -75,7 +81,7 @@ def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt",
 
     logger = logging.getLogger(__name__)
 
-    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
+    logger.info('Simulation started. Number of simulations: {}'.format(Nsim + 1))
 
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
@@ -167,7 +173,7 @@ class Model(object):
 
             if k in k_steps[:-1]:
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
-                print '{0}..\r'.format(s),
+                print('{0}..\r'.format(s), end='')
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
@@ -240,7 +246,7 @@ class Model(object):
             self.results = _append_results('ffloor', k, ffloor_state, self.results)
             self.results = _append_results('soil', k, soil_state, self.results)
 
-        print '100%'
+        print('100%')
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
 
         self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)

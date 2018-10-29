@@ -103,17 +103,17 @@ def peat_hydrol_properties(x, unit='g/cm3', var='bd', ptype='A', fig=False, labe
     if  np.shape(x)[0] >1 and len(ptype)==1:
         ptype=np.repeat(ptype, np.shape(x)[0])
 
-    wcont = lambda x, (a0, a1, a2): a0 + a1*x + a2*x**2.
+    wcont = lambda x, a0, a1, a2: a0 + a1*x + a2*x**2.
     potentials =np.array([0.001, 1.,3.2, 10.,100.,1000.,1500.])
-    wc = (np.array([wcont(x,prs['pF0']), pF1(x), wcont(x,prs['pF1.5']), wcont(x,prs['pF2']),
-               wcont(x,prs['pF3']), wcont(x,prs['pF4']),wcont(x,prs['pF4.2'])]))
+    wc = (np.array([wcont(x,*prs['pF0']), pF1(x), wcont(x,*prs['pF1.5']), wcont(x,*prs['pF2']),
+               wcont(x,*prs['pF3']), wcont(x,*prs['pF4']),wcont(x,*prs['pF4.2'])]))
     wc = np.transpose(wc)
     pF_para = fit_pF(potentials, wc, fig=fig, labels=labels, percentage=True, kPa=True)
 
     Ksat = np.zeros((np.size(x)))
-    K = lambda x, (a0, a1): 10.**(a0 + a1*x) / 100.   # to m/s
+    K = lambda x, a0, a1: 10.**(a0 + a1*x) / 100.   # to m/s
     for i, a, pt in zip(range(len(x)), x, ptype):
-        Ksat[i] = K(a, Kpara[var][pt])  # hydraulic conductivity (cm/s -> m/s)
+        Ksat[i] = K(a, *Kpara[var][pt])  # hydraulic conductivity (cm/s -> m/s)
 
     return pF_para, Ksat
 
@@ -354,7 +354,7 @@ def marklund(d, species):
         return y, L
         
     else:
-        print 'Vegetation.marklund: asked species (pine, spruce, birch) not found'
+        print('Vegetation.marklund: asked species (pine, spruce, birch) not found')
         return None
 
 def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):

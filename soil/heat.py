@@ -4,6 +4,10 @@
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
+Note:
+    migrated to python3
+    - absolute imports
+
 Represents soil heat balance.
 
 Created on Thu Oct 04 09:04:05 2018
@@ -11,11 +15,11 @@ Created on Thu Oct 04 09:04:05 2018
 
 import numpy as np
 import matplotlib.pyplot as plt
-from water import wrc
+from .water import wrc
 from tools.utilities import tridiag as thomas, spatial_average
-from constants import K_WATER, K_ICE, K_AIR, K_ORG, K_SAND, K_SILT, K_CLAY
-from constants import CV_AIR, CV_WATER, CV_ICE, CV_ORGANIC, CV_MINERAL
-from constants import LATENT_HEAT_FREEZING, FREEZING_POINT_H2O, ICE_DENSITY
+from .constants import K_WATER, K_ICE, K_AIR, K_ORG, K_SAND, K_SILT, K_CLAY
+from .constants import CV_AIR, CV_WATER, CV_ICE, CV_ORGANIC, CV_MINERAL
+from .constants import LATENT_HEAT_FREEZING, FREEZING_POINT_H2O, ICE_DENSITY
 
 import logging
 logger = logging.getLogger(__name__)

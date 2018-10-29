@@ -2,13 +2,18 @@
 """
 Created on Fri Jun 08 15:00:35 2018
 
+Note:
+    migrated to python3
+    - absolute imports
+    - print()
+
 @author: L1656
 """
 
 import numpy as np
 import pandas as pd
-from iotools import save_df_to_csv
-from timeseries_tools import fill_gaps
+from .iotools import save_df_to_csv
+from .timeseries_tools import fill_gaps
 
 direc = "C:/Users/L1656/Documents/Git_repos/CCFPeat/"
 
@@ -144,8 +149,8 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     dat = dat[cols]
     dat[cols].plot(subplots=True, kind='line')
 
-    print "NaN values in forcing data:"
-    print dat.isnull().any()
+    print("NaN values in forcing data:")
+    print(dat.isnull().any())
 
     save_df_to_csv(dat, output_file, readme=readme,fp=direc + "forcing/")
 
@@ -324,7 +329,7 @@ def gather_hyde_data():
         dat = pd.read_csv(forc_fp, sep=',', header='infer')
         index = pd.date_range('01-01-' + str(year),'31-12-' + str(year) + ' 23:59:59',freq='0.5H')
         if len(index) != len(dat):
-            print "Year " + str(year) + ": Missing values!"
+            print("Year " + str(year) + ": Missing values!")
         else:
             dat.index = index
             frames.append(dat[columns])

@@ -1,9 +1,13 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Mon Oct  1 13:30:51 2018
 
 Constants used in the model calculations.
+
+Note:
+    migrated to python3
+    - nothing to change
 
 @author: ajkieloaho
 """

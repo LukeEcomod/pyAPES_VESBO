@@ -2,7 +2,11 @@
 """
 Created on Mon Mar 19 10:19:19 2018
 
-@author: L1656
+Note:
+    migrated to python3
+    - print()
+
+@author: Kersti Haahti
 """
 
 import numpy as np
@@ -65,9 +69,9 @@ def diurnal_cycle(data, ap='hour'):
     else:
         print('diurnal_cycle: data must be pd.DataFrame or pd.Series')
 
-    print '********** computing diurnal cycles *********'
+    print('********** computing diurnal cycles *********')
     res = {}
-    for k in range(0, c):
+    for k in range(c):
         if ap.lower() == 'hour':
             N = len(hour)             
             x = np.ones((N, 11))*np.NaN

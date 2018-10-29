@@ -4,6 +4,10 @@
     :synopsis: APES-model component
 .. moduleauthor:: Samuli Launiainen & Kersti Haahti
 
+Note:
+    migrated to python3
+    - nothing changed
+
 Describes plant phenology, seasonal cycle of photosynthetic 
 capacity and leaf-area development.
 

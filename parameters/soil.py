@@ -2,8 +2,8 @@
 """
 Soilprofile
 """
-from soiltypes.organic import soil_properties as organic_soil_properties
-from soiltypes.mineral import soil_properties as mineral_soil_properties
+from .soiltypes.organic import soil_properties as organic_soil_properties
+from .soiltypes.mineral import soil_properties as mineral_soil_properties
 
 def get_spara(soiltype):
     """ grid """

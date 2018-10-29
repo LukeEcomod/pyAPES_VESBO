@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 .. module: canopy
@@ -9,6 +10,14 @@ Based on MatLab implementation by Samuli Launiainen.
 
 Created on Tue Oct 02 09:04:05 2018
 
+Note:
+    Migrated to python3:
+        - absolute imports
+        - for each loop: usage of enumerate() instead of list(range(len(foo)))
+        - if dictionary IS modified in a for-loop dict.items()/.keys()/.values() wrapped in a list
+        (this is not necessary if only modifying and not adding/deleting)
+        - if dictionary IS NOT modified in a for-loop, wrapped anyways (for caution).
+
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
 forest CO2, H2O and energy flows by a vertically structured forest canopy – 
@@ -18,13 +27,13 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 import numpy as np
 from copy import deepcopy
 from matplotlib import pyplot as plt
-from constants import MOLAR_MASS_H2O, EPS
+from .constants import MOLAR_MASS_H2O, EPS
 
-from radiation import Radiation
-from micromet import Micromet
-from interception import Interception
-from planttype.planttype import PlantType
-from forestfloor.forestfloor import ForestFloor
+from .radiation import Radiation
+from .micromet import Micromet
+from .interception import Interception
+from .planttype.planttype import PlantType
+from .forestfloor.forestfloor import ForestFloor
 
 import logging
 logger = logging.getLogger(__name__)
@@ -107,12 +116,25 @@ class CanopyModel(object):
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
-        for p in cpara['planttypes'].values():
-            for n in range(len(p['LAImax'])):
+
+        # Dictionary IS NOT modified in loop. Wrapped in to a list just in case.
+        for p in list(cpara['planttypes'].values()):
+
+            # can this be done just 'for item in list'?
+            for n in list(range(len(p['LAImax']))):
+
                 pp = p.copy()
                 pp['LAImax'] = p['LAImax'][n]
                 pp['lad'] = p['lad'][:, n]
                 ptypes.append(PlantType(self.z, pp, dz_soil, ctr=cpara['ctr']))
+
+            for idx, lai_max in enumerate(p['LAImax']):
+
+                pp = p.copy()
+                pp['LAImax'] = lai_max
+                pp['lad'] = p['lad'][:, idx]
+                ptypes.append(PlantType(self.z, pp, dz_soil, ctr=cpara['ctr']))
+
         self.planttypes = ptypes
 
         # --- stand characteristics ---
@@ -275,6 +297,7 @@ class CanopyModel(object):
                                    'lw_up': forcing['radiation']['LW']['up'][0]})
 
             # --- heat, h2o and co2 source terms
+            # Dictionary IS modified in loop. Wrapped in to a list.
             for key in sources.keys():
                 sources[key] = 0.0 * self.ones
 
@@ -287,6 +310,7 @@ class CanopyModel(object):
             df = self.interception.df
 
             # update source terms
+            # Dictionary IS modified in a loop. Wrapped in a list.
             for key in wetleaf_fluxes['sources'].keys():
                 sources[key] += wetleaf_fluxes['sources'][key] / self.dz
 
@@ -302,6 +326,7 @@ class CanopyModel(object):
                         H2O, CO2, T, U, df=df, forcing=forcing)
 
                 # update source terms
+                # Dictionary IS modiefied in a loop. Wrapped in a list.
                 for key in pt_sources.keys():
                     sources[key] += pt_sources[key]
 

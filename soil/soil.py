@@ -4,6 +4,11 @@
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
+Note:
+    migrated to python3
+    - absolute imports
+    - dict.keys are not wrapped in list()
+
 Soilprofile
 
 Created on Tue Oct 02 09:04:05 2018
@@ -13,10 +18,10 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from matplotlib import pyplot as plt
-from constants import EPS
+from .constants import EPS
 
-from water import Water
-from heat import Heat
+from .water import Water
+from .heat import Heat
 
 class Soil(object):
 
@@ -252,20 +257,26 @@ def form_profile(z, zh, p, lbc_water):
     ix = np.zeros(N)
     for depth in zh:
         ix += np.where(z < depth, 1, 0)
+
     for key in p.keys():
         if (key == 'pF' or key == 'solid_composition'):
             prop.update({key: {}})
+
             for subkey in p[key].keys():
                 pp = np.array([p[key][subkey][int(ix[i])] for i in range(N)])
                 prop[key].update({subkey: pp})
+
         elif key is not 'bedrock':
             pp = np.array([p[key][int(ix[i])] for i in range(N)])
             prop.update({key: pp})
+
     prop.update({'porosity': prop['pF']['ThetaS']})
     prop.update({'bedrock_thermal_conductivity': np.ones(N) * np.nan})
+
     if lbc_water['type'] == 'impermeable' and z[-1] < lbc_water['depth']:
         ixx = np.where(z < lbc_water['depth'])[0]
         prop['porosity'][ixx] = EPS
         prop['solid_heat_capacity'][ixx] = p['bedrock']['solid_heat_capacity']
         prop['bedrock_thermal_conductivity'][ixx] = p['bedrock']['thermal_conductivity']
+
     return prop

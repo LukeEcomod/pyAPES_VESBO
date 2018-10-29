@@ -9,6 +9,10 @@ Based on MatLab implementation by Samuli Launiainen.
 
 Created on Tue Jul 24 10:49:59 2018
 
+Note:
+    migrated to python3
+    - nothing changed
+
 References: --- SHOULD WE USE THIS??? Do we need to solve hroot???
 Volpe, V., Marani, M., Albertson, J.D. and Katul, G., 2013. Root controls 
 on water redistribution and carbon uptake in the soil–plant system under 

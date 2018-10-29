@@ -11,31 +11,36 @@ ranges = {}
 def get_parameters(name=None):
 
 # parameter sets of simulations
-parameters = {
-        'count': 8,
-        'canopy': {
-#                'forestfloor': {
-#                        'bryophytes': {
-#                                'hylocomium': {
-#                                        'ground_coverage': (1.0, 1.0),
-#                                        'height': (0.05, 0.05)
-#                                        },
-#                                'pleurozium': {
-#                                        'ground_coverage': (0.0, 0.0),
-#                                        'height': (0.04, 0.04)
-#                                        }
-#                                        },
-#                        'baresoil': {
-#                                'ground_coverage': (0.0, 0.0)
-#                                }
-#                                },
-                'planttypes': {
-                        'pine': {
-                                'LAImax': ([2.1], [2.1], [1.9], [1.9], [1.7], [1.7], [1.5], [1.5])
-                                },
-                        'shrubs': {
-                                'LAImax': ([0.6], [0.4], [0.2], [0.0], [0.6], [0.4], [0.2], [0.0])
+    parameters = {
+            'count': 1,
+#            'canopy': {
+    #                'forestfloor': {
+    #                        'bryophytes': {
+    #                                'hylocomium': {
+    #                                        'ground_coverage': (1.0, 1.0),
+    #                                        'height': (0.05, 0.05)
+    #                                        },
+    #                                'pleurozium': {
+    #                                        'ground_coverage': (0.0, 0.0),
+    #                                        'height': (0.04, 0.04)
+    #                                        }
+    #                                        },
+    #                        'baresoil': {
+    #                                'ground_coverage': (0.0, 0.0)
+    #                                }
+    #                                },
+#                    'planttypes': {
+#                            'pine': {
+#                                    'LAImax': ([2.1], [2.1], [1.9], [1.9], [1.7], [1.7], [1.5], [1.5])
+#                                    },
+#                            'shrubs': {
+#                                    'LAImax': ([0.6], [0.4], [0.2], [0.0], [0.6], [0.4], [0.2], [0.0])
+#                                    }
+#                            }
+#                        }
+                    }
 
+    return parameters
 #    if name is None:
 #        # parameter sets of simulations
 #        parameters = {
@@ -156,14 +161,14 @@ parameters = {
 #                                'shrubs': {
 #                                        'LAImax': ([0.7])
 #                                        }
-                                }
-                }
-            }
+#                                }
+#                }
+#            }
 
-    else:
-        raise ValueError('Unknown sensitivity parametrization %s' % name.upper())
-
-    return parameters
+#    else:
+#        raise ValueError('Unknown sensitivity parametrization %s' % name.upper())
+#
+#    return parameters
 
 def iterate_parameters(parameters, default, count):
     """ Going through recursively senstivity nested parameter dictionary.
@@ -172,7 +177,7 @@ def iterate_parameters(parameters, default, count):
         paramters (dict): nested dictionary
     """
 
-    for key, value in parameters.iteritems():
+    for key, value in parameters.items():
         if key == 'count':
             continue
         elif isinstance(value, dict):
