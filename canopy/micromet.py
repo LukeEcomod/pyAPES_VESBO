@@ -85,7 +85,7 @@ class Micromet(object):
             ustaro (float): friction velocity [m s-1]
         """
 
-        U = self.U_n * ustaro
+        U = self.U_n * ustaro + EPS
         U[0] = U[1]
 
         Km = self.Km_n * ustaro + EPS
@@ -134,8 +134,9 @@ class Micromet(object):
         # new H2O
         H2O = (1 - gam) * H2O_prev + gam * H2O
         # limit change to +/- 10%
-        H2O[H2O > H2O_prev] = np.minimum(H2O_prev[H2O > H2O_prev] * 1.1, H2O[H2O > H2O_prev])
-        H2O[H2O < H2O_prev] = np.maximum(H2O_prev[H2O < H2O_prev] * 0.9, H2O[H2O < H2O_prev])
+        if all(~np.isnan(H2O)):
+            H2O[H2O > H2O_prev] = np.minimum(H2O_prev[H2O > H2O_prev] * 1.1, H2O[H2O > H2O_prev])
+            H2O[H2O < H2O_prev] = np.maximum(H2O_prev[H2O < H2O_prev] * 0.9, H2O[H2O < H2O_prev])
         # relative error
         err_h2o = max(abs((H2O - H2O_prev) / H2O_prev))
 
@@ -150,8 +151,9 @@ class Micromet(object):
         # new CO2
         CO2 = (1 - gam) * CO2_prev + gam * CO2
         # limit change to +/- 10%
-        CO2[CO2 > CO2_prev] = np.minimum(CO2_prev[CO2 > CO2_prev] * 1.1, CO2[CO2 > CO2_prev])
-        CO2[CO2 < CO2_prev] = np.maximum(CO2_prev[CO2 < CO2_prev] * 0.9, CO2[CO2 < CO2_prev])
+        if all(~np.isnan(CO2)):
+            CO2[CO2 > CO2_prev] = np.minimum(CO2_prev[CO2 > CO2_prev] * 1.1, CO2[CO2 > CO2_prev])
+            CO2[CO2 < CO2_prev] = np.maximum(CO2_prev[CO2 < CO2_prev] * 0.9, CO2[CO2 < CO2_prev])
         # relative error
         err_co2 = max(abs((CO2 - CO2_prev) / CO2_prev))
 
@@ -167,9 +169,10 @@ class Micromet(object):
             # new T
             T = (1 - gam) * T_prev + gam * T
             # limit change to T_prev +/- 2degC
-            T[T > T_prev] = np.minimum(T_prev[T > T_prev] + 2.0, T[T > T_prev])
-            T[T < T_prev] = np.maximum(T_prev[T < T_prev] - 2.0, T[T < T_prev])
-    
+            if all(~np.isnan(T)):
+                T[T > T_prev] = np.minimum(T_prev[T > T_prev] + 2.0, T[T > T_prev])
+                T[T < T_prev] = np.maximum(T_prev[T < T_prev] - 2.0, T[T < T_prev])
+
             # absolut error
             err_t = max(abs(T - T_prev))
         else:

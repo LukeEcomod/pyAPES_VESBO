@@ -22,7 +22,7 @@ pal = sns.color_palette("hls", 6)
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default = prop_cycle.by_key()['color']
 
-def plot_results(results, sim_idx=0):
+def plot_results(results):
 
     # Read snow
 
@@ -35,30 +35,30 @@ def plot_results(results, sim_idx=0):
 
     plt.figure(figsize=(10,9))
     ax = plt.subplot(711)
-    plot_timeseries_xr(results, 'forcing_air_temperature', colors=pal, xticks=False, sim_idx=sim_idx)
+    plot_timeseries_xr(results, 'forcing_air_temperature', colors=pal, xticks=False)
     plt.subplot(712, sharex=ax)
-    plot_timeseries_xr(results, ['forcing_precipitation', 'canopy_throughfall'], sim_idx=sim_idx,
+    plot_timeseries_xr(results, ['forcing_precipitation', 'canopy_throughfall'],
                        colors=pal[3:], xticks=False, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(713, sharex=ax)
-    plot_timeseries_xr(results, ['canopy_moss_evaporation', 'canopy_baresoil_evaporation', 'canopy_transpiration', 'canopy_evaporation',
-                       'soil_drainage', 'soil_surface_runoff'], sim_idx=sim_idx,
+    plot_timeseries_xr(results, ['ffloor_evaporation_bryo', 'ffloor_evaporation_soil', 'canopy_transpiration', 'canopy_evaporation',
+                       'soil_drainage', 'soil_surface_runoff'],
                        colors=pal, cum=True, stack=True, xticks=False,
                        unit_conversion={'unit':'mm', 'conversion':1e3},)
     plt.subplot(714, sharex=ax)
-    plot_timeseries_xr(results, ['canopy_evaporation', 'canopy_transpiration', 'canopy_moss_evaporation', 'canopy_baresoil_evaporation'],
-                       sim_idx=sim_idx, colors=[pal[3]] + [pal[2]] + [pal[0]] + [pal[1]], xticks=False,
+    plot_timeseries_xr(results, ['canopy_evaporation', 'canopy_transpiration', 'ffloor_evaporation_bryo', 'ffloor_evaporation_soil'],
+                       colors=[pal[3]] + [pal[2]] + [pal[0]] + [pal[1]], xticks=False,
                        unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(715, sharex=ax)
     plot_timeseries_df(weir, 'runf', unit_conversion = {'unit':'mm h-1', 'conversion':3600},
                        labels='measured runoff', colors=['k'], xticks=False)
-    plot_timeseries_xr(results, 'soil_drainage', colors=pal, xticks=False, sim_idx=sim_idx,
+    plot_timeseries_xr(results, 'soil_drainage', colors=pal, xticks=False,
                       unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
     plt.subplot(716, sharex=ax)
-    plot_timeseries_xr(results, 'canopy_snow_water_equivalent', colors=['gray'], xticks=False, stack=True,
-                       sim_idx=sim_idx, unit_conversion={'unit':'mm', 'conversion':1e3})
+    plot_timeseries_xr(results, 'ffloor_snow_water_equivalent', colors=['gray'], xticks=False, stack=True,
+                       unit_conversion={'unit':'mm', 'conversion':1e3})
     plt.subplot(717, sharex=ax)
     plot_timeseries_df(gwl_meas, ['part','clear','ctrl'], colors=pal[1:], xticks=True, limits=False)
-    plot_timeseries_xr(results, 'soil_ground_water_level', colors=pal[0:], xticks=True, sim_idx=sim_idx)
+    plot_timeseries_xr(results, 'soil_ground_water_level', colors=pal[0:], xticks=True)
     plt.ylim(-1.0, 0.0)
 
     plt.tight_layout(rect=(0, 0, 0.8, 1))
@@ -69,10 +69,10 @@ def plot_fluxes(results, sim_idx=0):
     Data.ET = Data.ET / 1800 * 3600
     Data.GPP = -Data.GPP
 
-    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','forcing_precipitation','canopy_moss_evaporation','canopy_baresoil_evaporation']
+    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_moss_evaporation + Data.canopy_baresoil_evaporation) * 1e3 * 3600
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation) * 1e3 * 3600
     Data.canopy_GPP = Data.canopy_GPP * 44.01 * 1e-3
     Data.canopy_respiration = Data.canopy_respiration * 44.01 * 1e-3
 
@@ -85,9 +85,9 @@ def plot_fluxes(results, sim_idx=0):
     months = Data.index.month
     fmonth = 4
     lmonth = 9
-    ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
-    ixGPP = np.where((months >= fmonth) & (months <= lmonth))[0]
-    ixReco = np.where((months >= fmonth) & (months <= lmonth))[0]
+    ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
+    ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
+    ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
     labels=['Measured', 'Modelled']
 
     plt.figure(figsize=(10,6))
@@ -252,7 +252,7 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
     plt.setp(plt.gca().axes.get_xticklabels(), visible=xticks)
     plt.xlabel('')
     if legend:
-        plt.legend(frameon=False, borderpad=0.0, fontsize=8)
+        plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
                        labels=None, colors=default, xticks=True, stack=False, cum=False, limits=True,legend=True):
@@ -382,7 +382,7 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
             'x' (str): x-axis label
             'y' (str): y-axis label
     """
-    plt.scatter(x, y, marker='o', color=color, alpha=.2)
+    plt.scatter(x, y, marker='o', color=color, alpha=.1)
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])

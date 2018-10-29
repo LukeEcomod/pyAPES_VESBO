@@ -159,11 +159,12 @@ def heat_balance(forcing, properties, temperature):
         else:
             err = 0.0
 
-    if abs(T_surf - temperature) > 20:  # into iteration loop? chech photo or interception
-        logger.debug('%s (iteration %s) Unrealistic baresoil temperature %.2f set to previous value %.2f',
+    if (abs(T_surf - temperature) > 20 or np.isnan(T_surf)):  # into iteration loop? chech photo or interception
+        logger.debug('%s (iteration %s) Unrealistic baresoil temperature %.2f set to previous value %.2f: %.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f',
              forcing['date'],
              forcing['iteration'],
-             T_surf, temperature)
+             T_surf, temperature,
+             U, T, H2O, P, T_ave, T_soil, h_soil, Kh, Kt)
         T_surf = temperature
         es, s = e_sat(T_surf)
         Dsurf = es / P - H2O  # [mol/mol] - allows condensation

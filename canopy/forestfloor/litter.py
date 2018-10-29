@@ -25,7 +25,6 @@ from .carbon import soil_respiration
 
 from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C, EPS
 
-
 class Litter(object):
     """
     """
@@ -196,11 +195,19 @@ class Litter(object):
 
 
         # calculate respiration
+<<<<<<< HEAD
         respiration = soil_respiration(self.properties,
                                 self.temperature,
                                 self.volumetric_water,
                                 self.volumetric_air
                                 )
+=======
+        respiration, _ = soil_respiration(self.properties['respiration'],
+                                       self.temperature,
+                                       self.volumetric_water,
+                                       self.volumetric_air)
+        respiration = respiration * self.coverage
+>>>>>>> c5aa41fd7036dbd9806f1f1b9681fa5a9a1aabbd
 
         fluxes.update({'respiration_rate': respiration})
 

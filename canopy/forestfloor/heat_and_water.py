@@ -785,6 +785,8 @@ def soil_boundary_layer_conductance(u, z, zo, Ta, dT, P=101300.):
     to python by Kersti
     """
 
+    u = np.maximum(u, EPS)
+
     rho_air = 44.6*(P / 101300.0)*(273.15 / (Ta + 273.13))  # molar density of air [mol/m3]
 
     delta = 5.0 * GRAVITY * z * dT / ((Ta + 273.15) * u**2)
