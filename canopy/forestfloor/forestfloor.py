@@ -23,6 +23,7 @@ from canopy.micromet import e_sat
 from canopy.constants import EPS, WATER_DENSITY, MOLAR_MASS_H2O
 
 from bryophyte import Bryophyte
+from litter import Litter
 from baresoil import Baresoil
 from snowpack import Snowpack
 
@@ -63,11 +64,16 @@ class ForestFloor(object):
             self (object)
         """
 
-        self.baresoil = Baresoil(properties['baresoil'],
-                                 properties['initial_conditions']['baresoil'])
-
         self.snowpack = Snowpack(properties['snowpack'],
                                  properties['initial_conditions']['snowpack'])
+
+        self.baresoil = Baresoil(properties['baresoil'],
+                                 properties['initial_conditions']['baresoil'])
+        self.f_baresoil = self.baresoil.coverage
+
+        self.litter = Litter(properties['litter'],
+                             properties['initial_conditions']['litter'])
+        self.f_litter = self.litter.coverage
 
         # Bryotypes
         bryotypes = []
@@ -79,16 +85,11 @@ class ForestFloor(object):
             f_bryo += bryo['ground_coverage']
 
         self.bryotypes = bryotypes
-        # soil coverage: baresoil, bryotypes (and litter?)
 
-        f_baresoil = 1.0 - f_bryo
-
-        if f_bryo + f_baresoil > 1.0:
-            raise ValueError("The sum of bryophytes and baresoil coverages "
-                             + "more than one!")
-
-        self.f_baresoil = f_baresoil
-        self.baresoil.coverage = f_baresoil
+        if abs(1.0 - (f_bryo + self.f_baresoil + self.f_litter)) > EPS:
+            raise ValueError("The sum of bryophytes, litter and baresoil coverages "
+                             + "should be one! Now %.2f" % 
+                             (f_bryo + self.f_baresoil + self.f_litter))
 
         self.f_bryo = f_bryo
 
@@ -111,7 +112,12 @@ class ForestFloor(object):
             for bryo in self.bryotypes:
                 bryo.update()
 
+        if self.f_litter > 0.0:
+
+            self.litter.update()
+
         if self.f_baresoil > 0.0:
+
             self.baresoil.update()
 
         self.snowpack.update()
@@ -126,6 +132,10 @@ class ForestFloor(object):
 
             for bryo in self.bryotypes:
                 bryo.restore()
+
+        if self.f_litter > 0.0:
+
+            self.litter.restore()
 
         if self.f_baresoil > 0.0:
 
@@ -170,7 +180,6 @@ class ForestFloor(object):
         ground_heat = 0.0  # [W m-2]
         latent_heat = 0.0  # [W m-2]
         temperature = 0.0  # [degC]
-        evaporation = 0.0  # [mol m-2(ground) s-1]
 
         potential_infiltration = 0.0  # [m s-1]
         respiration = 0.0  # [umol m-2(ground) s-1]
@@ -183,6 +192,15 @@ class ForestFloor(object):
         soil_temperature = 0.0  # [degC]
         soil_energy_closure = 0.0  # [W m-2]
         radiative_flux = 0.0  # [W m-2]
+
+        # litter
+        litter_temperature = 0.0  # [degC]
+        litter_evaporation = 0.0  # [mol m-2 s-1]
+        litter_respiration = 0.0  # [umol m-2 s-1]
+        litter_carbon_pool = 0.0  # [g C m-2]
+        litter_water_storage = 0.0  # [kg m-2]
+        litter_water_closure = 0.0  # [W m-2]
+        litter_energy_closure = 0.0  # [W m-2]
 
         # --- Bryphytes ---
 
@@ -261,7 +279,36 @@ class ForestFloor(object):
 
                 respiration += bryo_respiration
                 temperature += bryo_temperature
-                evaporation += bryo_evaporation
+
+                bryo_temperature = bryo_temperature / self.f_bryo
+
+            if self.f_litter > 0.0:
+
+                # litters's heat, water and respiration
+                fluxes_litter, states_litter = self.litter.run(dt, forcing)
+
+                litter_evaporation += self.f_litter * fluxes_litter['evaporation'] / MOLAR_MASS_H2O
+                soil_evaporation += self.f_litter * fluxes_litter['soil_evaporation'] / MOLAR_MASS_H2O
+
+                potential_infiltration += self.f_litter * fluxes_litter['throughfall'] / WATER_DENSITY
+                capillar_rise += self.f_litter * fluxes_litter['capillar_rise'] / WATER_DENSITY
+                pond_recharge += self.f_litter * fluxes_litter['pond_recharge'] / WATER_DENSITY
+
+                latent_heat += self.f_litter * fluxes_litter['latent_heat']
+                sensible_heat += self.f_litter * fluxes_litter['sensible_heat']
+                ground_heat += self.f_litter * fluxes_litter['ground_heat']
+
+                litter_water_closure += self.f_litter * fluxes_litter['water_closure']
+                litter_energy_closure += self.f_litter * fluxes_litter['energy_closure']
+
+                litter_temperature = states_litter['temperature']
+                temperature += self.f_litter * litter_temperature
+                litter_water_storage = self.f_litter * states_litter['water_storage'] / WATER_DENSITY
+
+                # In carbon calculations are per litter's coverage
+                litter_respiration += fluxes_litter['respiration_rate']
+                litter_carbon_pool += states_litter['carbon_pool']
+                respiration += litter_respiration
 
             if self.f_baresoil > 0.0:
 
@@ -269,33 +316,35 @@ class ForestFloor(object):
                 forcing.update({'forestfloor_temperature': self.temperature})
                 fluxes_soil, states_soil = self.baresoil.run(dt, forcing)
 
-                soil_evaporation += self.baresoil.coverage * fluxes_soil['evaporation']
-                evaporation += soil_evaporation
+                soil_evaporation += self.f_baresoil * fluxes_soil['evaporation']
 
-                latent_heat += self.baresoil.coverage * fluxes_soil['latent_heat']
-                sensible_heat += self.baresoil.coverage * fluxes_soil['sensible_heat']
-                ground_heat += self.baresoil.coverage * fluxes_soil['ground_heat']
+                latent_heat += self.f_baresoil * fluxes_soil['latent_heat']
+                sensible_heat += self.f_baresoil * fluxes_soil['sensible_heat']
+                ground_heat += self.f_baresoil * fluxes_soil['ground_heat']
 
-                radiative_flux += self.baresoil.coverage * fluxes_soil['radiative_flux']
-                soil_energy_closure += self.baresoil.coverage * fluxes_soil['energy_closure']
+                radiative_flux += self.f_baresoil * fluxes_soil['radiative_flux']
+                soil_energy_closure += self.f_baresoil * fluxes_soil['energy_closure']
 
-                potential_infiltration += self.baresoil.coverage * forcing['throughfall_ffloor']
+                potential_infiltration += self.f_baresoil * forcing['throughfall_ffloor']
 
-                soil_temperature += states_soil['temperature']
-                temperature += self.baresoil.coverage * states_soil['temperature']
+                soil_temperature = states_soil['temperature']
+                temperature += self.f_baresoil * soil_temperature
 
         self.temperature = temperature
 
         fluxes.update({
-                'evaporation': evaporation,
+                'evaporation': soil_evaporation + bryo_evaporation + litter_evaporation,
                 'evaporation_soil': soil_evaporation,
                 'evaporation_bryo': bryo_evaporation,
+                'evaporation_litter': litter_evaporation,
                 'latent_heat_flux': latent_heat,
                 'sensible_heat_flux': sensible_heat,
                 'ground_heat_flux': ground_heat,
                 'water_closure_bryo': bryo_water_closure,
+                'water_closure_litter': litter_water_closure,
                 'water_closure_snow': fluxes_snow['water_closure'],
                 'energy_closure_bryo': bryo_energy_closure,
+                'energy_closure_litter': litter_energy_closure,
                 'energy_closure_soil': soil_energy_closure,
                 'radiative_flux': radiative_flux,
                 'potential_infiltration': potential_infiltration,
@@ -303,6 +352,7 @@ class ForestFloor(object):
                 'pond_recharge': pond_recharge,
                 'photosynthesis_bryo': bryo_photosynthesis,
                 'respiration_bryo': bryo_respiration,
+                'respiration_litter': litter_respiration,
                 'respiration': respiration,
                 })
 
@@ -310,9 +360,12 @@ class ForestFloor(object):
         states.update({
                 'temperature': temperature,
                 'temperature_bryo': bryo_temperature,
+                'temperature_litter': litter_temperature,
                 'temperature_soil': soil_temperature,
                 'water_storage_bryo': bryo_water_storage,
-                'carbon_pool_bryo': bryo_carbon_pool
+                'water_storage_litter': litter_water_storage,
+                'carbon_pool_bryo': bryo_carbon_pool,
+                'carbon_pool_litter': litter_carbon_pool
                 })
 
         return fluxes, states

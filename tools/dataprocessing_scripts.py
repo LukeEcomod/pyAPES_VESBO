@@ -350,3 +350,92 @@ def gather_hyde_data():
     hyde_data=hyde_data.rename(columns={'Ta':'Tair', 'ust':'Ustar', 'fRg':'Rg'})
 
     save_df_to_csv(hyde_data, "Hyde_data_1997_2016", fp=direc + "forcing/")
+
+def read_lettosuo_EC():
+
+    """
+    Reads data related to lettosuo case to dataframe.
+    """
+
+    # filepaths
+    forc_fp = ["H:/Lettosuo/Forcing_data/Annalea1/avohakkuu_EC.csv",
+               "H:/Lettosuo/Forcing_data/Annalea2/Letto1_EC.csv",
+               "H:/Lettosuo/Forcing_data/MikaK/Partial_EC_gapfilled_fluxes.csv",
+               "H:/Lettosuo/Forcing_data/Annalea2/energyfluxes_lettosuo.csv"]
+
+    index=pd.date_range('01-01-2009','06-01-2018',freq='0.5H')
+    lettosuo_data=pd.DataFrame(index=index, columns=[])
+
+    for fp in forc_fp:
+        dat = pd.read_csv(fp, sep=',', header='infer')
+        if fp.split("/")[-2] == 'Annalea2':
+            dat.index = pd.to_datetime(dat.ix[:,0], dayfirst=True)
+            # period end
+            dat.index = dat.index - pd.Timedelta(hours=0.5)
+        else:
+            dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
+        if fp.split("/")[-2] == 'FMI':
+            # UTC -> UTC + 2
+            dat.index = dat.index + pd.Timedelta(hours=2)
+        dat.index=dat.index.map(lambda x: x.replace(second=0))
+        dat.ix[:,0]=dat.index
+        dat = dat.drop_duplicates(subset=dat.columns[0])
+        dat = dat.drop(dat.columns[0], axis=1)
+        dat.columns = fp.split("/")[-1].split(".")[0] + ': ' + dat.columns
+        lettosuo_data=lettosuo_data.merge(dat, how='outer', left_index=True, right_index=True)
+
+    lettosuo_data = lettosuo_data[(lettosuo_data.index >= '01-01-2010') & 
+                                  (lettosuo_data.index <= '01-01-2018')]
+
+    lettosuo_EC = lettosuo_data[
+            ['Letto1_EC: PaikNEE_S',
+             'Letto1_EC: PaikNEE_N',
+             'Letto1_EC: GPP_S',
+             'Letto1_EC: GPP_N',
+             'Letto1_EC: Reco_S',
+             'Letto1_EC: Reco_N',
+             'Letto1_EC: LE (Wm-2)',
+             'Letto1_EC: SH (W m-2)',
+             'Partial_EC_gapfilled_fluxes: NEE [mg CO2 m-2 s-1]',
+             'Partial_EC_gapfilled_fluxes: GPP [mg CO2 m-2 s-1]',
+             'Partial_EC_gapfilled_fluxes: Reco [mg CO2 m-2 s-1]',
+             'Partial_EC_gapfilled_fluxes: gapped',
+             'energyfluxes_lettosuo: LE [W m-2]',
+             'energyfluxes_lettosuo: SH [W m-2]',
+             'avohakkuu_EC: NEE [mg CO2 m-2 s-1]',
+             'avohakkuu_EC: GPP [mg CO2 m-2 s-1]',
+             'avohakkuu_EC: Reco [mg CO2 m-2 s-1]',
+             'avohakkuu_EC: gapped',
+             'avohakkuu_EC: latent heat flux: FL [W m-2]',
+             'avohakkuu_EC: sensible heat flux: FH [W m-2]']].copy()
+
+    lettosuo_EC = lettosuo_EC.rename(columns={
+             'Letto1_EC: PaikNEE_S': 'control_NEE',
+             'Letto1_EC: PaikNEE_N': 'control-N_NEE',
+             'Letto1_EC: GPP_S': 'control_GPP',
+             'Letto1_EC: GPP_N': 'control-N_GPP',
+             'Letto1_EC: Reco_S': 'control_Reco',
+             'Letto1_EC: Reco_N': 'control-N_Reco',
+             'Letto1_EC: LE (Wm-2)': 'control_LE',
+             'Letto1_EC: SH (W m-2)': 'control_SH',
+             'Partial_EC_gapfilled_fluxes: NEE [mg CO2 m-2 s-1]': 'partial_NEE',
+             'Partial_EC_gapfilled_fluxes: GPP [mg CO2 m-2 s-1]': 'partial_GPP',
+             'Partial_EC_gapfilled_fluxes: Reco [mg CO2 m-2 s-1]': 'partial_Reco',
+             'Partial_EC_gapfilled_fluxes: gapped': 'partial_gapped',
+             'energyfluxes_lettosuo: LE [W m-2]': 'partial_LE',
+             'energyfluxes_lettosuo: SH [W m-2]': 'partial_SH',
+             'avohakkuu_EC: NEE [mg CO2 m-2 s-1]': 'clearcut_NEE',
+             'avohakkuu_EC: GPP [mg CO2 m-2 s-1]': 'clearcut_GPP',
+             'avohakkuu_EC: Reco [mg CO2 m-2 s-1]': 'clearcut_Reco',
+             'avohakkuu_EC: gapped': 'clearcut_gapped',
+             'avohakkuu_EC: latent heat flux: FL [W m-2]': 'clearcut_LE',
+             'avohakkuu_EC: sensible heat flux: FH [W m-2]': 'clearcut_SH'})
+
+    lettosuo_EC['control_gapped'] = np.where(
+            np.isfinite(lettosuo_data['Letto1_EC: NEE_South'].values), 0, 1)
+    lettosuo_EC['control-N_gapped'] = np.where(
+            np.isfinite(lettosuo_data['Letto1_EC: NEE_North'].values), 0, 1)
+
+    lettosuo_EC.columns = lettosuo_EC.columns.str.split('_', expand=True)
+
+    return lettosuo_EC

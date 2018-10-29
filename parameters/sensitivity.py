@@ -13,31 +13,31 @@ def get_parameters(name=None):
     if name is None:
         # parameter sets of simulations
         parameters = {
-                'count': 2,
+                'count': 1,
                 'canopy': {
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (1.0, 1.0),
-                                                'height': (0.05, 0.05)
+                                                'ground_coverage': (1.0),
+#                                                'height': (0.05, 0.05)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.0, 0.0),
-                                                'height': (0.04, 0.04)
+                                                'ground_coverage': (0.0),
+#                                                'height': (0.04, 0.04)
                                                 }
                                                 },
                                 'baresoil': {
-                                        'ground_coverage': (0.0, 0.0)
+                                        'ground_coverage': (0.0)
                                         }
                                         },
-                        'planttypes': {
-                                'pine': {
-                                        'LAImax': ([2.1], [2.1])
-                                        },
-                                'shrubs': {
-                                        'LAImax': ([0.7], [0.0])
-                                        }
-                                }
+#                        'planttypes': {
+#                                'pine': {
+#                                        'LAImax': ([2.1], [2.1])
+#                                        },
+#                                'shrubs': {
+#                                        'LAImax': ([0.7], [0.0])
+#                                        }
+#                                }
                 }
             }
 
@@ -56,12 +56,15 @@ def get_parameters(name=None):
                                                 'height': (0.045)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.1),
+                                                'ground_coverage': (0.07),
                                                 'height': (0.095)
                                                 }
                                         },
+                                'litter': {
+                                        'ground_coverage': (0.71)
+                                        },
                                 'baresoil': {
-                                        'ground_coverage': (0.9)
+                                        'ground_coverage': (0.22)
                                         }
                                 },
                         'planttypes': {
@@ -91,8 +94,11 @@ def get_parameters(name=None):
                                                 'height': (0.095)
                                                 }
                                         },
-                                'baresoil': {
+                                'litter': {
                                         'ground_coverage': (0.5)
+                                        },
+                                'baresoil': {
+                                        'ground_coverage': (0.0)
                                         }
                                 },
                         'planttypes': {
@@ -118,12 +124,15 @@ def get_parameters(name=None):
                                                 'height': (0.045)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.6),
+                                                'ground_coverage': (0.4),
                                                 'height': (0.095)
                                                 }
                                         },
+                                'litter': {
+                                        'ground_coverage': (0.6)
+                                        },
                                 'baresoil': {
-                                        'ground_coverage': (0.4)
+                                        'ground_coverage': (0.0)
                                         }
                                 },
                         'planttypes': {

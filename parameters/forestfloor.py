@@ -7,11 +7,15 @@ Created on Thu Aug 24 10:29:44 2017
 """
 
 initial_conditions = {
+        'snowpack' : {
+                'snow_water_equivalent': 0.0
+                },
         'baresoil': {
                 'temperature': 10.0
                 },
-        'snowpack' : {
-                'snow_water_equivalent': 0.0
+        'litter': {
+                'temperature': 10.0,
+                'water_content': 2.0
                 },
         'bryophytes': {
                 'hylocomium': {
@@ -29,21 +33,6 @@ initial_conditions = {
                 }
         }
 
-baresoil = {
-        'ground_coverage': 0.0,
-        'roughness_length':  0.01, # check right value
-        'optical_properties': {
-                'emissivity': 0.98,
-                'albedo_PAR': 0.05,  # [-]
-                'albedo_NIR': 0.5,  # [-]
-                },
-        'respiration': {
-                'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
-                'Q10': 2.0,  # temperature sensitivity [-]
-                'limitpara': [3.83, 4.43, 1.25, 0.854]  # Skopp respiration function param [a ,b, d, g]
-                }
-        }
-
 snowpack = {
         'kmelt': 2.31e-08,  # Melting coefficient [m degC-1 s-1] (=2.0 mm/C/d)
         'kfreeze': 5.79e-09,  # Freezing  coefficient [m degC-1 s-1] (=0.5 mm/C/d)
@@ -57,6 +46,47 @@ snowpack = {
                 }
         }
 
+baresoil = {
+        'ground_coverage': 0.0,
+        'roughness_length':  0.002, # check right value
+        'optical_properties': {
+                'emissivity': 0.98,
+                'albedo_PAR': 0.05,  # [-]
+                'albedo_NIR': 0.5,  # [-]
+                },
+        'respiration': {
+                'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
+                'Q10': 2.0,  # temperature sensitivity [-]
+                'limitpara': [3.83, 4.43, 1.25, 0.854]  # Skopp respiration function param [a ,b, d, g]
+                }
+        }
+
+litter = {
+        'ground_coverage': 0.0,  # [-]
+        'height': 0.03,  #  [m]
+        'roughness_height': 0.01,  #  [m]
+        'bulk_density': 45.0,  # [kg m\ :sup:`-3`]
+        'max_water_content': 4.0,  # [g g\ :sup:`-1`\ ]
+        'min_water_content': 1.0,  # [g g\ :sup:`-1`\ ]
+        'porosity': 0.95,  # [m\ :sup:`3` m\ :sup:`-3`\ ]
+        'respiration': {  # Taken from baresoil!!
+                'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
+                'Q10': 2.0,  # temperature sensitivity [-]
+                'limitpara': [3.83, 4.43, 1.25, 0.854]  # Skopp respiration function param [a ,b, d, g]
+                },
+        'optical_properties': {  # [0.1102, 0.2909, 0.98]
+                    'emissivity': 0.98,  # [-]
+                    'albedo_PAR': 0.1102,  # [-]
+                    'albedo_NIR': 0.2909,  # [-]
+                    },
+        'water_retention': {'theta_s': 0.95,  ### = porosity
+                            'theta_r': 0.01,  ### määritellään min_water_content*1e-3*bulk_density
+                            'alpha': 0.13,
+                            'n': 2.17,
+                            'saturated_conductivity': 1.16e-8,  # [m s-1]
+                            'pore_connectivity': -2.37,
+                            }
+            }
 #Community-scale light-responses and respiation rates (umol m-2 s-1):
 
 #    Sphagnum Rice et al. 2008 Am. J. Bot. Table 3; recomputed R10 assuming Q10 = 2.0
@@ -173,13 +203,16 @@ Sphagnum = {
         }
 
 # check that ground coverages sum to 1.0
-forestfloor = {'bryophytes': {'hylocomium': Hylocomium,
-                              'pleurozium': Pleurozium,
-                              'sphagnum': Sphagnum},
-               'baresoil': baresoil,
-               'snowpack': snowpack,
-               'initial_conditions': initial_conditions
-               }
+forestfloor = {
+        'bryophytes': {
+                'hylocomium': Hylocomium,
+                'pleurozium': Pleurozium,
+                'sphagnum': Sphagnum},
+        'litter': litter,
+        'baresoil': baresoil,
+        'snowpack': snowpack,
+        'initial_conditions': initial_conditions
+        }
 
 # pf_xero = [0.445, 0.02, 0.103, 2.229, 1.17e-4, -2.487]
 # pf_shpag = [0.95, 0.10, 0.34, 1.4, 3.5e-4, -4.38]

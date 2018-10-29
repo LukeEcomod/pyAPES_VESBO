@@ -414,6 +414,7 @@ class CanopyModel(object):
         fluxes_ffloor.update({
                 'potential_infiltration': fluxes_ffloor['potential_infiltration'],
                 'evaporation_bryo': fluxes_ffloor['evaporation_bryo'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'evaporation_litter': fluxes_ffloor['evaporation_litter'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
                 'evaporation_soil': fluxes_ffloor['evaporation_soil'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
                 'evaporation': fluxes_ffloor['evaporation'] * MOLAR_MASS_H2O * 1e-3  # [m s-1]
                 })
