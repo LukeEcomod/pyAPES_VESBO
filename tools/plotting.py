@@ -10,6 +10,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from timeseries_tools import diurnal_cycle, yearly_cumulative
 from iotools import read_forcing, xarray_to_df
+from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O, MOLAR_MASS_CO2, PAR_TO_UMOL
 
 import seaborn as sns
 pal = sns.color_palette("hls", 6)
@@ -58,18 +59,20 @@ def plot_results(results):
 
     plt.tight_layout(rect=(0, 0, 0.8, 1))
 
-def plot_fluxes(results, sim_idx=0):
-    Data = read_forcing("Lettosuo_data_2010_2018.csv", cols=['NEE','GPP','Reco','ET'],
-                        start_time=results.date[0].values, end_time=results.date[-1].values,)
-    Data.ET = Data.ET / 1800 * 3600
+def plot_fluxes(results, treatment='control', sim_idx=0):
+    Data = read_forcing("Lettosuo_EC.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    Data['ET'] = Data.LE / LATENT_HEAT * MOLAR_MASS_H2O * 3600  # W m-2 / J mol-1 * kg mol-1 * s h-1 = kg m-2 h-1 = mm h-1
     Data.GPP = -Data.GPP
 
     variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation) * 1e3 * 3600
-    Data.canopy_GPP = Data.canopy_GPP * 44.01 * 1e-3
-    Data.canopy_respiration = Data.canopy_respiration * 44.01 * 1e-3
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.ffloor_evaporation) * 1e3 * 3600
+    Data.canopy_GPP = Data.canopy_GPP * MOLAR_MASS_CO2  # umol m-2 s-1 * kg mol-1 = mg m-2 s-1
+    Data.canopy_respiration = Data.canopy_respiration * MOLAR_MASS_CO2
 
     dates = Data.index
 
@@ -80,10 +83,13 @@ def plot_fluxes(results, sim_idx=0):
     months = Data.index.month
     fmonth = 4
     lmonth = 9
+    Data.ET[Data.gapped == 1] = Data.ET[Data.gapped == 1] * np.nan
     ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
+    Data.GPP[Data.gapped == 1] = Data.GPP[Data.gapped == 1] * np.nan
     ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
+    Data.Reco[Data.gapped == 1] = Data.Reco[Data.gapped == 1] * np.nan
     ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
-    labels=['Measured', 'Modelled']
+    labels=['Modelled', 'Measured']
 
     plt.figure(figsize=(10,6))
     plt.subplot(341)
@@ -96,20 +102,20 @@ def plot_fluxes(results, sim_idx=0):
     plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
 
     ax = plt.subplot(3,4,(2,3))
-    plot_timeseries_df(Data, ['GPP','canopy_GPP'], colors=['k', pal[0]], xticks=False,
-                       labels=labels)
+    plot_timeseries_df(Data, ['canopy_GPP', 'GPP'], colors=[pal[0],'k'], xticks=False,
+                       labels=labels, marker=[None, '.'])
     plt.title('GPP [mg CO2 m-2 s-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(6,7), sharex=ax)
-    plot_timeseries_df(Data, ['Reco','canopy_respiration'], colors=['k', pal[1]], xticks=False,
-                       labels=labels)
+    plot_timeseries_df(Data, ['canopy_respiration','Reco'], colors=[pal[1],'k'], xticks=False,
+                       labels=labels, marker=[None, '.'])
     plt.title('Reco [mg CO2 m-2 s-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(10,11), sharex=ax)
-    plot_timeseries_df(Data, ['ET','ET_mod'], colors=['k', pal[2]], xticks=True,
-                       labels=labels)
+    plot_timeseries_df(Data, ['ET_mod','ET'], colors=[pal[2],'k'], xticks=True,
+                       labels=labels, marker=[None, '.'])
     plt.title('ET [mm h-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
@@ -250,7 +256,7 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
         plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
-                       labels=None, colors=default, xticks=True, stack=False, cum=False, limits=True,legend=True):
+                       labels=None, marker=None, colors=default, xticks=True, stack=False, cum=False, limits=True,legend=True):
     """
     Plot timeseries from dataframe data.
     Args:
@@ -295,7 +301,11 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
         ymax = max(sum(values_all))
     else:
         for i in range(len(values_all)):
-            plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i])
+            if marker is None:
+                markerstyle = None
+            else:
+                markerstyle = marker[i]
+            plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i], marker=markerstyle, markersize=1)
         ymax = max([np.nanmax(val) for val in values_all])
 
     if limits:
@@ -382,7 +392,10 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])
     plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
-    lim = [min(min(y), min(x)), max(max(y), max(x))]
+    lim = [min(min(y[np.isfinite(y)]),
+               min(x[np.isfinite(x)])),
+           max(max(y[np.isfinite(y)]),
+               max(x[np.isfinite(x)]))]
     plt.plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
     plt.plot(lim, lim, 'k--', linewidth=1)
     plt.ylim(lim)
@@ -418,3 +431,86 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
     if legend:
         plt.legend()
         plt.legend(frameon=False, borderpad=0.0,loc="center right")
+
+def plot_efficiencies(results, treatment='control', sim_idx=0):
+    PAR = read_forcing("Lettosuo_forcing_2010_2018.csv",cols=['diffPar','dirPar'],
+                       start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data = read_forcing("Lettosuo_EC.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    Data['ET'] = Data.LE / LATENT_HEAT * 1e3 # [mmol m-2 s-1]
+    Data.GPP = -Data.GPP / MOLAR_MASS_CO2  # [umol m-2 s-1]
+    Data['PAR'] = (PAR['diffPar'] + PAR['dirPar']) * PAR_TO_UMOL  # [umol m-2 s-1]
+
+    variables=['canopy_GPP','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
+    df = xarray_to_df(results, variables, sim_idx=sim_idx)
+    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.ffloor_evaporation) / MOLAR_MASS_H2O * 1e3 * 1e3 # [mmol m-2 s-1]
+    Data.canopy_GPP = Data.canopy_GPP  # [umol m-2 s-1]
+
+    dates = Data.index
+
+    ix = pd.rolling_mean(Data.forcing_precipitation.values, 48, 1)
+    dryc = np.ones(len(dates))
+    f = np.where(ix > 0)[0]  # wet canopy indices
+    dryc[f] = 0.0
+    months = Data.index.month
+    fmonth = 4
+    lmonth = 9
+    hours = Data.index.hour
+    fhour = 0
+    lhour = 24
+    Data.ET[Data.gapped == 1] = Data.ET[Data.gapped == 1] * np.nan
+
+    Data.GPP[Data.gapped == 1] = Data.GPP[Data.gapped == 1] * np.nan
+
+    labels=['Modelled', 'Measured']
+
+    Data['LUE'] = Data.GPP / Data.PAR
+    Data['WUE'] = Data.GPP / Data.ET
+
+    Data['LUE_mod'] = Data.canopy_GPP / Data.PAR
+    Data['WUE_mod'] = Data.canopy_GPP / Data.ET_mod
+    ixET = np.where((months >= fmonth) & (months <= lmonth) &
+                    (hours >= fhour) & (hours <= lhour) &
+                    (dryc == 1) & np.isfinite(Data.WUE))[0]
+    ixGPP = np.where((months >= fmonth) & (months <= lmonth) &
+                    (hours >= fhour) & (hours <= lhour) &
+                    np.isfinite(Data.LUE))[0]
+
+    plt.figure(figsize=(10,4.5))
+    plt.subplot(241)
+    plot_xy(Data.LUE[ixGPP], Data.LUE_mod[ixGPP], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
+    plt.ylim(0, 0.05)
+    plt.xlim(0, 0.05)
+
+    plt.subplot(245)
+    plot_xy(Data.WUE[ixET], Data.WUE_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
+    plt.ylim(0, 20)
+    plt.xlim(0, 20)
+    ax = plt.subplot(2,4,(2,3))
+    plot_timeseries_df(Data, ['LUE_mod', 'LUE'], colors=[pal[0],'k'], xticks=False,
+                       labels=labels, marker=[None, '.'], limits=False)
+    plt.title('Ligth use efficiency [umol/umol]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+    plt.ylim(0, 0.05)
+
+    plt.subplot(2,4,(6,7), sharex=ax)
+    plot_timeseries_df(Data, ['WUE_mod','WUE'], colors=[pal[2],'k'], xticks=True,
+                       labels=labels, marker=[None, '.'], limits=False)
+    plt.title('Water use efficiency [umol/mmol]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+    plt.ylim(0, 20)
+
+    ax =plt.subplot(244)
+    plot_diurnal(Data.LUE[ixGPP], color='k', legend=False)
+    plot_diurnal(Data.LUE_mod[ixGPP], color=pal[0], legend=False)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.xlabel('')
+
+    plt.subplot(248, sharex=ax)
+    plot_diurnal(Data.WUE[ixET], color='k', legend=False)
+    plot_diurnal(Data.WUE_mod[ixET], color=pal[2], legend=False)
+
+    plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)

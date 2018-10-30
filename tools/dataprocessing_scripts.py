@@ -10,7 +10,7 @@ import pandas as pd
 from iotools import save_df_to_csv
 from timeseries_tools import fill_gaps
 
-direc = "C:/Users/L1656/Documents/Git_repos/CCFPeat/"
+direc = "C:/Users/L1656/Documents/Git_repos/pyAPES/"
 
 """
 
@@ -410,14 +410,14 @@ def read_lettosuo_EC():
              'avohakkuu_EC: sensible heat flux: FH [W m-2]']].copy()
 
     lettosuo_EC = lettosuo_EC.rename(columns={
-             'Letto1_EC: PaikNEE_S': 'control_NEE',
+             'Letto1_EC: PaikNEE_S': 'control-S_NEE',
+             'Letto1_EC: GPP_S': 'control-S_GPP',
+             'Letto1_EC: Reco_S': 'control-S_Reco',
              'Letto1_EC: PaikNEE_N': 'control-N_NEE',
-             'Letto1_EC: GPP_S': 'control_GPP',
              'Letto1_EC: GPP_N': 'control-N_GPP',
-             'Letto1_EC: Reco_S': 'control_Reco',
              'Letto1_EC: Reco_N': 'control-N_Reco',
-             'Letto1_EC: LE (Wm-2)': 'control_LE',
-             'Letto1_EC: SH (W m-2)': 'control_SH',
+             'Letto1_EC: LE (Wm-2)': 'control-N_LE',
+             'Letto1_EC: SH (W m-2)': 'control-N_SH',
              'Partial_EC_gapfilled_fluxes: NEE [mg CO2 m-2 s-1]': 'partial_NEE',
              'Partial_EC_gapfilled_fluxes: GPP [mg CO2 m-2 s-1]': 'partial_GPP',
              'Partial_EC_gapfilled_fluxes: Reco [mg CO2 m-2 s-1]': 'partial_Reco',
@@ -431,11 +431,16 @@ def read_lettosuo_EC():
              'avohakkuu_EC: latent heat flux: FL [W m-2]': 'clearcut_LE',
              'avohakkuu_EC: sensible heat flux: FH [W m-2]': 'clearcut_SH'})
 
-    lettosuo_EC['control_gapped'] = np.where(
+    lettosuo_EC['control-S_LE'] = lettosuo_EC['control-N_LE'].values
+    lettosuo_EC['control-S_SH'] = lettosuo_EC['control-N_SH'].values
+    lettosuo_EC['control-S_gapped'] = np.where(
             np.isfinite(lettosuo_data['Letto1_EC: NEE_South'].values), 0, 1)
     lettosuo_EC['control-N_gapped'] = np.where(
             np.isfinite(lettosuo_data['Letto1_EC: NEE_North'].values), 0, 1)
 
-    lettosuo_EC.columns = lettosuo_EC.columns.str.split('_', expand=True)
+    for column in lettosuo_EC.columns:
+        if column.split('_')[-1] == 'LE':
+            lettosuo_EC[column][lettosuo_EC[column] < -100] = lettosuo_EC[column][lettosuo_EC[column] < -100] * np.nan
+            lettosuo_EC[column][lettosuo_EC[column] > 1000] = lettosuo_EC[column][lettosuo_EC[column] > 1000] * np.nan
 
-    return lettosuo_EC
+    save_df_to_csv(lettosuo_EC, "Lettosuo_EC", fp=direc + "forcing/")
