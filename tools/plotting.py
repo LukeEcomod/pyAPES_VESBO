@@ -301,11 +301,14 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
         ymax = max(sum(values_all))
     else:
         for i in range(len(values_all)):
+            linestyle='-'
             if marker is None:
                 markerstyle = None
             else:
                 markerstyle = marker[i]
-            plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i], marker=markerstyle, markersize=1)
+                if marker[i] is not None:
+                    linestyle  = 'None'
+            plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i], marker=markerstyle, markersize=1, linestyle=linestyle)
         ymax = max([np.nanmax(val) for val in values_all])
 
     if limits:

@@ -285,6 +285,8 @@ class CanopyModel(object):
                     forcing=forcing)
             # dry leaf fraction
             df = self.interception.df
+### TESTING!!!!!!!!!!
+#            df = 0.0
 
             # update source terms
             for key in wetleaf_fluxes['sources'].keys():
