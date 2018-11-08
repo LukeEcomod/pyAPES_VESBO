@@ -1,6 +1,11 @@
 # README
 Branch for cleaned model codes for pyAPES development
 
+## Function calls forcing, states, and params
+* forcing: 
+* states:
+* params:
+
 ## Migration to Python3
 https://docs.python.org/3.0/whatsnew/3.0.html
 Code is mainly written so that it works in both python 2.7 and 3.6 (should run versions >3.5)
