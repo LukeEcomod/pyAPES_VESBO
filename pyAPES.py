@@ -16,7 +16,7 @@ Note:
 
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
-forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 To call model and read results:
@@ -26,13 +26,12 @@ To call model and read results:
     results = read_results(outputfile)
 """
 
-import os
 import numpy as np
-import pandas as pd
 import time
 from copy import deepcopy as copy
 
-from tools.iotools import read_forcing
+from tools.iotools import read_forcing, initialize_netcdf,  write_ncf
+from tools.iotools import jsonify
 from canopy.canopy import CanopyModel
 from soil.soil import Soil
 
@@ -42,25 +41,23 @@ from parameters.soil import get_spara
 from parameters.sensitivity import get_parameters, iterate_parameters
 
 import logging
-from parameters.general import logging_configuration
-from logging.config import dictConfig
 
 
-dictConfig(logging_configuration)
-#mpl_logger = logging.getLogger('matplotlib')
-#mpl_logger.setLevel(logging.WARNING)
-
-
-
-def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt",
-           parameter_set_name=None):
+def driver(create_ncf=False,
+           soiltype='organic',
+           dbhfile="letto2014.txt",
+           parameter_set_name=None,
+           result_file=None):
     """
     """
+    # --- LOGGING ---
+    from parameters.general import logging_configuration
+    from logging.config import dictConfig
+    dictConfig(logging_configuration)
+    #mpl_logger = logging.getLogger('matplotlib')
+    #mpl_logger.setLevel(logging.WARNING)
 
-#    import logging
-#    from parameters.general import logging_configuration
-#    logging.config.dictConfig(logging_configuration)
-
+    # --- PARAMETERS ---
     # Import general parameters
     from parameters.general import gpara
     # Import canopy model parameters
@@ -83,6 +80,7 @@ def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt",
 
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim + 1))
 
+    # --- FORCING ---
     # Read forcing
     forcing = read_forcing(gpara['forc_filename'],
                            gpara['start_time'],
@@ -96,7 +94,10 @@ def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt",
 
     if create_ncf:
         timestr = time.strftime('%Y%m%d%H%M')
-        filename = timestr + '_pyAPES_results.nc'
+        if result_file:
+            filename = result_file
+        else:
+            filename = timestr + '_pyAPES_results.nc'
 
         ncf, _ = initialize_netcdf(
                 gpara['variables'],
@@ -114,7 +115,7 @@ def driver(create_ncf=False, soiltype='organic', dbhfile="letto2014.txt",
             running_time = time.time()
             results = task.run()
             logger.info('Running time %.2f seconds' % (time.time() - running_time))
-            _write_ncf(nsim=task.Nsim, results=results, ncf=ncf)
+            write_ncf(nsim=task.Nsim, results=results, ncf=ncf)
 
             del results
 
@@ -167,13 +168,16 @@ class Model(object):
     def run(self):
         """ Runs atmosphere-canopy-soil--continuum model"""
 
-        print('RUNNING')
+        logger = logging.getLogger(__name__)
+        logger.info('Running simulation {}'.format(self.Nsim))
+
+        #print('RUNNING')
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
         for k in range(0, self.Nsteps):
 
             if k in k_steps[:-1]:
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
-                print('{0}..'.format(s), end=' ')
+                #print('{0}..'.format(s), end=' ')
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
@@ -246,12 +250,13 @@ class Model(object):
             self.results = _append_results('ffloor', k, ffloor_state, self.results)
             self.results = _append_results('soil', k, soil_state, self.results)
 
-        print('100%')
+        #print('100%')
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
 
         self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)
 
         return self.results
+
 
 def _create_results(variables, Nstep, Nsoil_nodes, Ncanopy_nodes, Nplant_types):
     """
@@ -314,101 +319,11 @@ def _append_results(group, step, step_results, results):
 
     return results
 
-def _write_ncf(nsim=None, results=None, ncf=None):
-    """ Writes model simultaion results in netCDF4-file
+#if __name__ == 'main':
+#    import logging
+#    from parameters.general import logging_configuration
+#    from logging.config import dictConfig
+#    dictConfig(logging_configuration)
 
-    Args:
-        index (int): model loop index
-        results (dict): calculation results from group
-        ncf (object): netCDF4-file handle
-    """
-#    logger = logging.getLogger(__name__)
-    keys = results.keys()
-    variables = ncf.variables.keys()
+#    driver(create_ncf=True, dbhfile='letto2014.txt')
 
-    for key in keys:
-
-        if key in variables and key != 'time':
-            length = np.asarray(results[key]).ndim
-
-            if length > 1:
-                ncf[key][:, nsim, :] = results[key]
-            elif key == 'soil_z' or key == 'canopy_z':
-                if nsim == 0:
-                    ncf[key][:] = results[key]
-            else:
-                ncf[key][:, nsim] = results[key]
-
-#    logger.info("Writing results of simulation number: {} is finished".format(nsim))
-
-def initialize_netcdf(variables,
-                      sim,
-                      soil_nodes,
-                      canopy_nodes,
-                      plant_nodes,
-                      forcing,
-                      filepath='results/',
-                      filename='climoss.nc',
-                      description='Simulation results'):
-    """ Climoss netCDF4 format output file initialization
-
-    Args:
-        variables (list): list of variables to be saved in netCDF4
-        sim (int): number of simulations
-        soil_nodes (int): number of soil calculation nodes
-        canopy_nodes (int): number of canopy calculation nodes
-        forcing: forcing data (pd.dataframe)
-        filepath: path for saving results
-        filename: filename
-    """
-    from netCDF4 import Dataset, date2num
-    from datetime import datetime
-
-
-    # dimensions
-    date_dimension = None
-    simulation_dimension = sim
-    soil_dimension = soil_nodes
-    canopy_dimension = canopy_nodes
-    ptypes_dimension = plant_nodes
-
-    pyAPES_folder = os.getcwd()
-    filepath = os.path.join(pyAPES_folder, filepath)
-
-    if not os.path.exists(filepath):
-        os.makedirs(filepath)
-
-    ff = os.path.join(filepath, filename)
-
-    # create dataset and dimensions
-    ncf = Dataset(ff, 'w')
-    ncf.description = description
-    ncf.history = 'created ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    ncf.source = 'pyAPES_beta2018'
-
-    ncf.createDimension('date', date_dimension)
-    ncf.createDimension('simulation', simulation_dimension)
-    ncf.createDimension('soil', soil_dimension)
-    ncf.createDimension('canopy', canopy_dimension)
-    ncf.createDimension('planttype', ptypes_dimension)
-
-    time = ncf.createVariable('date', 'f8', ('date',))
-    time.units = 'days since 0001-01-01 00:00:00.0'
-    time.calendar = 'standard'
-#    tvec = [k.to_datetime() for k in forcing.index] is depricated
-    tvec = [pd.to_datetime(k) for k in forcing.index]
-    time[:] = date2num(tvec, units=time.units, calendar=time.calendar)
-
-    for var in variables:
-
-        var_name = var[0]
-        var_unit = var[1]
-        var_dim = var[2]
-
-        variable = ncf.createVariable(
-                var_name, 'f4', var_dim)
-
-        variable.units = var_unit
-
-#    print("netCDF4 path: " + ff)
-    return ncf, ff
