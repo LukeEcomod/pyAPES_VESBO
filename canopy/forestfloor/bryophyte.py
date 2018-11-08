@@ -41,7 +41,7 @@ from .carbon import carbon_exchange
 
 from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C, EPS
 
-
+from numpy import a
 class Bryophyte(object):
     r""" Represents bryophyte community-soil-atmosphere interactions.
 
@@ -84,7 +84,7 @@ class Bryophyte(object):
                     'n': pore size distribution [-]
                     'saturated conductivity': [m s\ :sup:`-1`]
                     'pore connectivity': (l) [-]
-                    'compressability': 
+                    'compressability':
                 'porosity': [m\ :sup:`3` m\ :sup:`-3`\ ]
                 'photosynthesis' (list):
                     0. Amax [\ :math:`\mu`\ mol m\ :sup:`-1`\ :sub:`leaf` s\ :sup:`-1`]
@@ -95,7 +95,7 @@ class Bryophyte(object):
                 'optical_properties' (dict):
                     'albedo_PAR': [-] photosynthetically active radiation (PAR)
                     'albedo_NIR': [-] near infrared radiation (NIR)
-                    'emissivity': [-] 
+                    'emissivity': [-]
 
             initial_conditions (dict):
                 initial_temperature: [\ :math:`^{\circ}`\ C]
@@ -113,20 +113,16 @@ class Bryophyte(object):
                           / WATER_DENSITY
                           * properties['bulk_density'])
 
-        saturated_water_content = properties['porosity']
+        saturated_water_content = field_capacity
+        # saturated_water_content = properties['porosity']
 
         if 'water_retention' not in properties:
             water_retention = {}
 
             water_retention['theta_r'] = residual_water_content
-            water_retention['theta_s'] = saturated_water_content
+            water_retention['theta_s'] = field_capacity
             water_retention['field_capacity'] = field_capacity
 
-            fraction = (
-                    (saturated_water_content - field_capacity)
-                    / (saturated_water_content - residual_water_content))
-
-            water_retention['fraction'] = fraction
             water_retention['saturated_conductivity'] = properties['saturated_conductivity']
 
             water_retention['alpha'] = properties['alpha']
@@ -143,6 +139,11 @@ class Bryophyte(object):
         else:
             water_retention = properties['water_retention']
             water_retention['field_capacity'] = field_capacity
+            # theta_s and theta_r are fixed to
+            # min_water_content and max_water_content
+            water_retention['theta_r'] = residual_water_content
+            water_retention['theta_s'] = saturated_water_content
+
 
         self.properties = properties
 
@@ -311,7 +312,7 @@ class MossLayer():
         self.b = self.Amax / (2.0 * para['qeff'])  # half-saturation par
         self.R10 = para['R10']  # base respiration at 10degC
         self.Q10 = para['Q10']  # temperature sensitivity [-]
-        
+
         self.zr = para['zr']  # roughness height m
         self.Mdry = para['Mdry']
         self.Wmax = para['Mdry']*para['Wmax']

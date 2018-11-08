@@ -934,24 +934,24 @@ def moss_atm_conductance(wind_speed, roughness_height, dT=0.0, atten_factor=0.25
     Sc_c = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_CO2
     Pr = AIR_VISCOSITY / THERMAL_DIFFUSIVITY_AIR
     Re = wind_speed * roughness_height / AIR_VISCOSITY
-    
+
 
     # Rice et al. (2001) eq. 1: ShSc**0.33 = CRe**n, where C=6.6e-4 and n=1.61.
     # however, exponent n for individual species is <1.53 so use median values of model
     # fitted to individual species.
     C = 0.0067
     n = 1.27
-    
+
     Sh_v = atten_factor * C*Re**n * Sc_v**0.33 # Sherwood numbner for H2O
-    
+
     conductance_h2o = Sh_v * MOLECULAR_DIFFUSIVITY_H2O / roughness_height # ms-1
 
     # free convection as parallell pathway, based on Condo and Ishida, 1997.
     b = 2.2e-3 #ms-1K-1 b=1.1e-3 for smooth, 3.3e-3 for rough surface
     dT = np.maximum(dT, 0.0)
     gfree = Sc_v / Pr * b * dT**0.33  # mol m-2 s-1
-    
-    # [mol m-2 s-1] 
+
+    # [mol m-2 s-1]
     conductance_h2o = (conductance_h2o + gfree) * AIR_DENSITY
 
 
@@ -1178,17 +1178,15 @@ def convert_hydraulic_parameters(value, water_retention, input_unit):
         # [m]
         psi = 1e-2 * 1.0 / -alpha * (inv_effs ** m - 1.0) ** (1.0 / n)
 
-#        if ~isinstance(psi, float):
-#            print(psi)
+        if isinstance(psi, list):
+            psi = np.array(list)
 
-#        if np.isscalar(psi):
-#            if np.isnan(psi):
-#                psi = 0.0
-#        else:
-#            psi[np.isnan(psi)] = 0.0
-
-        if psi <= -100.0:
-            return -100.0
+        if isinstance(psi, np.ndarray):
+            psi[psi <= -1000.0] = -1000.0
+            #psi = np.where(psi <= -100.0, -100.0, psi)
+        else:
+            if psi <= -1000.0:
+                return -1000.0
 
         return psi
 
@@ -1259,7 +1257,7 @@ def hydraulic_conduction(water_potential, water_retention, method=None):
         return conductivity * saturated_conductivity
 
     else:
-        # Possible to add more poresystems
+        # Possibility to add more poresystems
 
         psi = 100.0 * np.minimum(water_potential, 0.0)
 
