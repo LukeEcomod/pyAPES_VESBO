@@ -98,6 +98,44 @@ litter = {
 #    Amax = 4.97 (intro gives range 1...4.8 umolm-2s-1 and references)
 #    Rd  0.14 x Amax
 
+
+# -- Example of bryophyte parameters ---
+# moss = {
+#    "species": Scientific name
+#    "ground_coverage": [0.0 1.0] sum of all forest floor elements have to bee 1.0!
+#    "height": [m]
+#    "roughness_height": [m]
+#    "leaf_area_index": [m2 m-2] photosynthesis
+#    "specific_leaf_area": [m3 m-3] photosynthesis
+#    "dry_mass": [kg m-2] calculated from bulk_density * height NOT NEEDED
+#    "bulk_density": [kg m-3]
+#    "max_water_content": [g g-1] at field capacity! h = -0.01 m
+#    "min_water_content": [g g-1] at air dry! h = -1000 m
+#    "porosity": total pore volume [m3 m-3]
+#    "photosynthesis": {
+#        'Amax': [umol m-2 s-1]
+#        'b': [mol mol-1]
+#    },
+#    "respiration": {
+#        'Q10': [-]
+#        'Rd10': [umol m-2 s-1]
+#    },
+#    'optical_properties': {
+#        'emissivity':
+#        'albedo_PAR':
+#        'albedo_NIR':
+#    },
+#    "water_retention": {
+#        'theta_s': volumetric water content at field capacity!
+#        'theta_r': volumetric water content at air dry
+#        'alpha': [cm-1]
+#        'n': [-]
+#        'saturated_conductivity': [m s-1]
+#        'pore_connectivity': [-]
+#    }
+#}
+
+
 Pleurozium = {
         "species": "Pleurozium schreberi",  # (Brid.) Mitt.
         "ground_coverage": 0.0,
