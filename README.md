@@ -3,12 +3,13 @@ Branch for cleaned model codes for pyAPES development
 
 ## Migration to Python3
 https://docs.python.org/3.0/whatsnew/3.0.html
-Code is mainly written so that it works in both python 2.7 and 3.?
-* main things so far:
+Code is mainly written so that it works in both python 2.7 and 3.6.6
+Code should run python version >3.5
+* main things:
   - in python3, print is a function; brackets are needed
   - iterating a list: if a index is needed use enumarate() then list(range(len(foo))) is not needed. e.g. 'for index, item in foo:' instead of 'for index in list(range(len(foo))):'
   - iterating a dict: if you are iterating through dict.items(), dict.keys(), and dict.values() AND adding/deleting item from dict wrap it inside a list(). e.g. 'for key in list(dict.keys()): del dict[key]'.   
-  - absolute import vs. relative import: from .foo import spam if you want to import from same level.
+  - absolute import vs. relative import: from .foo import spam if you want to import from same package.
 
 ### SoilProfile
 Water flow:
