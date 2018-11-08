@@ -90,21 +90,6 @@ gpara = {
                       ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')],
                       ]}
 
-#logging_configuration = {
-#        'filename': 'pyAPES.log',
-#        'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
-#        'level': 'DEBUG'
-#        }
-
-
-#def file_handler(filename, mode='a', encoding=None):
-#    import os, logging
-#
-#    if not os.path.exists(filename):
-#        open(filename, mode).close()
-#
-#    return logging.FileHandler(filename, mode, encoding)
-
 logging_configuration = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -143,6 +128,58 @@ logging_configuration = {
                         'propagate': True,
                         },
                 },
+        }
+
+parallel_logging_configuration = {
+        'version': 1,
+        'formatters': {
+                'default': {
+                    'class': 'logging.Formatter',
+                    'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
+                'model': {
+                    'class': 'logging.Formatter',
+                    'format': '%(process)d %(levelname)s %(name)s %(funcName)s %(message)s'},
+                },
+        'handlers': {
+                'console': {
+                        'class' : 'logging.StreamHandler',
+                        'formatter': 'model',
+                        'level': 'INFO'  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        },
+                'pyAPES_file': {
+                        'class': 'logging.FileHandler',
+                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'formatter': 'model',
+                        'filename': 'pyAPES.log',
+                        'mode': 'w',  # a == append, w == overwrite
+                        },
+                'parallelAPES_file': {
+                        'class': 'logging.FileHandler',
+                        'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'formatter': 'default',
+                        'filename': 'parallelAPES.log',
+                        'mode': 'w',  # a == append, w == overwrite
+                        },
+        },
+        'loggers': {
+                'pyAPES': {
+                        #'handlers': ['file'],
+                        'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagate': True,
+                        },
+        #        'canopy':{
+        #                #'handlers': ['file'],
+        #                'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+        #                },
+        #        'soil':{
+        #                #'handlers': ['file'],
+        #                'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+        #                },
+                },
+        'root': {
+                'level': 'DEBUG',
+                'handlers': ['console', 'parallelAPES_file']
+                }
         }
 
 
