@@ -109,7 +109,7 @@ class Water(object):
         else:
             info = 'Water balance in soil not solved.'
 
-        logger.info(info)
+        #logger.info(info)
 
     def run(self, dt, forcing, water_sink=None, lower_boundary=None):
         r""" Runs soil water balance.

@@ -109,24 +109,16 @@ class CanopyModel(object):
         self.Switch_WMA = cpara['ctr']['WMA']
         self.Switch_Ebal = cpara['ctr']['Ebal']
 
-        logger.info('Eflow: %s, WMA: %s, Ebal: %s',
-                    self.Switch_Eflow,
-                    self.Switch_WMA,
-                    self.Switch_Ebal)
+        #logger.info('Eflow: %s, WMA: %s, Ebal: %s',
+        #            self.Switch_Eflow,
+        #            self.Switch_WMA,
+        #            self.Switch_Ebal)
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
 
         # Dictionary IS NOT modified in loop. Wrapped in to a list just in case.
-        for p in list(cpara['planttypes'].values()):
-
-            # can this be done just 'for item in list'?
-            for n in list(range(len(p['LAImax']))):
-
-                pp = p.copy()
-                pp['LAImax'] = p['LAImax'][n]
-                pp['lad'] = p['lad'][:, n]
-                ptypes.append(PlantType(self.z, pp, dz_soil, ctr=cpara['ctr']))
+        for p in cpara['planttypes'].values():
 
             for idx, lai_max in enumerate(p['LAImax']):
 
@@ -297,7 +289,6 @@ class CanopyModel(object):
                                    'lw_up': forcing['radiation']['LW']['up'][0]})
 
             # --- heat, h2o and co2 source terms
-            # Dictionary IS modified in loop. Wrapped in to a list.
             for key in sources.keys():
                 sources[key] = 0.0 * self.ones
 
@@ -310,7 +301,6 @@ class CanopyModel(object):
             df = self.interception.df
 
             # update source terms
-            # Dictionary IS modified in a loop. Wrapped in a list.
             for key in wetleaf_fluxes['sources'].keys():
                 sources[key] += wetleaf_fluxes['sources'][key] / self.dz
 

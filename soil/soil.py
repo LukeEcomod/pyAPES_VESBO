@@ -266,7 +266,8 @@ def form_profile(z, zh, p, lbc_water):
                 pp = np.array([p[key][subkey][int(ix[i])] for i in range(N)])
                 prop[key].update({subkey: pp})
 
-        elif key is not 'bedrock':
+        elif key != 'bedrock':
+            #print(key)
             pp = np.array([p[key][int(ix[i])] for i in range(N)])
             prop.update({key: pp})
 

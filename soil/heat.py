@@ -84,7 +84,7 @@ class Heat(object):
         else:
             info = 'Heat balance in soil not solved.'
 
-        logger.info(info)
+        #logger.info(info)
 
     def run(self, dt, forcing, volumetric_water_content, heat_sink=None, lower_boundary=None):
         r""" Runs soil heat balance.
