@@ -18,26 +18,26 @@ def get_parameters(name=None):
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (0.0),
-#                                                'height': (0.05, 0.05)
+                                                'ground_coverage': (1.0)
+                                                #'height': (0.05)
                                                 },
                                         'pleurozium': {
                                                 'ground_coverage': (0.0),
-#                                                'height': (0.04, 0.04)
+                                                #'height': (0.04, 0.04)
                                                 }
-                                                },
+                                },
                                 'baresoil': {
-                                        'ground_coverage': (1.0)
-                                        }
+                                        'ground_coverage': (0.0)
+                                }
+                        },
+                        'planttypes': {
+                                'pine': {
+                                        'LAImax': ([2.1])
                                         },
-#                        'planttypes': {
-#                                'pine': {
-#                                        'LAImax': ([2.1], [2.1])
-#                                        },
-#                                'shrubs': {
-#                                        'LAImax': ([0.7], [0.0])
-#                                        }
-#                                }
+                                'shrubs': {
+                                        'LAImax': ([0.7])
+                                        }
+                                }
                 }
             }
 
