@@ -694,7 +694,7 @@ def photo_temperature_response(Vcmax0, Jmax0, Rd0, Vcmax_T, Jmax_T, Rd_T, T):
     Hd = 1e3 * Vcmax_T[1]  # J mol-1, deactivation energy Vcmax
     Sd = Vcmax_T[2]  # entropy factor J mol-1 K-1
 
-    NOM = np.exp(Ha * (T - TN) / (GAS_CONSTANT*DEG_TO_KELVIN*T)) * (1.0 + np.exp((DEG_TO_KELVIN*Sd - Hd) / (DEG_TO_KELVIN*GAS_CONSTANT)))
+    NOM = np.exp(Ha * (T - TN) / (GAS_CONSTANT*TN*T)) * (1.0 + np.exp((TN*Sd - Hd) / (TN*GAS_CONSTANT)))
     DENOM = (1.0 + np.exp((T*Sd - Hd) / (T*GAS_CONSTANT)))
     Vcmax = Vcmax0 * NOM / DENOM
 
@@ -705,7 +705,7 @@ def photo_temperature_response(Vcmax0, Jmax0, Rd0, Vcmax_T, Jmax_T, Rd_T, T):
     Hd = 1e3 * Jmax_T[1]  # J mol-1, deactivation energy Vcmax
     Sd = Jmax_T[2]  # entropy factor J mol-1 K-1
 
-    NOM = np.exp(Ha * (T - TN) / (GAS_CONSTANT*DEG_TO_KELVIN*T)) * (1.0 + np.exp((DEG_TO_KELVIN*Sd - Hd) / (DEG_TO_KELVIN*GAS_CONSTANT)))
+    NOM = np.exp(Ha * (T - TN) / (GAS_CONSTANT*TN*T)) * (1.0 + np.exp((TN*Sd - Hd) / (TN*GAS_CONSTANT)))
     DENOM = (1.0 + np.exp((T*Sd - Hd) / (T*GAS_CONSTANT)))
     Jmax = Jmax0*NOM / DENOM
 
@@ -781,38 +781,164 @@ def photo_Toptima(T10):
 
 """--- scripts for testing functions ---- """
 
-def test_leafscale(method=1):
-    Vcmax = 55.
-    Jmax = 104.
-    Rd = 1.3
-    tresp = {'Vcmax': [78, 200.0, 650.0],
-             'Jmax': [56, 200.0, 647.0],
-             'Rd': [33.0]}
-    photop = {'Vcmax': Vcmax, 'Jmax': Jmax, 'Rd': Rd,
-              'alpha': 0.3, 'theta': 0.7, 'beta': 0.95, 'La': 1600.0, 'm': 1.2*2.3,
-              'g0': 1e-3, 'kn': 0.6, 'tresp': tresp}
-
-    leafp = {'lt': 0.02, 'emi': 0.98, 'par_alb': 0.12, 'nir_alb': 0.55}
-
+def test_leafscale(method=1, species='pine'):
+    gamma = 1.5
+    gfact = 1.2
+    if species.upper() == 'PINE':
+        photop= {
+                'Vcmax': 55.0,
+                'Jmax': 105.0,
+                'Rd': 1.3,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 1600.0,
+                'm': gfact * 2.5,
+                'g0': 1.0e-3,
+                'kn': 0.6,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [78.0, 200.0, 650.0],
+                    'Jmax': [56.0, 200.0, 647.0],
+                    'Rd': [33.0]
+                    }
+                }
+        leafp = {
+                'lt': 0.02,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                }
+    if species.upper() == 'SPRUCE':
+        photop = {
+                'Vcmax': 60.0,
+                'Jmax': 114.0,
+                'Rd': 1.5,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 1600.0,
+                'm': gfact * 2.5,
+                'g0': 1.0e-3,
+                'kn': 0.6,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
+                    'Jmax': [38.4, 202.0, 655.8],
+                    'Rd': [33.0]
+                    }
+                }
+        leafp = {
+                'lt': 0.02,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                }
+    if species.upper() == 'DECID':
+        photop = {
+                'Vcmax': 50.0,
+                'Jmax': 95.0,
+                'Rd': 1.3,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 600.0,
+                'm': gfact * 4.5,
+                'g0': 1.0e-3,
+                'kn': 0.6,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
+                }
+        leafp = {
+                'lt': 0.05,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                }
+    if species.upper() == 'SHRUBS':
+        photop = {
+                'Vcmax': 50.0,
+                'Jmax': 95.0,
+                'Rd': 1.3,
+                'alpha': gamma * 0.2,
+                'theta': 0.7,
+                'La': 600.0,
+                'm': gfact * 4.5,
+                'g0': 1.0e-3,
+                'kn': 0.3,
+                'beta': 0.95,
+                'drp': 0.7,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
+                }
+        leafp = {
+                'lt': 0.02,
+                'par_alb': 0.12,
+                'nir_alb': 0.55,
+                'emi': 0.98
+                }
     # env. conditions
     P = 101300.0
-    Qp = np.linspace(1.,1800.,50)
-    N=len(Qp)
-    LW = np.zeros(N)
+    Qp = 1000.  #np.linspace(1.,1800.,50)
+    N=50
     H2O = np.ones(N) * 1.0e3 / P
-    CO2 = np.ones(N) * 400.0
+    CO2 = np.ones(N) * 380.0
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = 25.0  # np.array([20.0, 19.0, 18.0, 20.0])
-    
+    T = np.linspace(1.,40.,50) #25.0  # np.array([20.0, 19.0, 18.0, 20.0])
+    Tl = T
+    # vapor pressure
+    esat, s = e_sat(20)
+    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+
+    lt = leafp['lt']
+    gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
+
     SWabs = 0.5*(1-leafp['par_alb'])*Qp / PAR_TO_UMOL + 0.5*(1-leafp['nir_alb'])*Qp / PAR_TO_UMOL 
 #    print('SWabs', SWabs)
     if method is not 1:
-        x = leaf_interface(photop, leafp, H2O, CO2, T, T, Qp, SWabs, LW, U, T, 0.0, P=101300.0, model=method, Ebal=False, dict_output=True)  
-#        print x
-        plt.figure(2)
-        plt.subplot(221); plt.plot(Qp, x['An'], 'o')
-        plt.subplot(222); plt.plot(Qp, x['E'], 'o')
-        plt.subplot(223); plt.plot(Qp, x['gs_v'], 'o')
+        if method.upper() == 'CO_OPTI':
+            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_analytical(photop, Qp, T, Dleaf, CO2, gb_c, gb_v)
+        if method.upper() == 'MEDLYN':
+            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn(photop, Qp, T, Dleaf, CO2, gb_c, gb_v, P=P)
+        if method.upper() == 'MEDLYN_FARQUHAR':
+            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn_farquhar(photop, Qp, T, Dleaf, CO2, gb_c, gb_v, P=P)
+        if method.upper() == 'BWB':
+            rh  = (1 - Dleaf*P / esat)  # rh at leaf (-)
+            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_bwb(photop, Qp, T, rh, CO2, gb_c, gb_v, P=P)
+        gsv = H2O_CO2_RATIO*gs_opt
+        geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
+        Qp = T
+        plt.figure(1)
+        plt.subplot(321); plt.plot(Qp, An, 'o')
+        plt.title('An')
+        plt.subplot(322); plt.plot(Qp, fe, 'o')
+        plt.title('fe')
+        plt.subplot(323); plt.plot(Qp, An + Rd, 'o')
+        plt.title('An + Rd')
+        plt.subplot(324); plt.plot(Qp, Rd, 'o')
+        plt.title('Rd')
+        plt.subplot(325); plt.plot(Qp, gs_opt, 'o')
+        plt.title('gs_opt')
+        plt.subplot(326); plt.plot(Qp, geff_v, 'o')
+        plt.title('geff_v')
+        plt.tight_layout()
+#        plt.figure(2)
+#        plt.subplot(221); plt.plot(Qp, Ci, 'o')
+#        plt.title('ci')
+#        plt.subplot(222); plt.plot(Qp, Cs, 'o')
+#        plt.title('cs')
+#        plt.subplot(223); plt.plot(Qp, Dleaf, 'o')
+#        plt.title('vpd')
+#        plt.subplot(224); plt.plot(Qp, Ci/Cs, 'o')
+#        plt.title('cics')
+#        plt.tight_layout()
     if method == 1:
         #ci = 300.0
         #Qp = np.arange(10, 1600, 20)
@@ -827,3 +953,76 @@ def test_leafscale(method=1):
         plt.xlabel('ci (ppm)')
         #plt.ylabel('An (umolm-2s-1)')
         #plt.plot(Qp, an, 'r.-', Qp, an1, 'g.-')
+
+def test_photo_temperature_response(species='pine'):
+    T = np.linspace(1.,40.,79)
+    Tk = T + DEG_TO_KELVIN
+    if species.upper() == 'PINE':
+        photop= {
+                'Vcmax': 55.0,
+                'Jmax': 105.0,
+                'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [78.0, 200.0, 650.0],
+                    'Jmax': [56.0, 200.0, 647.0],
+                    'Rd': [33.0]
+                    }
+                }
+    if species.upper() == 'SPRUCE':
+        photop = {
+                'Vcmax': 60.0,
+                'Jmax': 114.0,
+                'Rd': 1.5,
+                'tresp': {
+                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
+                    'Jmax': [38.4, 202.0, 655.8],
+                    'Rd': [33.0]
+                    }
+                }
+    if species.upper() == 'DECID':
+        photop = {
+                'Vcmax': 50.0,
+                'Jmax': 95.0,
+                'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
+                }
+    if species.upper() == 'SHRUBS':
+        photop = {
+                'Vcmax': 50.0,
+                'Jmax': 95.0,
+                'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
+                }
+
+    Vcmax = photop['Vcmax']
+    Jmax = photop['Jmax']
+    Rd = photop['Rd']
+    tresp = photop['tresp']
+    Vcmax_T = tresp['Vcmax']
+    Jmax_T = tresp['Jmax']
+    Rd_T = tresp['Rd']
+    Vcmax, Jmax, Rd, Tau_c = photo_temperature_response(Vcmax, Jmax, Rd, Vcmax_T, Jmax_T, Rd_T, Tk)
+    
+    plt.figure(1)
+    plt.subplot(311); plt.plot(T, Vcmax / photop['Vcmax'], 'o')
+    plt.title('Vcmax')
+    plt.subplot(312); plt.plot(T, Jmax/ photop['Jmax'], 'o')
+    plt.title('Jmax')
+    plt.subplot(313); plt.plot(T, Rd/ photop['Rd'], 'o')
+    plt.title('Rd')
+    
+def Topt_to_Sd(Ha, Hd, Topt):
+    Sd = Hd * 1e3 / (Topt + DEG_TO_KELVIN) + GAS_CONSTANT * np.log(Ha /(Hd - Ha))
+    return Sd
+
+def Sd_to_Topt(Ha, Hd, Sd):
+    Topt = Hd*1e3 / (Sd + GAS_CONSTANT * np.log(Ha /(Hd - Ha)))
+    return Topt - DEG_TO_KELVIN

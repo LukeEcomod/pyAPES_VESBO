@@ -41,7 +41,6 @@ from .carbon import carbon_exchange
 
 from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C, EPS
 
-from numpy import a
 class Bryophyte(object):
     r""" Represents bryophyte community-soil-atmosphere interactions.
 

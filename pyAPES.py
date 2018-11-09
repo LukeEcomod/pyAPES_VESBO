@@ -78,7 +78,7 @@ def driver(create_ncf=False,
 
     logger = logging.getLogger(__name__)
 
-    logger.info('Simulation started. Number of simulations: {}'.format(Nsim + 1))
+    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
     # --- FORCING ---
     # Read forcing
@@ -239,7 +239,8 @@ class Model(object):
                     'air_temperature': self.forcing['Tair'].iloc[k],
                     'precipitation': self.forcing['Prec'].iloc[k],
                     'h2o': self.forcing['H2O'].iloc[k],
-                    'co2': self.forcing['CO2'].iloc[k]}
+                    'co2': self.forcing['CO2'].iloc[k],
+                    'pressure':self.forcing['P'].iloc[k]}
 
             canopy_state.update(canopy_flux)
             ffloor_state.update(ffloor_flux)

@@ -8,9 +8,10 @@ gpara = {
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
         'end_time' : "2010-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
-        'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
+        'forc_filename' : "Lettosuo_forcing_2010_2019.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
+                      ['forcing_pressure', 'ambient pressure [Pa]', ('date', 'simulation')],
                       ['forcing_h2o','H2O concentration [mol mol-1]', ('date', 'simulation')],
                       ['forcing_co2','CO2 concentration [ppm]', ('date', 'simulation')],
                       ['forcing_wind_speed','wind speed [m s-1]', ('date', 'simulation')],
@@ -32,11 +33,11 @@ gpara = {
                       ['canopy_pt_gpp', 'gross primary production [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_respiration', 'dark respiration [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_leaf_net_LW', 'net leaf longwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_leaf_SW_absorbed', 'leaf absorbed shortwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
+                      ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+                      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+                      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+                      ['canopy_leaf_net_LW', 'net leaf longwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
+                      ['canopy_leaf_SW_absorbed', 'leaf absorbed shortwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m s-1]', ('date', 'simulation')],
 #                      ['canopy_co2_flux', 'co2 flux [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_latent_heat_flux', 'latent heat flux [W m-2]', ('date', 'simulation', 'canopy')],
