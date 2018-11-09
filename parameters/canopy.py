@@ -22,12 +22,12 @@ def get_cpara(dbhfile):
     ctr = {'Eflow': True,  # ensemble flow
            'WMA': False, # well-mixed assumption
            'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
-           'Ebal': True,  # computes leaf temperature by solving energy balance
+           'Ebal': False,  # computes leaf temperature by solving energy balance
            'SwModel': 'ZhaoQualls',
            'LwModel': 'ZhaoQualls',  #'Flerchinger'},  #
            'WaterStress': False,  # TRUE NOT SUPPORTED YET!
            'seasonal_LAI': True,  # account for seasonal LAI dynamics
-           'pheno_cycle': True  # account for phenological cycle
+           'pheno_cycle': True  #True  # account for phenological cycle
            }
 
     # --- micrometeo ---

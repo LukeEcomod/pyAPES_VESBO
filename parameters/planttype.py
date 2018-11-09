@@ -108,11 +108,11 @@ def get_planttypes(dbhfile, grid):
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
-#                'tresp': {
-#                    'Vcmax': [78.0, 200.0, 650.0],
-#                    'Jmax': [56.0, 200.0, 647.0],
-#                    'Rd': [33.0]
-#                    }
+                'tresp': {
+                    'Vcmax': [78.0, 200.0, 650.0],
+                    'Jmax': [56.0, 200.0, 647.0],
+                    'Rd': [33.0]
+                    }
                 },
             'leafp': {
                 'lt': 0.02,
@@ -162,11 +162,11 @@ def get_planttypes(dbhfile, grid):
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
-#                'tresp': {
-#                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
-#                    'Jmax': [38.4, 202.0, 655.8],
-#                    'Rd': [33.0]
-#                    }
+                'tresp': {
+                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
+                    'Jmax': [38.4, 202.0, 655.8],
+                    'Rd': [33.0]
+                    }
                 },
             'leafp': {
                 'lt': 0.02,
@@ -216,11 +216,11 @@ def get_planttypes(dbhfile, grid):
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
-#                'tresp': {
-#                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
-#                    'Jmax': [42.8, 200.0, 637.0],
-#                    'Rd': [33.0]
-#                    }
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
                 },
             'leafp': {
                 'lt': 0.05,
@@ -270,11 +270,11 @@ def get_planttypes(dbhfile, grid):
                 'kn': 0.3,
                 'beta': 0.95,
                 'drp': 0.7,
-#                'tresp': {
-#                    'Vcmax': [77.0, 200.0, 636.7],
-#                    'Jmax': [42.8, 200.0, 637.0],
-#                    'Rd': [33.0]
-#                    }
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.7],
+                    'Jmax': [42.8, 200.0, 637.0],
+                    'Rd': [33.0]
+                    }
                 },
             'leafp': {
                 'lt': 0.02,

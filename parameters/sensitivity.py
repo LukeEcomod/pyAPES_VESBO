@@ -19,25 +19,24 @@ def get_parameters(name=None):
                                 'bryophytes': {
                                         'hylocomium': {
                                                 'ground_coverage': (0.0),
-#                                                'height': (0.05, 0.05)
+#                                                'height': (0.06)
+                                                },
+                                        'sphagnum': {
+                                                'ground_coverage': (0.0),
+#                                                'height': (0.045)
                                                 },
                                         'pleurozium': {
                                                 'ground_coverage': (0.0),
-#                                                'height': (0.04, 0.04)
+#                                                'height': (0.095)
                                                 }
-                                                },
+                                        },
+                                'litter': {
+                                        'ground_coverage': (0.0)
+                                        },
                                 'baresoil': {
                                         'ground_coverage': (1.0)
                                         }
-                                        },
-#                        'planttypes': {
-#                                'pine': {
-#                                        'LAImax': ([2.1], [2.1])
-#                                        },
-#                                'shrubs': {
-#                                        'LAImax': ([0.7], [0.0])
-#                                        }
-#                                }
+                                }
                 }
             }
 

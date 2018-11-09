@@ -59,7 +59,7 @@ def plot_results(results):
 
     plt.tight_layout(rect=(0, 0, 0.8, 1))
 
-def plot_fluxes(results, treatment='control', sim_idx=0):
+def plot_fluxes(results, treatment='control-N', sim_idx=0):
     Data = read_forcing("Lettosuo_EC.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
@@ -256,7 +256,7 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
         plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
-                       labels=None, marker=None, colors=default, xticks=True, stack=False, cum=False, limits=True,legend=True):
+                       labels=None, marker=None, colors=default, xticks=True, stack=False, cum=False, linestyle='-', limits=True,legend=True):
     """
     Plot timeseries from dataframe data.
     Args:
@@ -301,13 +301,12 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
         ymax = max(sum(values_all))
     else:
         for i in range(len(values_all)):
-            linestyle='-'
             if marker is None:
                 markerstyle = None
             else:
                 markerstyle = marker[i]
                 if marker[i] is not None:
-                    linestyle  = 'None'
+                    linestyle = 'None'
             plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i], marker=markerstyle, markersize=1, linestyle=linestyle)
         ymax = max([np.nanmax(val) for val in values_all])
 
