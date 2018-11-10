@@ -12,8 +12,8 @@ run function arguments:
 run function returns a dict containing states and fluxes of encapsulated submodels to be used in upper-level.
 
 ### Worries:
-- leaky interface (how to handle consistent matter flags or other control parameters of model)
-- how to prevent dependencies across the interface (espacially how to keep lower levels clean): should lower levels provide different interfaces in different occasions or should they accomodate logic through forcing? 
+- leaky interface (how to handle in consistent manner control parameters in lower level)
+- how to prevent dependencies across the interface, especially to down-stream: How awere lower levels should be about upper level logic? Accomadete or provide services  
 
 ## Migration to Python3
 https://docs.python.org/3.0/whatsnew/3.0.html
