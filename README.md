@@ -1,10 +1,19 @@
 # README
 Branch for cleaned model codes for pyAPES development
 
-## Function calls forcing, states, and params
-* forcing: 
-* states:
-* params:
+## Introducing clear and consistent interfaces throughout the model code
+Lower-levels provides an interface through run-function, e.g. Forestfloor is a facade/adapter of forestfloor submodels (barasoil, litter, bryophyte, snowpack) and gathers usage logic and interactions of these submodels. A facade/adapter provides an interface through run-function. 
+
+run function arguments:
+* forcing: forcing data 
+* states: previously calculated states
+* params: control flags, needed parameters etc.
+
+run function returns a dict containing states and fluxes of encapsulated submodels to be used in upper-level.
+
+### Worries:
+- leaky interface (how to handle consistent matter flags or other control parameters of model)
+- how to prevent dependencies across the interface (espacially how to keep lower levels clean): should lower levels provide different interfaces in different occasions or should they accomodate logic through forcing? 
 
 ## Migration to Python3
 https://docs.python.org/3.0/whatsnew/3.0.html
