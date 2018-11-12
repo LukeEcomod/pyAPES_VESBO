@@ -6,8 +6,8 @@ Lower-levels provides an interface through run-function, e.g. Forestfloor is a f
 
 run function arguments:
 * forcing: forcing data 
-* states: previously calculated states
-* params: control flags, needed parameters etc.
+* parameters: previously calculated states
+* controls: control flags, needed parameters etc.
 
 run function returns a dict containing states and fluxes of encapsulated submodels to be used in upper-level.
 
