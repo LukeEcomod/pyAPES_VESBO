@@ -177,7 +177,7 @@ class Model(object):
 
             if k in k_steps[:-1]:
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
-                #print('{0}..'.format(s), end=' ')
+                print('{0}..'.format(s), end=' ')
 
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
@@ -251,7 +251,7 @@ class Model(object):
             self.results = _append_results('ffloor', k, ffloor_state, self.results)
             self.results = _append_results('soil', k, soil_state, self.results)
 
-        #print('100%')
+        print('100%')
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
 
         self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)

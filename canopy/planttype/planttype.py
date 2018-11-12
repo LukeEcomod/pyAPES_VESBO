@@ -25,7 +25,7 @@ eps = np.finfo(float).eps  # machine epsilon
 from .photo import leaf_interface
 from .phenology import Photo_cycle, LAI_cycle
 from .rootzone import RootUptake
-from canopy.constants import LATENT_HEAT
+from canopy.constants import LATENT_HEAT, PAR_TO_UMOL
 
 class PlantType(object):
     r""" Contains plant-specific properties, state variables and phenological
@@ -203,15 +203,65 @@ class PlantType(object):
             Tl_ave (array): average leaf temperature used in LW computation [degC]
             gr (array): radiative conductance [mol m-2 s-1]
         """
-        # --- sunlit leaves
-        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sl, U,
-                            forcing, leaftype='sunlit', model=self.StomaModel)
+        controls = {'energy_balance': forcing['Ebal'],
+                    'photo_model': self.StomaModel}
+        
+        leaf_forcing = {'h2o': H2O,
+                        'co2': CO2,
+                        'air_temperature': T,
+                        'wind_speed': U,
+                        'air_pressure': forcing['air_pressure'],
+                        'average_leaf_temperature': forcing['leaf_temperature']
+                        }
+
+        if controls['energy_balance']:
+            gr = forcing['radiation']['LW']['gr']
+            LWnet = forcing['radiation']['LW']['net_leaf']
+            
+            SWabs_sl = (forcing['radiation']['PAR']['sunlit']['absorbed']
+                        + forcing['radiation']['NIR']['sunlit']['absorbed']
+                        + forcing['radiation']['LW']['net_leaf'])
+            
+            leaf_forcing.update({'radiative_conductance': gr,
+                                 'lw_net': LWnet,
+                                 'sw_absorbed': SWabs_sl,  # for sunlit
+                                 'leaf_temperature': self.Tl_sl})  # for sunlit
+       
+        logger_info={'date': forcing['date'],
+                     'iteration': forcing['iteration'],
+                     'leaftype': 'sunlit'}
+        
+        Qp_sl = forcing['radiation']['PAR']['sunlit']['incident'] * PAR_TO_UMOL
+        leaf_forcing.update({'par_incident': Qp_sl}) # for sunlit
+
+        # --- sunlit leaves 
+        sl = leaf_interface(photop=self.photop, 
+                            leafp=self.leafp, 
+                            forcing=leaf_forcing,
+                            controls=controls,
+                            logger_info=logger_info)
 
         # --- shaded leaves
-        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sh, U,
-                            forcing, leaftype='shaded', model=self.StomaModel)
+        logger_info.update({'leaftype': 'shaded'})
+        
+        if controls['energy_balance']:
+            SWabs_sh = (forcing['radiation']['PAR']['shaded']['absorbed']
+                        + forcing['radiation']['NIR']['shaded']['absorbed']
+                        + forcing['radiation']['LW']['net_leaf'])
+            
+            leaf_forcing.update({'sw_absorbed': SWabs_sh,  # for shaded
+                                 'leaf_temperature': self.Tl_sh})  # for shaded
+    
+        Qp_sh = forcing['radiation']['PAR']['shaded']['incident'] * PAR_TO_UMOL
+        leaf_forcing.update({'par_incident': Qp_sh}) # for sunlit
+        
+        sh = leaf_interface(photop=self.photop, 
+                            leafp=self.leafp, 
+                            forcing=leaf_forcing,
+                            controls=controls,
+                            logger_info=logger_info)
 
-        if forcing['Ebal']:
+        if controls['energy_balance']:
             self.Tl_sh= sh['Tl'].copy()
             self.Tl_sl = sl['Tl'].copy()
 
