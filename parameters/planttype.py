@@ -42,8 +42,8 @@ def get_planttypes(dbhfile, grid):
                     'beta':  co-limitation parameter of Farquhar-model
                     'drp':
                     'tresp' (dict): temperature sensitivity parameters
-                        'Vcmax': [Ha, Hd, Topt]; activation energy [kJmol-1], deactivation energy [kJmol-1], optimum temperature [degC]
-                        'Jmax': [Ha, Hd, Topt];
+                        'Vcmax': [Ha, Hd, dS]; activation energy [kJmol-1], deactivation energy [kJmol-1],  entropy factor [J mol-1]
+                        'Jmax': [Ha, Hd, dS];
                         'Rd': [Ha]; activation energy [kJmol-1)]
                 'leafp' (dict): leaf properties
                     'lt': leaf lengthscale [m]

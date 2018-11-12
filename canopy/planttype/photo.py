@@ -25,8 +25,8 @@ from canopy.constants import *
 H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]
 TN = 25.0 + DEG_TO_KELVIN  # reference temperature [K]
 
-def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit', model='CO_OPTI',
-                   dict_output=True):
+def leaf_interface(photop, leafp, forcing, controls, dict_output=True, 
+                   logger_info={'date':'','iteration':'','leaftype':''}):
     """
     Entry-point to coupled leaf gas-exchange and energy balance functions.
     
@@ -41,59 +41,60 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
     In all these models, stomatal conductance (gs) is directly linked to An, either by optimal stomatal control principles or
     using semi-empirical models.
     
-    INPUT:
-        photop - dict. of photoparameters, keys:
-            Vcmax - maximum carboxylation velocity (umolm-2s-1)
-            Jmax - maximum rate of electron transport (umolm-2s-1)
-            Rd - dark respiration rate (umolm-2s-)
-            alpha - quantum yield parameter (mol/mol)
-            theta - co-limitation parameter of Farquhar-model
-            beta - co-limitation parameter of Farquhar-model
-            L, m - stomatal parameter (Lambda, m, ...) depending on model
-            g0 - residual conductance for CO2 (molm-2s-1)
-            
-            tresp - dict. of temperature sensitivity parameters, optional.
-                omitting neglects temperature adjustments of Vcmax, Jmax, Rd
-                Vcmax - [Ha, Hd, Topt]; activation energy (kJmol-1), deactivation energy (kJmol-1), optimum temperature (degC)
-                Jmax - [Ha, Hs, Topt];
-                Rd - [Ha]; activation energy (kJmol-1)
-        leafp - dict of leaf parameters, keys:
-            lt - leaf lengthscale (m)
-            emi - leaf emissivity (-)
-            # Par_alb - leaf Par albedo (-)
-            # Nir_alb - leaf Nir albedo (-)
-        
-        H2O - water vapor mixing ratio (mol/mol)
-        CO2 - carbon dioxide mixing ratio (ppm)
-        T - ambient air temperature (degC)
-        Qp - incident PAR at leaves (umolm-2s-1)
-        SWabs - absorbed SW (PAR + NIR) at leaves (Wm-2)
-        LW - net isothermal long-wave radiation (Wm-2).
-        U - mean wind speed (m/s)
-        P - ambient pressure (Pa)
-
-        model - CO_OPTI (Vico et al., 2014)
+    Args:
+        photop (dict): leaf gas-exchange parameters
+            'Vcmax': maximum carboxylation velocity [umolm-2s-1]
+            'Jmax': maximum rate of electron transport [umolm-2s-1]
+            'Rd': dark respiration rate [umolm-2s-1]
+            'alpha': quantum yield parameter [mol/mol]
+            'theta': co-limitation parameter of Farquhar-model
+            'La': stomatal parameter (Lambda, m, ...) depending on model
+            'm':
+            'g0': residual conductance for CO2 [molm-2s-1]
+            'kn': ?? not used ??
+            'beta': co-limitation parameter of Farquhar-model
+            'drp': ?? not used ??
+            'tresp' (dict): temperature sensitivity parameters
+                'Vcmax' (list): [Ha, Hd, dS]; activation energy [kJmol-1], deactivation energy [kJmol-1], entropy factor [J mol-1]
+                'Jmax' (list): [Ha, Hd, dS];
+                'Rd' (list): [Ha]; activation energy [kJmol-1)]
+        leafp (dict): leaf properties
+            'lt': leaf lengthscale [m]
+        forcing (dict):
+            'h2o': water vapor mixing ratio (mol/mol)
+            'co2': carbon dioxide mixing ratio (ppm)
+            'air_temperature': ambient air temperature (degC)
+            'par_incident': incident PAR at leaves (umolm-2s-1)
+            'sw_absorbed': absorbed SW (PAR + NIR) at leaves (Wm-2)
+            'lw_net': net isothermal long-wave radiation (Wm-2)
+            'wind_speed': mean wind speed (m/s)
+            'air_pressure': ambient pressure (Pa)
+            'leaf_temperature': initial guess for leaf temperature (optional)
+            'average_leaf_temperature': leaf temperature used for computing LWnet (optional)
+            'radiative_conductance': radiative conductance used in computing LWnet (optional)
+        controls (dict):
+            'model' (str): photosysthesis model
+                CO_OPTI (Vico et al., 2014)
                 MEDLYN (Medlyn et al., 2011 with co-limitation Farquhar)
+                MEDLYN_FARQUHAR
                 BWB (Ball et al., 1987 with co-limitation Farquhar)
-                ADD others!!!
-        Ebal - True computes leaf temperature by solving energy balance
-        dict_output - True returns output as dict, False as separate arrays
+                others?
+            'energy_closure' (bool): True computes leaf temperature by solving energy balance
+        dict_output (bool): True returns output as dict, False as separate arrays (optional)
+        logger_info (dict): optional
       
     OUTPUT:
-        x - dict with keys: (or separate arrays in following order)
-            An - net CO2 flux (umol m-2 leaf s-1)
-            Rd - CO2 respiration (umol m-2 leaf s-1)
-            E - H2O flux (transpiration) mol m-2 leaf s-1)
-            H - sensible heat flux (W m-2 leaf)
-            Fr - non-isothermal radiative flux (W m-2)
-            Tl - leaf temperature (degC)
-            Ci - leaf internal CO2 mixing ratio (mol/mol)
-            Cs - leaf surface CO2 mixing ratio (mol/mol)
-            #Cm - mesophyll CO2 mixing ratio (mol/mol)
-            gs_v - stomatal conductance for H2O (mol m-2 leaf s-1)
-            gs_c - stomatal conductance for CO2 (mol m-2 leaf s-1)
-            gb_v - boundary layer conductance for H2O (mol m-2 leaf s-1)
-            gbv - leaf boundary layer conductance for H2O (mol m-2 leaf s-1)
+        (dict):
+            'net_co2': net CO2 flux (umol m-2 leaf s-1)
+            'dark_respiration': CO2 respiration (umol m-2 leaf s-1)
+            'transpiration': H2O flux (transpiration) (mol m-2 leaf s-1)
+            'sensible_heat': sensible heat flux (W m-2 leaf)
+            'fr': non-isothermal radiative flux (W m-2)
+            'Tl': leaf temperature (degC)
+            'stomatal_conductance': stomatal conductance for H2O (mol m-2 leaf s-1)
+            'boundary_conductance': boundary layer conductance for H2O (mol m-2 leaf s-1)
+            'leaf_internal_co2': leaf internal CO2 mixing ratio (mol/mol)
+            'leaf_surface_co2': leaf surface CO2 mixing ratio (mol/mol)
 
     NOTE: Vectorized code can be used in multi-layer sense where inputs are vectors of equal length
 
@@ -102,22 +103,39 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
     """
     # -- parameters -----
     lt = leafp['lt']
-
+    
+    T = np.array(forcing['air_temperature'], ndmin=1)
+    H2O = np.array(forcing['h2o'], ndmin=1)
+    Qp = forcing['par_incident']
     P = forcing['air_pressure']
-    Tl_ave = forcing['leaf_temperature']
-    Qp = forcing['radiation']['PAR'][leaftype]['incident'] * PAR_TO_UMOL
-    Ebal = forcing['Ebal']
+    U = forcing['wind_speed']
+    CO2 = forcing['co2']
+    
+    Ebal = controls['energy_balance']
+    model = controls['photo_model']
+    
     if Ebal:
-        gr = forcing['radiation']['LW']['gr']
-        Rabs = (forcing['radiation']['PAR'][leaftype]['absorbed']
-                + forcing['radiation']['NIR'][leaftype]['absorbed']
-                + forcing['radiation']['LW']['net_leaf'])
+        SWabs = np.array(forcing['sw_absorbed'], ndmin=1)
+        LWnet = np.array(forcing['lw_net'], ndmin=1)
+        Rabs = SWabs + LWnet
         # canopy nodes
-        ic = np.where(abs(forcing['radiation']['LW']['net_leaf']) > 0.0)
-    else:
-        gr = 0.0
+        ic = np.where(abs(LWnet) > 0.0)
 
-    Tl_ini = Tl.copy()
+    if 'leaf_temperature' in forcing:
+        Tl_ini = np.array(forcing['leaf_temperature'], ndmin=1).copy()
+    else:
+        Tl_ini = T.copy()
+    Tl = Tl_ini.copy()
+    
+    if 'radiative_conductance' in forcing:
+        gr = np.array(forcing['radiative_conductance'], ndmin=1)
+    else:
+        gr = np.zeros(len(T))
+
+    if 'average_leaf_temperature' in forcing:
+        Tl_ave = np.array(forcing['average_leaf_temperature'], ndmin=1)
+    else:
+        Tl_ave = Tl.copy()     
 
     # vapor pressure
     esat, s = e_sat(Tl)
@@ -159,20 +177,20 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
 
             if (err < 0.01 or iterNo == itermax) and abs(np.mean(T) - np.mean(Tl)) > 20.0:
                 logger.debug('%s (iteration %s:%s) Unrealistic %s leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f, %.2f',
-                     forcing['date'],
-                     forcing['iteration'], iterNo,
-                     leaftype,
+                     logger_info['date'],
+                     logger_info['iteration'],
+                     logger_info['leaftype'],
                      np.mean(Tl), np.mean(T),
-                     np.mean(forcing['radiation']['LW']['net_leaf']), np.mean(Tl_ave), np.mean(Tl_ini), np.mean(H2O))
+                     np.mean(LWnet), np.mean(Tl_ave), np.mean(Tl_ini), np.mean(H2O))
                 Tl = T.copy()
                 Ebal = False  # recompute without solving leaf temperature
                 err = 999.
 
             elif iterNo == itermax and err > 0.05:
                 logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_%s = %.2f (err = %.2f)',
-                         forcing['date'],
-                         forcing['iteration'],
-                         leaftype,
+                         logger_info['date'],
+                         logger_info['iteration'],
+                         logger_info['leaftype'],
                          np.mean(Tl), err)
 
             # vapor pressure
@@ -180,11 +198,8 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
             s = s / P  # slope of esat, mol/mol / degC
             s[esat / P < H2O] = EPS
             Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
-
         else:
             err = 0.0
-
-
 
     # outputs
     H = SPECIFIC_HEAT_AIR*gb_h*(Tl - T)  # Wm-2
@@ -202,7 +217,11 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
              'transpiration': E,
              'sensible_heat': H,
              'fr': Fr,
-             'Tl': Tl}
+             'Tl': Tl,
+             'stomatal_conductance': gsv,
+             'boundary_conductance': gb_v,
+             'leaf_internal_co2': Ci,
+             'leaf_surface_co2': Cs}
         return x
     else:  # return 11 arrays
         return An, Rd, E, H, Fr, Tl, Ci, Cs, gsv, gs_opt, gb_v
@@ -781,7 +800,7 @@ def photo_Toptima(T10):
 
 """--- scripts for testing functions ---- """
 
-def test_leafscale(method=1, species='pine'):
+def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     gamma = 1.5
     gfact = 1.2
     if species.upper() == 'PINE':
@@ -885,74 +904,44 @@ def test_leafscale(method=1, species='pine'):
                 'emi': 0.98
                 }
     # env. conditions
-    P = 101300.0
-    Qp = 1000.  #np.linspace(1.,1800.,50)
     N=50
-    H2O = np.ones(N) * 1.0e3 / P
-    CO2 = np.ones(N) * 380.0
+    P = 101300.0
+    Qp = 1000. * np.ones(N)  #np.linspace(1.,1800.,50)
+    
+    CO2 = 380. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = np.linspace(1.,40.,50) #25.0  # np.array([20.0, 19.0, 18.0, 20.0])
-    Tl = T
-    # vapor pressure
-    esat, s = e_sat(20)
-    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
-
-    lt = leafp['lt']
-    gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
-
-    SWabs = 0.5*(1-leafp['par_alb'])*Qp / PAR_TO_UMOL + 0.5*(1-leafp['nir_alb'])*Qp / PAR_TO_UMOL 
-#    print('SWabs', SWabs)
-    if method is not 1:
-        if method.upper() == 'CO_OPTI':
-            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_analytical(photop, Qp, T, Dleaf, CO2, gb_c, gb_v)
-        if method.upper() == 'MEDLYN':
-            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn(photop, Qp, T, Dleaf, CO2, gb_c, gb_v, P=P)
-        if method.upper() == 'MEDLYN_FARQUHAR':
-            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn_farquhar(photop, Qp, T, Dleaf, CO2, gb_c, gb_v, P=P)
-        if method.upper() == 'BWB':
-            rh  = (1 - Dleaf*P / esat)  # rh at leaf (-)
-            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_bwb(photop, Qp, T, rh, CO2, gb_c, gb_v, P=P)
-        gsv = H2O_CO2_RATIO*gs_opt
-        geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
-        Qp = T
-        plt.figure(1)
-        plt.subplot(321); plt.plot(Qp, An, 'o')
-        plt.title('An')
-        plt.subplot(322); plt.plot(Qp, fe, 'o')
-        plt.title('fe')
-        plt.subplot(323); plt.plot(Qp, An + Rd, 'o')
-        plt.title('An + Rd')
-        plt.subplot(324); plt.plot(Qp, Rd, 'o')
-        plt.title('Rd')
-        plt.subplot(325); plt.plot(Qp, gs_opt, 'o')
-        plt.title('gs_opt')
-        plt.subplot(326); plt.plot(Qp, geff_v, 'o')
-        plt.title('geff_v')
-        plt.tight_layout()
-#        plt.figure(2)
-#        plt.subplot(221); plt.plot(Qp, Ci, 'o')
-#        plt.title('ci')
-#        plt.subplot(222); plt.plot(Qp, Cs, 'o')
-#        plt.title('cs')
-#        plt.subplot(223); plt.plot(Qp, Dleaf, 'o')
-#        plt.title('vpd')
-#        plt.subplot(224); plt.plot(Qp, Ci/Cs, 'o')
-#        plt.title('cics')
-#        plt.tight_layout()
-    if method == 1:
-        #ci = 300.0
-        #Qp = np.arange(10, 1600, 20)
-        Qp = 1600.0
-        ci = np.arange(200, 700, 10)        
-        an, rd, av, aj = photo_farquhar(photop, Qp, ci, T, co_limi=False )
-        an1, rd1 = photo_farquhar(photop, Qp, ci, T, co_limi=True)
-        plt.figure()
-        plt.title('photo.photo_farquhar')
-        plt.plot(ci, av, 'k-', ci, aj, 'k--')
-        plt.plot(ci, an, 'r.-', ci, an1, 'g.-')
-        plt.xlabel('ci (ppm)')
-        #plt.ylabel('An (umolm-2s-1)')
-        #plt.plot(Qp, an, 'r.-', Qp, an1, 'g.-')
+    T = np.linspace(1.,39.,50)
+    esat, s = e_sat(T)
+    H2O = (60.0 / 100.0) * esat / P
+    SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL 
+    LWnet = -30.0 * np.ones(N)
+    
+    x = leaf_interface(photop, leafp,
+                       H2O=H2O, CO2=CO2, T=T, 
+                       Qp=Qp, SWabs=SWabs, LWnet=LWnet, 
+                       U=U, P=P,
+                       model=method,
+                       Ebal=Ebal)
+    print(x)
+    Y=T
+    plt.figure(1)
+    plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
+    plt.title('net_co2')
+    plt.subplot(422); plt.plot(Y, x['transpiration'], 'o')
+    plt.title('transpiration')
+    plt.subplot(423); plt.plot(Y, x['net_co2'] + x['dark_respiration'], 'o')
+    plt.title('co2 uptake')
+    plt.subplot(424); plt.plot(Y, x['dark_respiration'], 'o')
+    plt.title('dark_respiration')
+    plt.subplot(425); plt.plot(Y, x['stomatal_conductance'], 'o')
+    plt.title('stomatal_conductance')
+    plt.subplot(426); plt.plot(Y, x['boundary_conductance'], 'o')
+    plt.title('boundary_conductance')
+    plt.subplot(427); plt.plot(Y, x['leaf_internal_co2'], 'o')
+    plt.title('leaf_internal_co2')
+    plt.subplot(428); plt.plot(Y, x['leaf_surface_co2'], 'o')
+    plt.title('leaf_surface_co2')
+    plt.tight_layout()
 
 def test_photo_temperature_response(species='pine'):
     T = np.linspace(1.,40.,79)
@@ -1011,7 +1000,7 @@ def test_photo_temperature_response(species='pine'):
     Rd_T = tresp['Rd']
     Vcmax, Jmax, Rd, Tau_c = photo_temperature_response(Vcmax, Jmax, Rd, Vcmax_T, Jmax_T, Rd_T, Tk)
     
-    plt.figure(1)
+    plt.figure(2)
     plt.subplot(311); plt.plot(T, Vcmax / photop['Vcmax'], 'o')
     plt.title('Vcmax')
     plt.subplot(312); plt.plot(T, Jmax/ photop['Jmax'], 'o')
