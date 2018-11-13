@@ -139,7 +139,7 @@ class Interception(object):
         es, s = e_sat(Tl_wet)
         Dleaf = es / P - H2O  #np.maximum(0.0, es / P - H2O)  # [mol/mol]
         s = s / P  # [mol/mol/degC]
-
+    
         """ --- wet Leaf temperature --- """
         itermax = 20
         err = 999.0
@@ -183,9 +183,9 @@ class Interception(object):
         # evaporation rate from wet leaf [m/s] (negative for condensation)
         Ep = gb_v * Dleaf * MOLAR_MASS_H2O / WATER_DENSITY
 
-#        # Assume no evaporation during rain (CHANGE when energy balance added)
-#        if Prec > 0.0:
-#            Ep = np.zeros(N)
+        # Assume no evaporation during rain when energy balance not solved
+        if Ebal==False and Prec > 0.0:
+            Ep = np.zeros(N)
 
         """ --- canopy water storage change --- """
         W = self.oldW.copy()  # layerwise canopy storage [m]
@@ -208,6 +208,7 @@ class Interception(object):
         Evap = np.zeros(N)  # evaporation [m]
         Cond = np.zeros(N)  # condesation [m]
         Heat = np.zeros(N)  # sensible heat flux [W m-2(ground)]
+        LE = np.zeros(N)  # latent heat flux [W m-2(ground)]
         Fr = np.zeros(N)  # sensible heat flux [W m-2(ground)]
         wf = np.zeros(N)  # wetness ratio
         Trfall = 0.0  # throughfall below canopy [m]
@@ -249,11 +250,12 @@ class Interception(object):
                         P[n] = P[n+1] - Ir[n] - wf[n] * LAIz[n] * Ep[n]
                         # Condensation [m] (incl. condenstation to dry leaf and drip from wet leaf)
                         Cond[n] += LAIz[n] * Ep[n] * subdt
-                # Tl_wet represent the whole leaf in case of condensation!!
+                # ! condensation to dry leaf part not accounted for  in energy balance here but in dry leaf module 
                 # Sensible heat flux [W m-2(ground)] * subdt
-                Heat += np.where(Ep >= 0, wf, 1.0) * LAIz * Hw * subdt
+                Heat += wf * LAIz * Hw * subdt
                 # radiative flux [W m-2(ground)] * subdt
-                Fr += np.where(Ep >= 0, wf, 1.0) * LAIz * Frw * subdt
+                Fr += wf * LAIz * Frw * subdt
+                LE += wf * LAIz * Ep / MOLAR_MASS_H2O * WATER_DENSITY * L * subdt
                 # update storage [m]
                 W += dW
                 # interception and throughfall [m]
@@ -267,19 +269,13 @@ class Interception(object):
 
         # H20 source/sink per ground area due to evaporation and condensation [mol m-2 s-1]
         dqsource = (Evap + Cond) / dt / MOLAR_MASS_H2O * WATER_DENSITY
-        # heat source [W m-2(ground)]
-        dtsource = Heat / dt
-        # latent heat flux [W m-2(ground)]
-        LE = dqsource * L
 
         if sum(W) < eps:
             W *= 0.0
 
         # dry canopy fraction
-        df = 1.0 - np.where(Ep >= 0, wf, 1.0)
-        
-# TESTING
-#        df = 1.0 - wf
+#        df = 1.0 - np.where(Ep >= 0, wf, 1.0)
+        df = 1.0 - wf
 
         # update state variables
         self.W = W
@@ -297,9 +293,9 @@ class Interception(object):
                   'condensation': sum(Cond) / dt,
                   'water_closure': water_closure / dt,
                   'sources': {'h2o': dqsource,
-                              'sensible_heat': dtsource,
+                              'sensible_heat': Heat / dt,
                               'fr': Fr / dt,
-                              'latent_heat': LE}
+                              'latent_heat': LE / dt}
                   }
         return fluxes
 

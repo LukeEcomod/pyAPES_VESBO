@@ -38,7 +38,7 @@ def get_planttypes(dbhfile, grid):
                     'La': stomatal parameter (Lambda, m, ...) depending on model
                     'm':
                     'g0': residual conductance for CO2 [molm-2s-1]
-                    'kn':
+                    'kn': used to scale photosynthetic capacity (vertical N gradient)
                     'beta':  co-limitation parameter of Farquhar-model
                     'drp':
                     'tresp' (dict): temperature sensitivity parameters

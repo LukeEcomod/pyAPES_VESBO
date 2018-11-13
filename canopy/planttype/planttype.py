@@ -271,7 +271,7 @@ class PlantType(object):
         sources = {'h2o': layer_stats['transpiration'],  # [mol m-3 s-1]
                    'co2': -layer_stats['net_co2'],  # [umol m-3 s-1]
                    'sensible_heat': layer_stats['sensible_heat'],  # [W m-3]
-                   'latent_heat': layer_stats['transpiration'] * LATENT_HEAT,  # [W m-3]
+                   'latent_heat': layer_stats['latent_heat'],  # [W m-3]
                    'fr': layer_stats['fr']}  # [W m-3]
 
         return pt_stats, sources
@@ -291,14 +291,14 @@ class PlantType(object):
         f1 = df * f_sl * self.lad
         f2 = df * (1.0 - f_sl) * self.lad
 
-        keys = ['net_co2', 'dark_respiration', 'transpiration', 'sensible_heat', 'fr']
+        keys = ['net_co2', 'dark_respiration', 'transpiration', 'latent_heat', 'sensible_heat', 'fr']
 
         pt_stats = {k: np.sum((sl[k]*f1 + sh[k]*f2) * self.dz) for k in keys}  # flux per m-2(ground)
 
         layer_stats = {k: sl[k]*f1 + sh[k]*f2 for k in keys}  # flux per m-3
         
         keys = ['stomatal_conductance', 'boundary_conductance','leaf_internal_co2', 'leaf_surface_co2']
-        pt_stats.update({k: np.sum((sl[k]*f1 + sh[k]*f2)) / np.sum(self.lad) for k in keys})
+        pt_stats.update({k: np.sum((sl[k]*f1 + sh[k]*f2)) / np.sum(df * self.lad + EPS) for k in keys})
 
         # leaf temperatures
         pt_stats.update({'Tleaf': f_sl * sl['Tl'] + (1.0 - f_sl) * sh['Tl']})  # dry leaf temperature

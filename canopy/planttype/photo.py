@@ -140,8 +140,9 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
     # vapor pressure
     esat, s = e_sat(Tl)
     s = s / P  # slope of esat, mol/mol / degC
-    s[esat / P < H2O] = EPS
-    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+#    s[esat / P < H2O] = EPS
+#    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+    Dleaf = esat / P - H2O
 
     itermax = 20
     err = 999.0
@@ -166,7 +167,8 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_bwb(photop, Qp, Tl, rh, CO2, gb_c, gb_v, P=P)
 
         gsv = H2O_CO2_RATIO*gs_opt
-        geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
+#        geff_v = (gb_v*gsv) / (gb_v + gsv)
+        geff_v = np.where(Dleaf > 0.0, (gb_v*gsv) / (gb_v + gsv), gb_v)  # molm-2s-1
 
         # solve  energy balance
         if Ebal:
@@ -196,15 +198,17 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
             # vapor pressure
             esat, s = e_sat(Tl)
             s = s / P  # slope of esat, mol/mol / degC
-            s[esat / P < H2O] = EPS
-            Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+#            s[esat / P < H2O] = EPS
+#            Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+            Dleaf = esat / P - H2O
         else:
             err = 0.0
 
     # outputs
     H = SPECIFIC_HEAT_AIR*gb_h*(Tl - T)  # Wm-2
     Fr = SPECIFIC_HEAT_AIR*gr*(Tl - Tl_ave)  # flux due to radiative conductance (Wm-2)
-    E = geff_v * Dleaf
+    E = geff_v * np.maximum(0.0, Dleaf)  # condensation accounted for in wetleaf water balance
+    LE = geff_v * Dleaf * LATENT_HEAT  # latent heat due to condensation accounted for here
 
 #    if any(np.isnan(An)):
 #        print('leafinterface: ', Tl, Qp, Dleaf, CO2, gb_c, gb_v )
@@ -216,6 +220,7 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
              'dark_respiration': Rd,
              'transpiration': E,
              'sensible_heat': H,
+             'latent_heat': LE,
              'fr': Fr,
              'Tl': Tl,
              'stomatal_conductance': np.minimum(gsv, 1.0), # gsv get high when VPD->0
@@ -449,7 +454,7 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         cs - leaf surface CO2 (ppm)
     """
     Tk = T + DEG_TO_KELVIN
-    VPD = 1e-3 * VPD * P  # kPa
+    VPD = np.maximum(EPS, 1e-3 * VPD * P)  # kPa
 
     MaxIter = 50
 

@@ -71,6 +71,7 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0):
     Data = Data[treatment]
     Data['ET'] = Data.LE / LATENT_HEAT * MOLAR_MASS_H2O * 3600  # W m-2 / J mol-1 * kg mol-1 * s h-1 = kg m-2 h-1 = mm h-1
     Data.GPP = -Data.GPP
+    Data['GPP2'] = -Data.NEE + Data.Reco
 
     variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
@@ -92,12 +93,15 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0):
     ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
     Data.GPP[Data.gapped == 1] = np.nan
     ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
+    Data.GPP2[Data.gapped == 1] = np.nan
+    ixGPP2 = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP2))[0]
     Data.Reco[Data.gapped == 1] = np.nan
     ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
     labels=['Modelled', 'Measured']
 
     plt.figure(figsize=(10,6))
     plt.subplot(341)
+    plot_xy(Data.GPP2[ixGPP2], Data.canopy_GPP[ixGPP2], color=['k'], axislabels={'x': '', 'y': 'Modelled'})
     plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(345)
@@ -107,8 +111,8 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0):
     plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
 
     ax = plt.subplot(3,4,(2,3))
-    plot_timeseries_df(Data, ['canopy_GPP', 'GPP'], colors=[pal[0],'k'], xticks=False,
-                       labels=labels, marker=[None, '.'])
+    plot_timeseries_df(Data, ['canopy_GPP', 'GPP', 'GPP2'], colors=[pal[0],'k','b'], xticks=False,
+                       labels=['Modelled', 'Measured', 'Measured2'], marker=[None, '.', '.'])
     plt.title('GPP [mg CO2 m-2 s-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
@@ -126,6 +130,7 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0):
 
     ax =plt.subplot(344)
     plot_diurnal(Data.GPP[ixGPP], color='k', legend=False)
+    plot_diurnal(Data.GPP2[ixGPP2], color='b', legend=False)
     plot_diurnal(Data.canopy_GPP[ixGPP], color=pal[0], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
