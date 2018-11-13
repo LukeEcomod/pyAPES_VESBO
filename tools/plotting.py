@@ -161,7 +161,7 @@ def plot_pt_results(results, variable):
     plt.title('')
     plt.tight_layout(rect=(0, 0, 0.9, 1))
 
-def plot_timeseries_pt(results, variable, sim_idx=0, unit_conversion={'unit':None, 'conversion':1.0},
+def plot_timeseries_pt(results, variable, unit_conversion={'unit':None, 'conversion':1.0},
                     xticks=True, stack=True, cum=True, legend=True, limits=True, colors=None):
     """
     Plot results by plant type.
@@ -190,7 +190,7 @@ def plot_timeseries_pt(results, variable, sim_idx=0, unit_conversion={'unit':Non
     labels.append('Shrubs')
     plot_timeseries_xr([results.isel(planttype=i) for i in range(len(results.planttype))],
                        variable, colors=colors, xticks=xticks,
-                       stack=stack, cum=cum, sim_idx=sim_idx,
+                       stack=stack, cum=cum,
                        unit_conversion=unit_conversion, labels=labels, legend=legend, limits=limits)
 
 def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conversion':1.0},

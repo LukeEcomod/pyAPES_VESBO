@@ -278,6 +278,9 @@ class Interception(object):
 
         # dry canopy fraction
         df = 1.0 - np.where(Ep >= 0, wf, 1.0)
+        
+# TESTING
+#        df = 1.0 - wf
 
         # update state variables
         self.W = W

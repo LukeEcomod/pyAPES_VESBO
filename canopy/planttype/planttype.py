@@ -25,7 +25,7 @@ eps = np.finfo(float).eps  # machine epsilon
 from .photo import leaf_interface
 from .phenology import Photo_cycle, LAI_cycle
 from .rootzone import RootUptake
-from canopy.constants import LATENT_HEAT, PAR_TO_UMOL
+from canopy.constants import LATENT_HEAT, PAR_TO_UMOL, EPS
 
 class PlantType(object):
     r""" Contains plant-specific properties, state variables and phenological
@@ -219,8 +219,7 @@ class PlantType(object):
             LWnet = forcing['radiation']['LW']['net_leaf']
             
             SWabs_sl = (forcing['radiation']['PAR']['sunlit']['absorbed']
-                        + forcing['radiation']['NIR']['sunlit']['absorbed']
-                        + forcing['radiation']['LW']['net_leaf'])
+                        + forcing['radiation']['NIR']['sunlit']['absorbed'])
             
             leaf_forcing.update({'radiative_conductance': gr,
                                  'lw_net': LWnet,
@@ -246,8 +245,7 @@ class PlantType(object):
         
         if controls['energy_balance']:
             SWabs_sh = (forcing['radiation']['PAR']['shaded']['absorbed']
-                        + forcing['radiation']['NIR']['shaded']['absorbed']
-                        + forcing['radiation']['LW']['net_leaf'])
+                        + forcing['radiation']['NIR']['shaded']['absorbed'])
             
             leaf_forcing.update({'sw_absorbed': SWabs_sh,  # for shaded
                                  'leaf_temperature': self.Tl_sh})  # for shaded
@@ -294,9 +292,13 @@ class PlantType(object):
         f2 = df * (1.0 - f_sl) * self.lad
 
         keys = ['net_co2', 'dark_respiration', 'transpiration', 'sensible_heat', 'fr']
+
         pt_stats = {k: np.sum((sl[k]*f1 + sh[k]*f2) * self.dz) for k in keys}  # flux per m-2(ground)
 
         layer_stats = {k: sl[k]*f1 + sh[k]*f2 for k in keys}  # flux per m-3
+        
+        keys = ['stomatal_conductance', 'boundary_conductance','leaf_internal_co2', 'leaf_surface_co2']
+        pt_stats.update({k: np.sum((sl[k]*f1 + sh[k]*f2)) / np.sum(self.lad) for k in keys})
 
         # leaf temperatures
         pt_stats.update({'Tleaf': f_sl * sl['Tl'] + (1.0 - f_sl) * sh['Tl']})  # dry leaf temperature

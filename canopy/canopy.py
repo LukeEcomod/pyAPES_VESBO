@@ -299,8 +299,6 @@ class CanopyModel(object):
                     forcing=forcing)
             # dry leaf fraction
             df = self.interception.df
-### TESTING!!!!!!!!!!
-#            df = 0.0
 
             # update source terms
             for key in wetleaf_fluxes['sources'].keys():
@@ -461,6 +459,10 @@ class CanopyModel(object):
                 'pt_transpiration': np.array([pt_st['transpiration'] * MOLAR_MASS_H2O * 1e-3 for pt_st in pt_stats]),
                 'pt_gpp': np.array([pt_st['net_co2'] + pt_st['dark_respiration'] for pt_st in pt_stats]),
                 'pt_respiration': np.array([pt_st['dark_respiration'] for pt_st in pt_stats]),
+                'pt_stomatal_conductance_h2o':  np.array([pt_st['stomatal_conductance'] for pt_st in pt_stats]),
+                'pt_boundary_conductance_h2o':  np.array([pt_st['boundary_conductance'] for pt_st in pt_stats]),
+                'pt_leaf_internal_co2':  np.array([pt_st['leaf_internal_co2'] for pt_st in pt_stats]),
+                'pt_leaf_surface_co2':  np.array([pt_st['leaf_surface_co2'] for pt_st in pt_stats]),
                 'water_closure': wetleaf_fluxes['water_closure'],
                 }
 

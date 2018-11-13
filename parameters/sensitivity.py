@@ -36,7 +36,22 @@ def get_parameters(name=None):
                                 'baresoil': {
                                         'ground_coverage': (1.0)
                                         }
-                                }
+                                },
+#                        'interception': {
+#                                'lt': (0.02)
+#                                },
+#                        'planttypes': {
+#                                'pine': {
+#                                        'photop': {
+#                                                'Vcmax': (60.0),
+#                                                'Jmax': (114.0),
+#                                                'tresp': {
+#                                                        'Vcmax': ([53.2, 202.0, 640.3]),
+#                                                        'Jmax': ([38.4, 202.0, 655.8]),
+#                                                        }
+#                                                }
+#                                        }
+#                                }
                 }
             }
 
