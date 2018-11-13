@@ -37,9 +37,6 @@ def get_parameters(name=None):
                                         'ground_coverage': (1.0)
                                         }
                                 },
-#                        'interception': {
-#                                'lt': (0.02)
-#                                },
 #                        'planttypes': {
 #                                'pine': {
 #                                        'photop': {

@@ -22,7 +22,7 @@ coupled with the water budget of leaf surfaces. Ecological Modelling, 147(1), pp
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
 from .micromet import e_sat, leaf_boundary_layer_conductance
-from .constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN
+from .constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN, EPS
 
 import logging
 logger = logging.getLogger(__name__)
@@ -39,8 +39,6 @@ class Interception(object):
                 'Tmin': temperature below which all is snow [degC]
                 'Tmax': temperature above which all is water [degC]
                 'w_ini': initial canopy storage [m]
-                'lt': leaf length scale for aerodynamic resistance [m]
-                    NOTE: seems that lt order of 1-10 cm is appropriate for pine evaporation
             LAIz (array): leaf area index per canopy layer [m\ :sup:`2`\ m\ :sup:`-2`\]
         Returns:
             self (object)
@@ -52,15 +50,13 @@ class Interception(object):
         # quality of precipitation [degC]
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
-        # leaf length scale for aerodynamic resistance [m]
-        self.lt = p['lt']
 
         # initial state
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)
 
         self.update()
 
-    def run(self, dt, H2O, U, T, forcing):
+    def run(self, dt, H2O, U, T, forcing, lt):
         r""" Computes interception and unloading of rain or snow,
         evaporation and condensation are computed based on wet leaf water balance.
 
@@ -83,6 +79,8 @@ class Interception(object):
                 Ebal (bool): solve wet leaf energy balance
                 Tl_ave (array): average leaf temperature used in LW computation [degC]
                 gr (array): radiative conductance [mol m-2 s-1]
+            lt: leaf length scale for aerodynamic resistance [m]
+                NOTE: seems that lt order of 1-10 cm is appropriate for pine evaporation
         Returns:
             df: fraction of dry leaves per layer [-]
             Trfall_rain: throughfall as rainfall [m]
@@ -97,6 +95,7 @@ class Interception(object):
             Tl_wet: wet leaf temperature [degC]
             MBE: water closure [m]
         """
+        lt = np.maximum(EPS, lt)
 
         LAIz = forcing['LAIz']
         Prec = forcing['precipitation']
@@ -119,7 +118,7 @@ class Interception(object):
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O
 
-        # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
+        # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical  -- into parameters!
         F = 0.5 # for randomdly oriented leaves
 
         """ --- state of precipitation (uses fW[-1] in end of code)--- """
@@ -134,7 +133,7 @@ class Interception(object):
         Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
 
         # boundary layer conductances for H2O and heat [mol m-2 s-1]
-        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, self.lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
+        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
 
         # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
         es, s = e_sat(Tl_wet)

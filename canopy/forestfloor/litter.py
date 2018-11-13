@@ -43,7 +43,8 @@ class Litter(object):
                           / WATER_DENSITY
                           * properties['bulk_density'])
 
-        saturated_water_content = properties['porosity']
+        saturated_water_content = field_capacity
+        # saturated_water_content = properties['porosity']
 
         if 'water_retention' not in properties:
             water_retention = {}

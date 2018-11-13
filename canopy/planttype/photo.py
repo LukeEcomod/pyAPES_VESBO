@@ -73,13 +73,13 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
             'average_leaf_temperature': leaf temperature used for computing LWnet (optional)
             'radiative_conductance': radiative conductance used in computing LWnet (optional)
         controls (dict):
-            'model' (str): photosysthesis model
+            'photo_model' (str): photosysthesis model
                 CO_OPTI (Vico et al., 2014)
                 MEDLYN (Medlyn et al., 2011 with co-limitation Farquhar)
                 MEDLYN_FARQUHAR
                 BWB (Ball et al., 1987 with co-limitation Farquhar)
                 others?
-            'energy_closure' (bool): True computes leaf temperature by solving energy balance
+            'energy_balance' (bool): True computes leaf temperature by solving energy balance
         dict_output (bool): True returns output as dict, False as separate arrays (optional)
         logger_info (dict): optional
       
@@ -218,7 +218,7 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
              'sensible_heat': H,
              'fr': Fr,
              'Tl': Tl,
-             'stomatal_conductance': gsv,
+             'stomatal_conductance': np.minimum(gsv, 1.0), # gsv get high when VPD->0
              'boundary_conductance': gb_v,
              'leaf_internal_co2': Ci,
              'leaf_surface_co2': Cs}
@@ -904,24 +904,34 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'emi': 0.98
                 }
     # env. conditions
-    N=50
+    N=50   
     P = 101300.0
     Qp = 1000. * np.ones(N)  #np.linspace(1.,1800.,50)
-    
     CO2 = 380. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
     T = np.linspace(1.,39.,50)
     esat, s = e_sat(T)
-    H2O = (60.0 / 100.0) * esat / P
+    H2O = (85.0 / 100.0) * esat / P
     SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL 
     LWnet = -30.0 * np.ones(N)
+
+    forcing = {
+            'h2o': H2O,
+            'co2': CO2,
+            'air_temperature': T,
+            'par_incident': Qp,
+            'sw_absorbed': SWabs,
+            'lw_net': LWnet,
+            'wind_speed': U,
+            'air_pressure': P
+            }
+
+    controls = {
+            'photo_model': method,
+            'energy_balance': Ebal
+            }
     
-    x = leaf_interface(photop, leafp,
-                       H2O=H2O, CO2=CO2, T=T, 
-                       Qp=Qp, SWabs=SWabs, LWnet=LWnet, 
-                       U=U, P=P,
-                       model=method,
-                       Ebal=Ebal)
+    x = leaf_interface(photop, leafp, forcing, controls)
     print(x)
     Y=T
     plt.figure(1)

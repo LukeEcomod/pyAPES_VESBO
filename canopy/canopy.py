@@ -130,8 +130,12 @@ class CanopyModel(object):
         self.planttypes = ptypes
 
         # --- stand characteristics ---
-        self.LAI = sum([pt.LAI for pt in self.planttypes])  # total leaf area index [m2 m-2]
-        self.lad = sum([pt.lad for pt in self.planttypes])  # total leaf area density [m2 m-3]
+        # total leaf area index [m2 m-2]
+        self.LAI = sum([pt.LAI for pt in self.planttypes])
+        # total leaf area density [m2 m-3]
+        self.lad = sum([pt.lad for pt in self.planttypes])
+         # layerwise mean leaf characteristic dimension [m]
+        self.leaf_length = sum([pt.leafp['lt'] * pt.lad for pt in self.planttypes]) / (self.lad + EPS)
         rad = sum([pt.Roots.rad for pt in self.planttypes])  # total fine root density [m2 m-3]
         self.rad = rad / sum(rad)  # normalized total fine root density distribution [-]
         # canopy height [m]
@@ -164,8 +168,12 @@ class CanopyModel(object):
         """ update physiology and leaf area of planttypes and canopy"""
         for pt in self.planttypes:
             pt.update_daily(doy, Ta, PsiL=PsiL)  # updates pt properties
-        self.LAI = sum([pt.LAI for pt in self.planttypes])  # total leaf area index [m2 m-2]
-        self.lad = sum([pt.lad for pt in self.planttypes])  # total leaf area density [m2 m-3]
+        # total leaf area index [m2 m-2]
+        self.LAI = sum([pt.LAI for pt in self.planttypes])
+        # total leaf area density [m2 m-3]
+        self.lad = sum([pt.lad for pt in self.planttypes])
+         # layerwise mean leaf characteristic dimension [m]
+        self.leaf_length = sum([pt.leafp['lt'] * pt.lad for pt in self.planttypes]) / (self.lad + EPS)
 
         """ normalized flow statistics in canopy with new lad """
         if self.Switch_Eflow and self.planttypes[0].Switch_lai:
@@ -296,7 +304,8 @@ class CanopyModel(object):
             wetleaf_fluxes = self.interception.run(
                     dt=dt,
                     H2O=H2O, U=U, T=T,
-                    forcing=forcing)
+                    forcing=forcing,
+                    lt=self.leaf_length)
             # dry leaf fraction
             df = self.interception.df
 
