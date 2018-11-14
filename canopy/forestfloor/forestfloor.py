@@ -93,7 +93,7 @@ class ForestFloor(object):
 
         if abs(1.0 - (f_bryo + self.f_baresoil + self.f_litter)) > EPS:
             raise ValueError("The sum of bryophytes, litter and baresoil coverages "
-                             + "should be one! Now %.2f" % 
+                             + "should be one! Now %.2f" %
                              (f_bryo + self.f_baresoil + self.f_litter))
 
         self.f_bryo = f_bryo
