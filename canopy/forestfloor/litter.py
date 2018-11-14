@@ -15,15 +15,12 @@ Note:
 
 """
 
-from copy import deepcopy
-
-import numpy as np
-
 from .heat_and_water import heat_and_water_exchange, evaporation_through
 from .heat_and_water import convert_hydraulic_parameters
 from .carbon import soil_respiration
 
-from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C, EPS
+from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C
+
 
 class Litter(object):
     """
@@ -43,7 +40,7 @@ class Litter(object):
                           / WATER_DENSITY
                           * properties['bulk_density'])
 
-        saturated_water_content = properties['porosity']
+        saturated_water_content = field_capacity
 
         if 'water_retention' not in properties:
             water_retention = {}
@@ -52,15 +49,17 @@ class Litter(object):
             water_retention['theta_s'] = saturated_water_content
             water_retention['field_capacity'] = field_capacity
 
-            fraction = (
-                    (saturated_water_content - field_capacity)
-                    / (saturated_water_content - residual_water_content))
+            if 'saturated_conductivity' in properties:
+                water_retention['saturated_conductivity'] = properties['saturated_conductivity']
 
-            water_retention['fraction'] = fraction
-            water_retention['saturated_conductivity'] = properties['saturated_conductivity']
+            else:
+                raise ValueError('Water retention parameter saturated_conductivity is missing')
 
-            water_retention['alpha'] = properties['alpha']
-            water_retention['n'] = properties['n']
+            if 'alpha' in properties and 'n' in properties:
+                water_retention['alpha'] = properties['alpha']
+                water_retention['n'] = properties['n']
+            else:
+                raise ValueError('Water retention parameteres alpha and n are missing')
 
             if 'pore_connectivity' in properties:
                 water_retention['pore_connectivity'] = properties['pore_connectivity']
@@ -74,7 +73,8 @@ class Litter(object):
             water_retention = properties['water_retention']
             water_retention['field_capacity'] = field_capacity
 
-        self.porosity = properties['water_retention']['theta_s']
+            water_retention['theta_r'] = residual_water_content
+            water_retention['theta_s'] = saturated_water_content
 
         self.properties = properties
 
@@ -149,24 +149,29 @@ class Litter(object):
         self.water_potential = self.old_water_potential
         self.temperature = self.old_temperature
 
-    def run(self, dt, forcing, solver=False):
+    def run(self, dt, forcing, parameters, controls):
         r""" Calculates one timestep and updates states of Litter instance.
+
         Args:
             dt: timestep [s]
-            forcing (dict): states of microclimate
+            forcing (dict):
                 'throughfall': [mm s\ :sup:`-1`\ ]
                 'par': [W m\ :sup:`-2`\ ]
-                'nir': [W m\ :sup:`-2`\ ]
-                'lwdn': [W m\ :sup:`-2`\ ]
+                'nir': [W m\ :sup:`-2`\ ] if energy_balance is True
+                'lw_dn': [W m\ :sup:`-2`\ ] if energy_balance is True
                 'h2o': [mol mol\ :sup:`-1`\ ]
                 'air_temperature': [\ :math:`^{\circ}`\ C]
-                'precipitation_temperature': [\ :math:`^{\circ}`\ C]
                 'air_pressure': [Pa]
-                'soil_depth': [m]
                 'soil_temperature': [\ :math:`^{\circ}`\ C]
                 'soil_water_potential': [m]
+            parameters (dict):
+                'soil_depth': [m]
                 'soil_hydraulic_conductivity': [m s\ :sup:`-1`\ ]
                 'soil_thermal_conductivity': [W m\ :sup:`-1`\  K\ :sup:`-1`\ ]
+                    if energy_balance is True
+            controls (dict):
+                'energy_balance': boolean
+                'solver': 'forward_euler', 'odeint'
                 'nsteps' number of steps in odesolver
 
         Returns:
@@ -174,16 +179,24 @@ class Litter(object):
             states (dict)
         """
 
-        # calculate moss energy and water balance and new state
-        litter_forcing = deepcopy(forcing)
+        if controls['energy_balance']:
+            # heat_and_water_exchange()
+            pass
+        else:
+            # water_exchange()
+            pass
 
         # No capillar connection assumed
-        litter_forcing['soil_hydraulic_conductivity'] = 0.0
-        fluxes, states = heat_and_water_exchange(self.properties,
-                                                 self.old_temperature,
-                                                 self.old_water_content,
-                                                 dt,
-                                                 litter_forcing)
+        fluxes, states = heat_and_water_exchange(
+            propertie=self.properties,
+            temperature=self.old_temperature,
+            water_content=self.old_water_content,
+            dt=dt,
+            forcing=forcing,
+            parameters=parameters,
+            solver=controls['solver'],
+            nsteps=controls['nsteps']
+        )
 
         # update state variables
         self.temperature = states['temperature']
@@ -193,13 +206,14 @@ class Litter(object):
         self.volumetric_air = self.porosity - states['volumetric_water']
         self.water_potential = states['water_potential']
 
-
         # calculate respiration
 
-        respiration = soil_respiration(self.properties['respiration'],
-                                self.temperature,
-                                self.volumetric_water,
-                                self.volumetric_air)
+        respiration = soil_respiration(
+            self.properties['respiration'],
+            self.temperature,
+            self.volumetric_water,
+            self.volumetric_air
+        )
 
         respiration = respiration * self.coverage
 

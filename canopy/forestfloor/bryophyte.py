@@ -41,7 +41,6 @@ from .carbon import carbon_exchange
 
 from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C, EPS
 
-from numpy import a
 class Bryophyte(object):
     r""" Represents bryophyte community-soil-atmosphere interactions.
 
@@ -114,19 +113,24 @@ class Bryophyte(object):
                           * properties['bulk_density'])
 
         saturated_water_content = field_capacity
-        # saturated_water_content = properties['porosity']
 
         if 'water_retention' not in properties:
             water_retention = {}
 
             water_retention['theta_r'] = residual_water_content
-            water_retention['theta_s'] = field_capacity
+            water_retention['theta_s'] = saturated_water_content
             water_retention['field_capacity'] = field_capacity
 
-            water_retention['saturated_conductivity'] = properties['saturated_conductivity']
+            if 'saturated_conductivity' in properties:
+                water_retention['saturated_conductivity'] = properties['saturated_conductivity']
+            else:
+                raise ValueError('Water retention parameter saturated_conductivity is missing')
 
-            water_retention['alpha'] = properties['alpha']
-            water_retention['n'] = properties['n']
+            if 'alpha' in properties and 'n' in properties:
+                water_retention['alpha'] = properties['alpha']
+                water_retention['n'] = properties['n']
+            else:
+                raise ValueError('Water retention parameteres alpha and n are missing')
 
             if 'pore_connectivity' in properties:
                 water_retention['pore_connectivity'] = properties['pore_connectivity']
@@ -213,25 +217,29 @@ class Bryophyte(object):
         self.water_potential = self.old_water_potential
         self.temperature = self.old_temperature
 
-    def run(self, dt, forcing, solver=False):
+    def run(self, dt, forcing, parameters, controls):
         r""" Calculates one timestep and updates states of Bryophyte instance.
 
         Args:
             dt: timestep [s]
-            forcing (dict): states of microclimate
+            forcing (dict):
                 'throughfall': [mm s\ :sup:`-1`\ ]
                 'par': [W m\ :sup:`-2`\ ]
-                'nir': [W m\ :sup:`-2`\ ]
-                'lwdn': [W m\ :sup:`-2`\ ]
+                'nir': [W m\ :sup:`-2`\ ] if energy_balance is True
+                'lw_dn': [W m\ :sup:`-2`\ ] if energy_balance is True
                 'h2o': [mol mol\ :sup:`-1`\ ]
                 'air_temperature': [\ :math:`^{\circ}`\ C]
-                'precipitation_temperature': [\ :math:`^{\circ}`\ C]
                 'air_pressure': [Pa]
-                'soil_depth': [m]
                 'soil_temperature': [\ :math:`^{\circ}`\ C]
                 'soil_water_potential': [m]
+            parameters (dict):
+                'soil_depth': [m]
                 'soil_hydraulic_conductivity': [m s\ :sup:`-1`\ ]
                 'soil_thermal_conductivity': [W m\ :sup:`-1`\  K\ :sup:`-1`\ ]
+                    if energy_balance is True
+            controls (dict):
+                'energy_balance': boolean
+                'solver': 'forward_euler', 'odeint'
                 'nsteps' number of steps in odesolver
 
         Returns:
@@ -239,14 +247,24 @@ class Bryophyte(object):
             states (dict)
         """
 
+        if controls['energy_balance']:
+            # heat_and_water_exchange()
+            pass
+        else:
+            # water_exchange()
+            pass
+
         # calculate moss energy and water balance and new state
-        fluxes, states = heat_and_water_exchange(self.properties,
-                                                 self.old_temperature,
-                                                 self.old_water_content,
-                                                 dt,
-                                                 forcing,
-#                                                 solver=solver
-                                                 )
+        fluxes, states = heat_and_water_exchange(
+            properties=self.properties,
+            temperature=self.old_temperature,
+            water_content=self.old_water_content,
+            dt=dt,
+            forcing=forcing,
+            parameters=parameters,
+            solver=controls['solver'],
+            nsteps=controls['nsteps']
+        )
 
         # update state variables
         self.temperature = states['temperature']
@@ -258,15 +276,17 @@ class Bryophyte(object):
         # solve photosynthesis and respiration
 
         # [umol m-2(ground) s-1]
-        cflx = carbon_exchange(self.properties,
-                               self.water_content,  # old
-                               self.temperature,  # old
-                               forcing['par'])
+        cflx = carbon_exchange(
+            self.properties,
+            self.water_content,  # old
+            self.temperature,  # old
+            forcing['par'])
 
         nee = -cflx['photosynthesis_rate'] + cflx['respiration_rate']
-        fluxes.update({'photosynthesis_rate': cflx['photosynthesis_rate'],
-                       'respiration_rate': cflx['respiration_rate'],
-                       'nee': nee})
+        fluxes.update({
+            'photosynthesis_rate': cflx['photosynthesis_rate'],
+            'respiration_rate': cflx['respiration_rate'],
+            'nee': nee})
 
         # update bryophyte free carbon pool (g C m-2) of bryophyte
         self.carbon_pool = self.old_carbon_pool + 1e3 * MOLAR_MASS_C * 1e-6 * nee

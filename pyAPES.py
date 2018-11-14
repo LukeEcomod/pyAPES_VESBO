@@ -78,7 +78,7 @@ def driver(create_ncf=False,
 
     logger = logging.getLogger(__name__)
 
-    logger.info('Simulation started. Number of simulations: {}'.format(Nsim + 1))
+    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
     # --- FORCING ---
     # Read forcing
