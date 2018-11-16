@@ -15,7 +15,7 @@ Note:
     - in for-loop range() does not need to be wrapped in list()
 
 References:
-Tanaka, K., 2002. Multi-layer model of CO2 exchange in a plant community 
+Tanaka, K., 2002. Multi-layer model of CO2 exchange in a plant community
 coupled with the water budget of leaf surfaces. Ecological Modelling, 147(1), pp.85-104.
 """
 
@@ -60,7 +60,7 @@ class Interception(object):
 
         self.update()
 
-    def run(self, dt, H2O, U, T, forcing):
+    def run(self, dt, H2O, U, T, forcing, parameters, controls):
         r""" Computes interception and unloading of rain or snow,
         evaporation and condensation are computed based on wet leaf water balance.
 
@@ -105,7 +105,7 @@ class Interception(object):
         Ebal = forcing['Ebal']
         if Ebal:
             gr = forcing['radiation']['LW']['gr']
-            Rabs = (forcing['radiation']['SW_absorbed'] + 
+            Rabs = (forcing['radiation']['SW_absorbed'] +
                     forcing['radiation']['LW']['net_leaf'])
         else:
             gr = 0.0
@@ -151,7 +151,7 @@ class Interception(object):
 
             if Ebal:
                 # solve leaf temperature [degC]
-                Tl_wet[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - L[ic]*gb_v[ic]*Dleaf[ic] 
+                Tl_wet[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - L[ic]*gb_v[ic]*Dleaf[ic]
                   + L[ic]*s[ic]*gb_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + L[ic]*s[ic]*gb_v[ic])
                 err = np.nanmax(abs(Tl_wet - Told))
 

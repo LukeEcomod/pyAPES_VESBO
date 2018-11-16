@@ -207,40 +207,38 @@ class CanopyModel(object):
 
         ff_forcing = deepcopy(forcing)
 
-        """ --- flow stats --- """
+        # --- FLOW STATISTICS ---
 
         if self.Switch_Eflow is False:
             # recompute normalized flow statistics in canopy with current meteo
             self.micromet.normalized_flow_stats(
-                    z=self.z,
-                    lad=self.lad,
-                    hc=self.hc,
-                    Utop=forcing['wind_speed'] / (forcing['friction_velocity'] + EPS))
+                z=self.z,
+                lad=self.lad,
+                hc=self.hc,
+                Utop=forcing['wind_speed'] / (forcing['friction_velocity'] + EPS))
         # update U
         U = self.micromet.update_state(ustaro=forcing['friction_velocity'])
 
-        """ --- SW profiles within canopy --- """
+        # --- SW profiles within canopy ---
 
         ff_albedo = self.forestfloor.shortwave_albedo()
-        forcing.update({'ff_albedo': ff_albedo,
-                        'LAIz': self.lad * self.dz})
+        forcing.update({
+            'ff_albedo': ff_albedo,
+        })
 
         # --- RADIATION PROFILES ---
         radiation_profiles = {}
+
         radiation_params = {
             'ff_albedo': ff_albedo,
             'LAIz': self.lad * self.dz,
         }
 
         # --- PAR ---
-        forcing['radiation']['PAR'] = self.radiation.SW_profiles(
-                forcing=forcing,
-                radtype='PAR')
-
         radiation_params.update({
-            'radiation_type': 'par'
+            'radiation_type': 'par',
         })
-        radiation_profiles['par'] = self.radiation.SW_profiles(
+        radiation_profiles['par'] = self.radiation.shortwave_profiles(
             forcing=forcing,
             parameters=radiation_params
         )
@@ -248,24 +246,20 @@ class CanopyModel(object):
 
         if self.Switch_Ebal:
             # --- NIR ---
-            forcing['radiation']['NIR']= self.radiation.SW_profiles(
-                forcing=forcing,
-                radtype='NIR')
-
             radiation_params['radiation_type'] = 'nir'
-            radiation_profiles['nir'] = self.radiation.SW_profiles(
+            radiation_profiles['nir'] = self.radiation.shortwave_profiles(
                 forcing=forcing,
                 parameters=radiation_params
             )
 
             # absorbed radiation by leafs [W m-2(leaf)]
-            forcing['radiation']['SW_absorbed'] = (
-                        forcing['radiation']['PAR']['sunlit']['absorbed'] * f_sl
-                        + forcing['radiation']['NIR']['sunlit']['absorbed'] * f_sl
-                        + forcing['radiation']['PAR']['shaded']['absorbed'] * (1 - f_sl)
-                        + forcing['radiation']['NIR']['shaded']['absorbed'] * (1 - f_sl))
-
-        """ --- iterative solution of H2O, CO2, T, Tleaf and Tsurf --- """
+            radiation_profiles['SW_absorbed'] = (
+                radiation_profiles['par']['sunlit']['absorbed'] * f_sl
+                + radiation_profiles['nir']['sunlit']['absorbed'] * f_sl
+                + radiation_profiles['par']['shaded']['absorbed'] * (1. - f_sl)
+                + radiation_profiles['nir']['shaded']['absorbed'] * (1. - f_sl)
+            )
+        # --- iterative solution of H2O, CO2, T, Tleaf and Tsurf ---
 
         max_err = 0.01  # maximum relative error
         max_iter = 25  # maximum iterations
@@ -275,11 +269,13 @@ class CanopyModel(object):
 
         # initialize state variables
         T, H2O, CO2, Tleaf = self._restore(forcing)
-        sources = {'h2o': None,  # [mol m-3 s-1]
-                   'co2': None,  # [umol m-3 s-1]
-                   'sensible_heat': None,  # [W m-3]
-                   'latent_heat': None,  # [W m-3]
-                   'fr': None}  # [W m-3]
+        sources = {
+            'h2o': None,  # [mol m-3 s-1]
+            'co2': None,  # [umol m-3 s-1]
+            'sensible_heat': None,  # [W m-3]
+            'latent_heat': None,  # [W m-3]
+            'fr': None  # [W m-3]
+        }
 
         iter_no = 0
         while (err_t > max_err or err_h2o > max_err or
@@ -290,23 +286,30 @@ class CanopyModel(object):
             Tleaf_prev = Tleaf.copy()
             Tsurf_prev = self.forestfloor.temperature
 
-            forcing.update({'leaf_temperature': Tleaf_prev,
-                            'iteration': iter_no})
-
             if self.Switch_Ebal:
-                """ ---  LW profiles within canopy --- """
+                # ---  LW profiles within canopy ---
                 ff_longwave = self.forestfloor.longwave_radiation()
+                lw_forcing = {
+                    'lw_in': forcing['lw_in'],
+                    'lw_up': ff_longwave['radiation'],
+                    'leaf_temperature': Tleaf_prev,
+                }
 
-                forcing.update({'ff_longwave': ff_longwave})
+                lw_params = {
+                    'LAIz': self.lad * self.dz,
+                    'forestfloor_emissivity': ff_longwave['emissivity']
+                }
 
-                forcing['radiation']['LW'] = self.radiation.LW_profiles(
-                        forcing=forcing)
+                forcing['radiation']['LW'] = self.radiation.longwave_profiles(
+                    forcing=lw_forcing,
+                    parameters=lw_params
+                )
 
             # --- heat, h2o and co2 source terms
             for key in sources.keys():
                 sources[key] = 0.0 * self.ones
 
-            """ --- wet leaf water and energy balance --- """
+            # --- wet leaf water and energy balance ---
             wetleaf_fluxes = self.interception.run(
                     dt=dt,
                     H2O=H2O, U=U, T=T,

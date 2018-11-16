@@ -16,8 +16,8 @@ import numpy as np
 
 from canopy.constants import EPS
 from canopy.constants import STEFAN_BOLTZMANN, LATENT_HEAT, DEG_TO_KELVIN
-from canopy.constants import MOLAR_MASS_forcing['h2o'], WATER_DENSITY, GRAVITY
-from canopy.constants import SPECIFIC_HEAT_AIR, SPECIFIC_HEAT_forcing['h2o'], GAS_CONSTANT
+from canopy.constants import MOLAR_MASS_H2O, WATER_DENSITY, GRAVITY
+from canopy.constants import SPECIFIC_HEAT_AIR, SPECIFIC_HEAT_H2O, GAS_CONSTANT
 from canopy.micromet import e_sat
 from .heat_and_water import soil_boundary_layer_conductance
 
@@ -189,19 +189,15 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
                 LE = LEmax
                 s = 0.0
             if iterNo == itermax:
-                logger.debug('%s (iteration %s) Maximum number of iterations reached: T_baresoil = %.2f, err = %.2f',
-                             forcing['date'],
-                             forcing['iteration'],
+                logger.debug('Maximum number of iterations reached: T_baresoil = %.2f, err = %.2f',
                              surface_temperature, err)
         else:
             err = 0.0
 
     if (abs(surface_temperature - temperature) > 20 or np.isnan(surface_temperature)):  # into iteration loop? chech photo or interception
-        logger.debug('%s (iteration %s) Unrealistic baresoil temperature %.2f set to previous value %.2f: %.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f',
-             forcing['date'],
-             forcing['iteration'],
-             surface_temperature, temperature,
-             U, T, forcing['h2o'], P, T_ave, T_soil, h_soil, Kh, Kt)
+        logger.debug('Unrealistic baresoil temperature %.2f set to previous value %.2f: %.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f',
+                     surface_temperature, temperature,
+                     U, T, forcing['h2o'], P, T_ave, T_soil, h_soil, Kh, Kt)
         surface_temperature = temperature
         es, s = e_sat(surface_temperature)
         Dsurf = es / P - forcing['h2o']  # [mol/mol] - allows condensation
@@ -223,19 +219,18 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
     closure = SW_gr + LWn - Hw - LE - Gw
 
     fluxes = {
-            'latent_heat': LE,
-            'energy_closure': closure,
-            'evaporation': Ep,
-            'radiative_flux': Frw,
-            'sensible_heat': Hw,
-            'ground_heat': Gw
-            }
+        'latent_heat': LE,
+        'energy_closure': closure,
+        'evaporation': Ep,
+        'radiative_flux': Frw,
+        'sensible_heat': Hw,
+        'ground_heat': Gw
+    }
 
     states = {
             'temperature': surface_temperature
             }
 
     return states, fluxes
-
 
 # EOF

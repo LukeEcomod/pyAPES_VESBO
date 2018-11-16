@@ -725,21 +725,21 @@ def water_exchange(dt,
                                  soil_water_potential=self.states['soil_water_potential'],
                                  soil_depth=self.states['soil_depth'])
 
-        # [kg m-2 s-1] or [mm s-1]
-        capillary_rise = min(capillary_rise, max_recharge_rate)
+    # [kg m-2 s-1] or [mm s-1]
+    capillary_rise = min(capillary_rise, max_recharge_rate)
 
-        # [kg m-2 s-1] or [mm s-1]
-        max_recharge_rate = max(max_recharge_rate - capillary_rise, 0.0)
+    # [kg m-2 s-1] or [mm s-1]
+    max_recharge_rate = max(max_recharge_rate - capillary_rise, 0.0)
 
-        # calculate mass balance of water
+    # calculate mass balance of water
 
-        # [kg m-2 s-1] or [mm s-1]
-        dy_water = (
-            interception_rate
-            + pond_recharge_rate
-            + capillary_rise
-            - evaporation_rate
-            )
+    # [kg m-2 s-1] or [mm s-1]
+    dy_water = (
+        interception_rate
+        + pond_recharge_rate
+        + capillary_rise
+        - evaporation_rate
+    )
 
 
     return dy_water

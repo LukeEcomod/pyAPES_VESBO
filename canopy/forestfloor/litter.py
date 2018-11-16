@@ -31,6 +31,7 @@ class Litter(object):
         """
         dry_mass = properties['bulk_density'] * properties['height']
         properties['dry_mass'] = dry_mass
+        self.porosity = properties['porosity']
 
         residual_water_content = (properties['min_water_content']
                                   / WATER_DENSITY
