@@ -109,10 +109,10 @@ class CanopyModel(object):
         self.Switch_WMA = cpara['ctr']['WMA']
         self.Switch_Ebal = cpara['ctr']['Ebal']
 
-        #logger.info('Eflow: %s, WMA: %s, Ebal: %s',
-        #            self.Switch_Eflow,
-        #            self.Switch_WMA,
-        #            self.Switch_Ebal)
+        logger.info('Eflow: %s, WMA: %s, Ebal: %s',
+                    self.Switch_Eflow,
+                    self.Switch_WMA,
+                    self.Switch_Ebal)
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []

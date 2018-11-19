@@ -72,7 +72,7 @@ def get_planttypes(dbhfile, grid):
 #    lai_spruce = []
 #    lai_decid = []
 
-    gamma = 1.0  # adjust shoot light response
+    gamma = 1.5  # adjust shoot light response
     gfact = 1.2  # coefficient for adjusting leaf gas-exchange parameters
 
     Pine = {
@@ -105,7 +105,7 @@ def get_planttypes(dbhfile, grid):
                 'La': 1600.0,
                 'm': gfact * 2.5,
                 'g0': 1.0e-3,
-                'kn': 0.6,
+                'kn': 0.5,
                 'beta': 0.95,
                 'drp': 0.7,
                 'tresp': {
@@ -159,7 +159,7 @@ def get_planttypes(dbhfile, grid):
                 'La': 1600.0,
                 'm': gfact * 2.5,
                 'g0': 1.0e-3,
-                'kn': 0.6,
+                'kn': 0.5,
                 'beta': 0.95,
                 'drp': 0.7,
                 'tresp': {
@@ -213,7 +213,7 @@ def get_planttypes(dbhfile, grid):
                 'La': 600.0,
                 'm': gfact * 4.5,
                 'g0': 1.0e-3,
-                'kn': 0.6,
+                'kn': 0.5,
                 'beta': 0.95,
                 'drp': 0.7,
                 'tresp': {

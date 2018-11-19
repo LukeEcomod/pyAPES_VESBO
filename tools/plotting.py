@@ -64,7 +64,7 @@ def plot_results(results):
 
     plt.tight_layout(rect=(0, 0, 0.8, 1))
 
-def plot_fluxes(results, treatment='control-N', sim_idx=0):
+def plot_fluxes(results, treatment='control-N', sim_idx=0, fmonth=4, lmonth=9):
     Data = read_forcing("Lettosuo_EC.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
@@ -73,7 +73,8 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0):
     Data.GPP = -Data.GPP
     Data['GPP2'] = -Data.NEE + Data.Reco
 
-    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
+    variables=['canopy_NEE','canopy_GPP','canopy_respiration','ffloor_respiration',
+               'canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
     Data['ET_mod'] = (Data.canopy_transpiration + Data.ffloor_evaporation) * 1e3 * 3600
@@ -87,8 +88,6 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0):
     f = np.where(ix > 0.0)[0]  # wet canopy indices
     dryc[f] = 0.0
     months = Data.index.month
-    fmonth = 4
-    lmonth = 9
     Data.ET[Data.gapped == 1] = np.nan
     ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
     Data.GPP[Data.gapped == 1] = np.nan
@@ -101,7 +100,7 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0):
 
     plt.figure(figsize=(10,6))
     plt.subplot(341)
-    plot_xy(Data.GPP2[ixGPP2], Data.canopy_GPP[ixGPP2], color=['k'], axislabels={'x': '', 'y': 'Modelled'})
+#    plot_xy(Data.GPP2[ixGPP2], Data.canopy_GPP[ixGPP2], color=['k'], axislabels={'x': '', 'y': 'Modelled'})
     plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(345)

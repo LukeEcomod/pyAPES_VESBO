@@ -17,6 +17,7 @@ Created on Mon May 15 13:43:44 2017
 import numpy as np
 import matplotlib.pyplot as plt
 from canopy.micromet import leaf_boundary_layer_conductance, e_sat
+from canopy.interception import latent_heat
 
 import logging
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]
 TN = 25.0 + DEG_TO_KELVIN  # reference temperature [K]
 
 def leaf_interface(photop, leafp, forcing, controls, dict_output=True, 
-                   logger_info={'date':'','iteration':'','leaftype':''}):
+                   logger_info={'date':'','iteration':'','leaftype':''}, df=1.0):
     """
     Entry-point to coupled leaf gas-exchange and energy balance functions.
     
@@ -126,9 +127,10 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
     else:
         Tl_ini = T.copy()
     Tl = Tl_ini.copy()
+    Told = Tl.copy()
     
     if 'radiative_conductance' in forcing:
-        gr = np.array(forcing['radiative_conductance'], ndmin=1)
+        gr = df * np.array(forcing['radiative_conductance'], ndmin=1)
     else:
         gr = np.zeros(len(T))
 
@@ -143,14 +145,16 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
 #    s[esat / P < H2O] = EPS
 #    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
     Dleaf = esat / P - H2O
-
+    
+    Lv = latent_heat(T) * MOLAR_MASS_H2O 
+    
     itermax = 20
     err = 999.0
     iterNo = 0
     while err > 0.01 and iterNo < itermax:
         iterNo += 1
         # boundary layer conductance
-        gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
+        gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.5 * (Tl + Told) - T, P)
 
         #print Dleaf
         Told = Tl.copy()
@@ -168,13 +172,14 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
 
         gsv = H2O_CO2_RATIO*gs_opt
 #        geff_v = (gb_v*gsv) / (gb_v + gsv)
-        geff_v = np.where(Dleaf > 0.0, (gb_v*gsv) / (gb_v + gsv), gb_v)  # molm-2s-1
+        geff_v = np.where(Dleaf > 0.0, (gb_v*gsv) / (gb_v + gsv), df * gb_v)  # molm-2s-1, condensation only on dry leaf part
+        gb_h = df * gb_h  # sensible heat exchange only through dry leaf part
 
         # solve  energy balance
         if Ebal:
             # solve leaf temperature 
-            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - LATENT_HEAT*geff_v[ic]*Dleaf[ic] 
-                  + LATENT_HEAT*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + LATENT_HEAT*s[ic]*geff_v[ic])
+            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - Lv[ic]*geff_v[ic]*Dleaf[ic] 
+                  + Lv[ic]*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + Lv[ic]*s[ic]*geff_v[ic])
             err = np.nanmax(abs(Tl - Told))
 
             if (err < 0.01 or iterNo == itermax) and abs(np.mean(T) - np.mean(Tl)) > 20.0:
@@ -208,7 +213,7 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
     H = SPECIFIC_HEAT_AIR*gb_h*(Tl - T)  # Wm-2
     Fr = SPECIFIC_HEAT_AIR*gr*(Tl - Tl_ave)  # flux due to radiative conductance (Wm-2)
     E = geff_v * np.maximum(0.0, Dleaf)  # condensation accounted for in wetleaf water balance
-    LE = geff_v * Dleaf * LATENT_HEAT  # latent heat due to condensation accounted for here
+    LE = E * Lv  # condensation accounted for in wetleaf energy balance
 
 #    if any(np.isnan(An)):
 #        print('leafinterface: ', Tl, Qp, Dleaf, CO2, gb_c, gb_v )

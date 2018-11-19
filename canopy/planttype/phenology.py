@@ -56,7 +56,8 @@ class Photo_cycle(object):
         self.X = self.X + 1.0 / self.tau * (T - self.X)  # degC
 
         S = np.maximum(self.X - self.Tbase, 0.0)
-        self.f = np.maximum(self.fmin, np.minimum(0.065*S, 1.0))
+        self.f = np.maximum(self.fmin, 
+                            np.minimum(S / (self.Smax-self.Tbase), 1.0))
 
         if out:
             return self.f

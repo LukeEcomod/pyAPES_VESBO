@@ -222,8 +222,8 @@ class PlantType(object):
                         + forcing['radiation']['NIR']['sunlit']['absorbed'])
             
             leaf_forcing.update({'radiative_conductance': gr,
-                                 'lw_net': LWnet,
-                                 'sw_absorbed': SWabs_sl,  # for sunlit
+                                 'lw_net': df * LWnet,
+                                 'sw_absorbed': df * SWabs_sl,  # for sunlit
                                  'leaf_temperature': self.Tl_sl})  # for sunlit
        
         logger_info={'date': forcing['date'],
@@ -238,7 +238,8 @@ class PlantType(object):
                             leafp=self.leafp, 
                             forcing=leaf_forcing,
                             controls=controls,
-                            logger_info=logger_info)
+                            logger_info=logger_info,
+                            df=df)
 
         # --- shaded leaves
         logger_info.update({'leaftype': 'shaded'})
@@ -247,7 +248,7 @@ class PlantType(object):
             SWabs_sh = (forcing['radiation']['PAR']['shaded']['absorbed']
                         + forcing['radiation']['NIR']['shaded']['absorbed'])
             
-            leaf_forcing.update({'sw_absorbed': SWabs_sh,  # for shaded
+            leaf_forcing.update({'sw_absorbed': df * SWabs_sh,  # for shaded
                                  'leaf_temperature': self.Tl_sh})  # for shaded
     
         Qp_sh = forcing['radiation']['PAR']['shaded']['incident'] * PAR_TO_UMOL
@@ -257,7 +258,8 @@ class PlantType(object):
                             leafp=self.leafp, 
                             forcing=leaf_forcing,
                             controls=controls,
-                            logger_info=logger_info)
+                            logger_info=logger_info,
+                            df=df)
 
         if controls['energy_balance']:
             self.Tl_sh= sh['Tl'].copy()
@@ -265,7 +267,7 @@ class PlantType(object):
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
         f_sl = forcing['radiation']['PAR']['sunlit']['fraction']
-        pt_stats, layer_stats = self._integrate(sl, sh, f_sl, df)
+        pt_stats, layer_stats = self._integrate(sl, sh, f_sl)
 
         # --- sink/source terms
         sources = {'h2o': layer_stats['transpiration'],  # [mol m-3 s-1]
@@ -276,7 +278,7 @@ class PlantType(object):
 
         return pt_stats, sources
 
-    def _integrate(self, sl, sh, f_sl, df):
+    def _integrate(self, sl, sh, f_sl):
         """
         integrates layerwise statistics (per unit leaf area) to plant level
         Arg:
@@ -287,9 +289,10 @@ class PlantType(object):
         Returns:
             y - plant level statistics
         """
+
         # plant fluxes, weight factors is sunlit and shaded LAI at each layer
-        f1 = df * f_sl * self.lad
-        f2 = df * (1.0 - f_sl) * self.lad
+        f1 = f_sl * self.lad
+        f2 = (1.0 - f_sl) * self.lad
 
         keys = ['net_co2', 'dark_respiration', 'transpiration', 'latent_heat', 'sensible_heat', 'fr']
 
@@ -298,7 +301,7 @@ class PlantType(object):
         layer_stats = {k: sl[k]*f1 + sh[k]*f2 for k in keys}  # flux per m-3
         
         keys = ['stomatal_conductance', 'boundary_conductance','leaf_internal_co2', 'leaf_surface_co2']
-        pt_stats.update({k: np.sum((sl[k]*f1 + sh[k]*f2)) / np.sum(df * self.lad + EPS) for k in keys})
+        pt_stats.update({k: np.sum((sl[k]*f1 + sh[k]*f2)) / np.sum(self.lad + EPS) for k in keys})
 
         # leaf temperatures
         pt_stats.update({'Tleaf': f_sl * sl['Tl'] + (1.0 - f_sl) * sh['Tl']})  # dry leaf temperature

@@ -61,9 +61,9 @@ class Radiation(object):
         self.leaf_emi = p['leaf_emi']
         self.SWmodel = ctr['SwModel'].upper()
         self.LWmodel = ctr['LwModel'].upper()
-        #logger.info('Shortwave radiation model: %s', self.SWmodel)
-        #if ctr['Ebal']:
-        #    logger.info('Longwave radiation model: %s', self.LWmodel)
+        logger.info('Shortwave radiation model: %s', self.SWmodel)
+        if ctr['Ebal']:
+            logger.info('Longwave radiation model: %s', self.LWmodel)
 
     def SW_profiles(self, forcing, radtype):
         r""" Computes distribution of within canopy shortwave radiation

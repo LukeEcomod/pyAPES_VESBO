@@ -114,6 +114,7 @@ class Interception(object):
 
         # initial guess for wet leaf temperature
         Tl_wet = self.Tl_wet.copy()
+        Told = Tl_wet.copy()
 
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O
@@ -132,8 +133,8 @@ class Interception(object):
         # maximum interception storage capacities layerwise [m]
         Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
 
-        # boundary layer conductances for H2O and heat [mol m-2 s-1]
-        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
+#        # boundary layer conductances for H2O and heat [mol m-2 s-1]
+#        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
 
         # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
         es, s = e_sat(Tl_wet)
@@ -146,6 +147,10 @@ class Interception(object):
         iterNo = 0
         while err > 0.01 and iterNo < itermax:
             iterNo += 1
+            
+            # boundary layer conductances for H2O and heat [mol m-2 s-1]
+            gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.5*(Tl_wet + Told) - T, P)  # OK to assume dt = 0.0?? convergence problems otherwise
+
             Told = Tl_wet.copy()
 
             if Ebal:
@@ -255,7 +260,7 @@ class Interception(object):
                 Heat += wf * LAIz * Hw * subdt
                 # radiative flux [W m-2(ground)] * subdt
                 Fr += wf * LAIz * Frw * subdt
-                LE += wf * LAIz * Ep / MOLAR_MASS_H2O * WATER_DENSITY * L * subdt
+#                LE += wf * LAIz * Ep / MOLAR_MASS_H2O * WATER_DENSITY * L * subdt
                 # update storage [m]
                 W += dW
                 # interception and throughfall [m]
@@ -295,7 +300,7 @@ class Interception(object):
                   'sources': {'h2o': dqsource,
                               'sensible_heat': Heat / dt,
                               'fr': Fr / dt,
-                              'latent_heat': LE / dt}
+                              'latent_heat': dqsource * L}
                   }
         return fluxes
 

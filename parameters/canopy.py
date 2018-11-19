@@ -27,7 +27,7 @@ def get_cpara(dbhfile):
            'LwModel': 'ZhaoQualls',  #'Flerchinger'},  #
            'WaterStress': False,  # TRUE NOT SUPPORTED YET!
            'seasonal_LAI': True,  # account for seasonal LAI dynamics
-           'pheno_cycle': True  #True  # account for phenological cycle
+           'pheno_cycle': True  # account for phenological cycle
            }
 
     # --- micrometeo ---
