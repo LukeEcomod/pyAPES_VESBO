@@ -182,13 +182,27 @@ class PlantType(object):
             if 'La' in self.photop0:
                 # lambda increases with decreasing Psi as in Manzoni et al., 2011 Funct. Ecol.
                 self.photop['La'] = self.photop0['La'] * np.exp(-b*PsiL)
-            if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
+            if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, H2O, CO2, T, U, df, forcing):
+    def leaf_gasexchange(self, forcing, paramters, controls):
         r"""Computes dry leaf gas-exchange shale and sunlit leaves.
 
         Args:
+            forcing (dict):
+                'h2o'
+                'co2'
+                'air_temperature'
+                'wind_speed'
+                'nir'
+                'par'
+                'nir'
+            'parameters' (dict):
+                'sunlit_fraction'
+                'dry_leaf_fraction'
+            'controls' (dict):
+                'energy_balance'
+
             f_sl (array): sunlit fraction [-]
             H2O (array): water vapor mixing ratio [mol mol-1]
             CO2 (array): carbon dioxide mixing ratio [ppm]
@@ -204,14 +218,27 @@ class PlantType(object):
             gr (array): radiative conductance [mol m-2 s-1]
         """
         # --- sunlit leaves
-        sl = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sl, U,
-                            forcing, leaftype='sunlit', model=self.StomaModel)
+        sl = leaf_interface(
+            self.photop,
+            self.leafp,
+            self.Tl_sl,
+            forcing,
+            controls,
+            leaftype='sunlit',
+            model=self.StomaModel
+        )
 
         # --- shaded leaves
-        sh = leaf_interface(self.photop, self.leafp, H2O, CO2, T, self.Tl_sh, U,
-                            forcing, leaftype='shaded', model=self.StomaModel)
+        sh = leaf_interface(
+            self.photop,
+            self.leafp,
+            self.Tl_sh,
+            forcing,
+            controls,
+            leaftype='shaded',
+            model=self.StomaModel)
 
-        if forcing['Ebal']:
+        if controls['energy_balance']:
             self.Tl_sh= sh['Tl'].copy()
             self.Tl_sl = sl['Tl'].copy()
 
@@ -233,7 +260,7 @@ class PlantType(object):
         integrates layerwise statistics (per unit leaf area) to plant level
         Arg:
             sl, sh - dict of leaf-level outputs for sunlit and shaded leaves:
-            
+
             x = {'An': An, 'Rd': Rd, 'E': fe, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
                  'Cs': Cs, 'gs_v': gsv, 'gs_c': gs_opt, 'gb_v': gb_v}
         Returns:

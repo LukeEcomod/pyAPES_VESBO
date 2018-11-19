@@ -22,10 +22,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 from canopy.constants import *
+from canopy.constants import DEG_TO_KELVIN, PAR_TO_UMOL, EPS
 H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]
 TN = 25.0 + DEG_TO_KELVIN  # reference temperature [K]
 
-def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit', model='CO_OPTI',
+def leaf_interface(photop,
+                   leafp,
+                   forcing,
+                   controls,
+                   leaftype='sunlit',
+                   model='CO_OPTI',
                    dict_output=True):
     """
     Entry-point to coupled leaf gas-exchange and energy balance functions.
@@ -42,27 +48,35 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
     using semi-empirical models.
     
     INPUT:
-        photop - dict. of photoparameters, keys:
-            Vcmax - maximum carboxylation velocity (umolm-2s-1)
-            Jmax - maximum rate of electron transport (umolm-2s-1)
-            Rd - dark respiration rate (umolm-2s-)
-            alpha - quantum yield parameter (mol/mol)
-            theta - co-limitation parameter of Farquhar-model
-            beta - co-limitation parameter of Farquhar-model
-            L, m - stomatal parameter (Lambda, m, ...) depending on model
-            g0 - residual conductance for CO2 (molm-2s-1)
-            
-            tresp - dict. of temperature sensitivity parameters, optional.
+        photop (dict): photo parameters
+            'Vcmax': maximum carboxylation velocity (umolm-2s-1)
+            'Jmax': maximum rate of electron transport (umolm-2s-1)
+            'Rd': dark respiration rate (umolm-2s-)
+            'alpha': quantum yield parameter (mol/mol)
+            'theta': co-limitation parameter of Farquhar-model
+            'beta': co-limitation parameter of Farquhar-model
+            'L'/'m': stomatal parameter (Lambda, m, ...) depending on model
+            'g0': residual conductance for CO2 (molm-2s-1)
+            tresp (dict): temperature sensitivity parameters (optional)
                 omitting neglects temperature adjustments of Vcmax, Jmax, Rd
-                Vcmax - [Ha, Hd, Topt]; activation energy (kJmol-1), deactivation energy (kJmol-1), optimum temperature (degC)
-                Jmax - [Ha, Hs, Topt];
-                Rd - [Ha]; activation energy (kJmol-1)
-        leafp - dict of leaf parameters, keys:
-            lt - leaf lengthscale (m)
-            emi - leaf emissivity (-)
-            # Par_alb - leaf Par albedo (-)
-            # Nir_alb - leaf Nir albedo (-)
-        
+                'Vcmax': [Ha, Hd, Topt]; activation energy (kJmol-1), deactivation energy (kJmol-1), optimum temperature (degC)
+                'Jmax': [Ha, Hs, Topt];
+                'Rd': [Ha]; activation energy (kJmol-1)
+        leafp (dict): leaf parameters:
+            'lt': leaf lengthscale (m)
+            'emi': leaf emissivity (-)
+            # 'Par_alb': leaf Par albedo (-)
+            # 'Nir_alb': leaf Nir albedo (-)
+        forcing (dict):
+            'h2o'
+            'co2'
+            'air_temperature'
+            'par'
+            'sw_absorbed'
+            'net_lw_leaf'
+            'wind_speed'
+            'air_pressure'
+
         H2O - water vapor mixing ratio (mol/mol)
         CO2 - carbon dioxide mixing ratio (ppm)
         T - ambient air temperature (degC)
@@ -103,17 +117,23 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
     # -- parameters -----
     lt = leafp['lt']
 
+    T = forcing['air_temperature']
     P = forcing['air_pressure']
+    U = forcing['wind_speed']
     Tl_ave = forcing['leaf_temperature']
-    Qp = forcing['radiation']['PAR'][leaftype]['incident'] * PAR_TO_UMOL
-    Ebal = forcing['Ebal']
+    Qp = forcing['par'][leaftype]['incident'] * PAR_TO_UMOL
+    H2O = forcing['h2o']
+    CO2 = forcing['co2']
+
+    Ebal = controls['Ebal']
     if Ebal:
-        gr = forcing['radiation']['LW']['gr']
-        Rabs = (forcing['radiation']['PAR'][leaftype]['absorbed']
-                + forcing['radiation']['NIR'][leaftype]['absorbed']
-                + forcing['radiation']['LW']['net_leaf'])
+        gr = forcing['lw']['radiative_conductance']
+        Rabs = (forcing['par'][leaftype]['absorbed']
+                + forcing['nir'][leaftype]['absorbed']
+                + forcing['lw']['net_leaf'])
+
         # canopy nodes
-        ic = np.where(abs(forcing['radiation']['LW']['net_leaf']) > 0.0)
+        ic = np.where(abs(forcing['lw']['net_leaf']) > 0.0)
     else:
         gr = 0.0
 
@@ -158,20 +178,18 @@ def leaf_interface(photop, leafp, H2O, CO2, T, Tl, U, forcing, leaftype='sunlit'
             err = np.nanmax(abs(Tl - Told))
 
             if (err < 0.01 or iterNo == itermax) and abs(np.mean(T) - np.mean(Tl)) > 20.0:
-                logger.debug('%s (iteration %s:%s) Unrealistic %s leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f, %.2f',
+                logger.debug('Unrealistic %s leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f, %.2f',
                      forcing['date'],
                      forcing['iteration'], iterNo,
                      leaftype,
                      np.mean(Tl), np.mean(T),
-                     np.mean(forcing['radiation']['LW']['net_leaf']), np.mean(Tl_ave), np.mean(Tl_ini), np.mean(H2O))
+                     np.mean(forcing['lw']['net_leaf']), np.mean(Tl_ave), np.mean(Tl_ini), np.mean(H2O))
                 Tl = T.copy()
                 Ebal = False  # recompute without solving leaf temperature
                 err = 999.
 
             elif iterNo == itermax and err > 0.05:
-                logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_%s = %.2f (err = %.2f)',
-                         forcing['date'],
-                         forcing['iteration'],
+                logger.debug('Maximum number of iterations reached: Tl_%s = %.2f (err = %.2f)',
                          leaftype,
                          np.mean(Tl), err)
 
@@ -804,10 +822,10 @@ def test_leafscale(method=1):
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
     T = 25.0  # np.array([20.0, 19.0, 18.0, 20.0])
     
-    SWabs = 0.5*(1-leafp['par_alb'])*Qp / PAR_TO_UMOL + 0.5*(1-leafp['nir_alb'])*Qp / PAR_TO_UMOL 
+    SWabs = 0.5*(1-leafp['par_alb'])*Qp / PAR_TO_UMOL + 0.5*(1-leafp['nir_alb'])*Qp / PAR_TO_UMOL
 #    print('SWabs', SWabs)
     if method is not 1:
-        x = leaf_interface(photop, leafp, H2O, CO2, T, T, Qp, SWabs, LW, U, T, 0.0, P=101300.0, model=method, Ebal=False, dict_output=True)  
+        x = leaf_interface(photop, leafp, H2O, CO2, T, T, Qp, SWabs, LW, U, T, 0.0, P=101300.0, model=method, Ebal=False, dict_output=True)
 #        print x
         plt.figure(2)
         plt.subplot(221); plt.plot(Qp, x['An'], 'o')
@@ -817,7 +835,7 @@ def test_leafscale(method=1):
         #ci = 300.0
         #Qp = np.arange(10, 1600, 20)
         Qp = 1600.0
-        ci = np.arange(200, 700, 10)        
+        ci = np.arange(200, 700, 10)
         an, rd, av, aj = photo_farquhar(photop, Qp, ci, T, co_limi=False )
         an1, rd1 = photo_farquhar(photop, Qp, ci, T, co_limi=True)
         plt.figure()

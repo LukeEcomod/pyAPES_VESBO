@@ -60,7 +60,7 @@ class Interception(object):
 
         self.update()
 
-    def run(self, dt, H2O, U, T, forcing, parameters, controls):
+    def run(self, dt, forcing, parameters, controls):
         r""" Computes interception and unloading of rain or snow,
         evaporation and condensation are computed based on wet leaf water balance.
 
@@ -72,17 +72,20 @@ class Interception(object):
 
         Args:
             dt: timestep [s]
-            H2O (array): mixing ratio for each layer [mol/mol]
-            U (array): wind speed for each layer [m s-1]
-            T (array): air temperature for each layer [degC]
             forcing (dict):
+                'net_lw_leaf' (array): net radiation balance at each layer [W m\ :sup:`-2`\]
+                'sw_absorbed' (array): absorbed shortwave radiation at each layer [W m\ :sup:`-2`\]
+                'precipitation' (float): precipitation rate above canopy [m s\ :sup:`-1`\]
+                'air_pressure' (float): ambient pressure [Pa]
+                'leaf_temperature' (array): average leaf temperature used in LW computation [degC]
+                'radiative_conductance' (array): radiative conductance [mol m-2 s-1]
+                'h2o' (array): [mol mol-1]
+                'wind_speed' (array): [m s-1]
+                'air_temperature' (array): [degC]
+            parameters (dict):
                 LAIz (array): leaf area index per canopy layer [m\ :sup:`2`\ m\ :sup:`-2`\]
-                Rabs (array): net radiation balance at each layer [W m\ :sup:`-2`\]
-                Prec (float): precipitation rate above canopy [m s\ :sup:`-1`\]
-                P (float): ambient pressure [Pa]
-                Ebal (bool): solve wet leaf energy balance
-                Tl_ave (array): average leaf temperature used in LW computation [degC]
-                gr (array): radiative conductance [mol m-2 s-1]
+            controls (dict):
+                'energy_balance': boolean
         Returns:
             df: fraction of dry leaves per layer [-]
             Trfall_rain: throughfall as rainfall [m]
@@ -98,15 +101,20 @@ class Interception(object):
             MBE: water closure [m]
         """
 
-        LAIz = forcing['LAIz']
         Prec = forcing['precipitation']
         P = forcing['air_pressure']
         Tl_ave = forcing['leaf_temperature']
-        Ebal = forcing['Ebal']
-        if Ebal:
-            gr = forcing['radiation']['LW']['gr']
-            Rabs = (forcing['radiation']['SW_absorbed'] +
-                    forcing['radiation']['LW']['net_leaf'])
+        H2O = forcing['h2o']
+        U = forcing['wind_speed']
+        T = forcing['air_temperature']
+        LAIz = parameters['LAIz']
+
+        Ebal = controls['energy_balance']
+
+        if controls['energy_balance']:
+            gr = forcing['lw_radiative_conductance']
+            Rabs = (forcing['sw_absorbed'] +
+                    forcing['net_lw_leaf'])
         else:
             gr = 0.0
         # number of canopy layers
@@ -122,7 +130,7 @@ class Interception(object):
         # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
         F = 0.5 # for randomdly oriented leaves
 
-        """ --- state of precipitation (uses fW[-1] in end of code)--- """
+        # --- state of precipitation (uses fW[-1] in end of code)---
         # fraction as water [-]
         fW = np.ones(N)
         ix = np.where(T < self.Tmin)
@@ -176,8 +184,10 @@ class Interception(object):
             else:
                 err = 0.0
 
-        """ --- energy and water fluxes for wet leaf --- """ ##### or sublimation/deposition ????????? GITHUB SPATHY!!
-        # sensible heat flux [W m-2(wet leaf)]
+        # --- energy and water fluxes for wet leaf ---
+        # or sublimation/deposition ????????? GITHUB SPATHY!!
+
+    # sensible heat flux [W m-2(wet leaf)]
         Hw = SPECIFIC_HEAT_AIR * gb_h * (Tl_wet - T)
         # non-isothermal radiative flux [W m-2 (wet leaf)]???
         Frw = SPECIFIC_HEAT_AIR * gr *(Tl_wet - Tl_ave)
@@ -188,7 +198,7 @@ class Interception(object):
 #        if Prec > 0.0:
 #            Ep = np.zeros(N)
 
-        """ --- canopy water storage change --- """
+        # --- canopy water storage change ---
         W = self.oldW.copy()  # layerwise canopy storage [m]
 
         # Unloading in canopy, ensures also that seasonal

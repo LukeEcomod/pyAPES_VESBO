@@ -242,22 +242,25 @@ class CanopyModel(object):
             forcing=forcing,
             parameters=radiation_params
         )
+
         f_sl = radiation_profiles['par']['sunlit']['fraction']
+        sunlit_fraction = radiation_profiles['par']['sunlit']['fraction']
 
         if self.Switch_Ebal:
             # --- NIR ---
             radiation_params['radiation_type'] = 'nir'
+
             radiation_profiles['nir'] = self.radiation.shortwave_profiles(
                 forcing=forcing,
                 parameters=radiation_params
             )
 
             # absorbed radiation by leafs [W m-2(leaf)]
-            radiation_profiles['SW_absorbed'] = (
-                radiation_profiles['par']['sunlit']['absorbed'] * f_sl
-                + radiation_profiles['nir']['sunlit']['absorbed'] * f_sl
-                + radiation_profiles['par']['shaded']['absorbed'] * (1. - f_sl)
-                + radiation_profiles['nir']['shaded']['absorbed'] * (1. - f_sl)
+            radiation_profiles['sw_absorbed'] = (
+                radiation_profiles['par']['sunlit']['absorbed'] * sunlit_fraction
+                + radiation_profiles['nir']['sunlit']['absorbed'] * sunlit_fraction
+                + radiation_profiles['par']['shaded']['absorbed'] * (1. - sunlit_fraction)
+                + radiation_profiles['nir']['shaded']['absorbed'] * (1. - sunlit_fraction)
             )
         # --- iterative solution of H2O, CO2, T, Tleaf and Tsurf ---
 
@@ -300,7 +303,7 @@ class CanopyModel(object):
                     'forestfloor_emissivity': ff_longwave['emissivity']
                 }
 
-                forcing['radiation']['LW'] = self.radiation.longwave_profiles(
+                radiation_profiles['lw'] = self.radiation.longwave_profiles(
                     forcing=lw_forcing,
                     parameters=lw_params
                 )
@@ -309,11 +312,34 @@ class CanopyModel(object):
             for key in sources.keys():
                 sources[key] = 0.0 * self.ones
 
-            # --- wet leaf water and energy balance ---
+            # --- wet leaf water andra energy balance ---
+            interception_forcing = {
+                'h2o': H2O,
+                'wind_speed': U,
+                'air_temperature': T,
+                'air_pressure': forcing['air_pressure'],
+                'sw_absorbed': radiation_profiles['sw_absorbed'],
+                'lw_radiative_conductance': radiation_profiles['lw']['radiative_conductance'],
+                'net_lw_leaf': radiation_profiles['lw']['net_leaf'],
+                'leaf_temperature': Tleaf_prev,
+                'precipitation': forcing['precipitation'],
+            }
+
+            interception_params = {
+                'LAIz': self.lad * self.dz
+            }
+
+            interception_controls = {
+                'energy_balance': self.Switch_Ebal
+            }
+
             wetleaf_fluxes = self.interception.run(
-                    dt=dt,
-                    H2O=H2O, U=U, T=T,
-                    forcing=forcing)
+                dt=dt,
+                forcing=interception_forcing,
+                parameters=interception_params,
+                controls=interception_controls
+            )
+
             # dry leaf fraction
             df = self.interception.df
 
@@ -327,6 +353,27 @@ class CanopyModel(object):
             """---  dry leaf gas-exchange --- """
             pt_stats = []
             for pt in self.planttypes:
+
+                forcing_pt = {
+                    'h2o': H2O,
+                    'co2': CO2,
+                    'air_temperature': T,
+                    'air_pressure': forcing['air_pressure'],
+                    'wind_speed': U,
+                    'par': radiation_profiles['par'],
+                    'nir': radiation_profiles['nir'],
+                    'lw': radiation_profiles['lw'],
+                    'leaf_temperature': Tleaf_prev,
+                }
+
+                paramters_pt = {
+                    'dry_leaf_fraction': self.interception.df,
+                    'sunlit_fraction': sunlit_fraction
+                }
+
+                controls_pt = {
+                    'energy_balance': self.Switch_Ebal
+                }
 
                 # --- sunlit and shaded leaves
                 pt_stats_i, pt_sources = pt.leaf_gasexchange(

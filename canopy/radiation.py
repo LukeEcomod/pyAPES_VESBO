@@ -17,7 +17,7 @@ Note:
 
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
-forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 from builtins import range
@@ -164,7 +164,7 @@ class Radiation(object):
                 x=self.leaf_angle,
                 Tleaf=forcing['leaf_temperature'],
                 LWdn0=forcing['lw_in'],
-                LWup0=forcing['ff_longwave']['radiation'],
+                LWup0=forcing['lw_up'],
                 leaf_emi=self.leaf_emi,
                 soil_emi=parameters['forestfloor_emissivity']
             )
@@ -206,25 +206,25 @@ def solar_angles(lat, lon, jday, timezone=+2.0):
     # declination angle (rad)
     decl = (6.918e-3 - 0.399912*np.cos(y) + 7.0257e-2*np.sin(y) - 6.758e-3*np.cos(2.*y)
         + 9.07e-4*np.sin(2.*y) - 2.697e-3*np.cos(3.*y) + 1.48e-3*np.sin(3.*y))
-    
+
     # equation of time (min)
-    et = 229.18*(7.5e-5 + 1.868e-3*np.cos(y) - 3.2077e-2*np.sin(y) 
+    et = 229.18*(7.5e-5 + 1.868e-3*np.cos(y) - 3.2077e-2*np.sin(y)
         - 1.4615e-2*np.cos(2.*y) - 4.0849e-2*np.sin(2.*y))
     # print et / 60.
     # hour angle
     offset = et + 4.*lon - 60.*timezone
     fday = np.modf(jday)[0]  # decimal day
     ha = DEG_TO_RAD * ((1440.0*fday + offset) / 4. - 180.)  # rad
-    
+
     # zenith angle (rad)
     aa = np.sin(lat0)*np.sin(decl) + np.cos(lat0)*np.cos(decl)*np.cos(ha)
     zen = np.arccos(aa)
     del aa
 
     # azimuth angle, clockwise from north in rad
-    aa = -(np.sin(decl) - np.sin(lat0)*np.cos(zen)) / (np.cos(lat0)*np.sin(zen))      
+    aa = -(np.sin(decl) - np.sin(lat0)*np.cos(zen)) / (np.cos(lat0)*np.sin(zen))
     azim = np.arccos(aa)
-    
+
     # sunrise, sunset, daylength
     zen0 = 90.833 * DEG_TO_RAD  # zenith angle at sunries/sunset after refraction correction
 
@@ -237,10 +237,10 @@ def solar_angles(lat, lon, jday, timezone=+2.0):
     daylength = (sunset - sunrise)  # minutes
 
     sunrise = sunrise + timezone
-    sunrise[sunrise < 0] = sunrise[sunrise <0] + 1440.0
+    sunrise[sunrise < 0] = sunrise[sunrise < 0] + 1440.0
 
     sunset = sunset + timezone
-    sunset[sunset > 1440] = sunset[sunset > 1440] - 1440.0     
+    sunset[sunset > 1440] = sunset[sunset > 1440] - 1440.0
 
     return zen, azim, decl, sunrise, sunset, daylength
 
@@ -457,12 +457,12 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
 
     # ---- solve A*SW = C
     SW = np.linalg.solve(A, C)
-    
+
     # upward and downward hemispherical radiation (Wm-2 ground)
     SWu0 = SW[0:2*M+2:2]
     SWd0 = SW[1:2*M+2:2]
     del A, C, SW, k
-  
+
     # ---- Compute multiple scattering, Zhao & Qualls, 2005. eq. 24 & 25.
     # downwelling diffuse after multiple scattering, eq. 24
     SWd = np.zeros([M+1])
@@ -593,7 +593,7 @@ def canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo
         LeafAlbedo: leaf albedo of desired waveband (-)
         SoilAlbedo: soil albedo of desired waveband (-)
         PlotFigs="True" plots figures.
- 
+
     OUTPUT:
         SWb: direct SW at z (Wm-2(ground))
         SWd: downwelling diffuse at z (Wm-2(ground))
@@ -636,7 +636,7 @@ def canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo
     # attenuation coefficients
     Kb = kbeam(ZEN, x)
     Kd = kdiffuse(x, LAI)
- 
+
     # sunlit fraction as a function of L
     f_sl = np.exp(-Kb*Lcum)
 
@@ -646,7 +646,7 @@ def canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo
     # in case canopy is deep, soil reflections have small impact and canopy reflection coefficients becomes
     rb1 = 2.0*Kb / (Kb + 1.0)*rcpy1  # beam
     rd1 = 2.0*Kd / (Kd + 1.0)*rcpy1  # diffuse
-    
+
     # but in sparser canopies soil reflectance has to be taken into account and this yields
     AA = ((rb1 - SoilAlbedo) / (rb1*SoilAlbedo - 1.0))*np.exp(-2.0*(1.0 - LeafAlbedo)**0.5*Kb*LAI)
     rb1 = (rb1 + AA) / (1.0 + rb1*AA)  # beam
@@ -874,7 +874,7 @@ def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
 
         plt.subplot(223)
         plt.plot(LWdn, list(range(len(Lcum))), 'bo', label='LWdn')
-        plt.plot(LWup, list(range(len(Lcum))), 'ro', label='LWup')    
+        plt.plot(LWup, list(range(len(Lcum))), 'ro', label='LWup')
         plt.ylabel("N")
         plt.xlabel("LW (Wm-2 )")
         plt.legend()
@@ -1074,9 +1074,9 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
         plt.title("radiation.canopy_lw_ZhaoQualls", fontsize=8)
 
         plt.plot(LWdn, -X/Clump, 'bo', label='LWdn')
-        plt.plot(LWup, -X/Clump, 'ro', label='LWup')    
+        plt.plot(LWup, -X/Clump, 'ro', label='LWup')
 #        plt.plot(LWd, -xi/Clump, 'go', label='LWdn_cg')
-#        plt.plot(LWu, -xi/Clump, 'co', label='LWup_cg')    
+#        plt.plot(LWu, -xi/Clump, 'co', label='LWup_cg')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("LW (Wm-2 )")
         plt.legend()
@@ -1112,7 +1112,7 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     INPUT:
         LAI: leaf area index (m2m-2)
         CLUMP: clumping index (-)
-        ZEN: solar zenith angle (rad)           
+        ZEN: solar zenith angle (rad)
         x: spherical leaf-angle distr.
         method: Name of function to be tested "functionname"
     OUTPUT:
@@ -1121,7 +1121,7 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
         Samuli Launiainen, METLA 4/2014
     """
 
-    # define setup for testing models 
+    # define setup for testing models
 
     #ZEN=35.0/180.0*np.pi
     IbSky = 100.0
@@ -1147,13 +1147,13 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
         print("------TestRun of radiation.canopy_sw_ZhaoQualls with given LAI and CLUMP -----------")
         SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")
 #        print SWb,SWd,SWu,Q_sl,Q_sh,q_sl,q_sh,q_soil,f_sl,alb
-        
+
     if method == "canopy_sw_Spitters":
         print("------TestRun of radiation.canopy_sw_Spitters with given LAI and predefined lad profile-----------")
         SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")
-        # print SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb  
-    
-    if method=="canopy_lw": 
+        # print SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb
+
+    if method == "canopy_lw":
         print("------TestRun of radiation.canopy_lw------------")
         LWnet, LWdn, LWup, gr = canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi,PlotFigs=True)
         print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
