@@ -187,43 +187,51 @@ class Model(object):
                         self.forcing['Tdaily'].iloc[k])
             # properties of first soil node
 
-            canopy_forcing = {'depth': self.soil.grid['z'][0],
-                              'soil_temperature': self.soil.heat.T[0],
-                              'soil_water_potential': self.soil.water.h[0],
-                              'soil_volumetric_water': self.soil.heat.Wliq[0],
-                              'soil_volumetric_air': self.soil.heat.Wair[0],
-                              'soil_pond_storage': self.soil.water.h_pond,
-                              'soil_hydraulic_conductivity': self.soil.water.Kv[0],
-                              'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],
-                              'wind_speed': self.forcing['U'].iloc[k],
-                              'air_temperature': self.forcing['Tair'].iloc[k],
-                              'precipitation': self.forcing['Prec'].iloc[k],
-                              'h2o': self.forcing['H2O'].iloc[k],
-                              'co2': self.forcing['CO2'].iloc[k],
-                              'PAR': {'direct': self.forcing['dirPar'].iloc[k],
-                                      'diffuse': self.forcing['diffPar'].iloc[k]},
-                              'NIR': {'direct': self.forcing['dirNir'].iloc[k],
-                                      'diffuse': self.forcing['diffNir'].iloc[k]},
-                              'lw_in': self.forcing['LWin'].iloc[k],
-                              'friction_velocity': self.forcing['Ustar'].iloc[k],
-                              'air_pressure': self.forcing['P'].iloc[k],
-                              'zenith_angle': self.forcing['Zen'].iloc[k],
-                              'date': self.forcing.index[k]
-                              }
+            canopy_forcing = {
+                'soil_temperature': self.soil.heat.T[0],
+                'soil_water_potential': self.soil.water.h[0],
+                'soil_volumetric_water': self.soil.heat.Wliq[0],
+                'soil_volumetric_air': self.soil.heat.Wair[0],
+                'soil_pond_storage': self.soil.water.h_pond,
+                'wind_speed': self.forcing['U'].iloc[k],
+                'air_temperature': self.forcing['Tair'].iloc[k],
+                'precipitation': self.forcing['Prec'].iloc[k],
+                'h2o': self.forcing['H2O'].iloc[k],
+                'co2': self.forcing['CO2'].iloc[k],
+                'PAR': {'direct': self.forcing['dirPar'].iloc[k],
+                        'diffuse': self.forcing['diffPar'].iloc[k]},
+                'NIR': {'direct': self.forcing['dirNir'].iloc[k],
+                        'diffuse': self.forcing['diffNir'].iloc[k]},
+                'lw_in': self.forcing['LWin'].iloc[k],
+                'friction_velocity': self.forcing['Ustar'].iloc[k],
+                'air_pressure': self.forcing['P'].iloc[k],
+                'zenith_angle': self.forcing['Zen'].iloc[k],
+            }
+
+            canopy_parameters = {
+                'depth': self.soil.grid['z'][0],
+                'soil_hydraulic_conductivity': self.soil.water.Kv[0],
+                'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],
+                'date': self.forcing.index[k]
+            }
 
             # run timestep loop
             canopy_flux, canopy_state, ffloor_flux, ffloor_state = self.canopy_model.run_timestep(
-                    dt=self.dt,
-                    forcing=canopy_forcing)
+                dt=self.dt,
+                forcing=canopy_forcing,
+                parameters=canopy_parameters
+            )
 
-            """ Water and Heat in soil """
+            # --- Water and Heat in soil ---
             # potential infiltration and evaporation from ground surface
-            soil_forcing = {'potential_infiltration': ffloor_flux['potential_infiltration'],
-                            'potential_evaporation': (ffloor_flux['evaporation_soil']
-                                                      + ffloor_flux['capillar_rise']),
-                            'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
-                            'ground_heat_flux': -ffloor_flux['ground_heat_flux'],
-                            'date': self.forcing.index[k]}
+            soil_forcing = {
+                'potential_infiltration': ffloor_flux['potential_infiltration'],
+                'potential_evaporation': (
+                    ffloor_flux['evaporation_soil'] + ffloor_flux['capillar_rise']
+                ),
+                'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
+                'ground_heat_flux': -ffloor_flux['ground_heat'],
+                'date': self.forcing.index[k]}
 
             # transpiration sink [m s-1]
             rootsink =  self.canopy_model.rad * canopy_flux['transpiration']
