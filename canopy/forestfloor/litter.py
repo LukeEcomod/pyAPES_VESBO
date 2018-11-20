@@ -14,12 +14,11 @@ Note:
 @author: ajkieloaho
 
 """
-
-from .heat_and_water import heat_and_water_exchange, evaporation_through
-from .heat_and_water import convert_hydraulic_parameters
+from numpy import power
+from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C, LATENT_HEAT, EPS
+from .heat_and_water import heat_and_water_exchange, water_exchange
+from .heat_and_water import convert_hydraulic_parameters, evaporation_through
 from .carbon import soil_respiration
-
-from canopy.constants import WATER_DENSITY, MOLAR_MASS_H2O, MOLAR_MASS_C
 
 
 class Litter(object):
@@ -162,7 +161,6 @@ class Litter(object):
                 'lw_dn': [W m\ :sup:`-2`\ ] if energy_balance is True
                 'h2o': [mol mol\ :sup:`-1`\ ]
                 'air_temperature': [\ :math:`^{\circ}`\ C]
-                'air_pressure': [Pa]
                 'soil_temperature': [\ :math:`^{\circ}`\ C]
                 'soil_water_potential': [m]
             parameters (dict):
@@ -181,23 +179,45 @@ class Litter(object):
         """
 
         if controls['energy_balance']:
-            # heat_and_water_exchange()
-            pass
-        else:
-            # water_exchange()
-            pass
+            # No capillar connection assumed
+            fluxes, states = heat_and_water_exchange(
+                properties=self.properties,
+                temperature=self.old_temperature,
+                water_content=self.old_water_content,
+                dt=dt,
+                forcing=forcing,
+                parameters=parameters,
+                solver=controls['solver'],
+                nsteps=controls['nsteps']
+            )
 
-        # No capillar connection assumed
-        fluxes, states = heat_and_water_exchange(
-            propertie=self.properties,
-            temperature=self.old_temperature,
-            water_content=self.old_water_content,
-            dt=dt,
-            forcing=forcing,
-            parameters=parameters,
-            solver=controls['solver'],
-            nsteps=controls['nsteps']
-        )
+        else:
+            fluxes, states = water_exchange(
+                dt=dt,
+                water_storage=self.old_water_storage,
+                properties=self.properties,
+                forcing=forcing
+            )
+
+            thermal_conductivity = (
+                power(states['thermal_conductivity']
+                      * parameters['soil_thermal_conductivity'], 0.5)
+                / abs(parameters['soil_depth'] + 0.5 * self.properties['height'])
+            )
+
+            ground_heat = (
+                thermal_conductivity
+                * (forcing['air_temperature'] - forcing['soil_temperature'])
+            )
+
+            latent_heat = (
+                LATENT_HEAT / (MOLAR_MASS_H2O * fluxes['evaporation'] + EPS)
+            )
+
+            fluxes.update({
+                'ground_heat': ground_heat,
+                'latent_heat': latent_heat
+            })
 
         # update state variables
         self.temperature = states['temperature']
