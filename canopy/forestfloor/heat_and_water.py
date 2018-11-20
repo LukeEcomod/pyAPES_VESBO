@@ -319,8 +319,8 @@ class heat_and_water:
         return self.dudt
 
 def heat_and_water_exchange(properties,
-                            moss_temperature,
-                            moss_water_content,
+                            temperature,
+                            water_content,
                             dt,
                             forcing,
                             parameters,
@@ -408,9 +408,9 @@ def heat_and_water_exchange(properties,
     # initial values for solver
 
     # [deg C]
-    initial_temperature = moss_temperature
+    initial_temperature = temperature
     # [kg m-2] or [mm]
-    initial_water_content = moss_water_content * properties['dry_mass']
+    initial_water_content = water_content * properties['dry_mass']
 
     # initial values for water components
 
@@ -601,71 +601,92 @@ def heat_and_water_exchange(properties,
         'water_storage': new_water_content,  # [kg m-2] or [mm]
         'temperature': new_temperature,  # [degC]
         'hydraulic_conductivity': hydraulic_conductivity,  # [m s-1]
-        'thermal_conductivity': thermal_conductivity,  # [Wm-1K-1]
+        'thermal_conductivity': thermal_conductivity,  # [W m-1 K-1]
         }
 
     return fluxes, states
 
 def water_exchange(dt,
-                   water_content,
-                   temperature,
-                   states):
+                   water_storage,
+                   properties,
+                   forcing):
     """
+    Args:
+        dt (float): timestep [s]
+        water_content (float): [kg m-2]
+        properties (dict): forestfloor object properties
+        states (dict):
+            'air_temperature': [degC]
+            'wind_speed': [m s-1]
+            'precipitation': [mm s-1]
+            'h2o': [mol mol-1]
+            'pond_storage': [mm]
+            'soil_water_potential': [m]
+            'soil_hydraulic_conductivity'
+            'soil_depth'
+
+    Returns:
+        water_content (float): [kg m-2]
     """
 
     if dt == 0.0:
         dt = dt + EPS
 
     # [kg m-2] or [mm]
-    water = y[1]
+    water = water_storage
+    max_water = properties['max_water_content'] * properties['dry_mass']
+    min_water = properties['min_water_content'] * properties['dry_mass']
 
-    water = min(self.max_water, water)
-    water = max(self.min_water, water)
+    water = min(max_water, water)
+    water = max(min_water, water)
 
-    max_recharge = max(self.max_water - water, 0.0)
-    max_recharge = min(self.max_water, max_recharge)
+    max_recharge = max(max_water - water, 0.0)
+    max_recharge = min(max_water, max_recharge)
 
     # [kg m-2 s-1] or [mm s-1]
     max_recharge_rate = max_recharge / dt
 
     # [kg m-2 s-1] or [mm s-1]
-    max_evaporation_rate = (y[1] - (self.min_water + EPS)) / dt
+    max_evaporation_rate = (water_storage - (min_water + EPS)) / dt
 
     if np.isinf(max_evaporation_rate) or max_evaporation_rate < 0.0:
-       max_evaporation_rate = 0.0
+        max_evaporation_rate = 0.0
 
     # [kg m-2 s-1] or [mm s-1]
-    max_condensation_rate = -((self.max_water - EPS) - y[1]) / dt
+    max_condensation_rate = -((max_water - EPS) - water_storage) / dt
 
     if np.isinf(max_condensation_rate) or max_condensation_rate > 0.0:
         max_condensation_rate = 0.0
 
     # boundary layer conductances for H2O, heat and CO2
-
-    temp_difference = y[0] - self.states['air_temperature']
-
     # [mol m-2 s-1]
-    conductance_to_air = moss_atm_conductance(self.states['wind_speed'],
-                                              self.properties['roughness_height'],
-                                              dT=temp_difference)
+    conductance_to_air = moss_atm_conductance(
+        forcing['wind_speed'],
+        properties['roughness_height'],
+        dT=0.0
+    )
 
     # water vapor conductance from moss to air
     # Relative conductance is from Williams and Flanagan (1996), Oecologia.
     # Crosses 1 at appr. when water content/dry mass is 8.8
-    relative_conductance = min(1.0,
-                               (0.1285 * y[1]
-                               / self.properties['dry_mass'] - 0.1285))
+    relative_conductance = min(
+        1.0,
+        (0.1285 * water_storage / properties['dry_mass'] - 0.1285)
+    )
 
     # [mol m-2 s-1]
     conductance_to_air_h2o = (
-        conductance_to_air['h2o'] * relative_conductance)
+        conductance_to_air['h2o'] * relative_conductance
+    )
 
     # [kg m-2 s-1]
-    evaporation_rate = (conductance_to_air_h2o
-                        * (611.0 / self.states['air_pressure']
-                           * np.exp(17.502 * y[0] / (y[0] + 240.0))
-                              - self.states['h2o'])
-                        * MOLAR_MASS_H2O)
+    evaporation_rate = (
+        conductance_to_air_h2o
+        * (611.0 / forcing['air_pressure']
+           * np.exp(17.502 * forcing['air_temperature'] / (forcing['air_temperature'] + 240.0))
+           - forcing['h2o'])
+        * MOLAR_MASS_H2O
+    )
 
     evaporation_rate = min(evaporation_rate, max_evaporation_rate)
     evaporation_rate = max(evaporation_rate, max_condensation_rate)
@@ -676,54 +697,67 @@ def water_exchange(dt,
     # take into account that maximum water capacity is not fully achieved
 
     # [mm] or [kg m-2]
-    interception = (max_recharge *
-                    (1.0 - np.exp(-(1.0 / self.max_water)
-                     * self.states['precipitation'] * dt)))
+    interception = (
+        max_recharge
+        * (1.0 - np.exp(-(1.0 / max_water)
+                        * forcing['precipitation'] * dt))
+    )
 
     # [kg m-2 s-1] or [mm s-1]
     interception_rate = interception / dt
 
     # [kg m-2 s-1] or [mm s-1]
-    max_recharge = max(max_recharge - interception,
-                       0.0)
+    max_recharge = max(
+        max_recharge - interception,
+        0.0
+    )
 
-    pond_recharge = (max_recharge *
-                     (1.0 - np.exp(-(1.0 / self.max_water)
-                      * self.states['pond_storage'] * dt)))
+    pond_recharge = (
+        max_recharge
+        * (1.0 - np.exp(-(1.0 / max_water)
+                        * forcing['pond_storage'] * dt))
+    )
 
     # [kg m-2 s-1] or [mm s-1]
     pond_recharge_rate = pond_recharge / dt
 
     # [kg m-2 s-1] or [mm s-1]
-    max_recharge_rate = max(max_recharge - pond_recharge, 0.0) / dt
+    max_recharge_rate = max(
+        max_recharge - pond_recharge,
+        0.0
+    ) / dt
 
     # [g g-1]
-    water_content = (water / self.properties['dry_mass'])
+    water_content = (water / properties['dry_mass'])
 
     # [m m-3]
     volumetric_water = (water_content / WATER_DENSITY
-                        * self.properties['bulk_density'])
+                        * properties['bulk_density'])
 
     # [m]
     water_potential = convert_hydraulic_parameters(
         volumetric_water,
-        self.properties['water_retention'],
-        'volumetric_water')
+        properties['water_retention'],
+        'volumetric_water'
+    )
 
     # [m s-1]
     hydraulic_conductivity = hydraulic_conduction(
         water_potential,
-        self.properties['water_retention'])
+        properties['water_retention']
+    )
 
     # [kg m-2 s-1] or [mm s-1]
-    capillary_rise = capillarity(dt=dt,
-                                 properties=self.properties,
-                                 hydraulic_conductivity=hydraulic_conductivity,
-                                 water_potential=water_potential,
-                                 water_content=water_content,
-                                 soil_hydraulic_conductivity=self.states['soil_hydraulic_conductivity'],
-                                 soil_water_potential=self.states['soil_water_potential'],
-                                 soil_depth=self.states['soil_depth'])
+    capillary_rise = capillarity(
+        dt=dt,
+        properties=properties,
+        hydraulic_conductivity=hydraulic_conductivity,
+        water_potential=water_potential,
+        water_content=water_content,
+        soil_hydraulic_conductivity=forcing['soil_hydraulic_conductivity'],
+        soil_water_potential=forcing['soil_water_potential'],
+        soil_depth=forcing['soil_depth']
+    )
 
     # [kg m-2 s-1] or [mm s-1]
     capillary_rise = min(capillary_rise, max_recharge_rate)
@@ -741,9 +775,49 @@ def water_exchange(dt,
         - evaporation_rate
     )
 
+    # [kg m-2] or [mm]
+    new_water_storage = dy_water + water_storage
 
-    return dy_water
+    # [g g-1]
+    new_water_content = new_water_storage / properties['dry_mass']
 
+    # [m3 m-3]
+    new_volumetric_water = (
+        new_water_content
+        / WATER_DENSITY
+        * properties['bulk_density']
+    )
+
+    new_water_potential = convert_hydraulic_parameters(
+        new_volumetric_water,
+        properties['water_retention'],
+        'volumetric_water'
+    )
+
+    hydraulic_conductivity = hydraulic_conduction(
+        new_water_potential,
+        properties['water_retention']
+    )
+
+    thermal_conductivity = thermal_conduction(new_volumetric_water)
+
+    fluxes = {
+        'evaporation': evaporation_rate,  # [mm s-1]
+        'capillar_rise': capillary_rise,  # [mm s-1]
+        'pond_recharge': pond_recharge_rate,  # [mm s-1]
+        'throughfall': forcing['precipitation'] - interception_rate  # [mm s-1]
+    }
+
+    states = {
+        'volumetric_water': new_volumetric_water,  # [m3 m-3]
+        'water_potential': new_water_potential,  # [m]
+        'water_content': new_water_content,  # [g g-1]
+        'water_storage': new_water_storage,  # [kg m-2] or [mm]
+        'hydraulic_conductivity': hydraulic_conductivity,  # [m s-1]
+        'thermal_conductivity': thermal_conductivity,  # [W m-1 K-1]
+    }
+
+    return fluxes, states
 
 
 def capillarity(dt,

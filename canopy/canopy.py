@@ -332,6 +332,13 @@ class CanopyModel(object):
                 'energy_balance': self.Switch_Ebal
             }
 
+            if self.Switch_Ebal:
+                interception_forcing.update({
+                    'sw_absorbed': radiation_profiles['sw_absorbed'],
+                    'lw_radiative_conductance': radiation_profiles['lw']['radiative_conductance'],
+                    'net_lw_leaf': radiation_profiles['lw']['net_leaf'],
+                })
+
             wetleaf_fluxes = self.interception.run(
                 dt=dt,
                 forcing=interception_forcing,
@@ -349,7 +356,7 @@ class CanopyModel(object):
             # canopy leaf temperature
             Tleaf = self.interception.Tl_wet * (1 - df) * self.lad
 
-            """---  dry leaf gas-exchange --- """
+            # --- dry leaf gas-exchange ---
             pt_stats = []
             for pt in self.planttypes:
 
@@ -381,6 +388,12 @@ class CanopyModel(object):
                         iter_no
                     )
                 }
+
+                if self.Switch_Ebal:
+                    forcing_pt.update({
+                        'nir': radiation_profiles['nir'],
+                        'lw': radiation_profiles['lw'],
+                    })
 
                 # --- sunlit and shaded leaves
                 pt_stats_i, pt_sources = pt.run(

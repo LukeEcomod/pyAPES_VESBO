@@ -178,13 +178,19 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
         Told = surface_temperature
         if controls['energy_balance']:
             # solve leaf temperature [degC]
-            surface_temperature = (SW_gr + LWn + SPECIFIC_HEAT_AIR*gr*T_ave + SPECIFIC_HEAT_AIR*gb_h*T - LE + LATENT_HEAT*s*gb_v*Told
-                      + Kt / dz_soil * T_soil) / (SPECIFIC_HEAT_AIR*(gr + gb_h) + LATENT_HEAT*s*gb_v + Kt / dz_soil)
+            surface_temperature = (
+                (SW_gr + LWn + SPECIFIC_HEAT_AIR*gr*T_ave
+                 + SPECIFIC_HEAT_AIR*gb_h*T - LE + LATENT_HEAT*s*gb_v*Told
+                 + Kt / dz_soil * T_soil)
+                / (SPECIFIC_HEAT_AIR*(gr + gb_h) + LATENT_HEAT*s*gb_v + Kt / dz_soil)
+            )
+
             err = abs(surface_temperature - Told)
             es, s = e_sat(surface_temperature)
             Dsurf = es / P - forcing['h2o']  # [mol/mol] - allows condensation
             s = s / P  # [mol/mol/degC]
             LE = LATENT_HEAT * gb_v * Dsurf
+
             if LE > LEmax:
                 LE = LEmax
                 s = 0.0
