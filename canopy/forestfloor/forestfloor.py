@@ -22,9 +22,7 @@ Note: roughness length z0 is [1/15 - 1/30] * x where x is height of element.
 
 Created on Tue Mar 13 11:59:23 2018
 """
-import numpy as np
 
-from canopy.micromet import e_sat
 from canopy.constants import EPS, WATER_DENSITY, MOLAR_MASS_H2O
 
 from .bryophyte import Bryophyte
@@ -33,8 +31,8 @@ from .snowpack import Snowpack
 from .litter import Litter
 
 from .carbon import soil_respiration
-from .heat_and_water import soil_boundary_layer_conductance
 from .heat_and_water import bryophyte_shortwave_albedo, emitted_longwave_radiation
+
 
 class ForestFloor(object):
     r"""Describes forest floor consisting of bryophytes and/or baresoil.
@@ -148,7 +146,7 @@ class ForestFloor(object):
 
         self.snowpack.restore()
 
-    def run(self, dt, forcing):
+    def run(self, dt, forcing, parameters, controls):
         r"""Water and energy balance at the forestfloor.
 
         Args:
@@ -157,18 +155,26 @@ class ForestFloor(object):
                 'throughfall_rain': [mm s\ :sup:`-1`\ ]
                 'throughfall_snow': [mm s\ :sup:`-1`\ ]
                 'par': [W m\ :sup:`-2`\ ]
-                'nir': [W m\ :sup:`-2`\ ]
-                'lwdn': [W m\ :sup:`-2`\ ]
+                'nir': [W m\ :sup:`-2`\ ] if energy_balance is True
+                'lw_dn': [W m\ :sup:`-2`\ ] if energy_balance is True
                 'h2o': [mol mol\ :sup:`-1`\ ]
                 'air_temperature': [\ :math:`^{\circ}`\ C]
                 'precipitation_temperature': [\ :math:`^{\circ}`\ C]
                 'air_pressure': [Pa]
-                'depth': [m]
                 'soil_temperature': [\ :math:`^{\circ}`\ C]
                 'soil_water_potential': [Pa]
-                'soil_hydraulic_conductivity': [m s\ :sup:`-1`\ ]
-                'soil_thermal_conductivity': [W m\ :sup:`-1`\  K\ :sup:`-1`\ ]
+                'soil_volumetric_water': [m\ :sup:`3`\  m\`-3`\ ]
+                'soil_volumetric_air': [m\ :sup:`3`\  m\`-3`\ ]
+                'soil_pond_storage': [m]
                 'nsteps' number of steps in odesolver
+            parameters (dict):
+                'soil_thermal_conductivity': [] if energy_balance is True
+                'soil_hydraulic_conductivity': []
+                'depth': [m] first soil calculation node
+                'height': [m] first canopy calculation node
+                'nsteps': number of steps in odesolver if energy_balance is True
+            controls (dict):
+                'energy_balance': boolean
         Returns:
             fluxes (dict)
             states (dict)
@@ -176,81 +182,111 @@ class ForestFloor(object):
         """
         # initialize fluxes at forest floor
 
-        fluxes = {}
-        states = {}
+        fluxes = {
+            'sensible_heat': 0.0,  # [W m-2]
+            'ground_heat': 0.0,  # [W m-2]
+            'latent_heat': 0.0,  # [W m-2]
+            'potential_infiltration': 0.0,  # [m s-1]
+            'respiration': 0.0,  # [umol m-2(ground) s-1]
+            'soil_evaporation': 0.0,  # [mol m-2 s-1]
+            'soil_energy_closure': 0.0,  # [W m-2]
+            'radiative_flux': 0.0,  # [W m-2]
+            'litter_evaporation': 0.0,  # [mol m-2 s-1]
+            'litter_respiration': 0.0,  # [umol m-2 s-1]
+            'litter_water_closure': 0.0,  # [W m-2]
+            'litter_energy_closure': 0.0,  # [W m-2]
+            'bryo_evaporation': 0.0,  # [mol m-2 s-1]
+            'capillar_rise': 0.0,  # water movement due to capillar forces [m s-1]
+            'pond_recharge': 0.0,  # water moved from pond to moss [m s-1]
+            'bryo_water_closure': 0.0,  # [W m-2]
+            'bryo_energy_closure': 0.0,  # [W m-2]
+            'bryo_photosynthesis': 0.0,  # [umol m-2 s-1]
+            'bryo_respiration': 0.0,  # [umol m-2 s-1]
+        }
 
-        # --- Forestfloor ---
-
-        sensible_heat = 0.0  # [W m-2]
-        ground_heat = 0.0  # [W m-2]
-        latent_heat = 0.0  # [W m-2]
-        temperature = 0.0  # [degC]
-
-        potential_infiltration = 0.0  # [m s-1]
-        respiration = 0.0  # [umol m-2(ground) s-1]
-
-        # --- Soil ---
-
-        soil_evaporation = 0.0  # [mol m-2 s-1]
-
-        # baresoil
-        soil_temperature = 0.0  # [degC]
-        soil_energy_closure = 0.0  # [W m-2]
-        radiative_flux = 0.0  # [W m-2]
-
-        # litter
-        litter_temperature = 0.0  # [degC]
-        litter_evaporation = 0.0  # [mol m-2 s-1]
-        litter_respiration = 0.0  # [umol m-2 s-1]
-        litter_carbon_pool = 0.0  # [g C m-2]
-        litter_water_storage = 0.0  # [kg m-2]
-        litter_water_closure = 0.0  # [W m-2]
-        litter_energy_closure = 0.0  # [W m-2]
-
-        # --- Bryphytes ---
-
-        bryo_evaporation = 0.0  # [mol m-2 s-1]
-        capillar_rise = 0.0  # water movement due to capillar forces [m s-1]
-        pond_recharge = 0.0  # water moved from pond to moss [m s-1]
-
-        bryo_temperature = 0.0  # [degC]
-        bryo_water_storage = 0.0  # [kg m-2]
-        bryo_water_closure = 0.0  # [W m-2]
-        bryo_energy_closure = 0.0  # [W m-2]
-
-        bryo_carbon_pool = 0.0  # [g C m-2]
-        bryo_photosynthesis = 0.0  # [umol m-2 s-1]
-        bryo_respiration = 0.0  # [umol m-2 s-1]
+        states = {
+            'temperature': 0.0,  # [degC]
+            'soil_temperature': 0.0,  # [degC]
+            'litter_temperature': 0.0,  # [degC]
+            'litter_carbon_pool': 0.0,  # [g C m-2]
+            'litter_water_storage': 0.0,  # [kg m-2]
+            'bryo_temperature': 0.0,  # [degC]
+            'bryo_water_storage': 0.0,  # [kg m-2]
+            'bryo_carbon_pool': 0.0,  # [g C m-2]
+        }
 
         # --- Snow ---
 
-        fluxes_snow, states_snow = self.snowpack.run(dt=dt, forcing=forcing)
-        forcing.update({'throughfall_ffloor': fluxes_snow['potential_infiltration']})
+        snow_forcing = {
+            'throughfall_rain': forcing['throughfall_rain'],
+            'throughfall_snow': forcing['throughfall_snow'],
+            'air_temperature': forcing['air_temperature'],
+        }
+
+        fluxes_snow, states_snow = self.snowpack.run(dt=dt, forcing=snow_forcing)
+
+        forcing.update({
+            'throughfall_ffloor': fluxes_snow['potential_infiltration']
+        })
 
         # --- Soil respiration ---
 
-        respiration = soil_respiration(self.baresoil.properties['respiration'],
-                                          forcing['soil_temperature'],
-                                          forcing['soil_volumetric_water'],
-                                          forcing['soil_volumetric_air'])
+        fluxes['respiration'] = soil_respiration(
+            self.baresoil.properties['respiration'],
+            forcing['soil_temperature'],
+            forcing['soil_volumetric_water'],
+            forcing['soil_volumetric_air'])
 
         if self.snowpack.snowcover():  # snow on the ground
 
-            potential_infiltration += fluxes_snow['potential_infiltration']
+            fluxes['potential_infiltration'] += fluxes_snow['potential_infiltration']
             # some groundheat flux to keep soil temperatures reasonable
-            ground_heat += 0.01 * forcing['soil_thermal_conductivity'] / abs(forcing['depth']) * (
-                           forcing['air_temperature'] - forcing['soil_temperature'])
+            fluxes['ground_heat'] += (
+                0.01 * forcing['soil_thermal_conductivity']
+                / abs(forcing['depth'])
+                * (forcing['air_temperature'] - forcing['soil_temperature'])
+            )
 
             for bryo in self.bryotypes:
-                # if something goes wrong in snow melt check this!
-                bryo.temperature = 0.0
-                bryo_water_storage += bryo.coverage * bryo.old_water_storage / WATER_DENSITY
-                bryo_carbon_pool += bryo.old_carbon_pool
+                states['bryo.temperature'] = 0.0
+                states['bryo_water_storage'] += bryo.coverage * bryo.old_water_storage / WATER_DENSITY
+                states['bryo_carbon_pool'] += bryo.old_carbon_pool
 
         else:
-
             # if there is bryophyte cover on the ground
             if self.f_bryo > 0.0:
+
+                bryo_forcing = {
+                    'throughfall': fluxes_snow['potential_infiltration'],
+                    'h2o': forcing['h2o'],
+                    'air_pressure': forcing['air_pressure'],
+                    'par': forcing['par'],
+                    'air_temperature': forcing['air_temperature'],
+                    'wind_speed': forcing['wind_speed'],
+                    'soil_temperature': forcing['soil_temperature'],
+                    'pond_storage': forcing['soil_pond_storage'],
+                }
+
+                bryo_params = {
+                    'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
+                    'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
+                    'soil_depth': parameters['depth'],
+                }
+
+                bryo_controls = {
+                    'energy_balance': controls['energy_balance'],
+                    'solver': 'forward_euler',
+                }
+
+                if controls['energy_balance']:
+                    bryo_forcing.update({
+                        'lw_dn': forcing['lw_dn'],
+                        'nir': forcing['nir']
+                    })
+
+                    bryo_controls.update({
+                        'nsteps': 20
+                    })
 
                 for bryo in self.bryotypes:
 
@@ -258,120 +294,166 @@ class ForestFloor(object):
                         continue
 
                     # bryophyte's heat, water and carbon balance
-                    fluxes_bryo, states_bryo = bryo.run(dt, forcing)
+                    fluxes_bryo, states_bryo = bryo.run(
+                        dt=dt,
+                        forcing=bryo_forcing,
+                        parameters=bryo_params,
+                        controls=bryo_controls
+                    )
 
-                    bryo_evaporation += bryo.coverage * fluxes_bryo['evaporation'] / MOLAR_MASS_H2O
-                    soil_evaporation += bryo.coverage * fluxes_bryo['soil_evaporation'] / MOLAR_MASS_H2O
+                    fluxes['bryo_evaporation'] += bryo.coverage * fluxes_bryo['evaporation'] / MOLAR_MASS_H2O
+                    fluxes['soil_evaporation'] += bryo.coverage * fluxes_bryo['soil_evaporation'] / MOLAR_MASS_H2O
 
-                    potential_infiltration += bryo.coverage * fluxes_bryo['throughfall'] / WATER_DENSITY
-                    capillar_rise += bryo.coverage * fluxes_bryo['capillar_rise'] / WATER_DENSITY
-                    pond_recharge += bryo.coverage * fluxes_bryo['pond_recharge'] / WATER_DENSITY
+                    fluxes['potential_infiltration'] += bryo.coverage * fluxes_bryo['throughfall'] / WATER_DENSITY
+                    fluxes['capillar_rise'] += bryo.coverage * fluxes_bryo['capillar_rise'] / WATER_DENSITY
+                    fluxes['pond_recharge'] += bryo.coverage * fluxes_bryo['pond_recharge'] / WATER_DENSITY
 
-                    latent_heat += bryo.coverage * fluxes_bryo['latent_heat']
-                    sensible_heat += bryo.coverage * fluxes_bryo['sensible_heat']
-                    ground_heat += bryo.coverage * fluxes_bryo['ground_heat']
+                    fluxes['latent_heat'] += bryo.coverage * fluxes_bryo['latent_heat']
+                    fluxes['sensible_heat'] += bryo.coverage * fluxes_bryo['sensible_heat']
+                    fluxes['ground_heat'] += bryo.coverage * fluxes_bryo['ground_heat']
 
-                    bryo_water_closure += bryo.coverage * fluxes_bryo['water_closure']
-                    bryo_energy_closure += bryo.coverage * fluxes_bryo['energy_closure']
+                    fluxes['bryo_water_closure'] += bryo.coverage * fluxes_bryo['water_closure']
+                    fluxes['bryo_energy_closure'] += bryo.coverage * fluxes_bryo['energy_closure']
 
-                    bryo_temperature += bryo.coverage * states_bryo['temperature']
-                    bryo_water_storage += bryo.coverage * states_bryo['water_storage'] / WATER_DENSITY
+                    states['bryo_temperature'] += bryo.coverage * states_bryo['temperature']
+                    states['bryo_water_storage'] += bryo.coverage * states_bryo['water_storage'] / WATER_DENSITY
 
                     # In carbon calculations are per bryophyte's coverage
-                    bryo_photosynthesis += fluxes_bryo['photosynthesis_rate']
-                    bryo_respiration += fluxes_bryo['respiration_rate']
-                    bryo_carbon_pool += states_bryo['carbon_pool']
+                    fluxes['bryo_photosynthesis'] += fluxes_bryo['photosynthesis_rate']
+                    fluxes['bryo_respiration'] += fluxes_bryo['respiration_rate']
+                    states['bryo_carbon_pool'] += states_bryo['carbon_pool']
 
-                respiration += bryo_respiration
-                temperature += bryo_temperature
+                fluxes['respiration'] += fluxes['bryo_respiration']
+                states['temperature'] += states['bryo_temperature']
 
-                bryo_temperature = bryo_temperature / self.f_bryo
+                states['bryo_temperature'] = states['bryo_temperature'] / self.f_bryo
 
             if self.f_litter > 0.0:
 
+                litter_forcing = {
+                    'throughfall': fluxes_snow['potential_infiltration'],
+                    'h2o': forcing['h2o'],
+                    'air_pressure': forcing['air_pressure'],
+                    'par': forcing['par'],
+                    'air_temperature': forcing['air_temperature'],
+                    'wind_speed': forcing['wind_speed'],
+                    'soil_temperature': forcing['soil_temperature'],
+                    'pond_storage': forcing['soil_pond_storage'],
+                }
+
+                litter_params = {
+                    'soil_hydraulic_conductivity': 0.0,
+                    'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
+                    'soil_depth': parameters['depth'],
+                }
+
+                litter_controls = {
+                    'energy_balance': controls['energy_balance'],
+                    'solver': 'forward_euler',
+                }
+
+                if controls['energy_balance']:
+                    litter_forcing.update({
+                        'lw_dn': forcing['lw_dn'],
+                        'nir': forcing['nir']
+                    })
+
+                    litter_params.update({
+                    })
+
+                    litter_controls.update({
+                        'nsteps': 20
+                    })
+
                 # litters's heat, water and respiration
-                fluxes_litter, states_litter = self.litter.run(dt, forcing)
+                fluxes_litter, states_litter = self.litter.run(
+                    dt=dt,
+                    forcing=litter_forcing,
+                    parameters=litter_params,
+                    controls=litter_controls
+                )
 
-                litter_evaporation += self.f_litter * fluxes_litter['evaporation'] / MOLAR_MASS_H2O
-                soil_evaporation += self.f_litter * fluxes_litter['soil_evaporation'] / MOLAR_MASS_H2O
+                fluxes['litter_evaporation'] += self.f_litter * fluxes_litter['evaporation'] / MOLAR_MASS_H2O
+                fluxes['soil_evaporation'] += self.f_litter * fluxes_litter['soil_evaporation'] / MOLAR_MASS_H2O
 
-                potential_infiltration += self.f_litter * fluxes_litter['throughfall'] / WATER_DENSITY
-                capillar_rise += self.f_litter * fluxes_litter['capillar_rise'] / WATER_DENSITY
-                pond_recharge += self.f_litter * fluxes_litter['pond_recharge'] / WATER_DENSITY
+                fluxes['potential_infiltration'] += self.f_litter * fluxes_litter['throughfall'] / WATER_DENSITY
+                fluxes['capillar_rise'] += self.f_litter * fluxes_litter['capillar_rise'] / WATER_DENSITY
+                fluxes['pond_recharge'] += self.f_litter * fluxes_litter['pond_recharge'] / WATER_DENSITY
 
-                latent_heat += self.f_litter * fluxes_litter['latent_heat']
-                sensible_heat += self.f_litter * fluxes_litter['sensible_heat']
-                ground_heat += self.f_litter * fluxes_litter['ground_heat']
+                fluxes['latent_heat'] += self.f_litter * fluxes_litter['latent_heat']
+                fluxes['sensible_heat'] += self.f_litter * fluxes_litter['sensible_heat']
+                fluxes['ground_heat'] += self.f_litter * fluxes_litter['ground_heat']
 
-                litter_water_closure += self.f_litter * fluxes_litter['water_closure']
-                litter_energy_closure += self.f_litter * fluxes_litter['energy_closure']
+                fluxes['litter_water_closure'] += self.f_litter * fluxes_litter['water_closure']
+                fluxes['litter_energy_closure'] += self.f_litter * fluxes_litter['energy_closure']
 
-                litter_temperature = states_litter['temperature']
-                temperature += self.f_litter * litter_temperature
-                litter_water_storage = self.f_litter * states_litter['water_storage'] / WATER_DENSITY
+                states['litter_temperature'] = states_litter['temperature']
+                states['temperature'] += self.f_litter * states['litter_temperature']
+                states['litter_water_storage'] = self.f_litter * states_litter['water_storage'] / WATER_DENSITY
 
                 # In carbon calculations are per litter's coverage
-                litter_respiration += fluxes_litter['respiration_rate']
-                litter_carbon_pool += states_litter['carbon_pool']
-                respiration += litter_respiration
+                fluxes['litter_respiration'] += fluxes_litter['respiration_rate']
+                states['litter_carbon_pool'] += states_litter['carbon_pool']
+                fluxes['respiration'] += fluxes['litter_respiration']
 
             if self.f_baresoil > 0.0:
 
-                # baresoil surface energy balance
-                forcing.update({'forestfloor_temperature': self.temperature})
-                fluxes_soil, states_soil = self.baresoil.run(dt, forcing)
+                bare_forcing = {
+                    'wind_speed': forcing['wind_speed'],
+                    'air_temperature': forcing['air_temperature'],
+                    'h2o': forcing['h2o'],
+                    'air_pressure': forcing['air_pressure'],
+                    'forestfloor_temperature': self.temperature,
+                    'soil_temperature': forcing['soil_temperature'],
+                    'soil_water_potential': forcing['soil_water_potential'],
+                    'par': forcing['par'],
+                }
 
-                soil_evaporation += self.f_baresoil * fluxes_soil['evaporation']
 
-                latent_heat += self.f_baresoil * fluxes_soil['latent_heat']
-                sensible_heat += self.f_baresoil * fluxes_soil['sensible_heat']
-                ground_heat += self.f_baresoil * fluxes_soil['ground_heat']
+                bare_params = {
+                    'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
+                    'depth': parameters['depth'],
+                    'height': parameters['height'],
+                    'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
+                }
 
-                radiative_flux += self.f_baresoil * fluxes_soil['radiative_flux']
-                soil_energy_closure += self.f_baresoil * fluxes_soil['energy_closure']
+                if controls['energy_balance']:
+                    bare_forcing.update({
+                        'nir': forcing['nir'],
+                        'lw_dn': forcing['lw_dn'],
+                        'lw_up': forcing['lw_up'],
+                    })
 
-                potential_infiltration += self.f_baresoil * forcing['throughfall_ffloor']
+                bare_controls = {
+                    'energy_balance': controls['energy_balance']
+                }
 
-                soil_temperature = states_soil['temperature']
-                temperature += self.f_baresoil * soil_temperature
+                fluxes_soil, states_soil = self.baresoil.run(
+                    dt=dt,
+                    forcing=bare_forcing,
+                    parameters=bare_params,
+                    controls=bare_controls
+                )
 
-        self.temperature = temperature
+                fluxes['soil_evaporation'] += self.f_baresoil * fluxes_soil['evaporation']
 
-        fluxes.update({
-                'evaporation': soil_evaporation + bryo_evaporation + litter_evaporation,
-                'evaporation_soil': soil_evaporation,
-                'evaporation_bryo': bryo_evaporation,
-                'evaporation_litter': litter_evaporation,
-                'latent_heat_flux': latent_heat,
-                'sensible_heat_flux': sensible_heat,
-                'ground_heat_flux': ground_heat,
-                'water_closure_bryo': bryo_water_closure,
-                'water_closure_litter': litter_water_closure,
-                'water_closure_snow': fluxes_snow['water_closure'],
-                'energy_closure_bryo': bryo_energy_closure,
-                'energy_closure_litter': litter_energy_closure,
-                'energy_closure_soil': soil_energy_closure,
-                'radiative_flux': radiative_flux,
-                'potential_infiltration': potential_infiltration,
-                'capillar_rise': capillar_rise,
-                'pond_recharge': pond_recharge,
-                'photosynthesis_bryo': bryo_photosynthesis,
-                'respiration_bryo': bryo_respiration,
-                'respiration_litter': litter_respiration,
-                'respiration': respiration,
-                })
+                fluxes['latent_heat'] += self.f_baresoil * fluxes_soil['latent_heat']
+                fluxes['sensible_heat'] += self.f_baresoil * fluxes_soil['sensible_heat']
+                fluxes['ground_heat'] += self.f_baresoil * fluxes_soil['ground_heat']
+
+                fluxes['radiative_flux'] += self.f_baresoil * fluxes_soil['radiative_flux']
+                fluxes['soil_energy_closure'] += self.f_baresoil * fluxes_soil['energy_closure']
+
+                fluxes['potential_infiltration'] += self.f_baresoil * forcing['throughfall_ffloor']
+
+                states['soil_temperature'] = states_soil['temperature']
+                states['temperature'] += self.f_baresoil * states['soil_temperature']
+
+        self.temperature = states['temperature']
+        fluxes['evaporation'] = fluxes['soil_evaporation'] + fluxes['bryo_evaporation'] + fluxes['litter_evaporation']
+        fluxes['water_closure_snow'] = fluxes_snow['water_closure']
 
         states.update(states_snow)
-        states.update({
-                'temperature': temperature,
-                'temperature_bryo': bryo_temperature,
-                'temperature_litter': litter_temperature,
-                'temperature_soil': soil_temperature,
-                'water_storage_bryo': bryo_water_storage,
-                'water_storage_litter': litter_water_storage,
-                'carbon_pool_bryo': bryo_carbon_pool,
-                'carbon_pool_litter': litter_carbon_pool
-                })
 
         return fluxes, states
 
@@ -399,8 +481,8 @@ class ForestFloor(object):
                         continue
 
                     bryo_albedo = bryophyte_shortwave_albedo(
-                            water_content=bryo.water_content,
-                            properties=bryo.properties)
+                        water_content=bryo.water_content,
+                        properties=bryo.properties)
 
                     par_albedo += bryo.coverage * bryo_albedo['PAR']
                     nir_albedo += bryo.coverage * bryo_albedo['NIR']
@@ -457,7 +539,7 @@ class ForestFloor(object):
                                          self.baresoil.temperature,
                                          self.baresoil.properties))
 
-                emissivity += (self.baresoil.coverage 
+                emissivity += (self.baresoil.coverage
                                * self.baresoil.properties['optical_properties']['emissivity'])
 
         return {'radiation': lw_radiation, 'emissivity': emissivity}

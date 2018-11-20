@@ -16,7 +16,7 @@ Note:
 
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
-forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 """
@@ -33,7 +33,7 @@ class PlantType(object):
     """
 
     def __init__(self, z, p, dz_soil, ctr):
-        r""" Initialises a planttype object and submodel objects 
+        r""" Initialises a planttype object and submodel objects
         using given parameters.
 
         Args:
@@ -182,13 +182,28 @@ class PlantType(object):
             if 'La' in self.photop0:
                 # lambda increases with decreasing Psi as in Manzoni et al., 2011 Funct. Ecol.
                 self.photop['La'] = self.photop0['La'] * np.exp(-b*PsiL)
-            if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi  
+            if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, H2O, CO2, T, U, df, forcing):
+    def run(self, forcing, parameters, controls):
         r"""Computes dry leaf gas-exchange shale and sunlit leaves.
 
         Args:
+            forcing (dict):
+                'h2o'
+                'co2'
+                'air_temperature'
+                'air_pressure'
+                'wind_speed'
+                'nir'
+                'par'
+                'nir'
+            'parameters' (dict):
+                'sunlit_fraction'
+                'dry_leaf_fraction'
+            'controls' (dict):
+                'energy_balance'
+
             f_sl (array): sunlit fraction [-]
             H2O (array): water vapor mixing ratio [mol mol-1]
             CO2 (array): carbon dioxide mixing ratio [ppm]
@@ -203,68 +218,80 @@ class PlantType(object):
             Tl_ave (array): average leaf temperature used in LW computation [degC]
             gr (array): radiative conductance [mol m-2 s-1]
         """
-        controls = {'energy_balance': forcing['Ebal'],
-                    'photo_model': self.StomaModel}
-        
-        leaf_forcing = {'h2o': H2O,
-                        'co2': CO2,
-                        'air_temperature': T,
-                        'wind_speed': U,
-                        'air_pressure': forcing['air_pressure'],
-                        'average_leaf_temperature': forcing['leaf_temperature']
-                        }
+        controls.update({
+            'photo_model': self.StomaModel
+        })
+
+        leaf_forcing = {
+            'h2o': forcing['h2o'],
+            'co2': forcing['co2'],
+            'air_temperature': forcing['air_temperature'],
+            'wind_speed': forcing['wind_speed'],
+            'air_pressure': forcing['air_pressure'],
+            'average_leaf_temperature': forcing['leaf_temperature']
+        }
 
         if controls['energy_balance']:
-            gr = forcing['radiation']['LW']['gr']
-            LWnet = forcing['radiation']['LW']['net_leaf']
-            
-            SWabs_sl = (forcing['radiation']['PAR']['sunlit']['absorbed']
-                        + forcing['radiation']['NIR']['sunlit']['absorbed'])
-            
-            leaf_forcing.update({'radiative_conductance': gr,
-                                 'lw_net': LWnet,
-                                 'sw_absorbed': SWabs_sl,  # for sunlit
-                                 'leaf_temperature': self.Tl_sl})  # for sunlit
-       
-        logger_info={'date': forcing['date'],
-                     'iteration': forcing['iteration'],
-                     'leaftype': 'sunlit'}
-        
-        Qp_sl = forcing['radiation']['PAR']['sunlit']['incident'] * PAR_TO_UMOL
+            sw_absorbed_sl = (forcing['par']['sunlit']['absorbed']
+                        + forcing['nir']['sunlit']['absorbed'])
+
+            # for sunlit
+            leaf_forcing.update({
+                'radiative_conductance': forcing['lw']['radiative_conductance'],
+                'lw_net': forcing['lw']['net_leaf'],
+                'sw_absorbed': sw_absorbed_sl,
+                'leaf_temperature': self.Tl_sl
+            })
+
+        logger_info = controls['logger_info']
+        logger_info = logger_info + ' leaftype: sunlit'
+        # logger_info = {
+        #     'date': forcing['date'],
+        #     'iteration': forcing['iteration'],
+        #     'leaftype': 'sunlit'
+        # }
+
+        Qp_sl = forcing['par']['sunlit']['incident'] * PAR_TO_UMOL
         leaf_forcing.update({'par_incident': Qp_sl}) # for sunlit
 
-        # --- sunlit leaves 
-        sl = leaf_interface(photop=self.photop, 
-                            leafp=self.leafp, 
-                            forcing=leaf_forcing,
-                            controls=controls,
-                            logger_info=logger_info)
+        # --- sunlit leaves
+        sl = leaf_interface(
+            photop=self.photop,
+            leafp=self.leafp,
+            forcing=leaf_forcing,
+            controls=controls,
+            logger_info=logger_info
+        )
 
         # --- shaded leaves
-        logger_info.update({'leaftype': 'shaded'})
-        
-        if controls['energy_balance']:
-            SWabs_sh = (forcing['radiation']['PAR']['shaded']['absorbed']
-                        + forcing['radiation']['NIR']['shaded']['absorbed'])
-            
-            leaf_forcing.update({'sw_absorbed': SWabs_sh,  # for shaded
-                                 'leaf_temperature': self.Tl_sh})  # for shaded
-    
-        Qp_sh = forcing['radiation']['PAR']['shaded']['incident'] * PAR_TO_UMOL
-        leaf_forcing.update({'par_incident': Qp_sh}) # for sunlit
-        
-        sh = leaf_interface(photop=self.photop, 
-                            leafp=self.leafp, 
-                            forcing=leaf_forcing,
-                            controls=controls,
-                            logger_info=logger_info)
+        logger_info = controls['logger_info']
+        logger_info = logger_info + ' leaftype: shaded'
 
         if controls['energy_balance']:
-            self.Tl_sh= sh['Tl'].copy()
+            SWabs_sh = (forcing['par']['shaded']['absorbed']
+                        + forcing['nir']['shaded']['absorbed'])
+
+            leaf_forcing.update({'sw_absorbed': SWabs_sh,  # for shaded
+                                 'leaf_temperature': self.Tl_sh})  # for shaded
+
+        Qp_sh = forcing['par']['shaded']['incident'] * PAR_TO_UMOL
+        leaf_forcing.update({'par_incident': Qp_sh}) # for sunlit
+
+        sh = leaf_interface(
+            photop=self.photop,
+            leafp=self.leafp,
+            forcing=leaf_forcing,
+            controls=controls,
+            logger_info=logger_info
+        )
+
+        if controls['energy_balance']:
+            self.Tl_sh = sh['Tl'].copy()
             self.Tl_sl = sl['Tl'].copy()
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
-        f_sl = forcing['radiation']['PAR']['sunlit']['fraction']
+        f_sl = parameters['sunlit_fraction']
+        df = parameters['dry_leaf_fraction']
         pt_stats, layer_stats = self._integrate(sl, sh, f_sl, df)
 
         # --- sink/source terms
@@ -281,7 +308,7 @@ class PlantType(object):
         integrates layerwise statistics (per unit leaf area) to plant level
         Arg:
             sl, sh - dict of leaf-level outputs for sunlit and shaded leaves:
-            
+
             x = {'An': An, 'Rd': Rd, 'E': fe, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
                  'Cs': Cs, 'gs_v': gsv, 'gs_c': gs_opt, 'gb_v': gb_v}
         Returns:

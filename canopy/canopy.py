@@ -20,13 +20,13 @@ Note:
 
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
-forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 
-import numpy as np
+import logging
 from copy import deepcopy
-from matplotlib import pyplot as plt
+import numpy as np
 from .constants import MOLAR_MASS_H2O, EPS
 
 from .radiation import Radiation
@@ -35,13 +35,13 @@ from .interception import Interception
 from .planttype.planttype import PlantType
 from .forestfloor.forestfloor import ForestFloor
 
-import logging
 logger = logging.getLogger(__name__)
+
 
 class CanopyModel(object):
     r""" Represents canopy-soil-atmosphere interactions.
-
     """
+
     def __init__(self, cpara, dz_soil):
         r""" Initializes canopy object and submodel objects using given parameters.
 
@@ -109,15 +109,14 @@ class CanopyModel(object):
         self.Switch_WMA = cpara['ctr']['WMA']
         self.Switch_Ebal = cpara['ctr']['Ebal']
 
-        #logger.info('Eflow: %s, WMA: %s, Ebal: %s',
-        #            self.Switch_Eflow,
-        #            self.Switch_WMA,
-        #            self.Switch_Ebal)
+        # logger.info('Eflow: %s, WMA: %s, Ebal: %s',
+        #             self.Switch_Eflow,
+        #             self.Switch_WMA,
+        #             self.Switch_Ebal)
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
 
-        # Dictionary IS NOT modified in loop. Wrapped in to a list just in case.
         for p in cpara['planttypes'].values():
 
             for idx, lai_max in enumerate(p['LAImax']):
@@ -152,7 +151,7 @@ class CanopyModel(object):
 
     def run_daily(self, doy, Ta, PsiL=0.0):
         r""" Computatations at daily timestep.
-        Updates planttypes and total canopy leaf area index and phenological state. 
+        Updates planttypes and total canopy leaf area index and phenological state.
         Recomputes normalize flow statistics with new leaf area density profile.
 
         Args:
@@ -171,7 +170,7 @@ class CanopyModel(object):
         if self.Switch_Eflow and self.planttypes[0].Switch_lai:
             self.micromet.normalized_flow_stats(self.z, self.lad, self.hc)
 
-    def run_timestep(self, dt, forcing):
+    def run_timestep(self, dt, forcing, parameters):
         r""" Calculates one timestep and updates state of CanopyModel object.
 
         Args:
@@ -190,12 +189,14 @@ class CanopyModel(object):
                 'h2o': ambient H2O mixing ratio [mol mol-1]
                 'air_pressure': pressure [Pa]
                 'zenith_angle': solar zenith angle [rad]
-                'depth': [m] properties of first soil node
                 'soil_temperature': [\ :math:`^{\circ}`\ C] properties of first soil node
                 'soil_water_potential': [m] properties of first soil node
                 'soil_volumetric_water': [m m\ :sup:`-3`\ ] properties of first soil node
-                'hydraulic_conductivity': [m s\ :sup:`-1`\ ] properties of first soil node
+            'parameters':
+                'date'
                 'thermal_conductivity': [W m\ :sup:`-1`\  K\ :sup:`-1`\ ] properties of first soil node
+                'hydraulic_conductivity': [m s\ :sup:`-1`\ ] properties of first soil node
+                'depth': [m] properties of first soil node
 
         Returns:
             fluxes (dict)
@@ -203,52 +204,60 @@ class CanopyModel(object):
         """
         logger = logging.getLogger(__name__)
 
-        forcing.update({'Ebal': self.Switch_Ebal,
-                        'radiation': {}})
-        ff_forcing = deepcopy(forcing)
-        ff_forcing.update({'height': self.z[1],  # height to first calculation node
-                           'nsteps': 20})
-
-        """ --- flow stats --- """
+        # --- FLOW STATISTICS ---
 
         if self.Switch_Eflow is False:
             # recompute normalized flow statistics in canopy with current meteo
             self.micromet.normalized_flow_stats(
-                    z=self.z,
-                    lad=self.lad,
-                    hc=self.hc,
-                    Utop=forcing['wind_speed'] / (forcing['friction_velocity'] + EPS))
+                z=self.z,
+                lad=self.lad,
+                hc=self.hc,
+                Utop=forcing['wind_speed'] / (forcing['friction_velocity'] + EPS))
         # update U
         U = self.micromet.update_state(ustaro=forcing['friction_velocity'])
 
-        """ --- SW profiles within canopy --- """
+        # --- SW profiles within canopy ---
 
         ff_albedo = self.forestfloor.shortwave_albedo()
-        forcing.update({'ff_albedo': ff_albedo,
-                        'LAIz': self.lad * self.dz})
+
+        # --- RADIATION PROFILES ---
+        radiation_profiles = {}
+
+        radiation_params = {
+            'ff_albedo': ff_albedo,
+            'LAIz': self.lad * self.dz,
+        }
 
         # --- PAR ---
-        forcing['radiation']['PAR'] = self.radiation.SW_profiles(
-                forcing=forcing,
-                radtype='PAR')
-        f_sl = forcing['radiation']['PAR']['sunlit']['fraction']
-        ff_forcing.update({'par': forcing['radiation']['PAR']['ground']})
+        radiation_params.update({
+            'radiation_type': 'par',
+        })
+
+        radiation_profiles['par'] = self.radiation.shortwave_profiles(
+            forcing=forcing,
+            parameters=radiation_params
+        )
+
+        f_sl = radiation_profiles['par']['sunlit']['fraction']
+        sunlit_fraction = radiation_profiles['par']['sunlit']['fraction']
 
         if self.Switch_Ebal:
             # --- NIR ---
-            forcing['radiation']['NIR']= self.radiation.SW_profiles(
+            radiation_params['radiation_type'] = 'nir'
+
+            radiation_profiles['nir'] = self.radiation.shortwave_profiles(
                 forcing=forcing,
-                radtype='NIR')
-            ff_forcing.update({'nir': forcing['radiation']['NIR']['ground']})
+                parameters=radiation_params
+            )
 
             # absorbed radiation by leafs [W m-2(leaf)]
-            forcing['radiation']['SW_absorbed'] = (
-                        forcing['radiation']['PAR']['sunlit']['absorbed'] * f_sl
-                        + forcing['radiation']['NIR']['sunlit']['absorbed'] * f_sl
-                        + forcing['radiation']['PAR']['shaded']['absorbed'] * (1 - f_sl)
-                        + forcing['radiation']['NIR']['shaded']['absorbed'] * (1 - f_sl))
-
-        """ --- iterative solution of H2O, CO2, T, Tleaf and Tsurf --- """
+            radiation_profiles['sw_absorbed'] = (
+                radiation_profiles['par']['sunlit']['absorbed'] * sunlit_fraction
+                + radiation_profiles['nir']['sunlit']['absorbed'] * sunlit_fraction
+                + radiation_profiles['par']['shaded']['absorbed'] * (1. - sunlit_fraction)
+                + radiation_profiles['nir']['shaded']['absorbed'] * (1. - sunlit_fraction)
+            )
+        # --- iterative solution of H2O, CO2, T, Tleaf and Tsurf ---
 
         max_err = 0.01  # maximum relative error
         max_iter = 25  # maximum iterations
@@ -258,11 +267,13 @@ class CanopyModel(object):
 
         # initialize state variables
         T, H2O, CO2, Tleaf = self._restore(forcing)
-        sources = {'h2o': None,  # [mol m-3 s-1]
-                   'co2': None,  # [umol m-3 s-1]
-                   'sensible_heat': None,  # [W m-3]
-                   'latent_heat': None,  # [W m-3]
-                   'fr': None}  # [W m-3]
+        sources = {
+            'h2o': None,  # [mol m-3 s-1]
+            'co2': None,  # [umol m-3 s-1]
+            'sensible_heat': None,  # [W m-3]
+            'latent_heat': None,  # [W m-3]
+            'fr': None  # [W m-3]
+        }
 
         iter_no = 0
         while (err_t > max_err or err_h2o > max_err or
@@ -273,30 +284,61 @@ class CanopyModel(object):
             Tleaf_prev = Tleaf.copy()
             Tsurf_prev = self.forestfloor.temperature
 
-            forcing.update({'leaf_temperature': Tleaf_prev,
-                            'iteration': iter_no})
-
             if self.Switch_Ebal:
-                """ ---  LW profiles within canopy --- """
+                # ---  LW profiles within canopy ---
                 ff_longwave = self.forestfloor.longwave_radiation()
+                lw_forcing = {
+                    'lw_in': forcing['lw_in'],
+                    'lw_up': ff_longwave['radiation'],
+                    'leaf_temperature': Tleaf_prev,
+                }
 
-                forcing.update({'ff_longwave': ff_longwave})
+                lw_params = {
+                    'LAIz': self.lad * self.dz,
+                    'forestfloor_emissivity': ff_longwave['emissivity']
+                }
 
-                forcing['radiation']['LW'] = self.radiation.LW_profiles(
-                        forcing=forcing)
-
-                ff_forcing.update({'lw_dn': forcing['radiation']['LW']['down'][0],
-                                   'lw_up': forcing['radiation']['LW']['up'][0]})
+                radiation_profiles['lw'] = self.radiation.longwave_profiles(
+                    forcing=lw_forcing,
+                    parameters=lw_params
+                )
 
             # --- heat, h2o and co2 source terms
             for key in sources.keys():
                 sources[key] = 0.0 * self.ones
 
-            """ --- wet leaf water and energy balance --- """
+            # --- wet leaf water andra energy balance ---
+            interception_forcing = {
+                'h2o': H2O,
+                'wind_speed': U,
+                'air_temperature': T,
+                'air_pressure': forcing['air_pressure'],
+                'leaf_temperature': Tleaf_prev,
+                'precipitation': forcing['precipitation'],
+            }
+
+            if self.Switch_Ebal:
+                interception_forcing.update({
+                    'sw_absorbed': radiation_profiles['sw_absorbed'],
+                    'lw_radiative_conductance': radiation_profiles['lw']['radiative_conductance'],
+                    'net_lw_leaf': radiation_profiles['lw']['net_leaf'],
+                })
+
+            interception_params = {
+                'LAIz': self.lad * self.dz
+            }
+
+            interception_controls = {
+                'energy_balance': self.Switch_Ebal
+            }
+
             wetleaf_fluxes = self.interception.run(
-                    dt=dt,
-                    H2O=H2O, U=U, T=T,
-                    forcing=forcing)
+                dt=dt,
+                forcing=interception_forcing,
+                parameters=interception_params,
+                controls=interception_controls
+            )
+
             # dry leaf fraction
             df = self.interception.df
 
@@ -311,9 +353,41 @@ class CanopyModel(object):
             pt_stats = []
             for pt in self.planttypes:
 
+                forcing_pt = {
+                    'h2o': H2O,
+                    'co2': CO2,
+                    'air_temperature': T,
+                    'air_pressure': forcing['air_pressure'],
+                    'wind_speed': U,
+                    'par': radiation_profiles['par'],
+                    'leaf_temperature': Tleaf_prev,
+                }
+
+                if self.Switch_Ebal:
+                    forcing_pt.update({
+                        'nir': radiation_profiles['nir'],
+                        'lw': radiation_profiles['lw']
+                    })
+
+                parameters_pt = {
+                    'dry_leaf_fraction': self.interception.df,
+                    'sunlit_fraction': sunlit_fraction
+                }
+
+                controls_pt = {
+                    'energy_balance': self.Switch_Ebal,
+                    'logger_info': 'date: {} iteration: {}'.format(
+                        parameters['date'],
+                        iter_no
+                    )
+                }
+
                 # --- sunlit and shaded leaves
-                pt_stats_i, pt_sources = pt.leaf_gasexchange(
-                        H2O, CO2, T, U, df=df, forcing=forcing)
+                pt_stats_i, pt_sources = pt.run(
+                    forcing=forcing_pt,
+                    parameters=parameters_pt,
+                    controls=controls_pt
+                )
 
                 # update source terms
                 # Dictionary IS modiefied in a loop. Wrapped in a list.
@@ -331,23 +405,57 @@ class CanopyModel(object):
 
             err_Tl = max(abs(Tleaf - Tleaf_prev))
 
-            """ --- forest floor --- """
+            # --- forest floor ---
 
-            ff_forcing.update({'throughfall_rain': wetleaf_fluxes['throughfall_rain'],
-                               'throughfall_snow': wetleaf_fluxes['throughfall_snow'],
-                               'air_temperature': T[1],
-                               'wind_speed': U[1],  # windspeed above forestfloor ca. 30 cm
-                               'h2o': H2O[1],
-                               'iteration': iter_no})
+            ff_controls = {
+                'energy_balance': self.Switch_Ebal,
+                'logger_info': 'iteration: {}'.format(iter_no)
+            }
+
+            ff_params = {
+                'height': self.z[1],  # height to first calculation node
+                'depth': parameters['depth'],
+                'nsteps': 20,
+                'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
+                'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
+                'iteration': iter_no,
+            }
+
+            ff_forcing = {
+                'throughfall_rain': wetleaf_fluxes['throughfall_rain'],
+                'throughfall_snow': wetleaf_fluxes['throughfall_snow'],
+                'par': radiation_profiles['par']['ground'],
+                'air_temperature': T[1],
+                'h2o': H2O[1],
+                'precipitation_temperature': T[1],
+                'air_pressure': forcing['air_pressure'],
+                'wind_speed': U[1],
+                'soil_temperature': forcing['soil_temperature'],
+                'soil_water_potential': forcing['soil_water_potential'],
+                'soil_volumetric_water': forcing['soil_volumetric_water'],
+                'soil_volumetric_air': forcing['soil_volumetric_water'],
+                'soil_pond_storage': forcing['soil_pond_storage']
+            }
+
+            if self.Switch_Ebal:
+
+                ff_forcing.update({
+                    'nir': radiation_profiles['nir']['ground'],
+                    'lw_dn': radiation_profiles['lw']['down'][0],
+                    'lw_up': radiation_profiles['lw']['up'][0]
+                })
 
             fluxes_ffloor, states_ffloor = self.forestfloor.run(
-                    dt=dt,
-                    forcing=ff_forcing)
+                dt=dt,
+                forcing=ff_forcing,
+                parameters=ff_params,
+                controls=ff_controls
+            )
 
             err_Ts = abs(Tsurf_prev - self.forestfloor.temperature)
 
 # check the sign of photosynthesis
-            Fc_gr = -fluxes_ffloor['photosynthesis_bryo'] + fluxes_ffloor['respiration']
+            Fc_gr = -fluxes_ffloor['bryo_photosynthesis'] + fluxes_ffloor['respiration']
 
             """  --- solve scalar profiles (H2O, CO2, T) """
             if Switch_WMA is False:
@@ -361,7 +469,7 @@ class CanopyModel(object):
                         source=sources,
                         lbc={'H2O': fluxes_ffloor['evaporation'],
                              'CO2': Fc_gr,
-                             'T': fluxes_ffloor['sensible_heat_flux']},
+                             'T': fluxes_ffloor['sensible_heat']},
                         Ebal=self.Switch_Ebal)
 
                 # to recognize oscillation
@@ -401,12 +509,12 @@ class CanopyModel(object):
 
         # --- ecosystem fluxes ---
 
-        flux_co2 = (np.cumsum(sources['co2']) * self.dz 
+        flux_co2 = (np.cumsum(sources['co2']) * self.dz
                     + Fc_gr)  # [umol m-2 s-1]
         flux_latent_heat = (np.cumsum(sources['latent_heat']) * self.dz
-                            + fluxes_ffloor['latent_heat_flux'])  # [W m-2]
+                            + fluxes_ffloor['latent_heat'])  # [W m-2]
         flux_sensible_heat = (np.cumsum(sources['sensible_heat']) * self.dz
-                              + fluxes_ffloor['sensible_heat_flux'])  # [W m-2]
+                              + fluxes_ffloor['sensible_heat'])  # [W m-2]
 
         # net ecosystem exchange [umol m-2 s-1]
         NEE = flux_co2[-1]
@@ -419,7 +527,7 @@ class CanopyModel(object):
 
         if self.Switch_Ebal:
             # energy closure of canopy  -- THIS IS EQUAL TO frsource (the error caused by linearizing sigma*ef*T^4)
-            energy_closure =  sum((forcing['radiation']['SW_absorbed'] + 
+            energy_closure =  sum((forcing['radiation']['SW_absorbed'] +
                                    forcing['radiation']['LW']['net_leaf']) * self.lad * self.dz) - (  # absorbed radiation
                               sum(sources['sensible_heat'] * self.dz)  # sensible heat
                               + sum(sources['latent_heat'] * self.dz))  # latent heat
@@ -428,9 +536,9 @@ class CanopyModel(object):
 
         fluxes_ffloor.update({
                 'potential_infiltration': fluxes_ffloor['potential_infiltration'],
-                'evaporation_bryo': fluxes_ffloor['evaporation_bryo'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
-                'evaporation_litter': fluxes_ffloor['evaporation_litter'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
-                'evaporation_soil': fluxes_ffloor['evaporation_soil'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'evaporation_bryo': fluxes_ffloor['bryo_evaporation'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'evaporation_litter': fluxes_ffloor['litter_evaporation'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
+                'evaporation_soil': fluxes_ffloor['soil_evaporation'] * MOLAR_MASS_H2O * 1e-3,  # [m s-1]
                 'evaporation': fluxes_ffloor['evaporation'] * MOLAR_MASS_H2O * 1e-3  # [m s-1]
                 })
 

@@ -69,13 +69,17 @@ class Snowpack(object):
 
         Args:
             dt: timestep [s]
-            T: air temperature [degC]
-            Trfall_rain: throughfall as rainfall [m s-1]
-            Trfall_snow: throughfall as snowfall [m s-1]
+            forcing (dict):
+                'air_temperature': [degC]
+                'throughfall_rain': [m s-1]
+                'throughfall_snow': [m s-1]
 
         Returns:
-            Potinf: potential infiltration [m s-1]
-            MBE: mass balance error [m s-1]
+            fluxes (dict):
+                'potential_infiltration': [m s-1]
+                'water_closure': [m s-1]
+            states (dict):
+                'snow_water_equivalent': [m]
         """
 
         """ --- initial conditions for calculating mass balance error --"""

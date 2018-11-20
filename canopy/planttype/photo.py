@@ -21,14 +21,19 @@ from canopy.micromet import leaf_boundary_layer_conductance, e_sat
 import logging
 logger = logging.getLogger(__name__)
 
-from canopy.constants import *
+from canopy.constants import DEG_TO_KELVIN, PAR_TO_UMOL, EPS
+from canopy.constants import SPECIFIC_HEAT_AIR, LATENT_HEAT
+from canopy.constants import GAS_CONSTANT, O2_IN_AIR
 H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]
 TN = 25.0 + DEG_TO_KELVIN  # reference temperature [K]
 
-def leaf_interface(photop, leafp, forcing, controls, dict_output=True, 
-                   logger_info={'date':'','iteration':'','leaftype':''}):
-    """
-    Entry-point to coupled leaf gas-exchange and energy balance functions.
+def leaf_interface(photop,
+                   leafp,
+                   forcing,
+                   controls,
+                   dict_output=True,
+                   logger_info=''):
+    r""" Entry-point to coupled leaf gas-exchange and energy balance functions.
     
     CALCULATES leaf photosynthesis (An), respiration (Rd), transpiration (E) and estimates of
     leaf temperature (Tl) and sensible heat fluxes (H) based onleaf energy balance equation coupled with
@@ -40,7 +45,7 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
     al. (1980) coupled with various stomatal control schemes (Medlyn, Ball-Woodrow-Berry, Hari, Katul-Vico et al.)
     In all these models, stomatal conductance (gs) is directly linked to An, either by optimal stomatal control principles or
     using semi-empirical models.
-    
+
     Args:
         photop (dict): leaf gas-exchange parameters
             'Vcmax': maximum carboxylation velocity [umolm-2s-1]
@@ -82,7 +87,7 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
             'energy_closure' (bool): True computes leaf temperature by solving energy balance
         dict_output (bool): True returns output as dict, False as separate arrays (optional)
         logger_info (dict): optional
-      
+
     OUTPUT:
         (dict):
             'net_co2': net CO2 flux (umol m-2 leaf s-1)
@@ -101,9 +106,10 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
     Samuli Launiainen LUKE 3/2011 - 5/2017
     Last edit 16.5.2017
     """
+
     # -- parameters -----
     lt = leafp['lt']
-    
+
     T = np.array(forcing['air_temperature'], ndmin=1)
     H2O = np.array(forcing['h2o'], ndmin=1)
     Qp = forcing['par_incident']
@@ -123,19 +129,23 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
 
     if 'leaf_temperature' in forcing:
         Tl_ini = np.array(forcing['leaf_temperature'], ndmin=1).copy()
+
     else:
         Tl_ini = T.copy()
+
     Tl = Tl_ini.copy()
     
     if 'radiative_conductance' in forcing:
         gr = np.array(forcing['radiative_conductance'], ndmin=1)
+
     else:
         gr = np.zeros(len(T))
 
     if 'average_leaf_temperature' in forcing:
         Tl_ave = np.array(forcing['average_leaf_temperature'], ndmin=1)
+
     else:
-        Tl_ave = Tl.copy()     
+        Tl_ave = Tl.copy()
 
     # vapor pressure
     esat, s = e_sat(Tl)
@@ -145,9 +155,9 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
 
     itermax = 20
     err = 999.0
-    iterNo = 0
-    while err > 0.01 and iterNo < itermax:
-        iterNo += 1
+    iter_no = 0
+    while err > 0.01 and iter_no < itermax:
+        iter_no += 1
         # boundary layer conductance
         gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
 
@@ -170,27 +180,21 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
 
         # solve  energy balance
         if Ebal:
-            # solve leaf temperature 
-            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - LATENT_HEAT*geff_v[ic]*Dleaf[ic] 
+            # solve leaf temperature
+            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - LATENT_HEAT*geff_v[ic]*Dleaf[ic]
                   + LATENT_HEAT*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + LATENT_HEAT*s[ic]*geff_v[ic])
             err = np.nanmax(abs(Tl - Told))
 
-            if (err < 0.01 or iterNo == itermax) and abs(np.mean(T) - np.mean(Tl)) > 20.0:
-                logger.debug('%s (iteration %s:%s) Unrealistic %s leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f, %.2f',
-                     logger_info['date'],
-                     logger_info['iteration'],
-                     logger_info['leaftype'],
+            if (err < 0.01 or iter_no == itermax) and abs(np.mean(T) - np.mean(Tl)) > 20.0:
+                logger.debug(logger_info + ' Unrealistic leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f, %.2f',
                      np.mean(Tl), np.mean(T),
                      np.mean(LWnet), np.mean(Tl_ave), np.mean(Tl_ini), np.mean(H2O))
                 Tl = T.copy()
                 Ebal = False  # recompute without solving leaf temperature
                 err = 999.
 
-            elif iterNo == itermax and err > 0.05:
-                logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_%s = %.2f (err = %.2f)',
-                         logger_info['date'],
-                         logger_info['iteration'],
-                         logger_info['leaftype'],
+            elif iter_no == itermax and err > 0.05:
+                logger.debug(logger_info + ' Maximum number of iterations reached: Tl = %.2f (err = %.2f)',
                          np.mean(Tl), err)
 
             # vapor pressure
@@ -226,7 +230,7 @@ def leaf_interface(photop, leafp, forcing, controls, dict_output=True,
     else:  # return 11 arrays
         return An, Rd, E, H, Fr, Tl, Ci, Cs, gsv, gs_opt, gb_v
 
-""" ------- photosynthesis models ------- """
+# ------- photosynthesis models -------
 
 def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
     """
@@ -292,13 +296,24 @@ def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
     while err > 0.01 and cnt < MaxIter:
         NUM1 = -k1_c * (k2_c - (cs - 2*Tau_c))
         DEN1 = (k2_c + cs)**2
-        NUM2 = np.sqrt(H2O_CO2_RATIO*VPD*La*k1_c**2 * (cs - Tau_c)*(k2_c + Tau_c) * ((k2_c + (cs - 2*H2O_CO2_RATIO*VPD*La))**2)*(k2_c + (cs - H2O_CO2_RATIO*VPD*La)))
+        NUM2 = (
+            np.sqrt(H2O_CO2_RATIO * VPD * La * k1_c**2
+                    * (cs - Tau_c) * (k2_c + Tau_c)
+                    * ((k2_c + (cs - 2.0 * H2O_CO2_RATIO * VPD * La))**2)
+                    * (k2_c + (cs - H2O_CO2_RATIO * VPD * La)))
+        )
+
         DEN2 = H2O_CO2_RATIO*VPD*La*((k2_c + cs)**2) * (k2_c + (cs - H2O_CO2_RATIO*VPD*La))
 
         gs_opt = (NUM1 / DEN1) + (NUM2 / DEN2) + EPS
 
-        ci = (1. / (2 *gs_opt)) * (-k1_c - k2_c*gs_opt + cs*gs_opt + Rd + np.sqrt((k1_c + k2_c*gs_opt - cs*gs_opt - Rd)**2 \
-            - 4*gs_opt*(-k1_c*Tau_c - k2_c*cs*gs_opt - k2_c*Rd)))
+        ci = (
+            (1. / (2 *gs_opt))
+            * (-k1_c - k2_c*gs_opt
+               + cs*gs_opt + Rd
+               + np.sqrt((k1_c + k2_c*gs_opt - cs*gs_opt - Rd)**2
+                         - 4*gs_opt*(-k1_c*Tau_c - k2_c*cs*gs_opt - k2_c*Rd)))
+        )
 
         An = gs_opt*(cs - ci)
         An1 = np.maximum(An, 0.0)
