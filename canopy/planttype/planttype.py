@@ -33,7 +33,7 @@ class PlantType(object):
     """
 
     def __init__(self, z, p, dz_soil, ctr):
-        r""" Initialises a planttype object and submodel objects 
+        r""" Initialises a planttype object and submodel objects
         using given parameters.
 
         Args:
@@ -185,7 +185,7 @@ class PlantType(object):
             if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi
                 self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
 
-    def leaf_gasexchange(self, forcing, paramters, controls):
+    def run(self, forcing, parameters, controls):
         r"""Computes dry leaf gas-exchange shale and sunlit leaves.
 
         Args:
