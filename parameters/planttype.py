@@ -72,8 +72,8 @@ def get_planttypes(dbhfile, grid):
 #    lai_spruce = []
 #    lai_decid = []
 
-    gamma = 1.5  # adjust shoot light response
-    gfact = 1.2  # coefficient for adjusting leaf gas-exchange parameters
+    gamma = 1.0  # adjust shoot light response
+    gfact = 1.0  # coefficient for adjusting leaf gas-exchange parameters
 
     Pine = {
             'name': 'pine',
@@ -97,22 +97,22 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 55.0,
-                'Jmax': 105.0,
+                'Vcmax': 94.0,  # Tarvainen et al. 2018 Physiol. Plant.
+                'Jmax': 143.0,
                 'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [78.3, 200.0, 650.1],
+                    'Jmax': [56.0, 200.0, 647.9],
+                    'Rd': [33.0]
+                    },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.5,
+                'm': gfact * 2.3,
                 'g0': 1.0e-3,
                 'kn': 0.5,
                 'beta': 0.95,
-                'drp': 0.7,
-                'tresp': {
-                    'Vcmax': [78.0, 200.0, 650.0],
-                    'Jmax': [56.0, 200.0, 647.0],
-                    'Rd': [33.0]
-                    }
+                'drp': 0.7
                 },
             'leafp': {
                 'lt': 0.02,
@@ -151,22 +151,22 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 60.0,
-                'Jmax': 114.0,
-                'Rd': 1.5,
+                'Vcmax': 69.7,  # Tarvainen et al. 2013 Oecologia
+                'Jmax': 130.2,
+                'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [53.2, 200.0, 640.0],
+                    'Jmax': [38.4, 200.0, 655.5],
+                    'Rd': [33.0]
+                    },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.5,
+                'm': gfact * 2.3,
                 'g0': 1.0e-3,
                 'kn': 0.5,
                 'beta': 0.95,
-                'drp': 0.7,
-                'tresp': {
-                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
-                    'Jmax': [38.4, 202.0, 655.8],
-                    'Rd': [33.0]
-                    }
+                'drp': 0.7
                 },
             'leafp': {
                 'lt': 0.02,
@@ -205,9 +205,14 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 50.0,
-                'Jmax': 95.0,
+                'Vcmax': 69.1,  # Medlyn et al 2002. Plant, Cell and Env.
+                'Jmax': 116.3,
                 'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.4],
+                    'Jmax': [42.8, 200.0, 636.6],
+                    'Rd': [33.0]
+                    },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 600.0,
@@ -215,12 +220,7 @@ def get_planttypes(dbhfile, grid):
                 'g0': 1.0e-3,
                 'kn': 0.5,
                 'beta': 0.95,
-                'drp': 0.7,
-                'tresp': {
-                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
-                    'Jmax': [42.8, 200.0, 637.0],
-                    'Rd': [33.0]
-                    }
+                'drp': 0.7
                 },
             'leafp': {
                 'lt': 0.05,
@@ -259,22 +259,22 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 50.0,
-                'Jmax': 95.0,
+                'Vcmax': 69.1,  # Medlyn et al 2002. Plant, Cell and Env.
+                'Jmax': 116.3,
                 'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.4],
+                    'Jmax': [42.8, 200.0, 636.6],
+                    'Rd': [33.0]
+                    },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 600.0,
                 'm': gfact * 4.5,
                 'g0': 1.0e-3,
-                'kn': 0.3,
+                'kn': 0.0,
                 'beta': 0.95,
-                'drp': 0.7,
-                'tresp': {
-                    'Vcmax': [77.0, 200.0, 636.7],
-                    'Jmax': [42.8, 200.0, 637.0],
-                    'Rd': [33.0]
-                    }
+                'drp': 0.7
                 },
             'leafp': {
                 'lt': 0.02,

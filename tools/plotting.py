@@ -443,8 +443,8 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
         plt.legend()
         plt.legend(frameon=False, borderpad=0.0,loc="center right")
 
-def plot_efficiencies(results, treatment='control', sim_idx=0):
-    PAR = read_forcing("Lettosuo_forcing_2010_2018.csv",cols=['diffPar','dirPar'],
+def plot_efficiencies(results, treatment='control-N', sim_idx=0):
+    PAR = read_forcing("Lettosuo_forcing_2010_2019.csv",cols=['diffPar','dirPar'],
                        start_time=results.date[0].values, end_time=results.date[-1].values)
     Data = read_forcing("Lettosuo_EC.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
@@ -462,7 +462,7 @@ def plot_efficiencies(results, treatment='control', sim_idx=0):
 
     dates = Data.index
 
-    ix = pd.rolling_mean(Data.forcing_precipitation.values, 48, 1)
+    ix = Data['forcing_precipitation'].rolling(48, 1).sum()
     dryc = np.ones(len(dates))
     f = np.where(ix > 0)[0]  # wet canopy indices
     dryc[f] = 0.0

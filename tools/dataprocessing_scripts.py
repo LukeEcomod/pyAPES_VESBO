@@ -103,7 +103,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     # ambient CO2 [ppm]
     readme += "\nCO2: Ambient CO2 [ppm]"
     if 'CO2' not in dat:
-        dat['CO2'] = 380.0
+        dat['CO2'] = 400.0
         readme += " - set constant!"
     cols.append('CO2')
 
@@ -397,7 +397,7 @@ def gather_hyde_data():
         dat = pd.read_csv(forc_fp, sep=',', header='infer')
         index = pd.date_range('01-01-' + str(year),'31-12-' + str(year) + ' 23:59:59',freq='0.5H')
         if len(index) != len(dat):
-            print "Year " + str(year) + ": Missing values!"
+            print("Year " + str(year) + ": Missing values!")
         else:
             dat.index = index
             frames.append(dat[columns])

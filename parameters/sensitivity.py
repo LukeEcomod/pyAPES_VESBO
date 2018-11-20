@@ -37,38 +37,6 @@ def get_parameters(name=None):
                                         'ground_coverage': (1.0)
                                         }
                                 },
-#                        'planttypes': {
-#                                'pine': {  # Medlyn et al. 2002
-#                                        'photop': {
-#                                                'Vcmax': (67.33),
-#                                                'Jmax': (70.77),
-#                                                'tresp': {
-#                                                        'Vcmax': ([69.8, 200.0, 659.9]),
-#                                                        'Jmax': ([100.3, 147.9, 511.0]),
-#                                                        }
-#                                                }
-#                                        }
-#                                'spruce': {  # Tarvainen et al. 2013
-#                                        'photop': {
-#                                                'Vcmax': (69.7),
-#                                                'Jmax': (130.2),
-#                                                'tresp': {
-#                                                        'Vcmax': ([53.2, 200.0, 640.0]),
-#                                                        'Jmax': ([38.4, 200.0, 655.5]),
-#                                                        }
-#                                                }
-#                                        }
-#                                'decidious': {  # Medlyn et al. 2002
-#                                        'photop': {
-#                                                'Vcmax': (101.9),
-#                                                'Jmax': (111.89),
-#                                                'tresp': {
-#                                                        'Vcmax': ([63.8, 200.0, 655.0]),
-#                                                        'Jmax': ([108.5, 156.8, 543.2]),
-#                                                        }
-#                                                }
-#                                        }
-#                                }
                 }
             }
 
