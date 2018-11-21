@@ -92,6 +92,7 @@ def get_planttypes(dbhfile, grid):
                 'DDsum0': 0.0,
                 'Tbase': 5.0,
                 'ddo': 45.0,
+                'ddmat': 250.0,
                 'ddur': 23.0,
                 'sso': 240,
                 'sdur': 30.0
@@ -146,6 +147,7 @@ def get_planttypes(dbhfile, grid):
                 'DDsum0': 0.0,
                 'Tbase': 5.0,
                 'ddo': 45.0,
+                'ddmat': 250.0,
                 'ddur': 23.0,
                 'sso': 240,
                 'sdur': 30.0
@@ -200,6 +202,7 @@ def get_planttypes(dbhfile, grid):
                 'DDsum0': 0.0,
                 'Tbase': 5.0,
                 'ddo': 45.0,
+                'ddmat': 250.0,
                 'ddur': 23.0,
                 'sso': 240,
                 'sdur': 30.0
@@ -254,6 +257,7 @@ def get_planttypes(dbhfile, grid):
                 'DDsum0': 0.0,
                 'Tbase': 5.0,
                 'ddo': 45.0,
+                'ddmat': 250.0,
                 'ddur': 23.0,
                 'sso': 240,
                 'sdur': 30.0

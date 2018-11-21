@@ -457,7 +457,7 @@ def plot_efficiencies(results, treatment='control-N', sim_idx=0):
     variables=['canopy_GPP','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.ffloor_evaporation) / MOLAR_MASS_H2O * 1e3 * 1e3 # [mmol m-2 s-1]
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation) / MOLAR_MASS_H2O * 1e3 * 1e3 # [mmol m-2 s-1]
     Data.canopy_GPP = Data.canopy_GPP  # [umol m-2 s-1]
 
     dates = Data.index

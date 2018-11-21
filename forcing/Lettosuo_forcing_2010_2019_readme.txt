@@ -1,6 +1,6 @@
 Readme for Lettosuo_forcing_2010_2019.csv
 
-Kersti Haahti, Luke 2018-11-09
+Kersti Haahti, Luke 2018-11-21
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 doy: Day of year [days]
@@ -21,3 +21,5 @@ dirPar: Direct PAR [W/m2]
 diffNir: Diffuse NIR [W/m2] 
 dirNir: Direct NIR [W/m2]
 Rnet: Net radiation [W/m2]
+X: phenomodel delayed temperature [degC]
+DDsum: degreedays [days]

@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 from os import listdir
 
-from .iotools import save_df_to_csv
-from .timeseries_tools import fill_gaps
+from iotools import save_df_to_csv
+from timeseries_tools import fill_gaps
 
 
 
@@ -84,7 +84,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     # air temperature: instant and daily [degC]
     cols.append('Tair')
     readme += "\nTair: Air temperature [degC]"
-    dat['Tdaily'] = pd.rolling_mean(dat['Tair'], int((24*3600)/dt), 1)
+    dat['Tdaily'] = dat['Tair'].rolling(int((24*3600)/dt), 1).mean()
     cols.append('Tdaily')
     readme += "\nTdaily: Daily air temperature [degC]"
 
@@ -149,6 +149,26 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
                    + dat['LWin'] - dat['LWout']
     cols.append('Rnet')
     readme += "\nRnet: Net radiation [W/m2]"
+
+
+    X = np.zeros(len(dat))
+    DDsum = np.zeros(len(dat))
+    for k in range(1,len(dat)):
+        if dat['doy'][k] != dat['doy'][k-1]:
+            X[k] = X[k - 1] + 1.0 / 8.33 * (dat['Tdaily'][k] - X[k - 1])
+            if dat['doy'][k] == 1:  # reset in the beginning of the year
+                DDsum[k] = 0.
+            else:
+                DDsum[k] = DDsum[k-1] + max(0.0, dat['Tdaily'][k] - 5.0)
+        else:
+            X[k] = X[k-1]
+            DDsum[k] = DDsum[k-1]
+    dat['X'] = X
+    cols.append('X')
+    readme += "\nX: phenomodel delayed temperature [degC]"
+    dat['DDsum'] = DDsum
+    cols.append('DDsum')
+    readme += "\nDDsum: degreedays [days]"
 
     dat = dat[cols]
     dat[cols].plot(subplots=True, kind='line')
