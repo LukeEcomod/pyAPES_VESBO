@@ -106,6 +106,8 @@ venv.bak/
 sand*.py
 sand*.ipynb
 
+bryo_ebal.ipynb
+
 /figures
 /results
 
