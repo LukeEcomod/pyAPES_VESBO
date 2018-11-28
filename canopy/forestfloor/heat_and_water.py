@@ -785,7 +785,7 @@ def soil_boundary_layer_conductance(u, z, zo, Ta, dT, P=101300.):
         gb_h - heat (mol m-2 s-1)
         gb_c- CO2 (mol m-2 s-1)
         gb_v - H2O (mol m-2 s-1)
-    Based on Daamond & Simmons (1996). Note: gb decreases both in
+    Based on Daamen & Simmons (1996). Note: gb decreases both in
     unstable and stable conditions compared to near-neutral;
     nonfeasible?
     Samuli Launiainen, 18.3.2014

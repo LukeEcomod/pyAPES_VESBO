@@ -281,7 +281,7 @@ def get_planttypes(dbhfile, grid):
                 'drp': 0.7
                 },
             'leafp': {
-                'lt': 0.02,
+                'lt': 0.05,
                 'par_alb': 0.12,
                 'nir_alb': 0.55,
                 'emi': 0.98

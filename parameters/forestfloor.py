@@ -48,7 +48,7 @@ snowpack = {
 
 baresoil = {
         'ground_coverage': 0.0,
-        'roughness_length':  0.002, # check right value
+        'roughness_length':  0.001, # check right value
         'optical_properties': {
                 'emissivity': 0.98,
                 'albedo_PAR': 0.05,  # [-]

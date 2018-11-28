@@ -42,33 +42,30 @@ def get_parameters(name=None):
 
     elif name.upper() == 'CLEARCUT':
         parameters = {
-                'count': 1,
+                'count': 2,
                 'canopy': {
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.06)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'sphagnum': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.045)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.07),
-                                                'height': (0.095)
+                                                'ground_coverage': (0.07, 0.07)
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.71)
+                                        'ground_coverage': (0.71, 0.71)
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (0.22)
+                                        'ground_coverage': (0.22, 0.22)
                                         }
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.49])
+                                        'LAImax': ([0.49], [0.0])
                                         }
                                 }
                 }
@@ -76,33 +73,30 @@ def get_parameters(name=None):
 
     elif name.upper() == 'PARTIAL':
         parameters = {
-                'count': 1,
+                'count': 2,
                 'canopy': {
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.06)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'sphagnum': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.045)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.5),
-                                                'height': (0.095)
+                                                'ground_coverage': (0.49, 0.49)
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.5)
+                                        'ground_coverage': (0.51, 0.51)
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (0.0)
+                                        'ground_coverage': (0.0, 0.0)
                                         }
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.8])
+                                        'LAImax': ([0.66], [0.79])
                                         }
                                 }
                 }
@@ -123,12 +117,12 @@ def get_parameters(name=None):
                                                 'height': (0.045)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.4),
+                                                'ground_coverage': (0.49),
                                                 'height': (0.095)
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.6)
+                                        'ground_coverage': (0.51)
                                         },
                                 'baresoil': {
                                         'ground_coverage': (0.0)
@@ -136,7 +130,7 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.65])
+                                        'LAImax': ([0.66])
                                         }
                                 }
                 }

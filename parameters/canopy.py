@@ -20,9 +20,9 @@ def get_cpara(dbhfile):
 
     # --- control flags (True/False) ---
     ctr = {'Eflow': True,  # ensemble flow
-           'WMA': True, # well-mixed assumption
+           'WMA': False, # well-mixed assumption
            'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
-           'Ebal': False,  # computes leaf temperature by solving energy balance
+           'Ebal': True,  # computes leaf temperature by solving energy balance
            'SwModel': 'ZhaoQualls',
            'LwModel': 'ZhaoQualls',  #'Flerchinger'},  #
            'WaterStress': False,  # TRUE NOT SUPPORTED YET!
@@ -31,7 +31,7 @@ def get_cpara(dbhfile):
            }
 
     # --- micrometeo ---
-    micromet = {'zos': 0.01,  # forest floor roughness length [m]
+    micromet = {'zos': 0.01,  # forest floor roughness length [m]  -- not used?
                 'dPdx': 0.01,  # horizontal pressure gradient
                 'Cd': 0.15,  # drag coefficient
                 'Utop': 5.0,  # ensemble U/ustar

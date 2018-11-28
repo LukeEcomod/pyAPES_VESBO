@@ -157,10 +157,8 @@ class Model(object):
         # initial delayed temperature and degreedaysum 
 
         if 'X' in forcing:
-            print(forcing['X'].iloc[0], forcing['DDsum'].iloc[0])
             for pt in list(canopy_para['planttypes'].keys()):
                 canopy_para['planttypes'][pt]['phenop'].update({'Xo': forcing['X'].iloc[0]})
-                print(pt)
         if 'DDsum' in forcing:
             for pt in list(canopy_para['planttypes'].keys()):
                 canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})           
