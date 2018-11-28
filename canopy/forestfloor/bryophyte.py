@@ -92,8 +92,8 @@ class Bryophyte(object):
                     0. Q10 [-]
                     1. R10 [\ :math:`\mu`\ mol m\ :sup:`-1`\ :sub:`leaf` s\ :sup:`-1`]
                 'optical_properties' (dict):
-                    'albedo_PAR': [-] photosynthetically active radiation (PAR)
-                    'albedo_NIR': [-] near infrared radiation (NIR)
+                    'albedo_par': [-] photosynthetically active radiation (PAR)
+                    'albedo_nir': [-] near infrared radiation (NIR)
                     'emissivity': [-]
 
             initial_conditions (dict):
