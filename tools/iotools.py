@@ -171,6 +171,10 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
                 'dirPar',
                 'diffNir',
                 'dirNir']
+        if 'X' in dat:
+            cols.append('X')
+        if 'DDsum' in dat:
+            cols.append('DDsum')
     elif cols == 'all':
         cols = [col for col in dat]
     # Forc dataframe from specified columns

@@ -22,7 +22,7 @@ coupled with the water budget of leaf surfaces. Ecological Modelling, 147(1), pp
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
 from .micromet import e_sat, leaf_boundary_layer_conductance
-from .constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN
+from .constants import WATER_DENSITY, MOLAR_MASS_H2O, SPECIFIC_HEAT_AIR, DEG_TO_KELVIN, EPS
 
 import logging
 logger = logging.getLogger(__name__)
@@ -39,8 +39,6 @@ class Interception(object):
                 'Tmin': temperature below which all is snow [degC]
                 'Tmax': temperature above which all is water [degC]
                 'w_ini': initial canopy storage [m]
-                'lt': leaf length scale for aerodynamic resistance [m]
-                    NOTE: seems that lt order of 1-10 cm is appropriate for pine evaporation
             LAIz (array): leaf area index per canopy layer [m\ :sup:`2`\ m\ :sup:`-2`\]
         Returns:
             self (object)
@@ -52,8 +50,6 @@ class Interception(object):
         # quality of precipitation [degC]
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
-        # leaf length scale for aerodynamic resistance [m]
-        self.lt = p['lt']
 
         # initial state
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)
@@ -84,8 +80,10 @@ class Interception(object):
                 'air_temperature' (array): [degC]
             parameters (dict):
                 LAIz (array): leaf area index per canopy layer [m\ :sup:`2`\ m\ :sup:`-2`\]
+                leaf_length (array): leaf length scale for aerodynamic resistance [m]
             controls (dict):
                 'energy_balance': boolean
+
         Returns:
             df: fraction of dry leaves per layer [-]
             Trfall_rain: throughfall as rainfall [m]
@@ -100,6 +98,7 @@ class Interception(object):
             Tl_wet: wet leaf temperature [degC]
             MBE: water closure [m]
         """
+        lt = np.maximum(EPS, parameters['leaf_length'])
 
         Prec = forcing['precipitation']
         P = forcing['air_pressure']
@@ -123,11 +122,12 @@ class Interception(object):
 
         # initial guess for wet leaf temperature
         Tl_wet = self.Tl_wet.copy()
+        Told = Tl_wet.copy()
 
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O
 
-        # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical
+        # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical  -- into parameters!
         F = 0.5 # for randomdly oriented leaves
 
         # --- state of precipitation (uses fW[-1] in end of code)---
@@ -141,20 +141,24 @@ class Interception(object):
         # maximum interception storage capacities layerwise [m]
         Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
 
-        # boundary layer conductances for H2O and heat [mol m-2 s-1]
-        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, self.lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
+#        # boundary layer conductances for H2O and heat [mol m-2 s-1]
+#        gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.0, P)  # OK to assume dt = 0.0?? convergence problems otherwise
 
         # vapor pressure deficit between leaf and air, and slope of vapor pressure curve at T
         es, s = e_sat(Tl_wet)
         Dleaf = es / P - H2O  #np.maximum(0.0, es / P - H2O)  # [mol/mol]
         s = s / P  # [mol/mol/degC]
-
+    
         """ --- wet Leaf temperature --- """
         itermax = 20
         err = 999.0
         iterNo = 0
         while err > 0.01 and iterNo < itermax:
             iterNo += 1
+            
+            # boundary layer conductances for H2O and heat [mol m-2 s-1]
+            gb_h, _, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.5*(Tl_wet + Told) - T, P)  # OK to assume dt = 0.0?? convergence problems otherwise
+
             Told = Tl_wet.copy()
 
             if Ebal:
@@ -164,17 +168,14 @@ class Interception(object):
                 err = np.nanmax(abs(Tl_wet - Told))
 
                 if (err < 0.01 or iterNo == itermax) and abs(np.mean(T) - np.mean(Tl_wet)) > 20.0:
-                    logger.debug('%s (iteration %s:%s) Unrealistic wet leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f',
-                         forcing['date'],
-                         forcing['iteration'], iterNo,
+                    logger.debug(controls['logger_info'] + ',%s Unrealistic wet leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f',
+                         iterNo,
                          np.mean(Tl_wet), np.mean(T),
                          np.mean(forcing['radiation']['LW']['net_leaf']), np.mean(Tl_ave), np.mean(self.Tl_wet))
                     Tl_wet = T.copy()
 
                 elif iterNo == itermax:
-                    logger.debug('%s (iteration %s) Maximum number of iterations reached: Tl_wet = %.2f, err = %.2f',
-                             forcing['date'],
-                             forcing['iteration'],
+                    logger.debug(controls['logger_info'] + ' Maximum number of iterations reached: Tl_wet = %.2f, err = %.2f',
                              np.mean(Tl_wet), err)
 
                 es, s = e_sat(Tl_wet)
@@ -194,9 +195,9 @@ class Interception(object):
         # evaporation rate from wet leaf [m/s] (negative for condensation)
         Ep = gb_v * Dleaf * MOLAR_MASS_H2O / WATER_DENSITY
 
-#        # Assume no evaporation during rain (CHANGE when energy balance added)
-#        if Prec > 0.0:
-#            Ep = np.zeros(N)
+        # Assume no evaporation during rain when energy balance not solved
+        if Ebal==False and Prec > 0.0:
+            Ep = np.zeros(N)
 
         # --- canopy water storage change ---
         W = self.oldW.copy()  # layerwise canopy storage [m]
@@ -219,6 +220,7 @@ class Interception(object):
         Evap = np.zeros(N)  # evaporation [m]
         Cond = np.zeros(N)  # condesation [m]
         Heat = np.zeros(N)  # sensible heat flux [W m-2(ground)]
+        LE = np.zeros(N)  # latent heat flux [W m-2(ground)]
         Fr = np.zeros(N)  # sensible heat flux [W m-2(ground)]
         wf = np.zeros(N)  # wetness ratio
         Trfall = 0.0  # throughfall below canopy [m]
@@ -260,11 +262,12 @@ class Interception(object):
                         P[n] = P[n+1] - Ir[n] - wf[n] * LAIz[n] * Ep[n]
                         # Condensation [m] (incl. condenstation to dry leaf and drip from wet leaf)
                         Cond[n] += LAIz[n] * Ep[n] * subdt
-                # Tl_wet represent the whole leaf in case of condensation!!
+                # ! condensation to dry leaf part not accounted for  in energy balance here but in dry leaf module 
                 # Sensible heat flux [W m-2(ground)] * subdt
-                Heat += np.where(Ep >= 0, wf, 1.0) * LAIz * Hw * subdt
+                Heat += wf * LAIz * Hw * subdt
                 # radiative flux [W m-2(ground)] * subdt
-                Fr += np.where(Ep >= 0, wf, 1.0) * LAIz * Frw * subdt
+                Fr += wf * LAIz * Frw * subdt
+#                LE += wf * LAIz * Ep / MOLAR_MASS_H2O * WATER_DENSITY * L * subdt
                 # update storage [m]
                 W += dW
                 # interception and throughfall [m]
@@ -278,19 +281,13 @@ class Interception(object):
 
         # H20 source/sink per ground area due to evaporation and condensation [mol m-2 s-1]
         dqsource = (Evap + Cond) / dt / MOLAR_MASS_H2O * WATER_DENSITY
-        # heat source [W m-2(ground)]
-        dtsource = Heat / dt
-        # latent heat flux [W m-2(ground)]
-        LE = dqsource * L
 
         if sum(W) < eps:
             W *= 0.0
 
         # dry canopy fraction
-        df = 1.0 - np.where(Ep >= 0, wf, 1.0)
-        
-# TESTING
-#        df = 1.0 - wf
+#        df = 1.0 - np.where(Ep >= 0, wf, 1.0)
+        df = 1.0 - wf
 
         # update state variables
         self.W = W
@@ -308,9 +305,9 @@ class Interception(object):
                   'condensation': sum(Cond) / dt,
                   'water_closure': water_closure / dt,
                   'sources': {'h2o': dqsource,
-                              'sensible_heat': dtsource,
+                              'sensible_heat': Heat / dt,
                               'fr': Fr / dt,
-                              'latent_heat': LE}
+                              'latent_heat': dqsource * L}
                   }
         return fluxes
 

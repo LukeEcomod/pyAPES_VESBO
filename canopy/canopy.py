@@ -109,10 +109,10 @@ class CanopyModel(object):
         self.Switch_WMA = cpara['ctr']['WMA']
         self.Switch_Ebal = cpara['ctr']['Ebal']
 
-        # logger.info('Eflow: %s, WMA: %s, Ebal: %s',
-        #             self.Switch_Eflow,
-        #             self.Switch_WMA,
-        #             self.Switch_Ebal)
+        logger.info('Eflow: %s, WMA: %s, Ebal: %s',
+                    self.Switch_Eflow,
+                    self.Switch_WMA,
+                    self.Switch_Ebal)
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
@@ -129,8 +129,12 @@ class CanopyModel(object):
         self.planttypes = ptypes
 
         # --- stand characteristics ---
-        self.LAI = sum([pt.LAI for pt in self.planttypes])  # total leaf area index [m2 m-2]
-        self.lad = sum([pt.lad for pt in self.planttypes])  # total leaf area density [m2 m-3]
+        # total leaf area index [m2 m-2]
+        self.LAI = sum([pt.LAI for pt in self.planttypes])
+        # total leaf area density [m2 m-3]
+        self.lad = sum([pt.lad for pt in self.planttypes])
+         # layerwise mean leaf characteristic dimension [m]
+        self.leaf_length = sum([pt.leafp['lt'] * pt.lad for pt in self.planttypes]) / (self.lad + EPS)
         rad = sum([pt.Roots.rad for pt in self.planttypes])  # total fine root density [m2 m-3]
         self.rad = rad / sum(rad)  # normalized total fine root density distribution [-]
         # canopy height [m]
@@ -163,8 +167,12 @@ class CanopyModel(object):
         """ update physiology and leaf area of planttypes and canopy"""
         for pt in self.planttypes:
             pt.update_daily(doy, Ta, PsiL=PsiL)  # updates pt properties
-        self.LAI = sum([pt.LAI for pt in self.planttypes])  # total leaf area index [m2 m-2]
-        self.lad = sum([pt.lad for pt in self.planttypes])  # total leaf area density [m2 m-3]
+        # total leaf area index [m2 m-2]
+        self.LAI = sum([pt.LAI for pt in self.planttypes])
+        # total leaf area density [m2 m-3]
+        self.lad = sum([pt.lad for pt in self.planttypes])
+         # layerwise mean leaf characteristic dimension [m]
+        self.leaf_length = sum([pt.leafp['lt'] * pt.lad for pt in self.planttypes]) / (self.lad + EPS)
 
         """ normalized flow statistics in canopy with new lad """
         if self.Switch_Eflow and self.planttypes[0].Switch_lai:
@@ -325,11 +333,16 @@ class CanopyModel(object):
                 })
 
             interception_params = {
-                'LAIz': self.lad * self.dz
+                'LAIz': self.lad * self.dz,
+                'leaf_length': self.leaf_length
             }
 
             interception_controls = {
-                'energy_balance': self.Switch_Ebal
+                'energy_balance': self.Switch_Ebal,
+                'logger_info': 'date: {} iteration: {}'.format(
+                    parameters['date'],
+                    iter_no
+                )
             }
 
             if self.Switch_Ebal:
@@ -427,7 +440,7 @@ class CanopyModel(object):
 
             ff_params = {
                 'height': self.z[1],  # height to first calculation node
-                'depth': parameters['depth'],
+                'soil_depth': parameters['soil_depth'],
                 'nsteps': 20,
                 'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
                 'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
@@ -495,18 +508,18 @@ class CanopyModel(object):
 
                     if (any(np.isnan(T)) or any(np.isnan(H2O)) or any(np.isnan(CO2))):
                         logger.debug('%s Solution of profiles blowing up, T nan %s, H2O nan %s, CO2 nan %s',
-                                         forcing['date'],
+                                         parameters['date'],
                                          any(np.isnan(T)), any(np.isnan(H2O)), any(np.isnan(CO2)))
                     elif max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
                         if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
                             logger.debug('%s Maximum iterations reached but error tolerable < 0.05',
-                                         forcing['date'])
+                                         parameters['date'])
                         break
 
                     Switch_WMA = True  # if no convergence, re-compute with WMA -assumption
 
                     logger.debug('%s Switched to WMA assumption: err_T %.4f, err_H2O %.4f, err_CO2 %.4f, err_Tl %.4f, err_Ts %.4f',
-                                 forcing['date'],
+                                 parameters['date'],
                                  err_t, err_h2o, err_co2, err_Tl, err_Ts)
 
                     # reset values
@@ -540,8 +553,8 @@ class CanopyModel(object):
 
         if self.Switch_Ebal:
             # energy closure of canopy  -- THIS IS EQUAL TO frsource (the error caused by linearizing sigma*ef*T^4)
-            energy_closure =  sum((forcing['radiation']['SW_absorbed'] +
-                                   forcing['radiation']['LW']['net_leaf']) * self.lad * self.dz) - (  # absorbed radiation
+            energy_closure =  sum((radiation_profiles['sw_absorbed'] +
+                                   radiation_profiles['lw']['net_leaf']) * self.lad * self.dz) - (  # absorbed radiation
                               sum(sources['sensible_heat'] * self.dz)  # sensible heat
                               + sum(sources['latent_heat'] * self.dz))  # latent heat
 
@@ -613,8 +626,8 @@ class CanopyModel(object):
                     })
 
             fluxes_canopy.update({
-                    'leaf_SW_absorbed': forcing['radiation']['SW_absorbed'],
-                    'leaf_net_LW': forcing['radiation']['LW']['net_leaf'],
+                    'leaf_SW_absorbed': radiation_profiles['sw_absorbed'],
+                    'leaf_net_LW': radiation_profiles['lw']['net_leaf'],
                     'sensible_heat_flux': flux_sensible_heat,  # [W m-2]
                     'energy_closure': energy_closure,
                     'fr_source': sum(sources['fr'] * self.dz)})

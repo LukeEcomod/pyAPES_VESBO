@@ -37,53 +37,35 @@ def get_parameters(name=None):
                                         'ground_coverage': (1.0)
                                         }
                                 },
-#                        'interception': {
-#                                'lt': (0.02)
-#                                },
-#                        'planttypes': {
-#                                'pine': {
-#                                        'photop': {
-#                                                'Vcmax': (60.0),
-#                                                'Jmax': (114.0),
-#                                                'tresp': {
-#                                                        'Vcmax': ([53.2, 202.0, 640.3]),
-#                                                        'Jmax': ([38.4, 202.0, 655.8]),
-#                                                        }
-#                                                }
-#                                        }
-#                                }
                 }
             }
 
     elif name.upper() == 'CLEARCUT':
         parameters = {
-                'count': 1,
+                'count': 2,
                 'canopy': {
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.06)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'sphagnum': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.045)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.07),
-                                                'height': (0.095)
+                                                'ground_coverage': (0.07, 0.07)
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.71)
+                                        'ground_coverage': (0.71, 0.71)
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (0.22)
+                                        'ground_coverage': (0.22, 0.22)
                                         }
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.49])
+                                        'LAImax': ([0.49], [0.0])
                                         }
                                 }
                 }
@@ -91,33 +73,30 @@ def get_parameters(name=None):
 
     elif name.upper() == 'PARTIAL':
         parameters = {
-                'count': 1,
+                'count': 2,
                 'canopy': {
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.06)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'sphagnum': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.045)
+                                                'ground_coverage': (0.0, 0.0)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.5),
-                                                'height': (0.095)
+                                                'ground_coverage': (0.49, 0.49)
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.5)
+                                        'ground_coverage': (0.51, 0.51)
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (0.0)
+                                        'ground_coverage': (0.0, 0.0)
                                         }
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.8])
+                                        'LAImax': ([0.66], [0.79])
                                         }
                                 }
                 }
@@ -138,12 +117,12 @@ def get_parameters(name=None):
                                                 'height': (0.045)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.4),
+                                                'ground_coverage': (0.49),
                                                 'height': (0.095)
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.6)
+                                        'ground_coverage': (0.51)
                                         },
                                 'baresoil': {
                                         'ground_coverage': (0.0)
@@ -151,7 +130,7 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.65])
+                                        'LAImax': ([0.66])
                                         }
                                 }
                 }
@@ -161,134 +140,7 @@ def get_parameters(name=None):
         raise ValueError('Unknown sensitivity parametrization %s' % name.upper())
 
     return parameters
-#    if name is None:
-#        # parameter sets of simulations
-#        parameters = {
-#                'count': 2,
-#                'canopy': {
-#                        'forestfloor': {
-#                                'bryophytes': {
-#                                        'hylocomium': {
-#                                                'ground_coverage': (1.0, 1.0),
-#                                                'height': (0.05, 0.05)
-#                                                },
-#                                        'pleurozium': {
-#                                                'ground_coverage': (0.0, 0.0),
-#                                                'height': (0.04, 0.04)
-#                                                }
-#                                                },
-#                                'baresoil': {
-#                                        'ground_coverage': (0.0, 0.0)
-#                                        }
-#                                        },
-#                        'planttypes': {
-#                                'pine': {
-#                                        'LAImax': ([2.1], [2.1])
-#                                        },
-#                                'shrubs': {
-#                                        'LAImax': ([0.7], [0.0])
-#                                        }
-#                                }
-#                }
-#            }
-#
-#    elif name.upper() == 'CLEARCUT':
-#        parameters = {
-#                'count': 1,
-#                'canopy': {
-#                        'forestfloor': {
-#                                'bryophytes': {
-#                                        'hylocomium': {
-#                                                'ground_coverage': (0.0),
-#                                                'height': (0.06)
-#                                                },
-#                                        'sphagnum': {
-#                                                'ground_coverage': (0.0),
-#                                                'height': (0.045)
-#                                                },
-#                                        'pleurozium': {
-#                                                'ground_coverage': (0.0),
-#                                                'height': (0.095)
-#                                                }
-#                                        },
-#                                'baresoil': {
-#                                        'ground_coverage': (1.0)
-#                                        }
-#                                },
-#                        'planttypes': {
-#                                'shrubs': {
-#                                        'LAImax': ([0.7])
-#                                        }
-#                                }
-#                }
-#            }
-#
-#    elif name.upper() == 'PARTIAL':
-#        parameters = {
-#                'count': 1,
-#                'canopy': {
-#                        'forestfloor': {
-#                                'bryophytes': {
-#                                        'hylocomium': {
-#                                                'ground_coverage': (0.0),
-#                                                'height': (0.06)
-#                                                },
-#                                        'sphagnum': {
-#                                                'ground_coverage': (0.0),
-#                                                'height': (0.045)
-#                                                },
-#                                        'pleurozium': {
-#                                                'ground_coverage': (0.3),
-#                                                'height': (0.095)
-#                                                }
-#                                        },
-#                                'baresoil': {
-#                                        'ground_coverage': (0.7)
-#                                        }
-#                                },
-#                        'planttypes': {
-#                                'shrubs': {
-#                                        'LAImax': ([0.7])
-#                                        }
-#                                }
-#                }
-#            }
-#
-#    elif name.upper() == 'CONTROL':
-#        parameters = {
-#                'count': 1,
-#                'canopy': {
-#                        'forestfloor': {
-#                                'bryophytes': {
-#                                        'hylocomium': {
-#                                                'ground_coverage': (0.0),
-#                                                'height': (0.06)
-#                                                },
-#                                        'sphagnum': {
-#                                                'ground_coverage': (0.0),
-#                                                'height': (0.045)
-#                                                },
-#                                        'pleurozium': {
-#                                                'ground_coverage': (0.6),
-#                                                'height': (0.095)
-#                                                }
-#                                        },
-#                                'baresoil': {
-#                                        'ground_coverage': (0.4)
-#                                        }
-#                                },
-#                        'planttypes': {
-#                                'shrubs': {
-#                                        'LAImax': ([0.7])
-#                                        }
-#                                }
-#                }
-#            }
 
-#    else:
-#        raise ValueError('Unknown sensitivity parametrization %s' % name.upper())
-#
-#    return parameters
 
 def iterate_parameters(parameters, default, count):
     """ Going through recursively senstivity nested parameter dictionary.

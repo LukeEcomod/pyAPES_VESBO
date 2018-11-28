@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 from os import listdir
 
-from .iotools import save_df_to_csv
-from .timeseries_tools import fill_gaps
+from iotools import save_df_to_csv
+from timeseries_tools import fill_gaps
 
 
 
@@ -84,7 +84,11 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     # air temperature: instant and daily [degC]
     cols.append('Tair')
     readme += "\nTair: Air temperature [degC]"
-    dat['Tdaily'] = pd.rolling_mean(dat['Tair'], int((24*3600)/dt), 1)
+    
+#    dat['Tdaily'] = dat['Tair'].rolling(int((24*3600)/dt), 1).mean()
+    dat['Tdaily'] = dat['Tair'].resample('D').mean()
+    dat['Tdaily'] = dat['Tdaily'].fillna(method='ffill')
+
     cols.append('Tdaily')
     readme += "\nTdaily: Daily air temperature [degC]"
 
@@ -103,7 +107,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     # ambient CO2 [ppm]
     readme += "\nCO2: Ambient CO2 [ppm]"
     if 'CO2' not in dat:
-        dat['CO2'] = 380.0
+        dat['CO2'] = 400.0
         readme += " - set constant!"
     cols.append('CO2')
 
@@ -150,8 +154,30 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     cols.append('Rnet')
     readme += "\nRnet: Net radiation [W/m2]"
 
+
+    X = np.zeros(len(dat))
+    DDsum = np.zeros(len(dat))
+    for k in range(1,len(dat)):
+        if dat['doy'][k] != dat['doy'][k-1]:
+            X[k] = X[k - 1] + 1.0 / 8.33 * (dat['Tdaily'][k-1] - X[k - 1])
+            if dat['doy'][k] == 1:  # reset in the beginning of the year
+                DDsum[k] = 0.
+            else:
+                DDsum[k] = DDsum[k - 1] + max(0.0, dat['Tdaily'][k-1] - 5.0)
+        else:
+            X[k] = X[k - 1]
+            DDsum[k] = DDsum[k - 1]
+    dat['X'] = X
+    cols.append('X')
+    readme += "\nX: phenomodel delayed temperature [degC]"
+    dat['DDsum'] = DDsum
+    cols.append('DDsum')
+    readme += "\nDDsum: degreedays [days]"
+
     dat = dat[cols]
     dat[cols].plot(subplots=True, kind='line')
+
+    dat[['Tdaily','DDsum','X']].plot(subplots=True)
 
     print("NaN values in forcing data:")
     print(dat.isnull().any())
@@ -397,7 +423,7 @@ def gather_hyde_data():
         dat = pd.read_csv(forc_fp, sep=',', header='infer')
         index = pd.date_range('01-01-' + str(year),'31-12-' + str(year) + ' 23:59:59',freq='0.5H')
         if len(index) != len(dat):
-            print "Year " + str(year) + ": Missing values!"
+            print("Year " + str(year) + ": Missing values!")
         else:
             dat.index = index
             frames.append(dat[columns])

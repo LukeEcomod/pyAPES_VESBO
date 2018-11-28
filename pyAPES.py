@@ -153,6 +153,15 @@ class Model(object):
 
         # create soil model instance
         self.soil = Soil(soil_para)
+        
+        # initial delayed temperature and degreedaysum 
+
+        if 'X' in forcing:
+            for pt in list(canopy_para['planttypes'].keys()):
+                canopy_para['planttypes'][pt]['phenop'].update({'Xo': forcing['X'].iloc[0]})
+        if 'DDsum' in forcing:
+            for pt in list(canopy_para['planttypes'].keys()):
+                canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})           
 
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para, self.soil.grid['dz'])
@@ -209,7 +218,7 @@ class Model(object):
             }
 
             canopy_parameters = {
-                'depth': self.soil.grid['z'][0],
+                'soil_depth': self.soil.grid['z'][0],
                 'soil_hydraulic_conductivity': self.soil.water.Kv[0],
                 'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],
                 'date': self.forcing.index[k]

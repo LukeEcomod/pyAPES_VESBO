@@ -22,16 +22,16 @@ def get_cpara(dbhfile):
     ctr = {'Eflow': True,  # ensemble flow
            'WMA': False, # well-mixed assumption
            'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
-           'Ebal': False,  # computes leaf temperature by solving energy balance
+           'Ebal': True,  # computes leaf temperature by solving energy balance
            'SwModel': 'ZhaoQualls',
            'LwModel': 'ZhaoQualls',  #'Flerchinger'},  #
            'WaterStress': False,  # TRUE NOT SUPPORTED YET!
            'seasonal_LAI': True,  # account for seasonal LAI dynamics
-           'pheno_cycle': True  #True  # account for phenological cycle
+           'pheno_cycle': True  # account for phenological cycle
            }
 
     # --- micrometeo ---
-    micromet = {'zos': 0.01,  # forest floor roughness length [m]
+    micromet = {'zos': 0.01,  # forest floor roughness length [m]  -- not used?
                 'dPdx': 0.01,  # horizontal pressure gradient
                 'Cd': 0.15,  # drag coefficient
                 'Utop': 5.0,  # ensemble U/ustar
@@ -53,7 +53,6 @@ def get_cpara(dbhfile):
                     'w_ini': 0.0,  # initial canopy storage [m]
                     'Tmin': 0.0,  # temperature below which all is snow [degC]
                     'Tmax': 1.0,  # temperature above which all is water [degC]
-                    'lt': 0.1  # leaf length scale for aerodynamic resistance [m] NOTE: seems that lt order of 1-10 cm is appropriate for pine evaporation
                     }
 
     # --- forest floor ---

@@ -264,13 +264,14 @@ class ForestFloor(object):
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
                     'soil_temperature': forcing['soil_temperature'],
-                    'pond_storage': forcing['soil_pond_storage'],
+                    'soil_pond_storage': forcing['soil_pond_storage'],
+                    'soil_water_potential': forcing['soil_water_potential']
                 }
 
                 bryo_params = {
                     'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
                     'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
-                    'soil_depth': parameters['depth'],
+                    'soil_depth': parameters['soil_depth'],
                 }
 
                 bryo_controls = {
@@ -338,13 +339,14 @@ class ForestFloor(object):
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
                     'soil_temperature': forcing['soil_temperature'],
-                    'pond_storage': forcing['soil_pond_storage'],
+                    'soil_pond_storage': forcing['soil_pond_storage'],
+                    'soil_water_potential': forcing['soil_water_potential']
                 }
 
                 litter_params = {
                     'soil_hydraulic_conductivity': 0.0,
                     'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
-                    'soil_depth': parameters['depth'],
+                    'soil_depth': parameters['soil_depth'],
                 }
 
                 litter_controls = {
