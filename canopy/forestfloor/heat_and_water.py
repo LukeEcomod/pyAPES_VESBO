@@ -12,8 +12,7 @@ Note:
 
 import numpy as np
 from scipy.integrate import odeint
-from .odesolver import solver_array, ForwardEuler_array
-#from canopy.constants import *
+
 from canopy.constants import EPS, MOLAR_MASS_H2O, SPECIFIC_HEAT_H2O
 from canopy.constants import SPECIFIC_HEAT_ORGANIC_MATTER, LATENT_HEAT
 from canopy.constants import DEG_TO_KELVIN, STEFAN_BOLTZMANN
@@ -21,8 +20,8 @@ from canopy.constants import SPECIFIC_HEAT_AIR, WATER_DENSITY, GAS_CONSTANT
 from canopy.constants import MOLECULAR_DIFFUSIVITY_CO2, MOLECULAR_DIFFUSIVITY_H2O
 from canopy.constants import THERMAL_DIFFUSIVITY_AIR, GRAVITY
 from canopy.constants import AIR_VISCOSITY, AIR_DENSITY
-
-EPS = np.finfo(float).eps  # machine epsilon
+from .odesolver import solver_array, ForwardEuler_array
+#from canopy.constants import *
 
 
 class heat_and_water:
@@ -33,7 +32,7 @@ class heat_and_water:
     """
 
     def __init__(self, properties, states):
-        """ Inititalises a heat and water balance calculation object
+        r""" Inititalises a heat and water balance calculation object
 
         Args:
             properties (dict): BryoType instance properties
@@ -62,10 +61,10 @@ class heat_and_water:
         self.states = states
 
         self.min_water = (
-                properties['min_water_content'] * properties['dry_mass'])
+            properties['min_water_content'] * properties['dry_mass'])
 
         self.max_water = (
-                properties['max_water_content'] * properties['dry_mass'])
+            properties['max_water_content'] * properties['dry_mass'])
 
     def __call__(self, y, dt):
         """
@@ -83,9 +82,8 @@ class heat_and_water:
             dt = dt + EPS
 
         # [kg m-2] or [mm]
-        water = y[1]
 
-        water = min(self.max_water, water)
+        water = min(self.max_water, y[1])
         water = max(self.min_water, water)
 
         max_recharge = max(self.max_water - water, 0.0)
