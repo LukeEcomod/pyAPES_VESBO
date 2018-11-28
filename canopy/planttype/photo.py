@@ -17,13 +17,14 @@ Created on Mon May 15 13:43:44 2017
 import numpy as np
 import matplotlib.pyplot as plt
 from canopy.micromet import leaf_boundary_layer_conductance, e_sat
+from canopy.interception import latent_heat
 
 import logging
 logger = logging.getLogger(__name__)
 
 from canopy.constants import DEG_TO_KELVIN, PAR_TO_UMOL, EPS
 from canopy.constants import SPECIFIC_HEAT_AIR, LATENT_HEAT
-from canopy.constants import GAS_CONSTANT, O2_IN_AIR
+from canopy.constants import GAS_CONSTANT, O2_IN_AIR, MOLAR_MASS_H2O
 H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]
 TN = 25.0 + DEG_TO_KELVIN  # reference temperature [K]
 
@@ -31,6 +32,7 @@ def leaf_interface(photop,
                    leafp,
                    forcing,
                    controls,
+                   df=1.0,
                    dict_output=True,
                    logger_info=''):
     r""" Entry-point to coupled leaf gas-exchange and energy balance functions.
@@ -78,15 +80,15 @@ def leaf_interface(photop,
             'average_leaf_temperature': leaf temperature used for computing LWnet (optional)
             'radiative_conductance': radiative conductance used in computing LWnet (optional)
         controls (dict):
-            'model' (str): photosysthesis model
+            'photo_model' (str): photosysthesis model
                 CO_OPTI (Vico et al., 2014)
                 MEDLYN (Medlyn et al., 2011 with co-limitation Farquhar)
                 MEDLYN_FARQUHAR
                 BWB (Ball et al., 1987 with co-limitation Farquhar)
                 others?
-            'energy_closure' (bool): True computes leaf temperature by solving energy balance
+            'energy_balance' (bool): True computes leaf temperature by solving energy balance
         dict_output (bool): True returns output as dict, False as separate arrays (optional)
-        logger_info (dict): optional
+        logger_info (str): optional
 
     OUTPUT:
         (dict):
@@ -134,10 +136,10 @@ def leaf_interface(photop,
         Tl_ini = T.copy()
 
     Tl = Tl_ini.copy()
+    Told = Tl.copy()
     
     if 'radiative_conductance' in forcing:
-        gr = np.array(forcing['radiative_conductance'], ndmin=1)
-
+        gr = df * np.array(forcing['radiative_conductance'], ndmin=1)
     else:
         gr = np.zeros(len(T))
 
@@ -150,16 +152,19 @@ def leaf_interface(photop,
     # vapor pressure
     esat, s = e_sat(Tl)
     s = s / P  # slope of esat, mol/mol / degC
-    s[esat / P < H2O] = EPS
-    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
-
+#    s[esat / P < H2O] = EPS
+#    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+    Dleaf = esat / P - H2O
+    
+    Lv = latent_heat(T) * MOLAR_MASS_H2O 
+    
     itermax = 20
     err = 999.0
     iter_no = 0
     while err > 0.01 and iter_no < itermax:
         iter_no += 1
         # boundary layer conductance
-        gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, Tl - T, P)
+        gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.5 * (Tl + Told) - T, P)
 
         #print Dleaf
         Told = Tl.copy()
@@ -176,13 +181,15 @@ def leaf_interface(photop,
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_bwb(photop, Qp, Tl, rh, CO2, gb_c, gb_v, P=P)
 
         gsv = H2O_CO2_RATIO*gs_opt
-        geff_v = (gb_v*gsv) / (gb_v + gsv)  # molm-2s-1
+#        geff_v = (gb_v*gsv) / (gb_v + gsv)
+        geff_v = np.where(Dleaf > 0.0, (gb_v*gsv) / (gb_v + gsv), df * gb_v)  # molm-2s-1, condensation only on dry leaf part
+        gb_h = df * gb_h  # sensible heat exchange only through dry leaf part
 
         # solve  energy balance
         if Ebal:
-            # solve leaf temperature
-            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - LATENT_HEAT*geff_v[ic]*Dleaf[ic]
-                  + LATENT_HEAT*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + LATENT_HEAT*s[ic]*geff_v[ic])
+            # solve leaf temperature 
+            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - Lv[ic]*geff_v[ic]*Dleaf[ic] 
+                  + Lv[ic]*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + Lv[ic]*s[ic]*geff_v[ic])
             err = np.nanmax(abs(Tl - Told))
 
             if (err < 0.01 or iter_no == itermax) and abs(np.mean(T) - np.mean(Tl)) > 20.0:
@@ -200,15 +207,17 @@ def leaf_interface(photop,
             # vapor pressure
             esat, s = e_sat(Tl)
             s = s / P  # slope of esat, mol/mol / degC
-            s[esat / P < H2O] = EPS
-            Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+#            s[esat / P < H2O] = EPS
+#            Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+            Dleaf = esat / P - H2O
         else:
             err = 0.0
 
     # outputs
     H = SPECIFIC_HEAT_AIR*gb_h*(Tl - T)  # Wm-2
     Fr = SPECIFIC_HEAT_AIR*gr*(Tl - Tl_ave)  # flux due to radiative conductance (Wm-2)
-    E = geff_v * Dleaf
+    E = geff_v * np.maximum(0.0, Dleaf)  # condensation accounted for in wetleaf water balance
+    LE = E * Lv  # condensation accounted for in wetleaf energy balance
 
 #    if any(np.isnan(An)):
 #        print('leafinterface: ', Tl, Qp, Dleaf, CO2, gb_c, gb_v )
@@ -220,9 +229,10 @@ def leaf_interface(photop,
              'dark_respiration': Rd,
              'transpiration': E,
              'sensible_heat': H,
+             'latent_heat': LE,
              'fr': Fr,
              'Tl': Tl,
-             'stomatal_conductance': gsv,
+             'stomatal_conductance': np.minimum(gsv, 1.0), # gsv get high when VPD->0
              'boundary_conductance': gb_v,
              'leaf_internal_co2': Ci,
              'leaf_surface_co2': Cs}
@@ -464,7 +474,7 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         cs - leaf surface CO2 (ppm)
     """
     Tk = T + DEG_TO_KELVIN
-    VPD = 1e-3 * VPD * P  # kPa
+    VPD = np.maximum(EPS, 1e-3 * VPD * P)  # kPa
 
     MaxIter = 50
 
@@ -816,26 +826,35 @@ def photo_Toptima(T10):
 """--- scripts for testing functions ---- """
 
 def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
-    gamma = 1.5
-    gfact = 1.2
+    gamma = 1.0
+    gfact = 1.0
     if species.upper() == 'PINE':
         photop= {
-                'Vcmax': 55.0,
-                'Jmax': 105.0,
+#                'Vcmax': 55.0,
+#                'Jmax': 105.0,
+#                'Rd': 1.3,
+#                'tresp': {
+#                    'Vcmax': [78.0, 200.0, 650.0],
+#                    'Jmax': [56.0, 200.0, 647.0],
+#                    'Rd': [33.0]
+#                    },
+                'Vcmax': 94.0,  # Tarvainen et al. 2018 Physiol. Plant.
+                'Jmax': 143.0,
                 'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [78.3, 200.0, 650.1],
+                    'Jmax': [56.0, 200.0, 647.9],
+                    'Rd': [33.0]
+                    },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.5,
+                'm': gfact * 2.3,
                 'g0': 1.0e-3,
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
-                'tresp': {
-                    'Vcmax': [78.0, 200.0, 650.0],
-                    'Jmax': [56.0, 200.0, 647.0],
-                    'Rd': [33.0]
-                    }
+
                 }
         leafp = {
                 'lt': 0.02,
@@ -845,22 +864,31 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 }
     if species.upper() == 'SPRUCE':
         photop = {
-                'Vcmax': 60.0,
-                'Jmax': 114.0,
-                'Rd': 1.5,
+#                'Vcmax': 60.0,
+#                'Jmax': 114.0,
+#                'Rd': 1.5,
+#                'tresp': {
+#                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
+#                    'Jmax': [38.4, 202.0, 655.8],
+#                    'Rd': [33.0]
+#                    },
+                'Vcmax': 69.7,  # Tarvainen et al. 2013 Oecologia
+                'Jmax': 130.2,
+                'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [53.2, 200.0, 640.0],
+                    'Jmax': [38.4, 200.0, 655.5],
+                    'Rd': [33.0]
+                    },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.5,
+                'm': gfact * 2.3,
                 'g0': 1.0e-3,
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
-                'tresp': {
-                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
-                    'Jmax': [38.4, 202.0, 655.8],
-                    'Rd': [33.0]
-                    }
+
                 }
         leafp = {
                 'lt': 0.02,
@@ -870,9 +898,22 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 }
     if species.upper() == 'DECID':
         photop = {
-                'Vcmax': 50.0,
-                'Jmax': 95.0,
+#                'Vcmax': 50.0,
+#                'Jmax': 95.0,
+#                'Rd': 1.3,
+#                'tresp': {
+#                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
+#                    'Jmax': [42.8, 200.0, 637.0],
+#                    'Rd': [33.0]
+#                    },
+                'Vcmax': 69.1,  # Medlyn et al 2002.
+                'Jmax': 116.3,
                 'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [77.0, 200.0, 636.4],
+                    'Jmax': [42.8, 200.0, 636.6],
+                    'Rd': [33.0]
+                    },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 600.0,
@@ -881,11 +922,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
-                'tresp': {
-                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
-                    'Jmax': [42.8, 200.0, 637.0],
-                    'Rd': [33.0]
-                    }
+
                 }
         leafp = {
                 'lt': 0.05,
@@ -919,27 +956,37 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'emi': 0.98
                 }
     # env. conditions
-    N=50
+    N=50   
     P = 101300.0
-    Qp = 1000. * np.ones(N)  #np.linspace(1.,1800.,50)
-    
-    CO2 = 380. * np.ones(N)
+    Qp = 1000. * np.ones(N)  # np.linspace(1.,1800.,50)#
+    CO2 = 400. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = np.linspace(1.,39.,50)
+    T = np.linspace(1.,39.,50) # 10. * np.ones(N) # 
     esat, s = e_sat(T)
-    H2O = (60.0 / 100.0) * esat / P
+    H2O = (85.0 / 100.0) * esat / P
     SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL 
     LWnet = -30.0 * np.ones(N)
+
+    forcing = {
+            'h2o': H2O,
+            'co2': CO2,
+            'air_temperature': T,
+            'par_incident': Qp,
+            'sw_absorbed': SWabs,
+            'lw_net': LWnet,
+            'wind_speed': U,
+            'air_pressure': P
+            }
+
+    controls = {
+            'photo_model': method,
+            'energy_balance': Ebal
+            }
     
-    x = leaf_interface(photop, leafp,
-                       H2O=H2O, CO2=CO2, T=T, 
-                       Qp=Qp, SWabs=SWabs, LWnet=LWnet, 
-                       U=U, P=P,
-                       model=method,
-                       Ebal=Ebal)
-    print(x)
+    x = leaf_interface(photop, leafp, forcing, controls)
+#    print(x)
     Y=T
-    plt.figure(1)
+    plt.figure(5)
     plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
     plt.title('net_co2')
     plt.subplot(422); plt.plot(Y, x['transpiration'], 'o')
@@ -1005,6 +1052,40 @@ def test_photo_temperature_response(species='pine'):
                     'Rd': [33.0]
                     }
                 }
+    
+    if species.upper() == 'PINE2':
+        photop= {
+                'Vcmax': 67.33,
+                'Jmax': 70.77,
+                'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [69.8, 200.0, 659.9],
+                    'Jmax': [100.3, 147.9, 511.0],
+                    'Rd': [33.0]
+                    }
+                }
+    if species.upper() == 'SPRUCE2':
+        photop = {
+                'Vcmax': 69.7,
+                'Jmax': 130.2,
+                'Rd': 1.5,
+                'tresp': {
+                    'Vcmax': [53.2, 200.0, 640.0],  # Tarvainen et al. 2013 Oecologia
+                    'Jmax': [38.4, 200.0, 655.5],
+                    'Rd': [33.0]
+                    }
+                }
+    if species.upper() == 'DECID2':
+        photop = {
+                'Vcmax': 101.9,
+                'Jmax': 111.89,
+                'Rd': 1.3,
+                'tresp': {
+                    'Vcmax': [63.8, 200.0, 655.0],  # Medlyn et al 2002.
+                    'Jmax': [108.5, 156.8, 543.2],
+                    'Rd': [33.0]
+                    }
+                }
 
     Vcmax = photop['Vcmax']
     Jmax = photop['Jmax']
@@ -1015,12 +1096,12 @@ def test_photo_temperature_response(species='pine'):
     Rd_T = tresp['Rd']
     Vcmax, Jmax, Rd, Tau_c = photo_temperature_response(Vcmax, Jmax, Rd, Vcmax_T, Jmax_T, Rd_T, Tk)
     
-    plt.figure(2)
-    plt.subplot(311); plt.plot(T, Vcmax / photop['Vcmax'], 'o')
+    plt.figure(4)
+    plt.subplot(311); plt.plot(T, Vcmax, 'o')
     plt.title('Vcmax')
-    plt.subplot(312); plt.plot(T, Jmax/ photop['Jmax'], 'o')
+    plt.subplot(312); plt.plot(T, Jmax, 'o')
     plt.title('Jmax')
-    plt.subplot(313); plt.plot(T, Rd/ photop['Rd'], 'o')
+    plt.subplot(313); plt.plot(T, Rd, 'o')
     plt.title('Rd')
     
 def Topt_to_Sd(Ha, Hd, Topt):

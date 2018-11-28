@@ -153,7 +153,7 @@ class heat_and_water:
 
         pond_recharge = (max_recharge *
                          (1.0 - np.exp(-(1.0 / self.max_water)
-                          * self.states['pond_storage'] * dt)))
+                          * self.states['soil_pond_storage'] * dt)))
 
         # [kg m-2 s-1] or [mm s-1]
         pond_recharge_rate = pond_recharge / dt
@@ -394,7 +394,7 @@ def heat_and_water_exchange(properties,
         'soil_water_potential': forcing['soil_water_potential'],
         'precipitation': precipitation,
         'precipitation_temperature': forcing['air_temperature'],
-        'pond_storage': forcing['soil_pond_storage'] * 1000.0 / dt,  # [mm s-1]
+        'soil_pond_storage': forcing['soil_pond_storage'] * 1000.0 / dt,  # [mm s-1]
         'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
         'soil_thermal_conductivity': parameters['soil_hydraulic_conductivity'],
         'soil_depth': parameters['soil_depth'],
@@ -713,7 +713,7 @@ def water_exchange(dt,
     pond_recharge = (
         max_recharge
         * (1.0 - np.exp(-(1.0 / max_water)
-                        * forcing['pond_storage'] * dt))
+                        * forcing['soil_pond_storage'] * dt))
     )
 
     # [kg m-2 s-1] or [mm s-1]
@@ -998,7 +998,7 @@ def soil_boundary_layer_conductance(u, z, zo, Ta, dT, P=101300.):
         gb_h - heat (mol m-2 s-1)
         gb_c- CO2 (mol m-2 s-1)
         gb_v - H2O (mol m-2 s-1)
-    Based on Daamond & Simmons (1996). Note: gb decreases both in
+    Based on Daamen & Simmons (1996). Note: gb decreases both in
     unstable and stable conditions compared to near-neutral;
     nonfeasible?
     Samuli Launiainen, 18.3.2014

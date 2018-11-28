@@ -56,7 +56,8 @@ class Photo_cycle(object):
         self.X = self.X + 1.0 / self.tau * (T - self.X)  # degC
 
         S = np.maximum(self.X - self.Tbase, 0.0)
-        self.f = np.maximum(self.fmin, np.minimum(0.065*S, 1.0))
+        self.f = np.maximum(self.fmin, 
+                            np.minimum(S / (self.Smax - self.Tbase), 1.0))
 
         if out:
             return self.f
@@ -82,6 +83,7 @@ class LAI_cycle(object):
         """
         self.LAImin = p['lai_min']  # minimum LAI, fraction of annual maximum
         self.ddo = p['ddo']
+        self.ddmat = p['ddmat']
         self.ddur = p['ddur']
         self.sso = p['sso']
         self.sdur = p['sdur']
@@ -108,7 +110,7 @@ class LAI_cycle(object):
             self.DDsum = 0.
         else:
             self.DDsum += np.maximum(0.0, T - self.Tbase)
-
+        """
         # growth phase
         if self.DDsum <= self.ddo:
             f = self.LAImin
@@ -123,6 +125,18 @@ class LAI_cycle(object):
             self._growth_stage = 0.
             self._senesc_stage += 1.0 / self.sdur
             f = 1.0 - (1.0 - self.LAImin) * np.minimum(1.0, self._senesc_stage)
+        """
+        # growth phase
+        if self.DDsum <= self.ddo:
+            f = self.LAImin
+        elif self.DDsum > self.ddo:
+            f = np.minimum(1.0, self.LAImin + (1.0 - self.LAImin) *
+                 (self.DDsum - self.ddo) / (self.ddmat - self.ddo))
+
+        # senescence phase
+        if doy > self.sso:
+            f = 1.0 - (1.0 - self.LAImin) * np.minimum(1.0,
+                    (doy - self.sso) / self.sdur)
 
         # update LAI
         self.f = f

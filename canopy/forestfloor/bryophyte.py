@@ -330,8 +330,8 @@ class Bryophyte(object):
             forcing['air_pressure'],
             forcing['soil_temperature'],
             forcing['soil_water_potential'],
-            forcing['soil_hydraulic_conductivity'],
-            forcing['depth'])
+            parameters['soil_hydraulic_conductivity'],
+            parameters['soil_depth'])
 
         # unit conversion: 1000 kg m-2 s-1 = mm s-1
 

@@ -6,8 +6,8 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2017-06-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2017-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2019.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -19,7 +19,7 @@ gpara = {
                       ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
                       ['canopy_temperature','air temperature []degC]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
+                      ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
                       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
