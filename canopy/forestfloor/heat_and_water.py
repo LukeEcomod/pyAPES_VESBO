@@ -396,7 +396,7 @@ def heat_and_water_exchange(properties,
         'precipitation_temperature': forcing['air_temperature'],
         'soil_pond_storage': forcing['soil_pond_storage'] * 1000.0 / dt,  # [mm s-1]
         'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
-        'soil_thermal_conductivity': parameters['soil_hydraulic_conductivity'],
+        'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
         'soil_depth': parameters['soil_depth'],
     }
 
@@ -627,7 +627,11 @@ def water_exchange(dt,
     Returns:
         water_content (float): [kg m-2]
     """
-    
+
+    temperature = (
+        np.power(forcing['air_temperature'] * forcing['soil_temperature'], 0.5)
+    )
+
     precipitation = forcing['throughfall'] * WATER_DENSITY  # [m s-1] -> [mm s-1]
 
     if dt == 0.0:
@@ -659,12 +663,13 @@ def water_exchange(dt,
     if np.isinf(max_condensation_rate) or max_condensation_rate > 0.0:
         max_condensation_rate = 0.0
 
+    temp_difference = temperature - forcing['air_temperature']
     # boundary layer conductances for H2O, heat and CO2
     # [mol m-2 s-1]
     conductance_to_air = moss_atm_conductance(
         forcing['wind_speed'],
         properties['roughness_height'],
-        dT=0.0
+        dT=temp_difference
     )
 
     # water vapor conductance from moss to air
@@ -684,7 +689,7 @@ def water_exchange(dt,
     evaporation_rate = (
         conductance_to_air_h2o
         * (611.0 / forcing['air_pressure']
-           * np.exp(17.502 * forcing['air_temperature'] / (forcing['air_temperature'] + 240.0))
+           * np.exp(17.502 * temperature / (forcing['air_temperature'] + 240.0))
            - forcing['h2o'])
         * MOLAR_MASS_H2O
     )
@@ -800,13 +805,39 @@ def water_exchange(dt,
         properties['water_retention']
     )
 
-    thermal_conductivity = thermal_conduction(new_volumetric_water)
+    # --- Heat exchange dummy variables ---
+
+
+    moss_thermal_conductivity = thermal_conduction(new_volumetric_water)
+    thermal_conductivity = (
+        np.power(moss_thermal_conductivity
+                 * parameters['soil_thermal_conductivity'], 0.5)
+        / abs(parameters['soil_depth'] + 0.5 * properties['height'])
+    )
+
+    ground_heat = (
+        thermal_conductivity
+        * (forcing['air_temperature'] - forcing['soil_temperature'])
+    )
+
+    latent_heat = (
+        LATENT_HEAT / (MOLAR_MASS_H2O * evaporation_rate + EPS)
+    )
+
+    sensible_heat = (
+        SPECIFIC_HEAT_AIR
+        * conductance_to_air['heat']
+        * (forcing['air_temperature'] - temperature)
+    )
 
     fluxes = {
         'evaporation': evaporation_rate,  # [mm s-1]
         'capillar_rise': capillary_rise,  # [mm s-1]
         'pond_recharge': pond_recharge_rate,  # [mm s-1]
-        'throughfall': precipitation - interception_rate  # [mm s-1]
+        'throughfall': precipitation - interception_rate,  # [mm s-1]
+        'ground_heat': ground_heat,  # [W m-2]
+        'latent_heat': latent_heat,  # [W m-2]
+        'sensible_heat': sensible_heat,  # [W m-2]
     }
 
     states = {
@@ -815,7 +846,8 @@ def water_exchange(dt,
         'water_content': new_water_content,  # [g g-1]
         'water_storage': new_water_storage,  # [kg m-2] or [mm]
         'hydraulic_conductivity': hydraulic_conductivity,  # [m s-1]
-        'thermal_conductivity': thermal_conductivity,  # [W m-1 K-1]
+        'thermal_conductivity': moss_thermal_conductivity,  # [W m-1 K-1]
+        'temperature': temperature  # [degC]
     }
 
     return fluxes, states

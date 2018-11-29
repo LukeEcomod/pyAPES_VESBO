@@ -268,11 +268,11 @@ class ForestFloor(object):
                     'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
                     'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
                     'soil_depth': parameters['soil_depth'],
+                    'height': parameters['height'],
                 }
 
                 bryo_controls = {
                     'energy_balance': controls['energy_balance'],
-                    'solver': 'forward_euler',
                 }
 
                 if controls['energy_balance']:
@@ -282,7 +282,8 @@ class ForestFloor(object):
                     })
 
                     bryo_controls.update({
-                        'nsteps': 20
+                        'nsteps': 20,
+                        'solver': 'forward_euler',
                     })
 
                 for bryo in self.bryotypes:
@@ -309,8 +310,9 @@ class ForestFloor(object):
                     fluxes['sensible_heat'] += bryo.coverage * fluxes_bryo['sensible_heat']
                     fluxes['ground_heat'] += bryo.coverage * fluxes_bryo['ground_heat']
 
-                    fluxes['bryo_water_closure'] += bryo.coverage * fluxes_bryo['water_closure']
-                    fluxes['bryo_energy_closure'] += bryo.coverage * fluxes_bryo['energy_closure']
+                    if controls['energy_balance']:
+                        fluxes['bryo_water_closure'] += bryo.coverage * fluxes_bryo['water_closure']
+                        fluxes['bryo_energy_closure'] += bryo.coverage * fluxes_bryo['energy_closure']
 
                     states['bryo_temperature'] += bryo.coverage * states_bryo['temperature']
                     states['bryo_water_storage'] += bryo.coverage * states_bryo['water_storage'] / WATER_DENSITY
@@ -343,11 +345,11 @@ class ForestFloor(object):
                     'soil_hydraulic_conductivity': 0.0,
                     'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
                     'soil_depth': parameters['soil_depth'],
+                    'height': parameters['height'],
                 }
 
                 litter_controls = {
                     'energy_balance': controls['energy_balance'],
-                    'solver': 'forward_euler',
                 }
 
                 if controls['energy_balance']:
@@ -356,11 +358,9 @@ class ForestFloor(object):
                         'nir': forcing['nir']
                     })
 
-                    litter_params.update({
-                    })
-
                     litter_controls.update({
-                        'nsteps': 20
+                        'nsteps': 20,
+                        'solver': 'forward_euler',
                     })
 
                 # litters's heat, water and respiration
@@ -382,8 +382,9 @@ class ForestFloor(object):
                 fluxes['sensible_heat'] += self.f_litter * fluxes_litter['sensible_heat']
                 fluxes['ground_heat'] += self.f_litter * fluxes_litter['ground_heat']
 
-                fluxes['litter_water_closure'] += self.f_litter * fluxes_litter['water_closure']
-                fluxes['litter_energy_closure'] += self.f_litter * fluxes_litter['energy_closure']
+                if controls['energy_balance']:
+                    fluxes['litter_water_closure'] += self.f_litter * fluxes_litter['water_closure']
+                    fluxes['litter_energy_closure'] += self.f_litter * fluxes_litter['energy_closure']
 
                 states['litter_temperature'] = states_litter['temperature']
                 states['temperature'] += self.f_litter * states['litter_temperature']
@@ -410,7 +411,7 @@ class ForestFloor(object):
 
                 bare_params = {
                     'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
-                    'depth': parameters['depth'],
+                    'soil_depth': parameters['soil_depth'],
                     'height': parameters['height'],
                     'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
                 }
