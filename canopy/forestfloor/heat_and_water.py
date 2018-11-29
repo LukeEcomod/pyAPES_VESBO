@@ -607,7 +607,8 @@ def heat_and_water_exchange(properties,
 def water_exchange(dt,
                    water_storage,
                    properties,
-                   forcing):
+                   forcing,
+                   parameters):
     """
     Args:
         dt (float): timestep [s]
@@ -626,6 +627,8 @@ def water_exchange(dt,
     Returns:
         water_content (float): [kg m-2]
     """
+    
+    precipitation = forcing['throughfall'] * WATER_DENSITY  # [m s-1] -> [mm s-1]
 
     if dt == 0.0:
         dt = dt + EPS
@@ -698,7 +701,7 @@ def water_exchange(dt,
     interception = (
         max_recharge
         * (1.0 - np.exp(-(1.0 / max_water)
-                        * forcing['precipitation'] * dt))
+                        * precipitation * dt))
     )
 
     # [kg m-2 s-1] or [mm s-1]
@@ -752,9 +755,9 @@ def water_exchange(dt,
         hydraulic_conductivity=hydraulic_conductivity,
         water_potential=water_potential,
         water_content=water_content,
-        soil_hydraulic_conductivity=forcing['soil_hydraulic_conductivity'],
+        soil_hydraulic_conductivity=parameters['soil_hydraulic_conductivity'],
         soil_water_potential=forcing['soil_water_potential'],
-        soil_depth=forcing['soil_depth']
+        soil_depth=parameters['soil_depth']
     )
 
     # [kg m-2 s-1] or [mm s-1]
@@ -803,7 +806,7 @@ def water_exchange(dt,
         'evaporation': evaporation_rate,  # [mm s-1]
         'capillar_rise': capillary_rise,  # [mm s-1]
         'pond_recharge': pond_recharge_rate,  # [mm s-1]
-        'throughfall': forcing['precipitation'] - interception_rate  # [mm s-1]
+        'throughfall': precipitation - interception_rate  # [mm s-1]
     }
 
     states = {
