@@ -225,10 +225,6 @@ class ForestFloor(object):
 
         fluxes_snow, states_snow = self.snowpack.run(dt=dt, forcing=snow_forcing)
 
-        forcing.update({
-            'throughfall_ffloor': fluxes_snow['potential_infiltration']
-        })
-
         # --- Soil respiration ---
 
         fluxes['respiration'] = soil_respiration(
@@ -446,7 +442,7 @@ class ForestFloor(object):
                 fluxes['radiative_flux'] += self.f_baresoil * fluxes_soil['radiative_flux']
                 fluxes['soil_energy_closure'] += self.f_baresoil * fluxes_soil['energy_closure']
 
-                fluxes['potential_infiltration'] += self.f_baresoil * forcing['throughfall_ffloor']
+                fluxes['potential_infiltration'] += self.f_baresoil * fluxes_snow['potential_infiltration']
 
                 states['soil_temperature'] = states_soil['temperature']
                 states['temperature'] += self.f_baresoil * states['soil_temperature']

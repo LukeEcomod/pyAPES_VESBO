@@ -265,7 +265,8 @@ class Bryophyte(object):
                 dt=dt,
                 water_storage=self.old_water_storage,
                 properties=self.properties,
-                forcing=forcing
+                forcing=forcing,
+                parameters=parameters
             )
 
             thermal_conductivity = (
