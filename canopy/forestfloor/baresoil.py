@@ -91,7 +91,7 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
             'soil_hydraulic_conductivity': [m s-1]
             'soil_thermal_conductivity': []
             'height': [m] height to the first canopy calculation node
-            'depth': [m] depth to the first soil calculation node
+            'soil_depth': [m] depth to the first soil calculation node
         controls (dict):
             'energy_balance': boolean
         properties (dict):
@@ -108,7 +108,7 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
     T_soil = forcing['soil_temperature']
     h_soil = forcing['soil_water_potential']
 
-    z_soil = parameters['depth']
+    z_soil = parameters['soil_depth']
     Kt = parameters['soil_thermal_conductivity']
     Kh = parameters['soil_hydraulic_conductivity']
 
@@ -133,7 +133,10 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
 
         SW_gr, LWn = 0.0, 0.0
         # set temperature to average of soil and air
-        surface_temperature = T_ave
+        # geometric mean of air_temperature and soil_temperature
+        surface_temperature = (
+            np.power(forcing['air_temperature'] * forcing['soil_temperature'], 0.5)
+        )
 
     dz_soil = - z_soil
 

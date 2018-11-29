@@ -643,9 +643,6 @@ class CanopyModel(object):
         CO2 = self.ones * ([forcing['co2']])
         Tleaf = T.copy() * self.lad / (self.lad + EPS)
         self.forestfloor.restore()
-        if self.Switch_Ebal is False:
-            self.forestfloor.temperature = (forcing['soil_temperature']
-                                            + T[0]) / 2.0
         self.interception.Tl_wet = T.copy()
         for pt in self.planttypes:
             pt.Tl_sh = T.copy()

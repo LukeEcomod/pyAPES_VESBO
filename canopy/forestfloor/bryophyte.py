@@ -269,26 +269,6 @@ class Bryophyte(object):
                 parameters=parameters
             )
 
-            thermal_conductivity = (
-                np.power(states['thermal_conductivity']
-                         * parameters['soil_thermal_conductivity'], 0.5)
-                / abs(parameters['soil_depth'] + 0.5 * self.properties['height'])
-            )
-
-            ground_heat = (
-                thermal_conductivity
-                * (forcing['air_temperature'] - forcing['soil_temperature'])
-            )
-
-            latent_heat = (
-                LATENT_HEAT / (MOLAR_MASS_H2O * fluxes['evaporation'] + EPS)
-            )
-
-            fluxes.update({
-                'ground_heat': ground_heat,
-                'latent_heat': latent_heat
-            })
-
         # update state variables
         self.temperature = states['temperature']
         self.water_content = states['water_content']

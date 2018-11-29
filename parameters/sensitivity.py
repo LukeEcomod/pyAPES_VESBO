@@ -18,7 +18,7 @@ def get_parameters(name=None):
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (0.0),
+                                                'ground_coverage': (0.5),
 #                                                'height': (0.06)
                                                 },
                                         'sphagnum': {
@@ -34,7 +34,7 @@ def get_parameters(name=None):
                                         'ground_coverage': (0.0)
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (1.0)
+                                        'ground_coverage': (0.5)
                                         }
                                 },
                 }
