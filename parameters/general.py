@@ -6,8 +6,8 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2013-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2013-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2017-06-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2017-06-10",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2019.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -59,7 +59,7 @@ gpara = {
                       ['soil_evaporation', 'evaporation from soil surface [m s-1]', ('date', 'simulation')],
                       ['soil_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
                       ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
-#                      ['soil_volumetric_water_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
+#                      ['soil_volumetric_water_content', 'soil water content [m3/m3]', ('date', 'simulation', 'soil')],
 #                      ['soil_volumetric_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
 #                      ['soil_thermal_conductivity', 'thermal conductivity [W m-1 K-1]', ('date', 'simulation', 'soil')],
                       ['canopy_water_closure', 'interception model mass balance error [m s-1]', ('date', 'simulation')],
@@ -71,27 +71,28 @@ gpara = {
                       ['soil_z', 'soil model grid node elevations [m]', ('soil')],
                       ['ffloor_potential_infiltration', 'potential infiltration to soil [m s-1]', ('date', 'simulation')],
                       ['ffloor_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
-                      ['ffloor_ground_heat_flux', 'ground heat flux (forest floor) [W m-2]', ('date', 'simulation')],
+                      ['ffloor_ground_heat', 'ground heat flux (forest floor) [W m-2]', ('date', 'simulation')],
                       ['ffloor_sensible_heat_flux', 'sensible heat flux (forest floor) [W m-2]', ('date', 'simulation')],
                       ['ffloor_latent_heat_flux', 'latent heat flux (forest floor) [W m-2]', ('date', 'simulation')],
-                      ['ffloor_water_closure_snow', "water balance error (snowcover) [m s-1]", ('date', 'simulation')],
-                      ['ffloor_water_closure_bryo', "water balance error (bryophytes) [m s-1]", ('date', 'simulation')],
-                      ['ffloor_energy_closure_bryo', "energy balance error (bryophytes) [W m-2]", ('date', 'simulation')],
-                      ['ffloor_energy_closure_soil', "energy balance error (soil) [W m-2]", ('date', 'simulation')],
-                      ['ffloor_carbon_pool_bryo', 'carbon pool (bryophyte) [kg C m-2]', ('date', 'simulation')],
-                      ['ffloor_photosynthesis_bryo', 'photosynthesis rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
-                      ['ffloor_respiration_bryo', 'respiration rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
-                      ['ffloor_respiration_litter', 'respiration rate (litter) [umol m-2(ground) s-1]', ('date', 'simulation')],
+                      ['ffloor_snow_water_closure', "water balance error (snowcover) [m s-1]", ('date', 'simulation')],
+                      ['ffloor_bryo_water_closure', "water balance error (bryophytes) [m s-1]", ('date', 'simulation')],
+                      ['ffloor_bryo_energy_closure', "energy balance error (bryophytes) [W m-2]", ('date', 'simulation')],
+                      ['ffloo_soilr_energy_closure', "energy balance error (soil) [W m-2]", ('date', 'simulation')],
+                      ['ffloor_bryo_carbon_pool', 'carbon pool (bryophyte) [kg C m-2]', ('date', 'simulation')],
+                      ['ffloor_bryo_photosynthesis', 'photosynthesis rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
+                      ['ffloor_bryo_respiration', 'respiration rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
+                      ['ffloor_litter_respiration', 'respiration rate (litter) [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_respiration', 'respiration rate [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation', 'evaporation (forest floor) [m s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation_bryo', 'evaporation (bryophytes) [m s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation_litter', 'evaporation (litter) [m s-1]', ('date', 'simulation')],
                       ['ffloor_evaporation_soil', 'evaporation (soil) [m s-1]', ('date', 'simulation')],
                       ['ffloor_temperature', 'temperature (forest floor) [degC]', ('date', 'simulation')],
-                      ['ffloor_temperature_litter', 'temperature (litter) [degC]', ('date', 'simulation')],
-                      ['ffloor_temperature_bryo', 'temperature (bryophyte) [degC]', ('date', 'simulation')],
-                      ['ffloor_temperature_soil', 'temperature (soil) [degC]', ('date', 'simulation')],
-                      ['ffloor_water_storage_bryo', 'water storage (bryophytes) [kg m-2]', ('date', 'simulation')],
+                      ['ffloor_litter_temperature', 'temperature (litter) [degC]', ('date', 'simulation')],
+                      ['ffloor_bryo_temperature', 'temperature (bryophyte) [degC]', ('date', 'simulation')],
+                      ['ffloor_soil_temperature', 'temperature (soil) [degC]', ('date', 'simulation')],
+                      ['ffloor_bryo_water_storage', 'water storage (bryophytes) [kg m-2]', ('date', 'simulation')],
+                      ['ffloor_litter_water_storage', 'water storage (litter) [kg m-2]', ('date', 'simulation')],
                       ['ffloor_capillar_rise', 'capillary rise to bryophyte layer [m s-1]', ('date', 'simulation')],
                       ]}
 

@@ -1061,7 +1061,11 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
     # Flerchinger et al. 2009. NJAS 57, 5-15
     taud = np.exp(-Kd*Lo)
     LWleaf = np.zeros(len(taud))
-    cantop = max(np.where(LAIz > 0)[0])  # node at canopy top
+    ic = np.where(LAIz > 0)[0]
+    if len(ic) == 0:
+        cantop = 0
+    else:
+        cantop = max(ic)
     LWleaf[0:cantop+1] = (1 - taud[0:cantop+1])*leaf_emi*(
                           LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*STEFAN_BOLTZMANN*(Tleaf[0:cantop+1] + DEG_TO_KELVIN)**4)/(
                           LAIz[0:cantop+1] + eps)

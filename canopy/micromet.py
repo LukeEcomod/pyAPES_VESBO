@@ -225,7 +225,7 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None, U_ini
     while err > 0.01 and iter_no < iter_max:
         iter_no += 1
         Fd = Cd*lad*U**2  # drag force
-        d = sum(z*Fd) / sum(Fd)  # displacement height
+        d = sum(z*Fd) / (sum(Fd) + EPS)  # displacement height
         l_mix = mixing_length(z, hc, d)  # m
 
         # --- dU/dz (m-1)
@@ -397,7 +397,7 @@ def mixing_length(z, h, d, l_min=None):
     if not l_min:
         l_min = dz / 2.0
     
-    alpha = (h - d)*VON_KARMAN / h
+    alpha = (h - d)*VON_KARMAN / (h + EPS)
     I_F = np.sign(z - h) + 1.0
     l_mix = alpha*h*(1 - I_F / 2) + (I_F / 2) * (VON_KARMAN*(z - d))
     

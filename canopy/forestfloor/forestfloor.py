@@ -238,8 +238,8 @@ class ForestFloor(object):
             fluxes['potential_infiltration'] += fluxes_snow['potential_infiltration']
             # some groundheat flux to keep soil temperatures reasonable
             fluxes['ground_heat'] += (
-                0.01 * forcing['soil_thermal_conductivity']
-                / abs(forcing['depth'])
+                0.01 * parameters['soil_thermal_conductivity']
+                / abs(parameters['soil_depth'])
                 * (forcing['air_temperature'] - forcing['soil_temperature'])
             )
 
@@ -410,7 +410,7 @@ class ForestFloor(object):
 
                 bare_params = {
                     'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
-                    'depth': parameters['depth'],
+                    'depth': parameters['soil_depth'],
                     'height': parameters['height'],
                     'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
                 }

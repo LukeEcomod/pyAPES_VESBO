@@ -396,7 +396,7 @@ def heat_and_water_exchange(properties,
         'precipitation_temperature': forcing['air_temperature'],
         'soil_pond_storage': forcing['soil_pond_storage'] * 1000.0 / dt,  # [mm s-1]
         'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
-        'soil_thermal_conductivity': parameters['soil_hydraulic_conductivity'],
+        'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
         'soil_depth': parameters['soil_depth'],
     }
 

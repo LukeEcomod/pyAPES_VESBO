@@ -171,7 +171,7 @@ class Interception(object):
                     logger.debug(controls['logger_info'] + ',%s Unrealistic wet leaf temperature %.2f set to air temperature %.2f, %.2f, %.2f, %.2f',
                          iterNo,
                          np.mean(Tl_wet), np.mean(T),
-                         np.mean(forcing['radiation']['LW']['net_leaf']), np.mean(Tl_ave), np.mean(self.Tl_wet))
+                         np.mean(forcing['net_lw_leaf']), np.mean(Tl_ave), np.mean(self.Tl_wet))
                     Tl_wet = T.copy()
 
                 elif iterNo == itermax:
