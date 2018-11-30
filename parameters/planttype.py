@@ -109,7 +109,7 @@ def get_planttypes(dbhfile, grid):
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.3,
+                'm': gfact * 2.5, # --- check value!!
                 'g0': 1.0e-3,
                 'kn': 0.5,
                 'beta': 0.95,
