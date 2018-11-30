@@ -65,7 +65,7 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.05], [0.49])
+                                        'LAImax': ([0.10], [0.49])
                                         }
                                 }
                 }
