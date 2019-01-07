@@ -627,10 +627,10 @@ def water_exchange(dt,
     Returns:
         water_content (float): [kg m-2]
     """
-
-    temperature = (
-        np.power(forcing['air_temperature'] * forcing['soil_temperature'], 0.5)
-    )
+    temperature = forcing['air_temperature']
+#    temperature = (
+#        np.power(forcing['air_temperature'] * forcing['soil_temperature'], 0.5)
+#    )
 
     precipitation = forcing['throughfall'] * WATER_DENSITY  # [m s-1] -> [mm s-1]
 

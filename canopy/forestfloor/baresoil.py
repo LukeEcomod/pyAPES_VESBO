@@ -133,10 +133,11 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
 
         SW_gr, LWn = 0.0, 0.0
         # set temperature to average of soil and air
+        surface_temperature = forcing['air_temperature']
         # geometric mean of air_temperature and soil_temperature
-        surface_temperature = (
-            np.power(forcing['air_temperature'] * forcing['soil_temperature'], 0.5)
-        )
+#        surface_temperature = (
+#            np.power(forcing['air_temperature'] * forcing['soil_temperature'], 0.5)
+#        )
 
     dz_soil = - z_soil
 

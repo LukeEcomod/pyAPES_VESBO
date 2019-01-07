@@ -584,6 +584,7 @@ class CanopyModel(object):
                 'interception': wetleaf_fluxes['interception'],
                 'evaporation': wetleaf_fluxes['evaporation'],
                 'condensation': wetleaf_fluxes['condensation'],
+                'condensation_drip': wetleaf_fluxes['condensation_drip'],
                 'transpiration': Tr,
                 'NEE': NEE,
                 'GPP': GPP,

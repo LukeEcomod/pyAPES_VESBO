@@ -42,7 +42,7 @@ def get_parameters(name=None):
 
     elif name.upper() == 'CLEARCUT':
         parameters = {
-                'count': 1,
+                'count': 2,
                 'canopy': {
                         'forestfloor': {
                                 'bryophytes': {
@@ -65,7 +65,7 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.10], [0.49])
+                                        'LAImax': ([0.1], [0.8])
                                         }
                                 }
                 }
@@ -96,7 +96,7 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'shrubs': {
-                                        'LAImax': ([0.66], [0.79])
+                                        'LAImax': ([0.4], [0.8])
                                         }
                                 }
                 }

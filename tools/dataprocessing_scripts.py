@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 from os import listdir
 
-from iotools import save_df_to_csv
-from timeseries_tools import fill_gaps
+from .iotools import save_df_to_csv
+from .timeseries_tools import fill_gaps
 
 
 
@@ -129,6 +129,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
                                                   dat['H2O'].values * dat['P'].values)
 
     if {'LWin', 'LWout'}.issubset(dat.columns) == False:
+        print('Longwave radiation estimated')
         # estimated long wave budget
         b = 5.6697e-8  # Stefan-Boltzman constant (W m-2 K-4)
         dat['LWin'] = 0.98 * emi_sky * b *(dat['Tair'] + 273.15)**4 # Wm-2 downwelling LW
@@ -139,6 +140,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
 
     # Short wave radiation; separate direct and diffuse PAR & NIR
     if {'diffPar', 'dirPar', 'diffNir', 'dirNir'}.issubset(dat.columns) == False:
+        print('Shortwave radiation components estimated')
         dat['diffPar'] = f_diff * fpar * dat['Rg']
         dat['dirPar'] = (1 - f_diff) * fpar * dat['Rg']
         dat['diffNir'] = f_diff * (1 - fpar) * dat['Rg']
@@ -249,6 +251,37 @@ def read_lettosuo_data():
                                   (lettosuo_data.index <= '01-01-2019')]
 
     return lettosuo_data
+
+def read_Svb_data(forc_fp=None):
+
+    """
+    Reads data related to Svartberget to dataframe.
+    """
+
+    if forc_fp == None: # filepaths
+        forc_fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_eco/concat.csv",
+                   "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_fluxes/concat.csv",
+                   "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_meteo/concat.csv",
+                   "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_profile/concat.csv",
+                   "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_T-profile/concat.csv"]
+
+    index=pd.date_range('01-01-2014','01-01-2017',freq='0.5H')
+    data=pd.DataFrame(index=index, columns=[])
+
+    for fp in forc_fp:
+        dat = pd.read_csv(fp, sep=',', header='infer')
+        dat.index = pd.to_datetime(dat.ix[:,0] + ' ' + dat.ix[:,1], dayfirst=True)
+        dat.index=dat.index.map(lambda x: x.replace(second=0))
+        dat.ix[:,0]=dat.index
+        dat = dat.drop_duplicates(subset=dat.columns[0])
+        dat = dat.drop([dat.columns[0], dat.columns[1]], axis=1)
+        dat.columns = fp.split("/")[-2] + ': ' + dat.columns
+        if len(np.setdiff1d(dat.index, index)) > 0:
+            print(fp, np.setdiff1d(dat.index, index))
+            raise ValueError("Error")
+        data=data.merge(dat, how='outer', left_index=True, right_index=True)
+
+    return data
 
 def gap_fill_lettosuo_meteo(lettosuo_data, plot=False):
     """
@@ -528,7 +561,7 @@ def read_lettosuo_EC():
 
     save_df_to_csv(lettosuo_EC, "Lettosuo_EC", fp=direc + "forcing/")
 
-def gather_data(dir_path="H:/Lettosuo/Forcing_data/datat/meteo/", cols=None):
+def gather_data(dir_path="H:/Lettosuo/Forcing_data/datat/meteo/", cols=None, sort=0):
     """
     Collect files in one directory to one file.
     """
@@ -539,15 +572,20 @@ def gather_data(dir_path="H:/Lettosuo/Forcing_data/datat/meteo/", cols=None):
 
     for fn in filenames:
         if fn != 'concat.csv':
-            dat = pd.read_csv(dir_path + fn, sep=',', header='infer')
+            print(fn)
+            dat = pd.read_csv(dir_path + fn, sep=',', header='infer', encoding = 'ISO-8859-1')
             if cols is not None:
                 frames.append(dat[cols])
             else:
                 frames.append(dat)
 
-    data = pd.concat(frames, ignore_index=True)
+    data = pd.concat(frames, ignore_index=True, sort=False)
     data = data[data[data.columns[0]] != data.columns[0]]
-    data = data.sort_values(by=data.columns[0])
+    data = data[data[data.columns[0]] != 'dd/mm/yyyy']
+    if sort == 0: # datetime in first column
+        data = data.sort_values(by=data.columns[0])
+    elif sort == 1: # date in first column, time in second
+        data = data.sort_values(by=[data.columns[0], data.columns[1]])
     
     data.to_csv(path_or_buf=dir_path + 'concat.csv', sep=',', na_rep='NaN', index=False)
 

@@ -6,8 +6,8 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2016-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2016-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2010-01-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2018-01-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2019.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -27,7 +27,8 @@ gpara = {
                       ['canopy_interception', 'canopy interception [m s-1]', ('date', 'simulation')],
                       ['canopy_interception_storage', 'canopy interception storage [m]', ('date', 'simulation')],
                       ['canopy_evaporation', 'evaporation from interception storage [m s-1]', ('date', 'simulation')],
-                      ['canopy_condensation', 'condensation to canopy [m s-1]', ('date', 'simulation')],
+                      ['canopy_condensation', 'condensation to canopy interception storage [m s-1]', ('date', 'simulation')],
+                      ['canopy_condensation_drip', 'condensation to canopy that drips [m s-1]', ('date', 'simulation')],
                       ['canopy_transpiration','transpiration [m s-1]', ('date', 'simulation')],
                       ['canopy_pt_transpiration', 'transpiration [m s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_gpp', 'gross primary production [umol m-2 s-1]', ('date', 'simulation', 'planttype')],

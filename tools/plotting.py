@@ -77,7 +77,7 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0, fmonth=4, lmonth=9):
                'canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.ffloor_evaporation) * 1e3 * 3600
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation) * 1e3 * 3600
     Data.canopy_GPP = Data.canopy_GPP * MOLAR_MASS_CO2  # umol m-2 s-1 * kg mol-1 = mg m-2 s-1
     Data.canopy_respiration = Data.canopy_respiration * MOLAR_MASS_CO2
 
@@ -88,13 +88,13 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0, fmonth=4, lmonth=9):
     f = np.where(ix > 0.0)[0]  # wet canopy indices
     dryc[f] = 0.0
     months = Data.index.month
-    Data.ET[Data.gapped == 1] = np.nan
+#    Data.ET[Data.gapped == 1] = np.nan
     ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
-    Data.GPP[Data.gapped == 1] = np.nan
+#    Data.GPP[Data.gapped == 1] = np.nan
     ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
-    Data.GPP2[Data.gapped == 1] = np.nan
+#    Data.GPP2[Data.gapped == 1] = np.nan
     ixGPP2 = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP2))[0]
-    Data.Reco[Data.gapped == 1] = np.nan
+#    Data.Reco[Data.gapped == 1] = np.nan
     ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
     labels=['Modelled', 'Measured']
 
@@ -252,7 +252,7 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
         ymax = max(sum(values_all))
     else:
         for i in range(len(values_all)):
-            plt.plot(results[0].date.values, values_all[i], color=colors[i], linewidth=1, label=labels[i])
+            plt.plot(results[0].date.values, values_all[i], color=colors[i], linewidth=1.5, label=labels[i])
         ymax = max([max(val) for val in values_all])
     plt.title(title)
     plt.xlim([results[0].date.values[0], results[0].date.values[-1]])
@@ -316,7 +316,7 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
                 markerstyle = marker[i]
                 if marker[i] is not None:
                     linestyle = 'None'
-            plt.plot(data.index, values_all[i], color=colors[i], linewidth=1, label=labels[i], marker=markerstyle, markersize=1, linestyle=linestyle)
+            plt.plot(data.index, values_all[i], color=colors[i], linewidth=1.5, label=labels[i], marker=markerstyle, markersize=1, linestyle=linestyle)
         ymax = max([np.nanmax(val) for val in values_all])
 
     if limits:
@@ -329,7 +329,7 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
     if legend:
         plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
-def plot_columns(data, col_index=None, slope=None):
+def plot_columns(data, col_index=None, slope=None, plot_timeseries=True):
     """
     Plots specified columns from dataframe as timeseries and correlation matrix.
     Args:
@@ -342,8 +342,9 @@ def plot_columns(data, col_index=None, slope=None):
         col_index = range(len(data.columns))
     for i in col_index:
         col_names.append(data.columns[i])
-    data[col_names].plot(kind='line',marker='o',markersize=1)
-    plt.legend()
+    if plot_timeseries:
+        data[col_names].plot(kind='line',marker='o',markersize=1)
+        plt.legend()
     axes = pd.plotting.scatter_matrix(data[col_names], figsize=(10, 10), alpha=.2)
     corr = data[col_names].corr().as_matrix()
     lim = [data[col_names].min().min(), data[col_names].max().max()]
