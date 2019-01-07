@@ -103,7 +103,7 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-.png
+*.png
 
 sand*.py
 sand*.ipynb
