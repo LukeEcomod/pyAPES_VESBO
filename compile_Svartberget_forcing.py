@@ -380,3 +380,76 @@ save_df_to_csv(Svb_final, "Svarberget_meteo_2014_2016", readme=readme, fp="C:/Us
 
 create_forcingfile("Svarberget_meteo_2014_2016", "Svarberget_forcing_2014_2016",
                    lat=64.26, lon=19.77, P_unit = 1e2) # [hPa]
+
+# %% EC data
+
+from tools.dataprocessing_scripts import read_Svb_data
+import numpy as np
+import pandas as pd
+
+fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_fluxes/concat.csv"]
+
+Svb_fluxes = read_Svb_data(fp)
+
+variables=['SE-Svb_fluxes: H_1_1_1',
+           'SE-Svb_fluxes: LE_1_1_1',
+           'SE-Svb_fluxes: Fc_1_1_1',
+           'SE-Svb_fluxes: LE_f_1_1_1',
+           'SE-Svb_fluxes: NEE_1_1_1']
+
+for var in variables:
+    Svb_fluxes[var]=np.where(Svb_fluxes[var] < -2000.0,
+                             np.nan, Svb_fluxes[var])
+plt.figure()
+ax1=plt.subplot(3,1,1)
+Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1','SE-Svb_fluxes: H_1_1_1','SE-Svb_fluxes: Hraw_1_1_1']].plot(ax=ax1)
+ax2=plt.subplot(3,1,2, sharex=ax1)
+Svb_fluxes[['SE-Svb_fluxes: LE_f_1_1_1','SE-Svb_fluxes: LE_1_1_1','SE-Svb_fluxes: Leraw_1_1_1']].plot(ax=ax2)
+ax3=plt.subplot(3,1,3, sharex=ax1)
+Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1','SE-Svb_fluxes: Fc_1_1_1','SE-Svb_fluxes: Fcraw_1_1_1']].plot(ax=ax3)
+
+from tools.iotools import save_df_to_csv
+from tools.timeseries_tools import fill_gaps
+
+frames = []
+readme = ""
+
+# sensible heat
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: H_1_1_1']],
+                     'SH', 'Sensible heat flux [W m-2]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1']],
+                     'SH_gapfilled', 'Sensible heat flux [W m-2], gapfilled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# latent heat
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: LE_1_1_1']],
+                     'LE', 'Latent heat flux [W m-2]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: LE_f_1_1_1']],
+                     'LE_gapfilled', 'Latent heat flux [W m-2], gapfilled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# NEE
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: Fc_1_1_1']],
+                     'NEE', 'Net ecosystem exchange [umol m-2 s-1]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1']],
+                     'NEE_gapfilled', 'Net ecosystem exchange [umol m-2 s-1], gapfilled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+Svb_EC=pd.concat(frames, axis=1)
+
+save_df_to_csv(Svb_EC, "Svarberget_EC_2014_2016", readme=readme)

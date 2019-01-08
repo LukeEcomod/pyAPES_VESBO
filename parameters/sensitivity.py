@@ -18,119 +18,34 @@ def get_parameters(name=None):
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (0.3),
-#                                                'height': (0.06)
+                                                'ground_coverage': (0.0)
                                                 },
                                         'sphagnum': {
-                                                'ground_coverage': (0.3),
-#                                                'height': (0.045)
+                                                'ground_coverage': (0.0)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.0),
-#                                                'height': (0.095)
+                                                'ground_coverage': (1.0)
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.2)
-                                        },
-                                'baresoil': {
-                                        'ground_coverage': (0.2)
-                                        }
-                                },
-                }
-            }
-
-    elif name.upper() == 'CLEARCUT':
-        parameters = {
-                'count': 2,
-                'canopy': {
-                        'forestfloor': {
-                                'bryophytes': {
-                                        'hylocomium': {
-                                                'ground_coverage': (0.0, 0.0)
-                                                },
-                                        'sphagnum': {
-                                                'ground_coverage': (0.0, 0.0)
-                                                },
-                                        'pleurozium': {
-                                                'ground_coverage': (0.07, 0.07)
-                                                }
-                                        },
-                                'litter': {
-                                        'ground_coverage': (0.71, 0.71)
-                                        },
-                                'baresoil': {
-                                        'ground_coverage': (0.22, 0.22)
-                                        }
-                                },
-                        'planttypes': {
-                                'shrubs': {
-                                        'LAImax': ([0.1], [0.8])
-                                        }
-                                }
-                }
-            }
-
-    elif name.upper() == 'PARTIAL':
-        parameters = {
-                'count': 2,
-                'canopy': {
-                        'forestfloor': {
-                                'bryophytes': {
-                                        'hylocomium': {
-                                                'ground_coverage': (0.0, 0.0)
-                                                },
-                                        'sphagnum': {
-                                                'ground_coverage': (0.0, 0.0)
-                                                },
-                                        'pleurozium': {
-                                                'ground_coverage': (0.49, 0.49)
-                                                }
-                                        },
-                                'litter': {
-                                        'ground_coverage': (0.51, 0.51)
-                                        },
-                                'baresoil': {
-                                        'ground_coverage': (0.0, 0.0)
-                                        }
-                                },
-                        'planttypes': {
-                                'shrubs': {
-                                        'LAImax': ([0.4], [0.8])
-                                        }
-                                }
-                }
-            }
-
-    elif name.upper() == 'CONTROL':
-        parameters = {
-                'count': 1,
-                'canopy': {
-                        'forestfloor': {
-                                'bryophytes': {
-                                        'hylocomium': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.06)
-                                                },
-                                        'sphagnum': {
-                                                'ground_coverage': (0.0),
-                                                'height': (0.045)
-                                                },
-                                        'pleurozium': {
-                                                'ground_coverage': (0.49),
-                                                'height': (0.095)
-                                                }
-                                        },
-                                'litter': {
-                                        'ground_coverage': (0.51)
+                                        'ground_coverage': (0.0)
                                         },
                                 'baresoil': {
                                         'ground_coverage': (0.0)
                                         }
                                 },
                         'planttypes': {
+                                'pine': {
+                                        'LAImax': ([0.3 * 4.1])
+                                        },
+                                'spruce': {
+                                        'LAImax': ([0.65 * 4.1])
+                                        },
+                                'decidious': {
+                                        'LAImax': ([0.05 * 4.1])
+                                        },
                                 'shrubs': {
-                                        'LAImax': ([0.66])
+                                        'LAImax': ([0.5])
                                         }
                                 }
                 }

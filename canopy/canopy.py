@@ -586,6 +586,7 @@ class CanopyModel(object):
                 'condensation': wetleaf_fluxes['condensation'],
                 'condensation_drip': wetleaf_fluxes['condensation_drip'],
                 'transpiration': Tr,
+                'SH': flux_sensible_heat[-1],
                 'NEE': NEE,
                 'GPP': GPP,
                 'respiration': Reco,
