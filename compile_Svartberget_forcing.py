@@ -6,24 +6,29 @@ Created on Thu Jan  3 10:10:39 2019
 """
 # %% collect short time data from directories to larger files
 
-#from tools.dataprocessing_scripts import gather_data
-#
-#directory = 'H:/Muut projektit/Natalia/Svartberget_data/'
-#
-#foldernames = [
-#        'SE-Svb_eco/',
-#        'SE-Svb_fluxes/',
-#        'SE-Svb_meteo/',
-#        'SE-Svb_profile/',
-#        'SE-Svb_T-profile/',
-#        'SE-Deg_meteo/',
-#        'SE-Deg_fluxes/'
-#        ]
-#
-#for fn in foldernames:
-#    print(fn)
-#    gather_data(directory + fn, sort=1)
-#    
+from tools.dataprocessing_scripts import gather_data
+
+directory = 'H:/Muut projektit/Natalia/Svartberget_data/'
+
+foldernames = [
+        'SE-Svb_eco/',
+        'SE-Svb_fluxes/',
+        'SE-Svb_meteo/',
+        'SE-Svb_profile/',
+        'SE-Svb_T-profile/',
+        'SE-Deg_meteo/',
+        'SE-Deg_fluxes/',
+        'EC_from_Chi/'
+        ]
+
+for fn in foldernames[:-1]:
+    print(fn)
+    gather_data(directory + fn, dayfirst=True)
+
+fn=foldernames[-1]
+print(fn)
+gather_data(directory + fn, dayfirst=False)
+
 # %% read data from files
 
 from tools.dataprocessing_scripts import read_Svb_data
@@ -34,10 +39,11 @@ fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_eco/concat.csv",
       "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_meteo/concat.csv",
       "H:/Muut projektit/Natalia/Svartberget_data/SE-Deg_meteo/concat.csv",
       "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_profile/concat.csv",
-      "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_T-profile/concat.csv"]
+      "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_T-profile/concat.csv",
+      "H:/Muut projektit/Natalia/Svartberget_data/EC_from_Chi/concat.csv"]
 
 Svb_eco = read_Svb_data([fp[0]])
-Svb_fluxes= read_Svb_data([fp[1],fp[2]])
+Svb_fluxes= read_Svb_data([fp[1],fp[2],fp[7]])
 Svb_meteo = read_Svb_data([fp[3],fp[4]])
 
 # %% processing data
@@ -387,7 +393,8 @@ from tools.dataprocessing_scripts import read_Svb_data
 import numpy as np
 import pandas as pd
 
-fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_fluxes/concat.csv"]
+fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_fluxes/concat.csv",
+      "H:/Muut projektit/Natalia/Svartberget_data/EC_from_Chi/concat.csv"]
 
 Svb_fluxes = read_Svb_data(fp)
 
@@ -397,16 +404,40 @@ variables=['SE-Svb_fluxes: H_1_1_1',
            'SE-Svb_fluxes: LE_f_1_1_1',
            'SE-Svb_fluxes: NEE_1_1_1']
 
+var2 = ['EC_from_Chi: NEE_f_umolm2s',
+        'EC_from_Chi: ET_f_mmolm2s',
+        'EC_from_Chi: H_f_Wm2',
+        'EC_from_Chi: Reco_umolm2s',
+        'EC_from_Chi: GPP_umolm2s',
+        'EC_from_Chi: NEE_umolm2s', 
+        'EC_from_Chi: ET_mmolm2s',
+        'EC_from_Chi: H_Wm2', 
+        'EC_from_Chi: LE_Wm2',
+        'EC_from_Chi: Rn_Wm2']
+
+
 for var in variables:
     Svb_fluxes[var]=np.where(Svb_fluxes[var] < -2000.0,
                              np.nan, Svb_fluxes[var])
+    
+for var in var2:
+    Svb_fluxes[var]=np.where(Svb_fluxes[var] > 2000,
+                             np.nan, Svb_fluxes[var])
+    
 plt.figure()
-ax1=plt.subplot(3,1,1)
-Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1','SE-Svb_fluxes: H_1_1_1','SE-Svb_fluxes: Hraw_1_1_1']].plot(ax=ax1)
-ax2=plt.subplot(3,1,2, sharex=ax1)
-Svb_fluxes[['SE-Svb_fluxes: LE_f_1_1_1','SE-Svb_fluxes: LE_1_1_1','SE-Svb_fluxes: Leraw_1_1_1']].plot(ax=ax2)
-ax3=plt.subplot(3,1,3, sharex=ax1)
-Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1','SE-Svb_fluxes: Fc_1_1_1','SE-Svb_fluxes: Fcraw_1_1_1']].plot(ax=ax3)
+ax1=plt.subplot(5,1,1)
+Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1','SE-Svb_fluxes: H_1_1_1','SE-Svb_fluxes: Hraw_1_1_1', 
+            'EC_from_Chi: H_Wm2','EC_from_Chi: H_f_Wm2']].plot(ax=ax1)
+ax2=plt.subplot(5,1,2, sharex=ax1)
+Svb_fluxes[['SE-Svb_fluxes: LE_f_1_1_1','SE-Svb_fluxes: LE_1_1_1','SE-Svb_fluxes: Leraw_1_1_1',
+            'EC_from_Chi: LE_Wm2']].plot(ax=ax2)
+ax3=plt.subplot(5,1,3, sharex=ax1)
+Svb_fluxes[['EC_from_Chi: ET_f_mmolm2s','EC_from_Chi: ET_mmolm2s']].plot(ax=ax3)
+ax4=plt.subplot(5,1,4, sharex=ax1)
+Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1','SE-Svb_fluxes: Fc_1_1_1','SE-Svb_fluxes: Fcraw_1_1_1',
+            'EC_from_Chi: NEE_f_umolm2s','EC_from_Chi: NEE_umolm2s']].plot(ax=ax4)
+ax5=plt.subplot(5,1,5, sharex=ax1)
+Svb_fluxes[['EC_from_Chi: GPP_umolm2s','EC_from_Chi: Reco_umolm2s']].plot(ax=ax5)
 
 from tools.iotools import save_df_to_csv
 from tools.timeseries_tools import fill_gaps

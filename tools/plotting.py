@@ -367,15 +367,41 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
 
     z = np.linspace(0, 30.0, 100)
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,
-        normed=normed, dbhfile="parameters/runkolukusarjat/" + filename, plot=True)
-    if normed == False:
-        lad = z * 0.0
+        normed=False, dbhfile="parameters/runkolukusarjat/" + filename, plot=False)        
+    
+    lad = z * 0.0
+    for k in range(len(quantiles)):
+        lad += lad_p[:,k] + lad_s[:,k] +lad_d[:,k]
+    lai_tot = sum(lai_p) + sum(lai_s) + sum(lai_d)
+    
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = prop_cycle.by_key()['color']
+    plt.figure(figsize=(3.2,4.5))
+    ax=plt.subplot(1,1,1)
+    if normed:
         for k in range(len(quantiles)):
-            lad += lad_p[:,k] + lad_s[:,k] +lad_d[:,k]
-        lai_tot = sum(lai_p) + sum(lai_s) + sum(lai_d)
-        plt.plot(lad, z,':k', label='total, %.2f m$^2$m$^{-2}$' % lai_tot)
-    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.1)
-
+            plt.plot(lad_p[:, k]/lai_tot,z,color=colors[0], label=r'Pine, $%.2f\times \mathrm{LAI_{tot}}$' % 0.3)#(lai_p[k]/lai_tot))#,lad_g,z)
+            plt.plot(lad_s[:, k]/lai_tot,z,color=colors[1], label=r'Spruce, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_s[k]/lai_tot))
+            plt.plot(lad_d[:, k]/lai_tot,z,color=colors[2], label=r'Birch, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_d[k]/lai_tot))
+        plt.title("  ")#dbhfile.split("/")[-1])
+        plt.ylabel('Height (m)')
+        plt.xlabel(r'Normalized leaf area density (m$^2$m$^{-3}$)')
+        ax.set_xticks([0.0,0.05,0.1,0.15])
+        plt.plot(lad/lai_tot, z,':k', label='Total')
+    else:
+        for k in range(len(quantiles)):
+            plt.plot(lad_p[:, k],z,color=colors[0], label='Pine, %.2f m$^2$m$^{-2}$' % lai_p[k])#,lad_g,z)
+            plt.plot(lad_s[:, k],z,color=colors[1], label='Spruce, %.2f m$^2$m$^{-2}$' % lai_s[k])
+            plt.plot(lad_d[:, k],z,color=colors[2], label='Birch, %.2f m$^2$m$^{-2}$' % lai_d[k])
+        plt.title("  ")#dbhfile.split("/")[-1])
+        plt.ylabel('height [m]')
+        plt.xlabel('lad [m$^2$m$^{-3}$]')
+        plt.plot(lad, z,':k', label='Total, %.2f m$^2$m$^{-2}$' % lai_tot)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.2)
+    plt.tight_layout()
+    
 def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
