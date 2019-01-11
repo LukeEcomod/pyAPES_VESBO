@@ -65,16 +65,18 @@ def plot_results(results):
     plt.tight_layout(rect=(0, 0, 0.8, 1))
 
 def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
-    Data = read_forcing("Svarberget_EC_2014_2016.csv", cols='all',
+    Data = read_forcing("Svarberget_EC_2014_2016_chi.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
-    Data['ET'] = Data.LE / LATENT_HEAT * MOLAR_MASS_H2O * 3600  # W m-2 / J mol-1 * kg mol-1 * s h-1 = kg m-2 h-1 = mm h-1
+    Data.ET = Data.ET * 1e-3 * MOLAR_MASS_H2O * 3600  # mmol m-2 s-1 - > mm h-1
 
-    variables=['canopy_NEE','canopy_SH','canopy_transpiration','canopy_evaporation',
+    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_SH','canopy_LE','canopy_transpiration','canopy_evaporation',
                'forcing_precipitation','ffloor_evaporation','canopy_condensation','canopy_condensation_drip']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
     Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation
         + Data.canopy_condensation + Data.canopy_condensation_drip) * 1e3 * 3600
+
+    Data['canopy_Reco'] = Data['canopy_respiration']
 
     dates = Data.index
 
@@ -85,12 +87,16 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     months = Data.index.month
     ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
     ixSH = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.SH))[0]
+    ixLE = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.LE))[0]
     ixNEE = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.NEE))[0]
+    ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
+    ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
     labels=['Modelled', 'Measured']
 
+    # Energy and ET
     plt.figure(figsize=(10,6))
     plt.subplot(341)
-    plot_xy(Data.NEE[ixNEE], Data.canopy_NEE[ixNEE], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
+    plot_xy(Data.LE[ixLE], Data.canopy_LE[ixLE], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(345)
     plot_xy(Data.SH[ixSH], Data.canopy_SH[ixSH], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
@@ -99,9 +105,9 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
 
     ax = plt.subplot(3,4,(2,3))
-    plot_timeseries_df(Data, ['canopy_NEE', 'NEE'], colors=[pal[0],'k'], xticks=False,
+    plot_timeseries_df(Data, ['canopy_LE', 'LE'], colors=[pal[0],'k'], xticks=False,
                        labels=['Modelled', 'Measured'], marker=[None, '.'])
-    plt.title('Net ecosystem exchange [umol CO2 m-2 s-1]', fontsize=10)
+    plt.title('Latent heat flux [W m-2]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(6,7), sharex=ax)
@@ -113,12 +119,12 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     plt.subplot(3,4,(10,11), sharex=ax)
     plot_timeseries_df(Data, ['ET_mod','ET'], colors=[pal[2],'k'], xticks=True,
                        labels=labels, marker=[None, '.'])
-    plt.title('Evapotranspiration [mm h-1]', fontsize=10)
+    plt.title('Evapotranspiration [mm h-1] with no precipitation in 24h', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     ax =plt.subplot(344)
-    plot_diurnal(Data.NEE[ixNEE], color='k', legend=False)
-    plot_diurnal(Data.canopy_NEE[ixNEE], color=pal[0], legend=False)
+    plot_diurnal(Data.LE[ixLE], color='k', legend=False)
+    plot_diurnal(Data.canopy_LE[ixLE], color=pal[0], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
@@ -131,6 +137,53 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     plt.subplot(3,4,12, sharex=ax)
     plot_diurnal(Data.ET[ixET], color='k', legend=False)
     plot_diurnal(Data.ET_mod[ixET], color=pal[2], legend=False)
+
+    plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
+
+    # CO2
+    plt.figure(figsize=(10,6))
+    plt.subplot(341)
+    plot_xy(Data.NEE[ixNEE], Data.canopy_NEE[ixNEE], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
+
+    plt.subplot(345)
+    plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
+
+    plt.subplot(349)
+    plot_xy(Data.Reco[ixReco], Data.canopy_Reco[ixReco], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
+
+    ax = plt.subplot(3,4,(2,3))
+    plot_timeseries_df(Data, ['canopy_NEE', 'NEE'], colors=[pal[0],'k'], xticks=False,
+                       labels=['Modelled', 'Measured'], marker=[None, '.'])
+    plt.title('Net ecosystem exchange [umol CO2 m-2 s-1]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+
+    plt.subplot(3,4,(6,7), sharex=ax)
+    plot_timeseries_df(Data, ['canopy_GPP','GPP'], colors=[pal[1],'k'], xticks=False,
+                       labels=labels, marker=[None, '.'])
+    plt.title('Gross primary production [umol CO2 m-2 s-1]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+
+    plt.subplot(3,4,(10,11), sharex=ax)
+    plot_timeseries_df(Data, ['canopy_Reco','Reco'], colors=[pal[2],'k'], xticks=True,
+                       labels=labels, marker=[None, '.'])
+    plt.title('Ecosystem respiration [umol CO2 m-2 s-1]', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+
+    ax =plt.subplot(344)
+    plot_diurnal(Data.NEE[ixNEE], color='k', legend=False)
+    plot_diurnal(Data.canopy_NEE[ixNEE], color=pal[0], legend=False)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.xlabel('')
+
+    plt.subplot(348, sharex=ax)
+    plot_diurnal(Data.GPP[ixGPP], color='k', legend=False)
+    plot_diurnal(Data.canopy_GPP[ixGPP], color=pal[1], legend=False)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.xlabel('')
+
+    plt.subplot(3,4,12, sharex=ax)
+    plot_diurnal(Data.Reco[ixReco], color='k', legend=False)
+    plot_diurnal(Data.canopy_Reco[ixReco], color=pal[2], legend=False)
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
 

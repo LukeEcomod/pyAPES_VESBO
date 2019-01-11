@@ -415,18 +415,20 @@ var2 = ['EC_from_Chi: NEE_f_umolm2s',
         'EC_from_Chi: LE_Wm2',
         'EC_from_Chi: Rn_Wm2']
 
-
 for var in variables:
     Svb_fluxes[var]=np.where(Svb_fluxes[var] < -2000.0,
                              np.nan, Svb_fluxes[var])
-    
+
 for var in var2:
     Svb_fluxes[var]=np.where(Svb_fluxes[var] > 2000,
                              np.nan, Svb_fluxes[var])
-    
+
+Svb_fluxes['EC_from_Chi: GPP_umolm2s_notfilled'] = np.where(np.isnan(Svb_fluxes['EC_from_Chi: NEE_umolm2s']),
+          np.nan, Svb_fluxes['EC_from_Chi: GPP_umolm2s'])
+
 plt.figure()
 ax1=plt.subplot(5,1,1)
-Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1','SE-Svb_fluxes: H_1_1_1','SE-Svb_fluxes: Hraw_1_1_1', 
+Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1','SE-Svb_fluxes: H_1_1_1','SE-Svb_fluxes: Hraw_1_1_1',
             'EC_from_Chi: H_Wm2','EC_from_Chi: H_f_Wm2']].plot(ax=ax1)
 ax2=plt.subplot(5,1,2, sharex=ax1)
 Svb_fluxes[['SE-Svb_fluxes: LE_f_1_1_1','SE-Svb_fluxes: LE_1_1_1','SE-Svb_fluxes: Leraw_1_1_1',
@@ -437,11 +439,13 @@ ax4=plt.subplot(5,1,4, sharex=ax1)
 Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1','SE-Svb_fluxes: Fc_1_1_1','SE-Svb_fluxes: Fcraw_1_1_1',
             'EC_from_Chi: NEE_f_umolm2s','EC_from_Chi: NEE_umolm2s']].plot(ax=ax4)
 ax5=plt.subplot(5,1,5, sharex=ax1)
-Svb_fluxes[['EC_from_Chi: GPP_umolm2s','EC_from_Chi: Reco_umolm2s']].plot(ax=ax5)
+Svb_fluxes[['EC_from_Chi: GPP_umolm2s', 'EC_from_Chi: GPP_umolm2s_notfilled','EC_from_Chi: Reco_umolm2s']].plot(ax=ax5)
 
 from tools.iotools import save_df_to_csv
 from tools.timeseries_tools import fill_gaps
 
+
+# File from ICOS portal data
 frames = []
 readme = ""
 
@@ -483,4 +487,75 @@ readme += info
 
 Svb_EC=pd.concat(frames, axis=1)
 
-save_df_to_csv(Svb_EC, "Svarberget_EC_2014_2016", readme=readme)
+Svb_EC = Svb_EC[(Svb_EC.index >= '1.1.2014') & (Svb_EC.index <= '1.1.2017')]
+
+save_df_to_csv(Svb_EC, "Svarberget_EC_2014_2016_ICOS", readme=readme)
+
+# File from Jackie's data
+frames = []
+readme = ""
+
+# sensible heat
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: H_Wm2']],
+                     'SH', 'Sensible heat flux [W m-2]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# latent heat
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: LE_Wm2']],
+                     'LE', 'Latent heat flux [W m-2]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# evapotranspiration
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: ET_mmolm2s']],
+                     'ET', 'Evapotranspiration [mmol m-2 s-1]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: ET_f_mmolm2s']],
+                     'ET', 'Evapotranspiration [mmol m-2 s-1], gapfilled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# NEE
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: NEE_umolm2s']],
+                     'NEE', 'Net ecosystem exchange [umol m-2 s-1]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: NEE_f_umolm2s']],
+                     'NEE_gapfilled', 'Net ecosystem exchange [umol m-2 s-1], gapfilled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# GPP
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: GPP_umolm2s_notfilled']],
+                     'GPP', 'Gross primary production [umol m-2 s-1]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: GPP_umolm2s']],
+                     'GPP_gapfilled', 'Gross primary production [umol m-2 s-1], gapfilled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# Reco
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: Reco_umolm2s']],
+                     'Reco', 'Ecosystem respiration [umol m-2 s-1], modelled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+
+Svb_EC2=pd.concat(frames, axis=1)
+
+Svb_EC2 = Svb_EC2[(Svb_EC2.index >= '1.1.2014') & (Svb_EC2.index <= '1.1.2017')]
+
+save_df_to_csv(Svb_EC2, "Svarberget_EC_2014_2016_Chi", readme=readme)
