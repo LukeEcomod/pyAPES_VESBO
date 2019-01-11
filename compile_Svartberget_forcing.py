@@ -441,6 +441,8 @@ Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1','SE-Svb_fluxes: Fc_1_1_1','SE-Svb_fluxes:
 ax5=plt.subplot(5,1,5, sharex=ax1)
 Svb_fluxes[['EC_from_Chi: GPP_umolm2s', 'EC_from_Chi: GPP_umolm2s_notfilled','EC_from_Chi: Reco_umolm2s']].plot(ax=ax5)
 
+Svb_fluxes[['EC_from_Chi: Rn_Wm2']].plot()
+
 from tools.iotools import save_df_to_csv
 from tools.timeseries_tools import fill_gaps
 
@@ -549,6 +551,13 @@ readme += info
 # Reco
 df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: Reco_umolm2s']],
                      'Reco', 'Ecosystem respiration [umol m-2 s-1], modelled', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# Rnet
+df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: Rn_Wm2']],
+                     'Rnet', 'Net radiation [W m-2]', fill_nan=np.nan,
                      plot=True)
 frames.append(df)
 readme += info

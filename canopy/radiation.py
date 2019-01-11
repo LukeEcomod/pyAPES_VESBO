@@ -111,7 +111,9 @@ class Radiation(object):
 
             results = {'sunlit':{'incident': Q_sl, 'absorbed': q_sl, 'fraction': f_sl},
                        'shaded':{'incident': Q_sh, 'absorbed': q_sh},
-                       'ground': SWb[0] + SWd[0]}
+                       'ground': SWb[0] + SWd[0],
+                       'up': SWu,
+                       'down': SWb + SWd}
 
             return results
 

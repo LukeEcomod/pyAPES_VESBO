@@ -69,6 +69,24 @@ def driver(create_ncf=False,
 
     Nsim = parameters['count']
 
+    # --- FORCING ---
+    # Read forcing
+    forcing = read_forcing(gpara['forc_filename'],
+                           gpara['start_time'],
+                           gpara['end_time'],
+                           dt=gpara['dt'])
+    # read soil moisture and temperature
+    df = read_forcing(gpara['forc_filename'],
+                      gpara['start_time'],
+                      gpara['end_time'],
+                      dt=gpara['dt'],
+                      cols=['Tsoil','Wliq'])
+
+    forcing[['Tsoil','Wliq']] = df[['Tsoil','Wliq']].copy()
+    # set first values as initial conditions
+    spara['heat_model']['initial_condition']['temperature'] = forcing['Tsoil'].iloc[0]
+    spara['water_model']['initial_condition']['volumetric_water_content'] = forcing['Wliq'].iloc[0]
+
     default_params = {
             'canopy': cpara,
             'soil': spara
@@ -80,12 +98,6 @@ def driver(create_ncf=False,
 
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
-    # --- FORCING ---
-    # Read forcing
-    forcing = read_forcing(gpara['forc_filename'],
-                           gpara['start_time'],
-                           gpara['end_time'],
-                           dt=gpara['dt'])
 
     tasks = []
 
@@ -153,7 +165,7 @@ class Model(object):
 
         # create soil model instance
         self.soil = Soil(soil_para)
-        
+
         # initial delayed temperature and degreedaysum 
 
         if 'X' in forcing:
@@ -161,7 +173,7 @@ class Model(object):
                 canopy_para['planttypes'][pt]['phenop'].update({'Xo': forcing['X'].iloc[0]})
         if 'DDsum' in forcing:
             for pt in list(canopy_para['planttypes'].keys()):
-                canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})           
+                canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})
 
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para, self.soil.grid['dz'])
@@ -240,7 +252,9 @@ class Model(object):
                 ),
                 'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
                 'ground_heat_flux': -ffloor_flux['ground_heat'],
-                'date': self.forcing.index[k]}
+                'date': self.forcing.index[k],
+                'state_water':{'volumetric_water_content': self.forcing['Wliq'].iloc[k]},
+                'state_heat':{'temperature': self.forcing['Tsoil'].iloc[k]}}
 
             # transpiration sink [m s-1]
             rootsink =  self.canopy_model.rad * canopy_flux['transpiration']

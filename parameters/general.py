@@ -7,7 +7,7 @@ gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2016-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2016-10-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2016-11-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Svarberget_forcing_2014_2016.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -49,6 +49,7 @@ gpara = {
 #                      ['canopy_sensible_heat_flux', 'sensible heat flux [W m-2]', ('date', 'simulation', 'canopy')],
                       ['canopy_SH', 'sensible heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_LE', 'latent heat flux [W m-2]', ('date', 'simulation')],
+                      ['canopy_Rnet', 'net radiation [W m-2]', ('date', 'simulation')],
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_respiration', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],
@@ -61,7 +62,7 @@ gpara = {
                       ['soil_evaporation', 'evaporation from soil surface [m s-1]', ('date', 'simulation')],
                       ['soil_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
                       ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
-#                      ['soil_volumetric_water_content', 'soil water content [m3/m3]', ('date', 'simulation', 'soil')],
+                      ['soil_volumetric_water_content', 'soil water content [m3/m3]', ('date', 'simulation', 'soil')],
 #                      ['soil_volumetric_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
 #                      ['soil_thermal_conductivity', 'thermal conductivity [W m-1 K-1]', ('date', 'simulation', 'soil')],
                       ['canopy_water_closure', 'interception model mass balance error [m s-1]', ('date', 'simulation')],

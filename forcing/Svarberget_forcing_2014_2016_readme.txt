@@ -1,6 +1,6 @@
 Readme for Svarberget_forcing_2014_2016.csv
 
-Kersti Haahti, Luke 2019-01-07
+Kersti Haahti, Luke 2019-01-11
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 doy: Day of year [days]
@@ -21,5 +21,7 @@ dirPar: Direct PAR [W/m2]
 diffNir: Diffuse NIR [W/m2] 
 dirNir: Direct NIR [W/m2]
 Rnet: Net radiation [W/m2]
+Tsoil: Soil surface layer temperature [degC]]
+Wliq: Soil surface layer moisture content [m3 m-3]
 X: phenomodel delayed temperature [degC]
 DDsum: degreedays [days]

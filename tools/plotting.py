@@ -69,7 +69,7 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.ET = Data.ET * 1e-3 * MOLAR_MASS_H2O * 3600  # mmol m-2 s-1 - > mm h-1
 
-    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_SH','canopy_LE','canopy_transpiration','canopy_evaporation',
+    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_SH','canopy_Rnet','canopy_transpiration','canopy_evaporation',
                'forcing_precipitation','ffloor_evaporation','canopy_condensation','canopy_condensation_drip']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
@@ -87,7 +87,7 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     months = Data.index.month
     ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
     ixSH = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.SH))[0]
-    ixLE = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.LE))[0]
+    ixRnet = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Rnet))[0]
     ixNEE = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.NEE))[0]
     ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
     ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
@@ -96,7 +96,7 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     # Energy and ET
     plt.figure(figsize=(10,6))
     plt.subplot(341)
-    plot_xy(Data.LE[ixLE], Data.canopy_LE[ixLE], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
+    plot_xy(Data.Rnet[ixRnet], Data.canopy_Rnet[ixRnet], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
 
     plt.subplot(345)
     plot_xy(Data.SH[ixSH], Data.canopy_SH[ixSH], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
@@ -105,9 +105,9 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
 
     ax = plt.subplot(3,4,(2,3))
-    plot_timeseries_df(Data, ['canopy_LE', 'LE'], colors=[pal[0],'k'], xticks=False,
+    plot_timeseries_df(Data, ['canopy_Rnet', 'Rnet'], colors=[pal[0],'k'], xticks=False,
                        labels=['Modelled', 'Measured'], marker=[None, '.'])
-    plt.title('Latent heat flux [W m-2]', fontsize=10)
+    plt.title('Net radiation [W m-2]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(6,7), sharex=ax)
@@ -123,8 +123,8 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     ax =plt.subplot(344)
-    plot_diurnal(Data.LE[ixLE], color='k', legend=False)
-    plot_diurnal(Data.canopy_LE[ixLE], color=pal[0], legend=False)
+    plot_diurnal(Data.Rnet[ixRnet], color='k', legend=False)
+    plot_diurnal(Data.canopy_Rnet[ixRnet], color=pal[0], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 

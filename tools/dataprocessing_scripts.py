@@ -19,7 +19,7 @@ from .timeseries_tools import fill_gaps
 
 
 
-direc = "C:/Users/L1656/Documents/Git_repos/pyAPES/"
+direc = "C:/Users/L1656/Documents/Git_repos/Modeling_cases/pyAPES_Krycklan_C2/"
 
 """
 
@@ -156,6 +156,11 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     cols.append('Rnet')
     readme += "\nRnet: Net radiation [W/m2]"
 
+    if {'Tsoil', 'Wliq'}.issubset(dat.columns):
+        cols.extend(('Tsoil', 'Wliq'))
+        dat['Wliq'] = dat['Wliq'] / 100.0
+        readme += "\nTsoil: Soil surface layer temperature [degC]]"
+        readme += "\nWliq: Soil surface layer moisture content [m3 m-3]"
 
     X = np.zeros(len(dat))
     DDsum = np.zeros(len(dat))

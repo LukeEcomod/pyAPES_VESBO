@@ -1,6 +1,6 @@
 Readme for Svarberget_meteo_2014_2016.csv
 
-Kersti Haahti, Luke 2019-01-07
+Kersti Haahti, Luke 2019-01-08
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 Tsoil: Soil temperature at 5cm [degC]

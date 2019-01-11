@@ -202,17 +202,29 @@ class Water(object):
         Returns:
             updates .gwl, (.h_pond), .h, .Wtot, .Kv, .Kh
         """
-        self.gwl = state['ground_water_level']
+        if 'ground_water_level' in state:
+            self.gwl = state['ground_water_level']
+            if 'water_potential' in state:
+                self.h = state['water_potential']
+            else:
+                self.h = self.gwl - self.grid['z']  # steady state
+            if 'volumetric_water_content' in state:
+                self.Wtot = state['volumetric_water_content']
+            else:
+                self.Wtot = h_to_cellmoist(self.pF, self.h, self.grid['dz'])
+        elif 'volumetric_water_content' in state:
+            if isinstance(state['volumetric_water_content'], float):
+                self.Wtot = self.zeros + state['volumetric_water_content']
+            else:
+                self.Wtot = np.array(state['volumetric_water_content'])
+            self.Wtot = np.minimum(self.Wtot, self.pF['ThetaS'])
+            self.h = wrc(self.pF, self.Wtot, var='Th')
+            self.gwl = get_gwl(self.h, self.grid['z'])
+        else:
+            raise ValueError("Problem in wate.update_state()")
+
         if 'pond_storage' in state:
             self.h_pond = state['pond_storage']
-        if 'water_potential' in state:
-            self.h = state['water_potential']
-        else:
-            self.h = self.gwl - self.grid['z']  # steady state
-        if 'volumetric_water_content' in state:
-            self.Wtot = state['volumetric_water_content']
-        else:
-            self.Wtot = h_to_cellmoist(self.pF, self.h, self.grid['dz'])
         self.Kv = hydraulic_conductivity(self.pF, x=self.h, Ksat=self.Kvsat)
         self.Kh = hydraulic_conductivity(self.pF, x=self.h, Ksat=self.Khsat)
 

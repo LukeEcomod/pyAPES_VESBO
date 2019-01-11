@@ -30,3 +30,6 @@ GPP_gapfilled: Gross primary production [umol m-2 s-1], gapfilled
 Reco: Ecosystem respiration [umol m-2 s-1], modelled
   flag 0 (51.70%): EC_from_Chi: Reco_umolm2s
   flag 1 (48.30%): filled with Reco = nan
+Rnet: Net radiation [W m-2]
+  flag 0 (51.65%): EC_from_Chi: Rn_Wm2
+  flag 1 (48.35%): filled with Rnet = nan
