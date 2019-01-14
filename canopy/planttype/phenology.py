@@ -15,6 +15,7 @@ Created on Mon May 15 13:43:44 2017
 """
 
 import numpy as np
+from canopy.constants import DEG_TO_RAD
 
 class Photo_cycle(object):
     r"""Seasonal cycle of photosynthetic machinery.
@@ -65,7 +66,7 @@ class Photo_cycle(object):
 class LAI_cycle(object):
     r"""Dercribes seasonal cycle of leaf-area index (LAI)
     """
-    def __init__(self, p):
+    def __init__(self, p, loc):
         r""" Initializes LAI cycle model.
 
         Args:
@@ -76,7 +77,7 @@ class LAI_cycle(object):
                 'Tbase': base temperature [degC]
                 'ddo': degreedays at bud burst [days]
                 'ddur': duration of recovery period [days]
-                'sso': start doy of decrease, based on daylength [days]
+                'sdl':  daylength for senescence start [h]
                 'sdur': duration of decreasing period [days]
         Returns:
             self (object)
@@ -85,7 +86,14 @@ class LAI_cycle(object):
         self.ddo = p['ddo']
         self.ddmat = p['ddmat']
         self.ddur = p['ddur']
-        self.sso = p['sso']
+
+        # senescence starts at first doy when daylength < sdl
+        doy = np.arange(1, 366)
+        dl = daylength(lat=loc['lat'], lon=loc['lon'], doy=doy)
+
+        ix = np.max(np.where(dl > p['sdl']))
+        self.sso = doy[ix]  # this is onset date for senescence
+
         self.sdur = p['sdur']
         if p['lai_ini']==None:
             self.f = p['lai_min']  # current relative LAI [...1]
@@ -142,3 +150,30 @@ class LAI_cycle(object):
         self.f = f
         if out:
             return f
+
+def daylength(lat, lon, doy):
+    """
+    Computes daylength from location and day of year.
+
+    Args:
+        lat, lon - in deg, float or arrays of floats
+        doy - day of year, float or arrays of floats
+
+    Returns:
+        dl - daylength (hours), float or arrays of floats
+    """
+
+    lat = lat * DEG_TO_RAD
+    lon = lon * DEG_TO_RAD
+
+    # ---> compute declination angle
+    xx = 278.97 + 0.9856 * doy + 1.9165 * np.sin((356.6 + 0.9856 * doy) * DEG_TO_RAD)
+    decl = np.arcsin(0.39785 * np.sin(xx * DEG_TO_RAD))
+
+    # --- compute day length, the period when sun is above horizon
+    # i.e. neglects civil twilight conditions
+    cosZEN = 0.0
+    dl = 2.0 * np.arccos(cosZEN - np.sin(lat)*np.sin(decl) / 
+                         (np.cos(lat)*np.cos(decl))) / DEG_TO_RAD / 15.0  # hours
+
+    return dl

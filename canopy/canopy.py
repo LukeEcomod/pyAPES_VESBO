@@ -124,7 +124,7 @@ class CanopyModel(object):
                 pp = p.copy()
                 pp['LAImax'] = lai_max
                 pp['lad'] = p['lad'][:, idx]
-                ptypes.append(PlantType(self.z, pp, dz_soil, ctr=cpara['ctr']))
+                ptypes.append(PlantType(self.z, pp, dz_soil, ctr=cpara['ctr'], loc=cpara['loc']))
 
         self.planttypes = ptypes
 
@@ -585,6 +585,9 @@ class CanopyModel(object):
                 'evaporation': wetleaf_fluxes['evaporation'],
                 'condensation': wetleaf_fluxes['condensation'],
                 'condensation_drip': wetleaf_fluxes['condensation_drip'],
+                'evaporation_ml': wetleaf_fluxes['evaporation_ml'],
+                'throughfall_ml': wetleaf_fluxes['throughfall_ml'],
+                'condensation_drip_ml': wetleaf_fluxes['condensation_drip_ml'],
                 'transpiration': Tr,
                 'SH': flux_sensible_heat[-1],
                 'NEE': NEE,

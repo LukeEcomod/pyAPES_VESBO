@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2016-06-01",  # start time of simulation [yyyy-mm-dd]
+        'start_time' : "2016-07-01",  # start time of simulation [yyyy-mm-dd]
         'end_time' : "2016-11-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Svarberget_forcing_2014_2016.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
@@ -20,7 +20,7 @@ gpara = {
 #                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
                       ['canopy_temperature','air temperature []degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
+                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
                       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
                       ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
@@ -44,6 +44,9 @@ gpara = {
                       ['canopy_leaf_net_LW', 'net leaf longwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
                       ['canopy_leaf_SW_absorbed', 'leaf absorbed shortwave radiation [W m-2]', ('date', 'simulation', 'canopy')],
                       ['canopy_throughfall', 'throughfall to moss or snow [m s-1]', ('date', 'simulation')],
+                      ['canopy_evaporation_ml', 'evaporation from interception storage (condensation incl.) [m s-1]', ('date', 'simulation', 'canopy')],
+                      ['canopy_throughfall_ml', 'throughfall within canopy [m s-1]', ('date', 'simulation', 'canopy')],
+                      ['canopy_condensation_drip_ml', 'condensation drip within canopy [m s-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_co2_flux', 'co2 flux [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_latent_heat_flux', 'latent heat flux [W m-2]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_sensible_heat_flux', 'sensible heat flux [W m-2]', ('date', 'simulation', 'canopy')],

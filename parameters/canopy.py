@@ -13,6 +13,11 @@ def get_cpara(dbhfile):
     # initialize dictionary to store parameters
     cpara = {}
 
+    # site location
+    loc = {'lat': 64.26,  # latitude
+           'lon': 19.77  # longitude
+           }
+
     # grid
     grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
             'Nlayers': 100  # number of layers in grid [-]
@@ -63,7 +68,7 @@ def get_cpara(dbhfile):
     # defined in parameters.planttype.py
     planttypes = get_planttypes(dbhfile, grid)
 
-    cpara.update({'ctr': ctr, 'grid': grid, 'radiation': radiation, 'micromet': micromet,
+    cpara.update({'loc': loc, 'ctr': ctr, 'grid': grid, 'radiation': radiation, 'micromet': micromet,
                   'interception': interception, 'planttypes': planttypes, 'forestfloor': ffloor})
 
     return cpara
