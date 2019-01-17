@@ -13,6 +13,12 @@ def get_cpara(dbhfile):
     # initialize dictionary to store parameters
     cpara = {}
 
+    # site location
+    loc = {'lat': 60.63,  # latitude
+           'lon': 23.95  # longitude
+           }
+
+
     # grid
     grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
             'Nlayers': 100  # number of layers in grid [-]
@@ -48,8 +54,8 @@ def get_cpara(dbhfile):
                  }
 
     # --- interception ---  SADANNAN KORJAUSKERTOIMET?
-    interception = {'wmax': 0.15e-03, #0.5e-03,  # maximum interception storage capacity for rain [m per unit of LAI]
-                    'wmaxsnow': 1.2e-03, #4.0e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
+    interception = {'wmax': 0.2e-03,  # maximum interception storage capacity for rain [m per unit of LAI]  - Watanabe & Mizunani coniferous trees
+                    'wmaxsnow': 1.6e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
                     'w_ini': 0.0,  # initial canopy storage [m]
                     'Tmin': 0.0,  # temperature below which all is snow [degC]
                     'Tmax': 1.0,  # temperature above which all is water [degC]
@@ -63,7 +69,6 @@ def get_cpara(dbhfile):
     # defined in parameters.planttype.py
     planttypes = get_planttypes(dbhfile, grid)
 
-    cpara.update({'ctr': ctr, 'grid': grid, 'radiation': radiation, 'micromet': micromet,
+    cpara.update({'loc': loc, 'ctr': ctr, 'grid': grid, 'radiation': radiation, 'micromet': micromet,
                   'interception': interception, 'planttypes': planttypes, 'forestfloor': ffloor})
-
     return cpara

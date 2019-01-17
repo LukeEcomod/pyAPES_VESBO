@@ -27,7 +27,7 @@ def get_planttypes(dbhfile, grid):
                     'Tbase': base temperature [degC]
                     'ddo': degreedays at bud burst [days]
                     'ddur': duration of recovery period [days]
-                    'sso': start doy of decrease, based on daylength [days]
+                    'sdl':  daylength for senescence start [h]
                     'sdur': duration of decreasing period [days]
                 'photop' (dict): leaf gas-exchange parameters
                     'Vcmax': maximum carboxylation velocity [umolm-2s-1]
@@ -94,7 +94,7 @@ def get_planttypes(dbhfile, grid):
                 'ddo': 45.0,
                 'ddmat': 250.0,
                 'ddur': 23.0,
-                'sso': 240,
+                'sdl': 12.0,
                 'sdur': 30.0
                 },
             'photop': {
@@ -149,7 +149,7 @@ def get_planttypes(dbhfile, grid):
                 'ddo': 45.0,
                 'ddmat': 250.0,
                 'ddur': 23.0,
-                'sso': 240,
+                'sdl': 12.0,
                 'sdur': 30.0
                 },
             'photop': {
@@ -204,7 +204,7 @@ def get_planttypes(dbhfile, grid):
                 'ddo': 45.0,
                 'ddmat': 250.0,
                 'ddur': 23.0,
-                'sso': 240,
+                'sdl': 12.0,
                 'sdur': 30.0
                 },
             'photop': {
@@ -259,7 +259,7 @@ def get_planttypes(dbhfile, grid):
                 'ddo': 45.0,
                 'ddmat': 250.0,
                 'ddur': 23.0,
-                'sso': 240,
+                'sdl': 12.0,
                 'sdur': 30.0
                 },
             'photop': {
