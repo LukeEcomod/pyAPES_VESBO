@@ -15,7 +15,6 @@ import sys
 import os
 import pandas as pd
 import numpy as np
-import datetime
 import json
 
 
@@ -164,9 +163,7 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
                 'H2O',
                 'CO2',
                 'Zen',
-                'Rg',
                 'LWin',
-                'LWout',
                 'diffPar',
                 'dirPar',
                 'diffNir',
@@ -223,42 +220,6 @@ def read_results(outputfiles):
         return results[0]
     else:
         return results
-
-def save_df_to_csv(df, fn, readme='', fp="forcing/", timezone = +2):
-    """
-    Save dataframe with datetime index to csv file with corresponding readme.txt.
-    Args:
-        df (DataFrame): data to save
-        fn (str): filename of saved file (.csv not included)
-        readme (str): readme corresponding to df to save as txt file
-        fp (str): filepath, forcing folder used as default
-        timezone (float): time zone in refernce to UTC, default UTC + 2
-    """
-
-    # add datetime as columns
-    df.insert(0, 'yyyy', df.index.year.values)
-    df.insert(1, 'mo', df.index.month.values)
-    df.insert(2, 'dd', df.index.day.values)
-    df.insert(3, 'hh', df.index.hour.values)
-    df.insert(4, 'mm', df.index.minute.values)
-
-    df.to_csv(path_or_buf=fp + fn + ".csv", sep=',', na_rep='NaN', index=False)
-    Readme = "Readme for " + fn + ".csv"
-    Readme += "\n\nKersti Haahti, Luke " + str(datetime.datetime.now().date())
-    Readme += "\n\nyyyy, mo, dd, hh, mm: datetime [UTC + %.1f]" % timezone
-    Readme += readme
-    outF = open(fp + fn + "_readme.txt", "w")
-    print(Readme, file=outF)
-    outF.close()
-
-
-def xarray_to_df(results, variables, sim_idx=0):
-    series = []
-    for var in variables:
-        series.append(results[var].isel(simulation=sim_idx).to_pandas())
-    df = pd.concat(series, axis=1)
-    df.columns = variables
-    return df
 
 
 class NumpyEncoder(json.JSONEncoder):
