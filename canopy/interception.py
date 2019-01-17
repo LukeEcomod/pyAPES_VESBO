@@ -223,6 +223,7 @@ class Interception(object):
         LE = np.zeros(N)  # latent heat flux [W m-2(ground)]
         Fr = np.zeros(N)  # sensible heat flux [W m-2(ground)]
         wf = np.zeros(N)  # wetness ratio
+        Tr = np.zeros(N)  # throughfall within canopy [m]
         Trfall = 0.0  # throughfall below canopy [m]
 
         if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
@@ -273,6 +274,7 @@ class Interception(object):
                 # interception and throughfall [m]
                 Interc += Ir * subdt
                 Trfall += P[0] * subdt
+                Tr += P[:-1] * subdt
 
         # throughfall to field layer or snowpack
         Trfall = Trfall + Unload
@@ -308,7 +310,10 @@ class Interception(object):
                   'sources': {'h2o': dqsource,
                               'sensible_heat': Heat / dt,
                               'fr': Fr / dt,
-                              'latent_heat': dqsource * L}
+                              'latent_heat': dqsource * L},
+                  'evaporation_ml': (Evap + Cond * (1 - wf)) / dt,
+                  'throughfall_ml': Tr / dt,
+                  'condensation_drip_ml': (Cond * wf) / dt
                   }
         return fluxes
 
