@@ -35,15 +35,19 @@ from tools.iotools import jsonify
 from canopy.canopy import CanopyModel
 from soil.soil import Soil
 
-from parameters.sensitivity import iterate_parameters
+from parameters.parametersets import iterate_parameters
 
 import logging
 
 
 def driver(create_ncf=False,
            result_file=None,
-           sensitivityrun=False):
+           parametersets={}):
     """
+    Args:
+        create_ncf (bool): results saved to netCDF4 file
+        result_file (str): name of result file
+        parametersets (dict): parameter sets to overwrite default parameters
     """
     # --- LOGGING ---
     from parameters.general import logging_configuration
@@ -59,20 +63,17 @@ def driver(create_ncf=False,
     from parameters.canopy import cpara
     # Import soil model parameters
     from parameters.soil import spara
-    if sensitivityrun:
-        # Impport sensitivity parameters
-        from parameters.sensitivity import parameters
-        Nsim = parameters['count']
-    else:
-        parameters = {}
+    if parametersets == {}:
         Nsim = 1
+    else:
+        Nsim = parametersets['count']
 
     default_params = {
             'canopy': cpara,
             'soil': spara
             }
 
-    param_space = [iterate_parameters(parameters, copy(default_params), count) for count in range(Nsim)]
+    param_space = [iterate_parameters(parametersets, copy(default_params), count) for count in range(Nsim)]
 
     logger = logging.getLogger(__name__)
 

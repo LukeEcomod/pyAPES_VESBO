@@ -53,8 +53,8 @@ class Water(object):
                               'type' (str): 'impermeable', 'flux', 'free_drain' or 'head'
                               'value' (float or None): give for 'head' [m] and 'flux' [m s-1]
                               'depth' (float): depth of impermeable boundary (=bedrock) [m]
-                ('drainage_equation' (dict): drainage equation and drainage parameters
-                                  'type' (str): 'hooghoudt' (no other options yet)
+                'drainage_equation' (dict): drainage equation and drainage parameters
+                                  'type' (str): 'hooghoudt' / None (no other options yet)
                                   'depth' (float): drain depth [m]
                                   'spacing' (float): drain spacing [m]
                                   'width' (float):  drain width [m])
@@ -95,15 +95,15 @@ class Water(object):
                 self.solution_type = 'RICHARDS EQUATION'
             info = 'Water balance in soil solved using: %s' % self.solution_type
             # drainage equation
-            if 'drainage_equation' in model_specs:
-                self.drainage_equation = model_specs['drainage_equation']
+            self.drainage_equation = model_specs['drainage_equation']
+            if self.drainage_equation['type'] == None:
+                info += ' & no lateral drainage'
+            else:
                 self.drainage_equation['type'] = model_specs['drainage_equation']['type'].upper()
                 if self.drainage_equation['type'] != 'HOOGHOUDT':
                     raise ValueError("Unknown drainage equation type %s"
                                      % self.drainage_equation['type'])
                 info += ' & %s' % self.drainage_equation['type']
-            else:
-                self.drainage_equation = {'type': None}
             # Keep track of dt used in solution
             self.subdt = None
         else:
@@ -140,7 +140,7 @@ class Water(object):
         if lower_boundary is not None:  # allows lower boundary to change in time
             self.lbc = lower_boundary
 
-        rootsink = self.zeros
+        rootsink = self.zeros.copy()
         if water_sink is not None:
             rootsink[0:min(len(water_sink), len(rootsink))] = water_sink
             rootsink = rootsink / self.grid['dz']  # [m3 m-3 s-1]
@@ -154,7 +154,7 @@ class Water(object):
                                               self.drainage_equation['spacing'],
                                               self.drainage_equation['width'])
         else:
-            drainage_flux = self.zeros  # no drainage
+            drainage_flux = self.zeros.copy()  # no drainage
 
         # initial state
         initial_state = {'water_potential': self.h,
@@ -367,15 +367,18 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
 
             """ lower boundary condition """
             if lbc['type'] == 'free_drain':
-                q_bot = -KLh[-1]*cosalfa
+                q_bot = - min(KLh[-1] * cosalfa, 1e-6)  # avoid extreme high drainage
             elif lbc['type'] == 'impermeable':
                 q_bot = 0.0
             elif lbc['type'] == 'flux':
-                q_bot = max(lbc['value'], -KLh[-1] * cosalfa)
+                q_bot = np.sign(lbc['value']) * min(lbc['value'], KLh[-1] * cosalfa)
             elif lbc['type'] == 'head':
                 h_bot = lbc['value']
                 # approximate flux to calculate Qin
                 q_bot = -KLh[-1] * (h_iter[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
+            else:
+                raise ValueError("Unknown lower boundary condition %s"
+                     % lbc['type'])
 
             """ upper boundary condition """
             # swiching between flux and head as in Dam and Feddes (2000)
