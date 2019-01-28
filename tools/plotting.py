@@ -466,7 +466,7 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
             'x' (str): x-axis label
             'y' (str): y-axis label
     """
-    plt.scatter(x, y, marker='o', color=color, alpha=.1)
+    plt.scatter(x, y, marker='o', color=color, alpha=.5)
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])

@@ -52,12 +52,13 @@ def get_cpara(dbhfile):
                  'leaf_emi': 0.98
                  }
 
-    # --- interception ---  SADANNAN KORJAUSKERTOIMET?
-    interception = {'wmax': 0.15e-03, #0.5e-03,  # maximum interception storage capacity for rain [m per unit of LAI]
-                    'wmaxsnow': 1.2e-03, #4.0e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
+    # --- interception ---  SADANNAN KORJAUSKERTOIMET? Leaf orientation factor
+    interception = {'wmax': 0.2e-03,  # maximum interception storage capacity for rain [m per unit of LAI]  - Watanabe & Mizunani coniferous trees
+                    'wmaxsnow': 1.6e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
                     'w_ini': 0.0,  # initial canopy storage [m]
                     'Tmin': 0.0,  # temperature below which all is snow [degC]
                     'Tmax': 1.0,  # temperature above which all is water [degC]
+                    'leaf_orientation': 0.5 # leaf orientation factor for randomdly oriented leaves
                     }
 
     # --- forest floor ---

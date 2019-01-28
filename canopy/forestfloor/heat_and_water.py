@@ -1647,7 +1647,9 @@ def bryophyte_shortwave_albedo(water_content, properties=None):
         albedo_par = properties['optical_properties']['albedo_PAR']
         normalized_water_content = water_content / properties['max_water_content']
 
-        scaling_coefficient = 0.2 / (1 - 0.9 * np.power(1.8703, -normalized_water_content))
+#        scaling_coefficient = 0.2 / (1 - 0.9 * np.power(1.8703, -normalized_water_content))
+        # lower assymptote 1.0, upper assymptote 4.5, beta -4.24
+        scaling_coefficient = 1.0 + (4.5 - 1.0) / (1.00 + np.power(10, 4.24 * normalized_water_content))
 
         albedo_par = scaling_coefficient * albedo_par
         albedo_nir = scaling_coefficient * albedo_nir
