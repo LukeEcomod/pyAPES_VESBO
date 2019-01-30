@@ -47,8 +47,8 @@ def get_cpara(dbhfile):
     # --- radiation ---
     radiation = {'clump': 0.7,  # clumping index [-]
                  'leaf_angle': 1.0,  # leaf-angle distribution [-]
-                 'Par_alb': 0.12,  # shoot Par-albedo [-]
-                 'Nir_alb': 0.55,  # shoot NIR-albedo [-]
+                 'Par_alb': 0.1,  # shoot Par-albedo [-]
+                 'Nir_alb': 0.39,  # shoot NIR-albedo [-]
                  'leaf_emi': 0.98
                  }
 

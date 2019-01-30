@@ -1,6 +1,6 @@
 Readme for Svarberget_EC_2014_2016_Chi.csv
 
-Kersti Haahti, Luke 2019-01-11
+Kersti Haahti, Luke 2019-01-29
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 SH: Sensible heat flux [W m-2]
@@ -31,5 +31,11 @@ Reco: Ecosystem respiration [umol m-2 s-1], modelled
   flag 0 (51.70%): EC_from_Chi: Reco_umolm2s
   flag 1 (48.30%): filled with Reco = nan
 Rnet: Net radiation [W m-2]
-  flag 0 (51.65%): EC_from_Chi: Rn_Wm2
-  flag 1 (48.35%): filled with Rnet = nan
+  flag 0 (58.32%): SE-Svb_meteo: NetRad_1_2_1
+  flag 1 (41.68%): filled with Rnet = nan
+LWnet: Net longwave radiation [W m-2]
+  flag 0 (58.32%): SE-Svb_meteo: Lwnet_1_2_1
+  flag 1 (41.68%): filled with LWnet = nan
+SWnet: Net shortwave radiation [W m-2]
+  flag 0 (58.32%): SE-Svb_meteo: Swnet_1_2_1
+  flag 1 (41.68%): filled with SWnet = nan

@@ -507,9 +507,11 @@ class CanopyModel(object):
                     any(np.isnan(H2O)) or any(np.isnan(CO2))):
 
                     if (any(np.isnan(T)) or any(np.isnan(H2O)) or any(np.isnan(CO2))):
-                        logger.debug('%s Solution of profiles blowing up, T nan %s, H2O nan %s, CO2 nan %s',
+                        logger.debug('%s Solution of profiles blowing up, T nan %s, H2O nan %s, CO2 nan %s, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f',
                                          parameters['date'],
-                                         any(np.isnan(T)), any(np.isnan(H2O)), any(np.isnan(CO2)))
+                                         any(np.isnan(T)), any(np.isnan(H2O)), any(np.isnan(CO2)),
+                                         np.mean(sources['h2o']),np.mean(sources['co2']),np.mean(sources['sensible_heat']),
+                                         fluxes_ffloor['evaporation'], Fc_gr, fluxes_ffloor['sensible_heat'])
                     elif max(err_t, err_h2o, err_co2, err_Tl, err_Ts) < 0.05:
                         if max(err_t, err_h2o, err_co2, err_Tl, err_Ts) > 0.01:
                             logger.debug('%s Maximum iterations reached but error tolerable < 0.05',
@@ -623,9 +625,9 @@ class CanopyModel(object):
             Tleaf_wet = np.where(self.lad > 0.0,
                                  self.interception.Tl_wet,
                                  np.nan)
-            Rnet = (radiation_profiles['lw']['down'][-1] - radiation_profiles['lw']['up'][-1] +
-                    radiation_profiles['nir']['down'][-1] - radiation_profiles['nir']['up'][-1] +
-                    radiation_profiles['par']['down'][-1] - radiation_profiles['par']['up'][-1])
+            SWnet = (radiation_profiles['nir']['down'][-1] - radiation_profiles['nir']['up'][-1] +
+                     radiation_profiles['par']['down'][-1] - radiation_profiles['par']['up'][-1])
+            LWnet = (radiation_profiles['lw']['down'][-1] - radiation_profiles['lw']['up'][-1])
 
             state_canopy.update({
                     'Tleaf_wet': Tleaf_wet,
@@ -639,7 +641,9 @@ class CanopyModel(object):
                     'leaf_net_LW': radiation_profiles['lw']['net_leaf'],
                     'sensible_heat_flux': flux_sensible_heat,  # [W m-2]
                     'energy_closure': energy_closure,
-                    'Rnet': Rnet,
+                    'Rnet': SWnet + LWnet,
+                    'SWnet': SWnet,
+                    'LWnet': LWnet,
                     'fr_source': sum(sources['fr'] * self.dz)})
 
         return fluxes_canopy, state_canopy, fluxes_ffloor, states_ffloor

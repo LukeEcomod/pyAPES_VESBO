@@ -480,11 +480,16 @@ def heat_and_water_exchange(properties,
     del tt
 
     if np.any(np.isnan(new_states)):
-        print('AAAAARGH!!! temp: {}, waterc: {}, evap: {}, h2o{}'.format(
+        print('AAAAARGH!!! temp: {}, waterc: {}, evap: {}, h2o{}, par{}, nir{}, lw{}, T{}, U{}'.format(
                 new_states[0][-1],
                 new_states[1][-1],
                 new_states[5][-1],
-                forcing['h2o']
+                forcing['h2o'],
+                forcing['par'],
+                forcing['nir'],
+                forcing['lw_dn'],
+                forcing['air_temperature'],  # [deg C]
+                forcing['wind_speed']
                 ))
 
     # new states in every solver timestep
@@ -1649,7 +1654,7 @@ def bryophyte_shortwave_albedo(water_content, properties=None):
 
 #        scaling_coefficient = 0.2 / (1 - 0.9 * np.power(1.8703, -normalized_water_content))
         # lower assymptote 1.0, upper assymptote 4.5, beta -4.24
-        scaling_coefficient = 1.0 + (4.5 - 1.0) / (1.00 + np.power(10, 4.24 * normalized_water_content))
+        scaling_coefficient = 1.0 + (4.5 - 1.0) / (1.00 + np.power(10, 4.53 * normalized_water_content))
 
         albedo_par = scaling_coefficient * albedo_par
         albedo_nir = scaling_coefficient * albedo_nir

@@ -470,15 +470,19 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])
-    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
+    plt.annotate("y = %.2fx + %.2f \nR$^2$ = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
     lim = [min(min(y[np.isfinite(y)]),
+               min(x[np.isfinite(x)]))-100,
+           max(max(y[np.isfinite(y)]),
+               max(x[np.isfinite(x)]))+100]
+    lim2 = [min(min(y[np.isfinite(y)]),
                min(x[np.isfinite(x)])),
            max(max(y[np.isfinite(y)]),
                max(x[np.isfinite(x)]))]
     plt.plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
     plt.plot(lim, lim, 'k--', linewidth=1)
-    plt.ylim(lim)
-    plt.xlim(lim)
+    plt.ylim(lim2)
+    plt.xlim(lim2)
     plt.title(title)
     plt.xlabel(axislabels['x'])
     plt.ylabel(axislabels['y'])

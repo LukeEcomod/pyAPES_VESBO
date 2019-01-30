@@ -53,6 +53,8 @@ gpara = {
                       ['canopy_SH', 'sensible heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_LE', 'latent heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_Rnet', 'net radiation [W m-2]', ('date', 'simulation')],
+                      ['canopy_SWnet', 'net shortwave radiation [W m-2]', ('date', 'simulation')],
+                      ['canopy_LWnet', 'net longwave radiation [W m-2]', ('date', 'simulation')],
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_respiration', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],

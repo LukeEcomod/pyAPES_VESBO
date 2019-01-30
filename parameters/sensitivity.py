@@ -15,6 +15,9 @@ def get_parameters(name=None):
         parameters = {
                 'count': 1,
                 'canopy': {
+                        'interception': {
+                                'wmax': (0.35e-03)
+                                },
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
@@ -36,21 +39,63 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'pine': {
-                                        'LAImax': ([0.3 * 4.1])
+                                        'LAImax': ([0.3 * 5.15])
                                         },
                                 'spruce': {
-                                        'LAImax': ([0.65 * 4.1])
+                                        'LAImax': ([0.65 * 5.15])
                                         },
                                 'decidious': {
-                                        'LAImax': ([0.05 * 4.1])
+                                        'LAImax': ([0.05 * 5.15])
                                         },
                                 'shrubs': {
-                                        'LAImax': ([0.5])
+                                        'LAImax': ([0.6])
                                         }
                                 }
                 }
             }
-
+    elif name=='Krycklan_sensitivity':
+        # parameter sets of simulations
+        parameters = {
+                'count': 1,
+                'canopy': {
+                        'interception': {
+                                'wmax': (0.2e-03)
+                                },
+                        'forestfloor': {
+                                'bryophytes': {
+                                        'hylocomium': {
+                                                'ground_coverage': (1.0)
+                                                },
+                                        'sphagnum': {
+                                                'ground_coverage': (0.0)
+                                                },
+                                        'pleurozium': {
+                                                'ground_coverage': (0.0)
+                                                }
+                                        },
+                                'litter': {
+                                        'ground_coverage': (0.0)
+                                        },
+                                'baresoil': {
+                                        'ground_coverage': (0.0)
+                                        }
+                                },
+                        'planttypes': {
+                                'pine': {
+                                        'LAImax': ([0.3 * 5.15])
+                                        },
+                                'spruce': {
+                                        'LAImax': ([0.65 * 5.15])
+                                        },
+                                'decidious': {
+                                        'LAImax': ([0.05 * 5.15])
+                                        },
+                                'shrubs': {
+                                        'LAImax': ([0.6])
+                                        }
+                                }
+                }
+            }
     else:
         raise ValueError('Unknown sensitivity parametrization %s' % name.upper())
 

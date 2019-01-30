@@ -394,7 +394,8 @@ import numpy as np
 import pandas as pd
 
 fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_fluxes/concat.csv",
-      "H:/Muut projektit/Natalia/Svartberget_data/EC_from_Chi/concat.csv"]
+      "H:/Muut projektit/Natalia/Svartberget_data/EC_from_Chi/concat.csv",
+      "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_meteo/concat.csv"]
 
 Svb_fluxes = read_Svb_data(fp)
 
@@ -414,6 +415,10 @@ var2 = ['EC_from_Chi: NEE_f_umolm2s',
         'EC_from_Chi: H_Wm2', 
         'EC_from_Chi: LE_Wm2',
         'EC_from_Chi: Rn_Wm2']
+
+var3 = ['SE-Svb_meteo: Swnet_1_2_1',
+        'SE-Svb_meteo: Lwnet_1_2_1',
+        'SE-Svb_meteo: NetRad_1_2_1']
 
 for var in variables:
     Svb_fluxes[var]=np.where(Svb_fluxes[var] < -2000.0,
@@ -442,6 +447,8 @@ ax5=plt.subplot(5,1,5, sharex=ax1)
 Svb_fluxes[['EC_from_Chi: GPP_umolm2s', 'EC_from_Chi: GPP_umolm2s_notfilled','EC_from_Chi: Reco_umolm2s']].plot(ax=ax5)
 
 Svb_fluxes[['EC_from_Chi: Rn_Wm2']].plot()
+
+Svb_fluxes[var3].plot()
 
 from tools.iotools import save_df_to_csv
 from tools.timeseries_tools import fill_gaps
@@ -556,8 +563,22 @@ frames.append(df)
 readme += info
 
 # Rnet
-df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: Rn_Wm2']],
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_meteo: NetRad_1_2_1']],
                      'Rnet', 'Net radiation [W m-2]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# LWnet
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_meteo: Lwnet_1_2_1']],
+                     'LWnet', 'Net longwave radiation [W m-2]', fill_nan=np.nan,
+                     plot=True)
+frames.append(df)
+readme += info
+
+# SWnet
+df, info = fill_gaps(Svb_fluxes[['SE-Svb_meteo: Swnet_1_2_1']],
+                     'SWnet', 'Net shortwave radiation [W m-2]', fill_nan=np.nan,
                      plot=True)
 frames.append(df)
 readme += info
