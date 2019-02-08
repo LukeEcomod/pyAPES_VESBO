@@ -95,46 +95,46 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
 
     # Energy and ET
     plt.figure(figsize=(10,6))
-    plt.subplot(341)
-    plot_xy(Data.Rnet[ixRnet], Data.canopy_Rnet[ixRnet], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
-
-    plt.subplot(345)
-    plot_xy(Data.SH[ixSH], Data.canopy_SH[ixSH], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
+#    plt.subplot(341)
+#    plot_xy(Data.Rnet[ixRnet], Data.canopy_Rnet[ixRnet], color=pal[0], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
+#
+#    plt.subplot(345)
+#    plot_xy(Data.SH[ixSH], Data.canopy_SH[ixSH], color=pal[1], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
 
     plt.subplot(349)
-    plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
+    plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'},alpha=0.2)
 
-    ax = plt.subplot(3,4,(2,3))
-    plot_timeseries_df(Data, ['canopy_Rnet', 'Rnet'], colors=[pal[0],'k'], xticks=False,
-                       labels=['Modelled', 'Measured'], marker=[None, '.'])
-    plt.title('Net radiation [W m-2]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+#    ax = plt.subplot(3,4,(2,3))
+#    plot_timeseries_df(Data, ['canopy_Rnet', 'Rnet'], colors=[pal[0],'k'], xticks=False,
+#                       labels=['Modelled', 'Measured'], marker=[None, '.'])
+#    plt.title('Net radiation [W m-2]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+#
+#    plt.subplot(3,4,(6,7), sharex=ax)
+#    plot_timeseries_df(Data, ['canopy_SH','SH'], colors=[pal[1],'k'], xticks=False,
+#                       labels=labels, marker=[None, '.'])
+#    plt.title('Sensible heat flux [W m-2]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    plt.subplot(3,4,(6,7), sharex=ax)
-    plot_timeseries_df(Data, ['canopy_SH','SH'], colors=[pal[1],'k'], xticks=False,
-                       labels=labels, marker=[None, '.'])
-    plt.title('Sensible heat flux [W m-2]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
-
-    plt.subplot(3,4,(10,11), sharex=ax)
+    plt.subplot(3,4,(10,11))#, sharex=ax)
     plot_timeseries_df(Data, ['ET_mod','ET'], colors=[pal[2],'k'], xticks=True,
                        labels=labels, marker=[None, '.'])
     plt.title('Evapotranspiration [mm h-1] with no precipitation in 24h', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    ax =plt.subplot(344)
-    plot_diurnal(Data.Rnet[ixRnet], color='k', legend=False)
-    plot_diurnal(Data.canopy_Rnet[ixRnet], color=pal[0], legend=False)
-    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
-    plt.xlabel('')
+#    ax =plt.subplot(344)
+#    plot_diurnal(Data.Rnet[ixRnet], color='k', legend=False)
+#    plot_diurnal(Data.canopy_Rnet[ixRnet], color=pal[0], legend=False)
+#    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+#    plt.xlabel('')
+#
+#    plt.subplot(348, sharex=ax)
+#    plot_diurnal(Data.SH[ixSH], color='k', legend=False)
+#    plot_diurnal(Data.canopy_SH[ixSH], color=pal[1], legend=False)
+#    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+#    plt.xlabel('')
 
-    plt.subplot(348, sharex=ax)
-    plot_diurnal(Data.SH[ixSH], color='k', legend=False)
-    plot_diurnal(Data.canopy_SH[ixSH], color=pal[1], legend=False)
-    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
-    plt.xlabel('')
-
-    plt.subplot(3,4,12, sharex=ax)
+    plt.subplot(3,4,12)#, sharex=ax)
     plot_diurnal(Data.ET[ixET], color='k', legend=False)
     plot_diurnal(Data.ET_mod[ixET], color=pal[2], legend=False)
 
@@ -143,13 +143,13 @@ def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
     # CO2
     plt.figure(figsize=(10,6))
     plt.subplot(341)
-    plot_xy(Data.NEE[ixNEE], Data.canopy_NEE[ixNEE], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
+    plot_xy(Data.NEE[ixNEE], Data.canopy_NEE[ixNEE], color=pal[0], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
 
     plt.subplot(345)
-    plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
+    plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[1], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
 
     plt.subplot(349)
-    plot_xy(Data.Reco[ixReco], Data.canopy_Reco[ixReco], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
+    plot_xy(Data.Reco[ixReco], Data.canopy_Reco[ixReco], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'},alpha=0.2)
 
     ax = plt.subplot(3,4,(2,3))
     plot_timeseries_df(Data, ['canopy_NEE', 'NEE'], colors=[pal[0],'k'], xticks=False,
@@ -306,7 +306,7 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
         plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
-                       labels=None, marker=None, colors=default, xticks=True, stack=False, cum=False, linestyle='-', limits=True,legend=True):
+                       labels=None, marker=None, colors=default, xticks=True, stack=False, cum=False, linestyles='-', limits=True,legend=True):
     """
     Plot timeseries from dataframe data.
     Args:
@@ -356,7 +356,11 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
             else:
                 markerstyle = marker[i]
                 if marker[i] is not None:
-                    linestyle = 'None'
+                    linestyles = 'None'
+            if type(linestyles) == list:
+                linestyle = linestyles[i]
+            else:
+                linestyle=linestyles
             plt.plot(data.index, values_all[i], color=colors[i], linewidth=1.5, label=labels[i], marker=markerstyle, markersize=1, linestyle=linestyle)
         ymax = max([np.nanmax(val) for val in values_all])
 
@@ -433,7 +437,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
     ax=plt.subplot(1,1,1)
     if normed:
         for k in range(len(quantiles)):
-            plt.plot(lad_p[:, k]/lai_tot,z,color=colors[0], label=r'Pine, $%.2f\times \mathrm{LAI_{tot}}$' % 0.3)#(lai_p[k]/lai_tot))#,lad_g,z)
+            plt.plot(lad_p[:, k]/lai_tot,z,color=colors[0], label=r'Pine, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_p[k]/lai_tot))#(lai_p[k]/lai_tot))#,lad_g,z)
             plt.plot(lad_s[:, k]/lai_tot,z,color=colors[1], label=r'Spruce, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_s[k]/lai_tot))
             plt.plot(lad_d[:, k]/lai_tot,z,color=colors[2], label=r'Birch, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_d[k]/lai_tot))
         plt.title("  ")#dbhfile.split("/")[-1])
@@ -455,7 +459,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
     plt.legend(frameon=False, borderpad=0.0, labelspacing=0.2)
     plt.tight_layout()
     
-def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
+def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}, alpha=.5):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
     Args:
@@ -466,7 +470,7 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
             'x' (str): x-axis label
             'y' (str): y-axis label
     """
-    plt.scatter(x, y, marker='o', color=color, alpha=.5)
+    plt.scatter(x, y, marker='o', color=color, alpha=alpha)
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])

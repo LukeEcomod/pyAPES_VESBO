@@ -21,13 +21,13 @@ def get_parameters(name=None):
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (1.0)
+                                                'ground_coverage': (0.0)
                                                 },
                                         'sphagnum': {
                                                 'ground_coverage': (0.0)
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.0)
+                                                'ground_coverage': (1.0)
                                                 }
                                         },
                                 'litter': {
@@ -39,10 +39,10 @@ def get_parameters(name=None):
                                 },
                         'planttypes': {
                                 'pine': {
-                                        'LAImax': ([0.3 * 5.15])
+                                        'LAImax': ([0.31 * 5.15])
                                         },
                                 'spruce': {
-                                        'LAImax': ([0.65 * 5.15])
+                                        'LAImax': ([0.64 * 5.15])
                                         },
                                 'decidious': {
                                         'LAImax': ([0.05 * 5.15])
@@ -54,44 +54,91 @@ def get_parameters(name=None):
                 }
             }
     elif name=='Krycklan_sensitivity':
+        N = 27
+        LAI_tot = ([5.15], [5.15], [5.15], [5.15], [5.15], [5.15], [5.15], [5.15], [5.15], [3.4], [3.4], [3.4], [3.4], [3.4], [3.4], [3.4], [3.4], [3.4], [6.9], [6.9], [6.9], [6.9], [6.9], [6.9], [6.9], [6.9], [6.9])
         # parameter sets of simulations
         parameters = {
-                'count': 1,
+                'count': 27,
                 'canopy': {
                         'interception': {
-                                'wmax': (0.2e-03)
+                                'wmax': (0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005, 0.00035, 0.0002, 0.0005)
                                 },
                         'forestfloor': {
                                 'bryophytes': {
                                         'hylocomium': {
-                                                'ground_coverage': (1.0)
+                                                'ground_coverage': (0.0,) * N
                                                 },
                                         'sphagnum': {
-                                                'ground_coverage': (0.0)
+                                                'ground_coverage': (0.0,) * N
                                                 },
                                         'pleurozium': {
-                                                'ground_coverage': (0.0)
+                                                'ground_coverage': (1.0,) * N
                                                 }
                                         },
                                 'litter': {
-                                        'ground_coverage': (0.0)
+                                        'ground_coverage': (0.0,) * N
                                         },
                                 'baresoil': {
-                                        'ground_coverage': (0.0)
+                                        'ground_coverage': (0.0,) * N
                                         }
                                 },
                         'planttypes': {
                                 'pine': {
-                                        'LAImax': ([0.3 * 5.15])
+                                        'LAImax': tuple([[0.31*LAI_tot[i][0]] for i in range(N)])
                                         },
                                 'spruce': {
-                                        'LAImax': ([0.65 * 5.15])
+                                        'LAImax': tuple([[0.64*LAI_tot[i][0]] for i in range(N)])
                                         },
                                 'decidious': {
-                                        'LAImax': ([0.05 * 5.15])
+                                        'LAImax': tuple([[0.05*LAI_tot[i][0]] for i in range(N)])
                                         },
                                 'shrubs': {
-                                        'LAImax': ([0.6])
+                                        'LAImax': ([0.6], [0.6], [0.6], [0.4], [0.4], [0.4], [0.8], [0.8], [0.8], [0.6], [0.6], [0.6], [0.4], [0.4], [0.4], [0.8], [0.8], [0.8], [0.6], [0.6], [0.6], [0.4], [0.4], [0.4], [0.8], [0.8], [0.8])
+                                        }
+                                }
+                }
+            }
+    elif name=='Krycklan_sensitivity2':
+        N = 3
+        LAI_tot = ([5.15], [3.4], [6.9])
+        # parameter sets of simulations
+        parameters = {
+                'count': 3,
+                'canopy': {
+                        'interception': {
+                                'wmax': (0.00035, 0.0002, 0.0005)
+                                },
+                        'forestfloor': {
+                                'bryophytes': {
+                                        'hylocomium': {
+                                                'ground_coverage': (0.0,) * N
+                                                },
+                                        'sphagnum': {
+                                                'ground_coverage': (0.0,) * N
+                                                },
+                                        'pleurozium': {
+                                                'ground_coverage': (1.0,) * N
+                                                }
+                                        },
+                                'litter': {
+                                        'ground_coverage': (0.0,) * N
+                                        },
+                                'baresoil': {
+                                        'ground_coverage': (0.0,) * N
+                                        }
+                                },
+                        'planttypes': {
+                                'pine': {
+                                        'LAImax': tuple([[0.31*LAI_tot[i][0]] for i in range(N)])
+                                        },
+                                'spruce': {
+                                        'LAImax': tuple([[0.64*LAI_tot[i][0]] for i in range(N)])
+                                        },
+                                'decidious': {
+                                        'LAImax': tuple([[0.05*LAI_tot[i][0]] for i in range(N)])
+                                        },
+                                'shrubs': {
+                                        'LAImax': ([0.6], [0.4], [0.8])
                                         }
                                 }
                 }

@@ -11,13 +11,13 @@ def get_spara(soiltype):
             }
 
     soil_properties = {'pF': {  # vanGenuchten water retention parameters
-                             'ThetaS': [0.89],
-                             'ThetaR': [1e-12],
-                             'alpha': [0.96],
-                             'n': [1.24]
+                             'ThetaS': [0.80],
+                             'ThetaR': [0.01],
+                             'alpha': [0.70],
+                             'n': [1.25]
                              },
-                      'saturated_conductivity_vertical': [2.42e-05],  # saturated vertical hydraulic conductivity [m s-1]
-                      'saturated_conductivity_horizontal': [2.42e-05],  # saturated horizontal hydraulic conductivity [m s-1]
+                      'saturated_conductivity_vertical': [4.167e-06],  # saturated vertical hydraulic conductivity [m s-1]
+                      'saturated_conductivity_horizontal': [4.167e-06],  # saturated horizontal hydraulic conductivity [m s-1]
                       'solid_heat_capacity': None,  # [J m-3 (solid) K-1] - if None, estimated from organic/mineral composition
                       'solid_composition': {  # fractions of solid volume [-]
                                    'organic': [0.2076],

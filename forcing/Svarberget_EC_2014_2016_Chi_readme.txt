@@ -1,6 +1,6 @@
 Readme for Svarberget_EC_2014_2016_Chi.csv
 
-Kersti Haahti, Luke 2019-01-29
+Kersti Haahti, Luke 2019-02-04
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 SH: Sensible heat flux [W m-2]
@@ -12,9 +12,9 @@ LE: Latent heat flux [W m-2]
 ET: Evapotranspiration [mmol m-2 s-1]
   flag 0 (16.04%): EC_from_Chi: ET_mmolm2s
   flag 1 (83.96%): filled with ET = nan
-ET: Evapotranspiration [mmol m-2 s-1], gapfilled
+ET_gapfilled: Evapotranspiration [mmol m-2 s-1], gapfilled
   flag 0 (51.70%): EC_from_Chi: ET_f_mmolm2s
-  flag 1 (48.30%): filled with ET = nan
+  flag 1 (48.30%): filled with ET_gapfilled = nan
 NEE: Net ecosystem exchange [umol m-2 s-1]
   flag 0 (16.46%): EC_from_Chi: NEE_umolm2s
   flag 1 (83.54%): filled with NEE = nan

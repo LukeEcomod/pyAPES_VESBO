@@ -232,7 +232,7 @@ def leaf_interface(photop,
              'latent_heat': LE,
              'fr': Fr,
              'Tl': Tl,
-             'stomatal_conductance': np.minimum(gsv, 1.0), # gsv get high when VPD->0
+             'stomatal_conductance': np.minimum(gsv, 1.0), # gsv gets high when VPD->0
              'boundary_conductance': gb_v,
              'leaf_internal_co2': Ci,
              'leaf_surface_co2': Cs}
@@ -278,6 +278,7 @@ def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
     La = photop['La']
     g0 = photop['g0']
 
+    # From Bernacchi et al. 2001  
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
 
@@ -537,6 +538,19 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
 
         err = max(abs(ci0 - ci))
         cnt += 1
+        if cnt == MaxIter:
+            print('Maximum number of iterations reached in photo, err = ' + str(err))
+
+## TEST
+#    plt.figure()
+#    plt.subplot(121)
+#    plt.plot(Qp, Av - Rd)
+#    plt.plot(Qp, Aj - Rd)
+#    plt.plot(Qp, An)
+#    plt.subplot(122)
+#    plt.plot(T, Av - Rd)
+#    plt.plot(T, Aj - Rd)
+#    plt.plot(T, An)
 
     # when Rd > photo, assume stomata closed and ci == ca
     ix = np.where(An < 0)
@@ -823,6 +837,16 @@ def photo_Toptima(T10):
 
     return Tv, Tj, rjv
 
+def acclimation_kattge(tgrowth, Vcmax):
+    Hd = 200.0
+    Hav = 72.0
+    Haj = 50.0
+    dSv = 668.36 - 1.07 * tgrowth
+    dSj = 659.7 - 0.75 * tgrowth
+    Jmax = (2.59 - 0.035 * tgrowth) * Vcmax
+
+    return Vcmax, [Hav, Hd, dSv], Jmax, [Haj, Hd, dSj]
+    
 """--- scripts for testing functions ---- """
 
 def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
@@ -958,12 +982,13 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     # env. conditions
     N=50   
     P = 101300.0
-    Qp = 1000. * np.ones(N)  # np.linspace(1.,1800.,50)#
+    Qp = np.linspace(1.,1800.,50)  #1500. * np.ones(N)  # 
     CO2 = 400. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = np.linspace(1.,39.,50) # 10. * np.ones(N) # 
+    T = 20. * np.ones(N)  #  np.linspace(1.,39.,50) # 
     esat, s = e_sat(T)
-    H2O = (85.0 / 100.0) * esat / P
+    H2O = (40.0 / 100.0) * esat / P
+    print('vpd',np.mean(1e-3 * (esat - H2O * P)))
     SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL 
     LWnet = -30.0 * np.ones(N)
 
@@ -985,8 +1010,9 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     
     x = leaf_interface(photop, leafp, forcing, controls)
 #    print(x)
-    Y=T
-    plt.figure(5)
+    geff_v = (x['boundary_conductance']*x['stomatal_conductance']) / (x['boundary_conductance'] + x['stomatal_conductance'])
+    Y=Qp
+    plt.figure(6)
     plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
     plt.title('net_co2')
     plt.subplot(422); plt.plot(Y, x['transpiration'], 'o')
@@ -999,13 +1025,13 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     plt.title('stomatal_conductance')
     plt.subplot(426); plt.plot(Y, x['boundary_conductance'], 'o')
     plt.title('boundary_conductance')
-    plt.subplot(427); plt.plot(Y, x['leaf_internal_co2'], 'o')
-    plt.title('leaf_internal_co2')
+    plt.subplot(427); plt.plot(Y, T - x['Tl'], 'o')
+    plt.title('T - Tl')
     plt.subplot(428); plt.plot(Y, x['leaf_surface_co2'], 'o')
     plt.title('leaf_surface_co2')
     plt.tight_layout()
 
-def test_photo_temperature_response(species='pine'):
+def test_photo_temperature_response(species='pine', tgrowth=10.0):
     T = np.linspace(1.,40.,79)
     Tk = T + DEG_TO_KELVIN
     if species.upper() == 'PINE':
@@ -1096,13 +1122,24 @@ def test_photo_temperature_response(species='pine'):
     Rd_T = tresp['Rd']
     Vcmax, Jmax, Rd, Tau_c = photo_temperature_response(Vcmax, Jmax, Rd, Vcmax_T, Jmax_T, Rd_T, Tk)
     
-    plt.figure(4)
+    plt.figure(99)
     plt.subplot(311); plt.plot(T, Vcmax, 'o')
     plt.title('Vcmax')
     plt.subplot(312); plt.plot(T, Jmax, 'o')
     plt.title('Jmax')
     plt.subplot(313); plt.plot(T, Rd, 'o')
     plt.title('Rd')
+
+    # Kattge 2007
+    Vcmax = photop['Vcmax']
+    Vcmax, Vcmax_T, Jmax, Jmax_T = acclimation_kattge(tgrowth, Vcmax)
+    Rd = photop['Rd']
+    Rd_T = photop['tresp']['Rd']
+    Vcmax, Jmax, Rd, Tau_c = photo_temperature_response(Vcmax, Jmax, Rd, Vcmax_T, Jmax_T, Rd_T, Tk)
+
+    plt.subplot(311); plt.plot(T, Vcmax, 'o')
+    plt.subplot(312); plt.plot(T, Jmax, 'o')
+    plt.subplot(313); plt.plot(T, Rd, 'o')
     
 def Topt_to_Sd(Ha, Hd, Topt):
     Sd = Hd * 1e3 / (Topt + DEG_TO_KELVIN) + GAS_CONSTANT * np.log(Ha /(Hd - Ha))

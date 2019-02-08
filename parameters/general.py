@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2016-07-01",  # start time of simulation [yyyy-mm-dd]
+        'start_time' : "2016-05-01",  # start time of simulation [yyyy-mm-dd]
         'end_time' : "2016-11-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Svarberget_forcing_2014_2016.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
@@ -59,7 +59,7 @@ gpara = {
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_respiration', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_IterWMA', 'number of iterations [-]', ('date', 'simulation')],
-#                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
+                      ['soil_water_potential','soil water potential [m]', ('date', 'simulation', 'soil')],
                       ['soil_pond_storage', 'pond storage [m]', ('date', 'simulation')],
                       ['soil_ground_water_level', 'ground water level [m]', ('date', 'simulation')],
                       ['soil_infiltration', 'infiltration [m s-1]', ('date', 'simulation')],
@@ -85,7 +85,7 @@ gpara = {
                       ['ffloor_snow_water_closure', "water balance error (snowcover) [m s-1]", ('date', 'simulation')],
                       ['ffloor_bryo_water_closure', "water balance error (bryophytes) [m s-1]", ('date', 'simulation')],
                       ['ffloor_bryo_energy_closure', "energy balance error (bryophytes) [W m-2]", ('date', 'simulation')],
-                      ['ffloo_soilr_energy_closure', "energy balance error (soil) [W m-2]", ('date', 'simulation')],
+                      ['ffloo_soil_energy_closure', "energy balance error (soil) [W m-2]", ('date', 'simulation')],
                       ['ffloor_bryo_carbon_pool', 'carbon pool (bryophyte) [kg C m-2]', ('date', 'simulation')],
                       ['ffloor_bryo_photosynthesis', 'photosynthesis rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_bryo_respiration', 'respiration rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],

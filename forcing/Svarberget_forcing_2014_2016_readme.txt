@@ -1,6 +1,6 @@
 Readme for Svarberget_forcing_2014_2016.csv
 
-Kersti Haahti, Luke 2019-01-11
+Kersti Haahti, Luke 2019-02-07
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 doy: Day of year [days]

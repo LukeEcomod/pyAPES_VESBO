@@ -98,25 +98,25 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 94.0,  # Tarvainen et al. 2018 Physiol. Plant.
-                'Jmax': 143.0,
-                'Rd': 1.3,
+                'Vcmax': 50., #94.0,  # Tarvainen et al. 2018 Physiol. Plant.  # SAMULILLA 50.0
+                'Jmax': 98., #143.0,  # SAMULILLA  90.0
+                'Rd': 1.2, #1.3,  # SAMULILLA 1.2
                 'tresp': {
-                    'Vcmax': [78.3, 200.0, 650.1],
-                    'Jmax': [56.0, 200.0, 647.9],
+                    'Vcmax': [72., 200., 649.],  #[78.3, 200.0, 650.1],
+                    'Jmax': [50., 200., 646.], #[56.0, 200.0, 647.9],
                     'Rd': [33.0]
                     },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.5, # --- check value!!
-                'g0': 1.0e-3,
+                'm': gfact * 2.5, # --- check value!! # SAMULILLA 2.0-2.3
+                'g0': 4.0e-3,  # SAMULILLA 0.004
                 'kn': 0.5,
                 'beta': 0.95,
                 'drp': 0.7
                 },
             'leafp': {
-                'lt': 0.02,
+                'lt': 0.02,  # SAMULILLA 0.05??
                 'par_alb': 0.12,
                 'nir_alb': 0.55,
                 'emi': 0.98
@@ -153,25 +153,25 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 69.7,  # Tarvainen et al. 2013 Oecologia
-                'Jmax': 130.2,
-                'Rd': 1.3,
+                'Vcmax': 60., #69.7,  # Tarvainen et al. 2013 Oecologia # SAMULILLA 60.0
+                'Jmax': 118., #130.2,  # SAMULILLA 114
+                'Rd': 1.4, #1.3,  # SAMULILLA 1.5
                 'tresp': {
-                    'Vcmax': [53.2, 200.0, 640.0],
-                    'Jmax': [38.4, 200.0, 655.5],
+                    'Vcmax': [72., 200., 649.],  #[53.2, 200.0, 640.0],
+                    'Jmax': [50., 200., 646.], #[38.4, 200.0, 655.5],
                     'Rd': [33.0]
                     },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.5,
-                'g0': 1.0e-3,
+                'm': gfact * 2.5, # SAMULILLA 2.0-2.3
+                'g0': 4.0e-3,  # SAMULILLA 0.004
                 'kn': 0.5,
                 'beta': 0.95,
                 'drp': 0.7
                 },
             'leafp': {
-                'lt': 0.02,
+                'lt': 0.02,  # SAMULILLA 0.05??
                 'par_alb': 0.12,
                 'nir_alb': 0.55,
                 'emi': 0.98
@@ -208,20 +208,20 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 69.1,  # Medlyn et al 2002. Plant, Cell and Env.
-                'Jmax': 116.3,
-                'Rd': 1.3,
+                'Vcmax': 45., #69.1,  # Medlyn et al 2002. Plant, Cell and Env.   # SAMULILLA 45.0
+                'Jmax': 89., #116.3,  # SAMULILLA 80.0
+                'Rd': 1.0,
                 'tresp': {
-                    'Vcmax': [77.0, 200.0, 636.4],
-                    'Jmax': [42.8, 200.0, 636.6],
+                    'Vcmax': [72., 200., 649.],  #[77.0, 200.0, 636.4],
+                    'Jmax': [50., 200., 646.], #[42.8, 200.0, 636.6],
                     'Rd': [33.0]
                     },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 600.0,
-                'm': gfact * 4.5,
-                'g0': 1.0e-3,
-                'kn': 0.5,
+                'm': gfact * 4.5,  # SAMULILLA 4.2 – 4.3
+                'g0': 1.0e-2,  # SAMULILLA 0.01
+                'kn': 0.5,  # SAMULILLA 0.2
                 'beta': 0.95,
                 'drp': 0.7
                 },
@@ -263,19 +263,19 @@ def get_planttypes(dbhfile, grid):
                 'sdur': 30.0
                 },
             'photop': {
-                'Vcmax': 69.1,  # Medlyn et al 2002. Plant, Cell and Env.
-                'Jmax': 116.3,
-                'Rd': 1.3,
+                'Vcmax': 45., #69.1,  # Medlyn et al 2002. Plant, Cell and Env.  # SAMULILLA 40.0
+                'Jmax': 89., #116.3,  # SAMULILLA 76.0
+                'Rd': 1.0, #1.3,  # SAMULILLA 0.7
                 'tresp': {
-                    'Vcmax': [77.0, 200.0, 636.4],
-                    'Jmax': [42.8, 200.0, 636.6],
+                    'Vcmax': [72., 200., 649.],  #[77.0, 200.0, 636.4],
+                    'Jmax': [50., 200., 646.], #[42.8, 200.0, 636.6],
                     'Rd': [33.0]
                     },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 600.0,
-                'm': gfact * 4.5,
-                'g0': 1.0e-3,
+                'm': gfact * 4.5,  # SAMULILLA ??
+                'g0': 1.0e-2,  # SAMULILLA ??
                 'kn': 0.0,
                 'beta': 0.95,
                 'drp': 0.7

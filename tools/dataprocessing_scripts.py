@@ -36,7 +36,7 @@ create_forcingfile("Hyde_data_1997_2016", "Hyde_forcing_1997_2016",
 
 """
 
-def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
+def create_forcingfile(meteo_file, output_file, lat, lon, P_unit,timezone=+2.0):
     """
     Create forcing file from meteo.
     Args:
@@ -113,7 +113,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
 
     # zenith angle
     jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0
-    dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=+2.0)
+    dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=timezone)
     cols.append('Zen')
     readme += "\nZen: Zenith angle [rad], (lat = %.2f, lon = %.2f)" % (lat, lon)
 
@@ -184,7 +184,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     dat = dat[cols]
     dat[cols].plot(subplots=True, kind='line')
 
-    dat[['Tdaily','DDsum','X']].plot(subplots=True)
+    dat[['Tdaily','DDsum','X', 'Zen']].plot(subplots=True)
 
     print("NaN values in forcing data:")
     print(dat.isnull().any())

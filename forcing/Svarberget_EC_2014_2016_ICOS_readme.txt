@@ -1,6 +1,6 @@
 Readme for Svarberget_EC_2014_2016_ICOS.csv
 
-Kersti Haahti, Luke 2019-01-11
+Kersti Haahti, Luke 2019-02-04
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 SH: Sensible heat flux [W m-2]
