@@ -91,7 +91,7 @@ def plot_ETcomponents(results):
     # Overstory transpiration
     ay = plt.subplot(445)
     plot_xy(Data.Transp_av, Data.T_mod, color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
-
+    plt.ylabel('Modelled',labelpad=7)
     ax = plt.subplot(4,4,(6,8), sharey=ay)
     plt.fill_between(Data.index, Data['T_mod_max'].values, Data['T_mod_min'].values,
                      facecolor=pal[0], alpha=0.3)
@@ -99,21 +99,21 @@ def plot_ETcomponents(results):
                      facecolor='k', alpha=0.2)
     plot_timeseries_df(Data, ['T_mod','Transp_av'], colors=[pal[0],'k'], xticks=False,
                        labels=['Modelled','Measured (sapflow)'], linestyles=['-',':'])
-    plt.title('Overstory transpiration, T (mm/d)', fontsize=10)
+    plt.title('Canopy transpiration, T [mm d$^{-1}$]', fontsize=10)
     plt.legend(loc="upper right", frameon=False, borderpad=0.0)
 
     # Residual ET - Tr
     plt.subplot(449, sharex=ay, sharey=ay)
     plot_xy(Data.E, Data.E_mod, color=pal[3], axislabels={'x': 'Measured', 'y': 'Modelled'})
-
+    plt.ylabel('Modelled',labelpad=7)
     plt.subplot(4,4,(10,12), sharex=ax, sharey=ay)
     plt.fill_between(Data.index, Data['E_mod_max'].values, Data['E_mod_min'].values,
                      facecolor=pal[3], alpha=0.3)
     plt.fill_between(Data.index, Data['E_max'].values, Data['E_min'].values,
                      facecolor='k', alpha=0.2)
     plot_timeseries_df(Data, ['E_mod','E'], colors=[pal[3],'k'], xticks=False,
-                       labels=['Modelled E', 'Residual from measured ET and T'], linestyles=['-',':'])
-    plt.title('Evaporation, E (mm/d)', fontsize=10)
+                       labels=['Modelled', 'Residual of measured ET and T'], linestyles=['-',':'])
+    plt.title('Evaporation, E [mm d$^{-1}$]', fontsize=10)
     plt.legend(loc="upper right", frameon=False, borderpad=0.0)
 
     # Interception evaporation
@@ -122,26 +122,27 @@ def plot_ETcomponents(results):
                      facecolor=pal[4], alpha=0.3)
     plot_timeseries_df(Data, ['I_mod'], colors=[pal[4]], xticks=True,
                        labels=['Modelled'])
-    plt.title('Interception evaporation, I (mm/d)', fontsize=10)
+    plt.title('Interception evaporation, I [mm d$^{-1}$]', fontsize=10)
     plt.legend(loc="upper right", frameon=False, borderpad=0.0)
 
     # Evapotranspiration
     plt.subplot(441, sharex=ay, sharey=ay)
     plot_xy(Data.ET, Data.ET_mod, color=pal[2], axislabels={'x': '', 'y': 'Modelled'})
     plt.xlim([0, 5])
-
+    plt.ylabel('Modelled',labelpad=7)
     plt.subplot(4,4,(2,4), sharex=ax, sharey=ay)
     plt.fill_between(Data.index, Data['ET_mod_max'].values, Data['ET_mod_min'].values,
                      facecolor=pal[3], alpha=0.3)
     plot_timeseries_df(Data, ['ET_mod','ET'], colors=[pal[2],'k'], xticks=False,
                        labels=['Modelled','Measured (Eddy-covariance)'], linestyles=['-',':'])
     plt.ylim([0, 5])
-    plt.title('Evapotranspiration, ET (mm/d)', fontsize=10)
+    plt.title('Evapotranspiration, ET [mm d$^{-1}$]', fontsize=10)
     plt.legend(loc="upper right", frameon=False, borderpad=0.0)
 
     ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator())
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
 
+    ay.set_xticks([0, 1, 2, 3, 4, 5])
     plt.tight_layout(rect=(0, 0, 1, 1), pad=1.0,w_pad=0.1, h_pad=0.1)
 
 # %% Plot ET component comparison
@@ -212,11 +213,13 @@ def plot_interception(results):
     mod_err = [(Data_events.I_mod - Data_events.I_mod_min).values,
                (Data_events.I_mod_max - Data_events.I_mod).values]
 
-    plt.figure(figsize=(8.5,5))
+    plt.figure(figsize=(9,5.5))
     plt.subplot(231)
     _, _, bars = plt.errorbar(Data_events.I_av, Data_events.I_mod, xerr=data_err, yerr=mod_err, fmt='o',ecolor=grey, color=grey, alpha=0.5)
     [bar.set_alpha(0.2) for bar in bars]
-    plot_xy(Data_events.I_av, Data_events.I_mod, color=(1,1,1), axislabels={'x': 'Data derived IL (mm)', 'y': 'Modelled IL (mm)'})
+    plot_xy(Data_events.I_av, Data_events.I_mod, color=(1,1,1))
+    plt.ylabel('Modelled interception [mm]', labelpad=7)
+    plt.xlabel('Measured interception [mm]')
     plt.xlim([0,7.5])
     plt.ylim([0,7.5])
 
@@ -225,15 +228,15 @@ def plot_interception(results):
     [bar.set_alpha(0.2) for bar in bars]
     plt.xlim([0,30])
 
-    plt.ylabel('Data derived IL (mm)')
-    plt.xlabel('Precipitation* (mm)')
+    plt.ylabel('Measured interception [mm]', labelpad=7)
+    plt.xlabel('Precipitation* [mm]')
 
     plt.subplot(233, sharey=axx)
     _, _, bars = plt.errorbar(Data_events.Precip, Data_events.I_mod, yerr=mod_err, fmt='o',ecolor=pal[4], color=pal[4], alpha=.5)
     [bar.set_alpha(0.2) for bar in bars]
     plt.xlim([0,30])
-    plt.ylabel('Modelled IL (mm)')
-    plt.xlabel('Precipitation (mm)')
+    plt.ylabel('Modelled interception [mm]', labelpad=7)
+    plt.xlabel('Precipitation [mm]')
     plt.ylim([0,7.5])
 
     ax = plt.subplot(2,3,(4,5))
@@ -243,16 +246,16 @@ def plot_interception(results):
                 np.cumsum(Data2['I_mod_min'].values), facecolor=pal[4], alpha=0.2)
     plot_timeseries_df(Data2, ['precip_open_area_mm','Precip','I_av','I_mod'],
                        colors=['k',grey,pal[0],pal[4]], xticks=True,
-                       labels=['Precipitation*', 'Precipitation', 'Data derived IL', 'Modelled IL'], cum=True,
+                       labels=['Precipitation*', 'Precipitation', 'Measured interception', 'Modelled interception'], cum=True,
                        unit_conversion={'unit':'mm', 'conversion':1/1800}, legend=False)
-    plt.ylabel('(mm)')
+    plt.ylabel('[mm]')
     plt.ylim([0,250])
     plt.xlim(['7.1.2016', '11.1.2016'])
 
     ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator())
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
 
-    plt.tight_layout(rect=(0, 0, 1, 1), pad=1.0)
+    plt.tight_layout(rect=(0, 0, 1, 1), pad=1.0, h_pad=2, w_pad=2)
     plt.legend(bbox_to_anchor=(1.05,0.5), loc="center left", frameon=False, borderpad=0.0)
 
 # %% Plot energy 
@@ -269,7 +272,7 @@ def plot_energy(results):
     Data = read_forcing("Svarberget_EC_2014_2016_chi.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
 
-    variables=['canopy_SH','canopy_LE','canopy_SWnet','canopy_LWnet']
+    variables=['canopy_SH','canopy_LE','canopy_SWnet','canopy_LWnet','canopy_GPP']
     df = xarray_to_df(results, variables, sim_idx=0)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
 
@@ -277,73 +280,100 @@ def plot_energy(results):
     ixSH = np.where(np.isfinite(Data.SH))[0]
     ixLWnet = np.where(np.isfinite(Data.LWnet))[0]
     ixSWnet = np.where(np.isfinite(Data.SWnet))[0]
+    ixGPP = np.where(np.isfinite(Data.GPP))[0]
     labels=['Modelled', 'Measured']
 
     # Energy
-    plt.figure(figsize=(10,8))
-    plt.subplot(441)
+    plt.figure(figsize=(9,10))
+    ay1=plt.subplot(541)
     plot_xy(Data.SWnet[ixSWnet], Data.canopy_SWnet[ixSWnet], color=pal[0], alpha=0.2, axislabels={'x': '', 'y': 'Modelled'})
 
-    plt.subplot(445)
+    ay2=plt.subplot(545)
     plot_xy(Data.LWnet[ixLWnet], Data.canopy_LWnet[ixLWnet], color=pal[1], alpha=0.2, axislabels={'x': '', 'y': 'Modelled'})
+    plt.ylabel('Modelled',labelpad=-4)
 
-    plt.subplot(449)
+    ay3=plt.subplot(549)
     plot_xy(Data.SH[ixSH], Data.canopy_SH[ixSH], color=pal[3], alpha=0.2, axislabels={'x': '', 'y': 'Modelled'})
+    plt.ylabel('Modelled',labelpad=-4)
 
-    plt.subplot(4,4,13)
-    plot_xy(Data.LE[ixLE], Data.canopy_LE[ixLE], color=pal[2], alpha=0.2, axislabels={'x': 'Measured', 'y': 'Modelled'})
+    ay4=plt.subplot(5,4,13)
+    plot_xy(Data.LE[ixLE], Data.canopy_LE[ixLE], color=pal[2], alpha=0.2, axislabels={'x': '', 'y': 'Modelled'})
 
-    ax = plt.subplot(4,4,(2,3))
+    ay5=plt.subplot(5,4,17)
+    plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[5], alpha=0.2, axislabels={'x': 'Measured', 'y': 'Modelled'})
+    plt.ylabel('Modelled',labelpad=2)
+
+    ax = plt.subplot(5,4,(2,3), sharey=ay1)
     plot_timeseries_df(Data, ['canopy_SWnet', 'SWnet'], colors=[pal[0],'k'], xticks=False,
-                       labels=['Modelled', 'Measured'], marker=[None, '.'])
-    plt.title('Net shortwave radiation [W m-2]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+                       labels=['Modelled', 'Measured'], marker=[None, '.'], legend=False)
+    plt.title('Net shortwave radiation [W m$^{-2}$]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    plt.subplot(4,4,(6,7), sharex=ax)
+    plt.subplot(5,4,(6,7), sharex=ax, sharey=ay2)
     plot_timeseries_df(Data, ['canopy_LWnet', 'LWnet'], colors=[pal[1],'k'], xticks=False,
-                       labels=['Modelled', 'Measured'], marker=[None, '.'])
-    plt.title('Net longwave radiation [W m-2]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+                       labels=['Modelled', 'Measured'], marker=[None, '.'], legend=False)
+    plt.title('Net longwave radiation [W m$^{-2}$]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    plt.subplot(4,4,(10,11), sharex=ax)
+    plt.subplot(5,4,(10,11), sharex=ax, sharey=ay3)
     plot_timeseries_df(Data, ['canopy_SH','SH'], colors=[pal[3],'k'], xticks=False,
-                       labels=labels, marker=[None, '.'])
-    plt.title('Sensible heat flux [W m-2]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+                       labels=labels, marker=[None, '.'], legend=False)
+    plt.title('Sensible heat flux [W m$^{-2}$]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
-    plt.subplot(4,4,(14,15), sharex=ax)
-    plot_timeseries_df(Data, ['canopy_LE','LE'], colors=[pal[2],'k'], xticks=True,
-                       labels=labels, marker=[None, '.'])
-    plt.title('Latent heat flux [W m-2]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+    plt.subplot(5,4,(14,15), sharex=ax, sharey=ay4)
+    plot_timeseries_df(Data, ['canopy_LE','LE'], colors=[pal[2],'k'], xticks=False,
+                       labels=labels, marker=[None, '.'], legend=False)
+    plt.title('Latent heat flux [W m$^{-2}$]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+
+    plt.subplot(5,4,(18,19), sharex=ax, sharey=ay5)
+    plot_timeseries_df(Data, ['canopy_GPP','GPP'], colors=[pal[5],'k'], xticks=True,
+                       labels=labels, marker=[None, '.'], legend=False)
+    plt.title('Gross primary production [$\mu$mol m$^{-2}$ s$^{-1}$]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator())
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m'))
 
-    ax =plt.subplot(444)
+    ax =plt.subplot(544)
     plot_diurnal(Data.SWnet[ixSWnet], color='k', legend=False)
     plot_diurnal(Data.canopy_SWnet[ixSWnet], color=pal[0], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
-    ax =plt.subplot(448, sharex=ax)
+    ax =plt.subplot(548, sharex=ax)
     plot_diurnal(Data.LWnet[ixLWnet], color='k', legend=False)
     plot_diurnal(Data.canopy_LWnet[ixLWnet], color=pal[1], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
     
-    plt.subplot(4,4,12, sharex=ax)
+    plt.subplot(5,4,12, sharex=ax)
     plot_diurnal(Data.SH[ixSH], color='k', legend=False)
     plot_diurnal(Data.canopy_SH[ixSH], color=pal[3], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
-    plt.subplot(4,4,16, sharex=ax)
+    plt.subplot(5,4,16, sharex=ax)
     plot_diurnal(Data.LE[ixLE], color='k', legend=False)
     plot_diurnal(Data.canopy_LE[ixLE], color=pal[2], legend=False)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.xlabel('')
 
-    plt.tight_layout(rect=(0, 0, 0.90, 1),w_pad=0.1)
+    plt.subplot(5,4,20, sharex=ax)
+    plot_diurnal(Data.GPP[ixGPP], color='k', legend=False)
+    plot_diurnal(Data.canopy_GPP[ixGPP], color=pal[5], legend=False)
 
+    plt.tight_layout(w_pad=0.1)
+
+    ay1.set_yticks([0, 400, 800])
+    ay1.set_xticks([0, 400, 800])
+    ay2.set_yticks([-100, -50, 0])
+    ay3.set_yticks([-500, 0, 500])
+    ay4.set_yticks([0, 300, 600])
+    ay4.set_xticks([0, 300, 600])
+    ay5.set_yticks([-25, 0, 25])
+    ay5.set_xticks([-25, 0, 25])
 # %% Plot forcing
 
 def plot_forcing(results):
@@ -615,3 +645,152 @@ def plot_Tcomponents(results):
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
 
     plt.tight_layout(rect=(0, 0, 1, 1), pad=1.0,w_pad=0.1, h_pad=0.1)
+
+def scatter_plots(results, data_var='Transp_av', mod_var='T_mod', label='Transpiration [mm d$^{-1}$]',color=pal[0]):
+
+    Data = read_forcing("Sapflow_2016-2017.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    Data2 = read_forcing("Svarberget_EC_2014_2016_chi.csv", cols=['ET_gapfilled'],
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data2.ET_gapfilled = Data2.ET_gapfilled * 1e-3 * MOLAR_MASS_H2O * 3600 * 24  # mmol m-2 s-1 - > mm/d
+
+    results['overstory_transpiration'] = results['canopy_pt_transpiration'][:,:,:3].sum(dim='planttype')
+    results['overstory_evaporation'] = results['canopy_evaporation_ml'][:,:,2:].sum(dim='canopy')
+    results['understory_transpiration'] = results['canopy_pt_transpiration'][:,:,3:].sum(dim='planttype')
+    results['understory_evaporation'] = results['canopy_evaporation_ml'][:,:,:2].sum(dim='canopy')
+
+    results['ET_mod'] = (results['overstory_transpiration'] +
+                         results['understory_transpiration'] +
+                         results['overstory_evaporation'] +
+                         results['understory_evaporation'] +
+                         results['ffloor_evaporation'])
+
+    results['T_mod'] = results['overstory_transpiration']
+
+    results['E_mod'] = (results['understory_transpiration'] +
+                        results['overstory_evaporation'] +
+                        results['understory_evaporation'] +
+                        results['ffloor_evaporation'])
+
+    results['I_mod'] = results['overstory_evaporation']
+
+    results['Precip'] = results['forcing_precipitation']
+
+    variables = ['ET_mod', 'T_mod', 'E_mod','I_mod','Precip']
+
+    series = []
+    varnames = []
+    for var in variables:
+        series.append(results.sel(simulation=0)[var].to_pandas())
+        varnames.append(var)
+        series.append(results[var].min(dim='simulation').to_pandas())
+        varnames.append(var + '_min')
+        series.append(results[var].max(dim='simulation').to_pandas())
+        varnames.append(var + '_max')
+    df = pd.concat(series, axis=1)
+    df.columns = varnames
+
+    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+    Data = Data.merge(Data2, how='outer', left_index=True, right_index=True)
+    Data = Data.fillna(method='ffill')
+
+    for var in varnames:
+        Data[var] *= 1000*3600*24  # m/s --> mm/d
+
+    Data = Data.resample('D').mean()
+
+    Data['ET'] = Data.ET_gapfilled
+    Data['E'] = Data.ET - Data.Transp_av
+    Data['E_min'] = Data.ET - Data.Transp_max
+    Data['E_max'] = Data.ET - Data.Transp_min
+
+    Dat = read_forcing("Svarberget_forcing_2014_2016.csv",cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    # VPD
+    from canopy.micromet import e_sat
+    # vapor pressure
+    esat, s = e_sat(Dat['Tair'].values)
+    Dat['VPD'] = 1e-3 * (esat - Dat['H2O'].values * Dat['P'].values)
+    Dat['Prec'] = Dat['Prec'].values * 1000 * 3600 * 24
+    Dat['Wliq'] = Dat['Wliq'].values * 100
+    Dat['Par'] = Dat['diffPar'].values + Dat['dirPar'].values
+    Datt = Dat.resample('D').mean()
+    Data['Tmax'] = Datt['Tair'].resample('D').max()
+    Data['Tmin'] = Datt['Tair'].resample('D').min()
+    Data['VPDmax'] = Datt['VPD'].resample('D').max()
+    Data['VPDmin'] = Datt['VPD'].resample('D').min()
+
+    Data = Data.merge(Datt, how='outer', left_index=True, right_index=True)
+    Data = Data[Data.index >= "6.17.2016"]
+
+    EPS = np.finfo(float).eps
+    ix = np.where(Data['Prec'] > 1)[0]
+    ixx = np.where(Data['Prec'] < 1)[0]
+
+    plt.figure(figsize=(7,8))
+    ax1 = plt.subplot(4,3,1)
+    plt.scatter(Data[data_var][ixx], Data.VPD[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix], Data.VPD[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.ylabel('VPD [kPa]')
+    plt.title('Measured')
+    plt.subplot(4,3,2, sharey=ax1, sharex=ax1)
+    plt.scatter(Data[mod_var][ixx], Data.VPD[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[mod_var][ix], Data.VPD[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+    plt.title('Modelled')
+    ax = plt.subplot(4,3,3, sharey=ax1)
+    plt.scatter(Data[data_var][ixx] - Data[mod_var][ixx], Data.VPD[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix] - Data[mod_var][ix], Data.VPD[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+    plt.title('Measured - Modelled')
+
+    ax2 = plt.subplot(4,3,4, sharex=ax1)
+    plt.scatter(Data[data_var][ixx], Data.Tair[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix], Data.Tair[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.ylabel('Tair [degC]')
+    plt.subplot(4,3,5, sharey=ax2, sharex=ax1)
+    plt.scatter(Data[mod_var][ixx], Data.Tair[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[mod_var][ix], Data.Tair[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+    plt.subplot(4,3,6, sharey=ax2, sharex=ax)
+    plt.scatter(Data[data_var][ixx] - Data[mod_var][ixx], Data.Tair[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix] - Data[mod_var][ix], Data.Tair[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+
+    ax3 = plt.subplot(4,3,7, sharex=ax1)
+    plt.scatter(Data[data_var][ixx], Data.Par[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix], Data.Par[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.ylabel('Par [W m$^{-2}$]')
+    plt.subplot(4,3,8, sharey=ax3, sharex=ax1)
+    plt.scatter(Data[mod_var][ixx], Data.Par[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[mod_var][ix], Data.Par[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+    plt.subplot(4,3,9, sharey=ax3, sharex=ax)
+    plt.scatter(Data[data_var][ixx] - Data[mod_var][ixx], Data.Par[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix] - Data[mod_var][ix], Data.Par[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+
+    ax4 = plt.subplot(4,3,10, sharex=ax1)
+    plt.scatter(Data[data_var][ixx], Data.U[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix], Data.U[ix], marker='x', color=color, alpha=0.4)
+    plt.ylabel('wind speed [m s$^{-1}$]')
+    plt.subplot(4,3,11, sharey=ax4, sharex=ax1)
+    plt.scatter(Data[mod_var][ixx], Data.U[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[mod_var][ix], Data.U[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+    plt.xlabel(label)
+    plt.subplot(4,3,12, sharey=ax4, sharex=ax)
+    plt.scatter(Data[data_var][ixx] - Data[mod_var][ixx], Data.U[ixx], marker='o', color=color, alpha=0.2)
+    plt.scatter(Data[data_var][ix] - Data[mod_var][ix], Data.U[ix], marker='x', color=color, alpha=0.4)
+    plt.setp(plt.gca().axes.get_yticklabels(), visible=False)

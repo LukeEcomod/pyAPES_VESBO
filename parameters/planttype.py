@@ -82,9 +82,9 @@ def get_planttypes(dbhfile, grid):
             'phenop': {
                 'Xo': 0.0,
                 'fmin': 0.1,
-                'Tbase': -4.67,
-                'tau': 8.33,
-                'smax': 18.5
+                'Tbase': -4.67,  # Kolari 2007
+                'tau': 8.33,  # Kolari 2007
+                'smax': 15.0  # Kolari 2014
                 },
             'laip': {
                 'lai_min': 0.8,
@@ -137,9 +137,9 @@ def get_planttypes(dbhfile, grid):
             'phenop': {
                 'Xo': 0.0,
                 'fmin': 0.1,
-                'Tbase': -4.67,
-                'tau': 8.33,
-                'smax': 18.5
+                'Tbase': -4.67,  # Kolari 2007
+                'tau': 8.33,  # Kolari 2007
+                'smax': 15.0  # Kolari 2014
                 },
             'laip': {
                 'lai_min': 0.8,
@@ -192,9 +192,9 @@ def get_planttypes(dbhfile, grid):
             'phenop': {
                 'Xo': 0.0,
                 'fmin': 0.01,
-                'Tbase': -4.67,
-                'tau': 8.33,
-                'smax': 18.5
+                'Tbase': -4.67,  # Kolari 2007
+                'tau': 8.33,  # Kolari 2007
+                'smax': 15.0  # Kolari 2014
                 },
             'laip': {
                 'lai_min': 0.1,
@@ -247,9 +247,9 @@ def get_planttypes(dbhfile, grid):
             'phenop': {
                 'Xo': 0.0,
                 'fmin': 0.01,
-                'Tbase': -4.67,
-                'tau': 8.33,
-                'smax': 18.5
+                'Tbase': -4.67,  # Kolari 2007
+                'tau': 8.33,  # Kolari 2007
+                'smax': 15.0  # Kolari 2014
                 },
             'laip': {
                 'lai_min': 0.5,

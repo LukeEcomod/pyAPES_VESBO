@@ -851,7 +851,7 @@ def acclimation_kattge(tgrowth, Vcmax):
 
 def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     gamma = 1.0
-    gfact = 1.0
+    gfact = 1.5
     if species.upper() == 'PINE':
         photop= {
 #                'Vcmax': 55.0,
@@ -907,8 +907,8 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.3,
-                'g0': 1.0e-3,
+                'm': gfact * 2.2,
+                'g0': 1.0e-2,
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
@@ -1027,7 +1027,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     plt.title('boundary_conductance')
     plt.subplot(427); plt.plot(Y, T - x['Tl'], 'o')
     plt.title('T - Tl')
-    plt.subplot(428); plt.plot(Y, x['leaf_surface_co2'], 'o')
+    plt.subplot(428); plt.plot(Y, x['net_co2']/x['leaf_surface_co2'], 'o')
     plt.title('leaf_surface_co2')
     plt.tight_layout()
 
