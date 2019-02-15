@@ -441,8 +441,8 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
             plt.plot(lad_s[:, k]/lai_tot,z,color=colors[1], label=r'Spruce, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_s[k]/lai_tot))
             plt.plot(lad_d[:, k]/lai_tot,z,color=colors[2], label=r'Birch, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_d[k]/lai_tot))
         plt.title("  ")#dbhfile.split("/")[-1])
-        plt.ylabel('Height (m)')
-        plt.xlabel(r'Normalized leaf area density (m$^2$m$^{-3}$)')
+        plt.ylabel('Height [m]')
+        plt.xlabel(r'Normalized leaf area density [m$^2$m$^{-3}$]')
         ax.set_xticks([0.0,0.05,0.1,0.15])
         plt.plot(lad/lai_tot, z,':k', label='Total')
     else:
@@ -456,7 +456,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
         plt.plot(lad, z,':k', label='Total, %.2f m$^2$m$^{-2}$' % lai_tot)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.2)
+    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.3, loc="upper right",bbox_to_anchor=(1.1,1.05))
     plt.tight_layout()
     
 def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}, alpha=.5):
@@ -491,7 +491,7 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}, alpha
     plt.xlabel(axislabels['x'])
     plt.ylabel(axislabels['y'])
 
-def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', label='median', legend=True):
+def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', label='median', legend=True, alpha=1.0):
     """
     Plot diurnal cycle (hourly) for variable
     Args:
@@ -508,7 +508,7 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
                          color=color, alpha=0.2, label='5...95%')
         plt.fill_between(var_diurnal['hour'], var_diurnal['25th'], var_diurnal['75th'],
                          color=color, alpha=0.4, label='25...75%')
-    plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label)
+    plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label, alpha=alpha)
     print('Daily sum :' + str(sum(var_diurnal['median'])) + ' mm/d')
     plt.title(title)
     plt.xticks(np.linspace(0,24,4))
