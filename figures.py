@@ -993,3 +993,203 @@ def plot_ETcomponents_stacked(results):
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
 
     plt.tight_layout(rect=(0, 0, 1, 1), pad=1.0,w_pad=0.1, h_pad=0.1)
+
+from matplotlib.sankey import Sankey
+
+def sankey_WB(results):
+
+    WB={}
+
+    WB['precipitation']=results['forcing_precipitation'].isel(simulation=0).sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['overstory interception evaporation']=results['canopy_evaporation_ml'].sel(date=results['date.month']>=7)[:,0,2:].sum().values*1800*1000
+    WB['overstory transpiration']=results['canopy_pt_transpiration'][:,0,:3].sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['pine transpiration']=results['canopy_pt_transpiration'][:,0,0].sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['spruce transpiration']=results['canopy_pt_transpiration'][:,0,1].sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['birch transpiration']=results['canopy_pt_transpiration'][:,0,2].sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['understory interception evaporation']=results['canopy_evaporation_ml'][:,0,:2].sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['understory transpiration']=results['canopy_pt_transpiration'][:,0,3:].sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['forest floor evaporation']=results['ffloor_evaporation'].isel(simulation=0).sel(date=results['date.month']>=7).sum().values*1800*1000
+    WB['ETu']=WB['understory interception evaporation'] + WB['understory transpiration'] + WB['forest floor evaporation']
+    WB['evapotranspiration']=WB['ETu'] + WB['overstory interception evaporation'] + WB['overstory transpiration']
+    WB['residual']=WB['precipitation'] - WB['evapotranspiration']
+
+    ET = 194.17
+    T=84.55
+    IL=66.29
+    Q = 27.85
+    dS = WB['precipitation'] - Q - ET
+    ETu=ET-IL-T
+
+    flows0 = [
+            WB['precipitation'],
+            ET - WB['precipitation'],  #dS + Q
+            -ET  # ET
+             ]
+
+    orientations0 = [0, 0, 0]
+
+    labels0 = [
+            'Precipitation\n%.0f mm\n\n\n\n' % WB['precipitation'],
+            ' ',
+            ' '
+              ]
+
+    pathlengths0=[0.5,
+                 0.0,
+                 0.7
+                 ]
+
+    flows1 = [
+            ET,
+            -ETu,
+            -T,
+            -IL,
+             ]
+
+    orientations1 = [0, -1, -1, -1]
+
+    labels1 = [
+            '\n\n\nEvapotranspiration     \n%.1f mm     ' % ET,
+            '\n\nUnderstorey ET\n& forestfloor E\n%.1f mm' % ETu,
+            'Transpiration\n%.1f mm' % T,
+            'Interception\nevaporation\n%.1f mm\n' % IL,
+              ]
+
+    pathlengths1=[0.9,
+                 1.0,
+                 0.75,
+                 0.5]
+
+    flows3 = [
+            WB['precipitation'] - ET,
+            -dS,  #dS
+            -Q  # ET
+             ]
+
+    orientations3 = [0, 0, -1]
+
+    labels3 = [
+            '',
+            '\n\n$\Delta$S\n%.1f mm' % dS,
+            '\n\nRunoff\n%.1f mm' % Q
+              ]
+
+    pathlengths3=[5.0,
+                 0.5,
+                 0.5
+                 ]
+
+    fig = plt.figure(figsize=(10,6))
+    ax = fig.add_subplot(1, 3, 1)
+    plt.title("       Measured\n",fontweight="bold")
+    sankey = Sankey(ax=ax,
+                    unit=None,
+                    format='%.1f',
+                    scale=1e-2
+                    )
+
+    sankey.add(flows=flows0,
+               labels=labels0,
+               orientations=orientations0,
+               pathlengths=pathlengths0,
+               rotation=-90
+               )
+
+    sankey.add(flows=flows1,
+               labels=labels1,
+               orientations= orientations1,
+               pathlengths=pathlengths1,
+               rotation=-90,
+               prior=0,
+               connect=(2, 0)
+               )
+
+    sankey.add(flows=flows3,
+               labels=labels3,
+               orientations= orientations3,
+               pathlengths=pathlengths3,
+               rotation=-90,
+               prior=0,
+               connect=(1, 0)
+               )
+
+    diagrams = sankey.finish()
+    diagrams[0].patch.set_color(pal[4])
+    diagrams[1].patch.set_color(pal[3])
+    diagrams[2].patch.set_color(pal[4])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.axis('off')
+
+
+    flows0 = [
+            WB['precipitation'],
+            -WB['evapotranspiration'],
+            -WB['residual'],
+             ]
+
+    orientations0 = [0, 0, 0]
+
+    labels0 = [
+            'Precipitation\n%.0f mm\n\n\n\n' % WB['precipitation'],
+            ' ',
+            '\n\nRunoff & $\Delta$S\n%.1f mm' % WB['residual']
+              ]
+
+    pathlengths0=[0.5,
+                 0.5,
+                 6.2
+                 ]
+
+    flows1 = [
+            WB['evapotranspiration'],
+            -WB['overstory interception evaporation'],
+            -WB['overstory transpiration'],
+            -WB['ETu']
+             ]
+
+    orientations1 = [0, 1, 1, 1]
+
+    labels1 = [
+            '\n\n\n     Evapotranspiration\n     %.1f mm' % WB['evapotranspiration'],
+            'Interception\nevaporation\n%.1f mm\n' % WB['overstory interception evaporation'],
+            'Transpiration\n%.1f mm' % WB['overstory transpiration'],
+            '\n\nUnderstorey ET\n& forestfloor E\n%.1f mm' % WB['ETu']
+              ]
+
+    pathlengths1=[1.0,
+                 0.5,
+                 0.75,
+                 1.0]
+
+    ax = fig.add_subplot(1, 3, 3)
+    plt.title("Modelled       \n",fontweight="bold")
+    sankey = Sankey(ax=ax,
+                    unit=None,
+                    format='%.1f',
+                    scale=1e-2,
+                    )
+
+    sankey.add(flows=flows0,
+               labels=labels0,
+               orientations=orientations0,
+               pathlengths=pathlengths0,
+               rotation=-90
+               )
+
+    sankey.add(flows=flows1,
+               labels=labels1,
+               orientations=orientations1,
+               pathlengths=pathlengths1,
+               rotation=-90,
+               prior=0,
+               connect=(1, 0)
+               )
+
+    diagrams = sankey.finish()
+    diagrams[0].patch.set_color(pal[4])
+    diagrams[1].patch.set_color(pal[3])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.axis('off')
+

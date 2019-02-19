@@ -93,7 +93,7 @@ def get_planttypes(dbhfile, grid):
                 'Tbase': 5.0,
                 'ddo': 45.0,
                 'ddmat': 250.0,
-                'ddur': 23.0,
+                'ddur': 23.0,  # not used anymore!
                 'sdl': 12.0,
                 'sdur': 30.0
                 },

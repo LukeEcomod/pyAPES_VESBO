@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 .. module: phenology
     :synopsis: APES-model component
