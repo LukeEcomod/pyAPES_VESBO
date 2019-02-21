@@ -6,24 +6,29 @@ Created on Thu Jan  3 10:10:39 2019
 """
 # %% collect short time data from directories to larger files
 
-#from tools.dataprocessing_scripts import gather_data
-#
-#directory = 'H:/Muut projektit/Natalia/Svartberget_data/'
-#
-#foldernames = [
-#        'SE-Svb_eco/',
-#        'SE-Svb_fluxes/',
-#        'SE-Svb_meteo/',
-#        'SE-Svb_profile/',
-#        'SE-Svb_T-profile/',
-#        'SE-Deg_meteo/',
-#        'SE-Deg_fluxes/'
-#        ]
-#
-#for fn in foldernames:
-#    print(fn)
-#    gather_data(directory + fn, sort=1)
-#    
+from tools.dataprocessing_scripts import gather_data
+
+directory = 'H:/Muut projektit/Natalia/Svartberget_data/'
+
+foldernames = [
+        'SE-Svb_eco/',
+        'SE-Svb_fluxes/',
+        'SE-Svb_meteo/',
+        'SE-Svb_profile/',
+        'SE-Svb_T-profile/',
+        'SE-Deg_meteo/',
+        'SE-Deg_fluxes/',
+        'EC_from_Chi/'
+        ]
+
+for fn in foldernames[:-1]:
+    print(fn)
+    gather_data(directory + fn, dayfirst=True)
+
+fn=foldernames[-1]
+print(fn)
+gather_data(directory + fn, dayfirst=False)
+
 # %% read data from files
 
 from tools.dataprocessing_scripts import read_Svb_data
@@ -34,10 +39,11 @@ fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_eco/concat.csv",
       "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_meteo/concat.csv",
       "H:/Muut projektit/Natalia/Svartberget_data/SE-Deg_meteo/concat.csv",
       "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_profile/concat.csv",
-      "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_T-profile/concat.csv"]
+      "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_T-profile/concat.csv",
+      "H:/Muut projektit/Natalia/Svartberget_data/EC_from_Chi/concat.csv"]
 
 Svb_eco = read_Svb_data([fp[0]])
-Svb_fluxes= read_Svb_data([fp[1],fp[2]])
+Svb_fluxes= read_Svb_data([fp[1],fp[2],fp[7]])
 Svb_meteo = read_Svb_data([fp[3],fp[4]])
 
 # %% processing data
@@ -171,6 +177,8 @@ for var in variables:
 #                        'SE-Svb_meteo: PPFD_IN_1_2_1_screened',
 #                        'SE-Svb_meteo: PPFD_DIR_1_1_1_screened']],plot_timeseries=False)
 # precipitation
+Svb_meteo['SE-Svb_meteo: P_1_1_1'][(Svb_meteo.index >= "10.1.2016") & (Svb_meteo.index <= "10.31.2016")]=np.nan
+
 Svb_meteo[['SE-Svb_meteo: P_1_1_1','SE-Deg_meteo: P_1_1_1']] = Svb_meteo[
         ['SE-Svb_meteo: P_1_1_1','SE-Deg_meteo: P_1_1_1']].fillna(-999)
 
@@ -354,12 +362,13 @@ frames.append(df)
 readme += info
 
 # Precipitation
+
+frames.append(df)
 df, info = fill_gaps(Svb_meteo[['SE-Svb_meteo: P_1_1_1',
                              'SE-Deg_meteo: P_corrected to match daily Prec',
                              'Prec (mm)']],
                     'Prec', 'Precipitation  [mm/30min]', fill_nan=0.0, 
                      plot=True)
-frames.append(df)
 readme += info
 
 Svb_final=pd.concat(frames, axis=1)
@@ -376,7 +385,213 @@ Svb_final[['Tair', 'Rg', 'LWin', 'U', 'RH', 'P', 'Prec', 'Tsoil', 'Wliq']].plot(
 plt.tight_layout()
 plt.xlim('1.1.2014','1.1.2017')
 
-save_df_to_csv(Svb_final, "Svarberget_meteo_2014_2016", readme=readme, fp="C:/Users/L1656/Documents/Git_repos/pyAPES/forcing/")
+Svb_final=Svb_final[(Svb_final.index >= '1.1.2014') & (Svb_final.index <= '1.1.2017')]
+
+save_df_to_csv(Svb_final, "Svarberget_meteo_2014_2016", readme=readme,
+               fp="C:/Users/L1656/Documents/Git_repos/Modeling_cases/pyAPES_Krycklan_C2/forcing/")
 
 create_forcingfile("Svarberget_meteo_2014_2016", "Svarberget_forcing_2014_2016",
-                   lat=64.26, lon=19.77, P_unit = 1e2) # [hPa]
+                   lat=64.26, lon=19.77, P_unit = 1e2,timezone=+1.0) # [hPa]
+
+# %% EC data
+#
+#from tools.dataprocessing_scripts import read_Svb_data
+#import numpy as np
+#import pandas as pd
+#
+#fp = ["H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_fluxes/concat.csv",
+#      "H:/Muut projektit/Natalia/Svartberget_data/EC_from_Chi/concat.csv",
+#      "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_meteo/concat.csv"]
+#
+#Svb_fluxes = read_Svb_data(fp)
+#
+#variables=['SE-Svb_fluxes: H_1_1_1',
+#           'SE-Svb_fluxes: LE_1_1_1',
+#           'SE-Svb_fluxes: Fc_1_1_1',
+#           'SE-Svb_fluxes: LE_f_1_1_1',
+#           'SE-Svb_fluxes: NEE_1_1_1']
+#
+#var2 = ['EC_from_Chi: NEE_f_umolm2s',
+#        'EC_from_Chi: ET_f_mmolm2s',
+#        'EC_from_Chi: H_f_Wm2',
+#        'EC_from_Chi: Reco_umolm2s',
+#        'EC_from_Chi: GPP_umolm2s',
+#        'EC_from_Chi: NEE_umolm2s', 
+#        'EC_from_Chi: ET_mmolm2s',
+#        'EC_from_Chi: H_Wm2', 
+#        'EC_from_Chi: LE_Wm2',
+#        'EC_from_Chi: Rn_Wm2']
+#
+#var3 = ['SE-Svb_meteo: Swnet_1_2_1',
+#        'SE-Svb_meteo: Lwnet_1_2_1',
+#        'SE-Svb_meteo: NetRad_1_2_1']
+#
+#for var in variables:
+#    Svb_fluxes[var]=np.where(Svb_fluxes[var] < -2000.0,
+#                             np.nan, Svb_fluxes[var])
+#
+#for var in var2:
+#    Svb_fluxes[var]=np.where(Svb_fluxes[var] > 2000,
+#                             np.nan, Svb_fluxes[var])
+#
+#Svb_fluxes['EC_from_Chi: GPP_umolm2s_notfilled'] = np.where(np.isnan(Svb_fluxes['EC_from_Chi: NEE_umolm2s']),
+#          np.nan, Svb_fluxes['EC_from_Chi: GPP_umolm2s'])
+#
+#plt.figure()
+#ax1=plt.subplot(5,1,1)
+#Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1','SE-Svb_fluxes: H_1_1_1','SE-Svb_fluxes: Hraw_1_1_1',
+#            'EC_from_Chi: H_Wm2','EC_from_Chi: H_f_Wm2']].plot(ax=ax1)
+#ax2=plt.subplot(5,1,2, sharex=ax1)
+#Svb_fluxes[['SE-Svb_fluxes: LE_f_1_1_1','SE-Svb_fluxes: LE_1_1_1','SE-Svb_fluxes: Leraw_1_1_1',
+#            'EC_from_Chi: LE_Wm2']].plot(ax=ax2)
+#ax3=plt.subplot(5,1,3, sharex=ax1)
+#Svb_fluxes[['EC_from_Chi: ET_f_mmolm2s','EC_from_Chi: ET_mmolm2s']].plot(ax=ax3)
+#ax4=plt.subplot(5,1,4, sharex=ax1)
+#Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1','SE-Svb_fluxes: Fc_1_1_1','SE-Svb_fluxes: Fcraw_1_1_1',
+#            'EC_from_Chi: NEE_f_umolm2s','EC_from_Chi: NEE_umolm2s']].plot(ax=ax4)
+#ax5=plt.subplot(5,1,5, sharex=ax1)
+#Svb_fluxes[['EC_from_Chi: GPP_umolm2s', 'EC_from_Chi: GPP_umolm2s_notfilled','EC_from_Chi: Reco_umolm2s']].plot(ax=ax5)
+#
+#Svb_fluxes[['EC_from_Chi: Rn_Wm2']].plot()
+#
+#Svb_fluxes[var3].plot()
+#
+#from tools.iotools import save_df_to_csv
+#from tools.timeseries_tools import fill_gaps
+#
+#
+## File from ICOS portal data
+#frames = []
+#readme = ""
+#
+## sensible heat
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: H_1_1_1']],
+#                     'SH', 'Sensible heat flux [W m-2]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: H_f_1_1_1']],
+#                     'SH_gapfilled', 'Sensible heat flux [W m-2], gapfilled', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## latent heat
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: LE_1_1_1']],
+#                     'LE', 'Latent heat flux [W m-2]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: LE_f_1_1_1']],
+#                     'LE_gapfilled', 'Latent heat flux [W m-2], gapfilled', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## NEE
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: Fc_1_1_1']],
+#                     'NEE', 'Net ecosystem exchange [umol m-2 s-1]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_fluxes: NEE_1_1_1']],
+#                     'NEE_gapfilled', 'Net ecosystem exchange [umol m-2 s-1], gapfilled', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+#Svb_EC=pd.concat(frames, axis=1)
+#
+#Svb_EC = Svb_EC[(Svb_EC.index >= '1.1.2014') & (Svb_EC.index <= '1.1.2017')]
+#
+#save_df_to_csv(Svb_EC, "Svarberget_EC_2014_2016_ICOS", readme=readme)
+#
+## File from Jackie's data
+#frames = []
+#readme = ""
+#
+## sensible heat
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: H_Wm2']],
+#                     'SH', 'Sensible heat flux [W m-2]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## latent heat
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: LE_Wm2']],
+#                     'LE', 'Latent heat flux [W m-2]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## evapotranspiration
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: ET_mmolm2s']],
+#                     'ET', 'Evapotranspiration [mmol m-2 s-1]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: ET_f_mmolm2s']],
+#                     'ET_gapfilled', 'Evapotranspiration [mmol m-2 s-1], gapfilled', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## NEE
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: NEE_umolm2s']],
+#                     'NEE', 'Net ecosystem exchange [umol m-2 s-1]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: NEE_f_umolm2s']],
+#                     'NEE_gapfilled', 'Net ecosystem exchange [umol m-2 s-1], gapfilled', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## GPP
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: GPP_umolm2s_notfilled']],
+#                     'GPP', 'Gross primary production [umol m-2 s-1]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: GPP_umolm2s']],
+#                     'GPP_gapfilled', 'Gross primary production [umol m-2 s-1], gapfilled', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## Reco
+#df, info = fill_gaps(Svb_fluxes[['EC_from_Chi: Reco_umolm2s']],
+#                     'Reco', 'Ecosystem respiration [umol m-2 s-1], modelled', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## Rnet
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_meteo: NetRad_1_2_1']],
+#                     'Rnet', 'Net radiation [W m-2]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## LWnet
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_meteo: Lwnet_1_2_1']],
+#                     'LWnet', 'Net longwave radiation [W m-2]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+## SWnet
+#df, info = fill_gaps(Svb_fluxes[['SE-Svb_meteo: Swnet_1_2_1']],
+#                     'SWnet', 'Net shortwave radiation [W m-2]', fill_nan=np.nan,
+#                     plot=True)
+#frames.append(df)
+#readme += info
+#
+#
+#Svb_EC2=pd.concat(frames, axis=1)
+#
+#Svb_EC2 = Svb_EC2[(Svb_EC2.index >= '1.1.2014') & (Svb_EC2.index <= '1.1.2017')]
+#
+#save_df_to_csv(Svb_EC2, "Svarberget_EC_2014_2016_Chi", readme=readme)

@@ -202,17 +202,29 @@ class Water(object):
         Returns:
             updates .gwl, (.h_pond), .h, .Wtot, .Kv, .Kh
         """
-        self.gwl = state['ground_water_level']
+        if 'ground_water_level' in state:
+            self.gwl = state['ground_water_level']
+            if 'water_potential' in state:
+                self.h = state['water_potential']
+            else:
+                self.h = self.gwl - self.grid['z']  # steady state
+            if 'volumetric_water_content' in state:
+                self.Wtot = state['volumetric_water_content']
+            else:
+                self.Wtot = h_to_cellmoist(self.pF, self.h, self.grid['dz'])
+        elif 'volumetric_water_content' in state:
+            if isinstance(state['volumetric_water_content'], float):
+                self.Wtot = self.zeros + state['volumetric_water_content']
+            else:
+                self.Wtot = np.array(state['volumetric_water_content'])
+            self.Wtot = np.minimum(self.Wtot, self.pF['ThetaS'])
+            self.h = wrc(self.pF, self.Wtot, var='Th')
+            self.gwl = get_gwl(self.h, self.grid['z'])
+        else:
+            raise ValueError("Problem in wate.update_state()")
+
         if 'pond_storage' in state:
             self.h_pond = state['pond_storage']
-        if 'water_potential' in state:
-            self.h = state['water_potential']
-        else:
-            self.h = self.gwl - self.grid['z']  # steady state
-        if 'volumetric_water_content' in state:
-            self.Wtot = state['volumetric_water_content']
-        else:
-            self.Wtot = h_to_cellmoist(self.pF, self.h, self.grid['dz'])
         self.Kv = hydraulic_conductivity(self.pF, x=self.h, Ksat=self.Kvsat)
         self.Kh = hydraulic_conductivity(self.pF, x=self.h, Ksat=self.Khsat)
 
@@ -922,9 +934,8 @@ def hydraulic_conductivity(pF, x, Ksat=1):
     m = 1.0 - np.divide(1.0, n)
 
     def relcond(x):
-        nm = (1.0 - abs(alfa*x)**(n - 1.0) * (1 + abs(alfa*x)**n)**(-m))**2
-        dn = (1.0 + abs(alfa*x)**n)**(m / 2.0)
-        r = nm / (dn + EPS)
+        Seff = 1.0 / (1.0 + abs(alfa*x)**n)**m
+        r = Seff**0.5 * (1.0 - (1.0 - Seff**(1/m))**m)**2.0
         return r
 
     Kh = Ksat * relcond(100.0 * np.minimum(x, 0.0))
@@ -1133,9 +1144,8 @@ def unsat_conductivity(pF, x=None, var=None, Ksat=1):
         m = 1.0 - np.divide(1.0, n)
 
     def relcond(x):
-        nm = (1.0 - abs(alfa*x)**(n - 1.0) * (1 + abs(alfa*x)**n)**(-m))**2
-        dn = (1.0 + abs(alfa*x)**n)**(m / 2.0)
-        r = nm / (dn + EPS)
+        Seff = 1.0 / (1.0 + abs(alfa*x)**n)**m
+        r = Seff**0.5 * (1.0 - (1.0 - Seff**(1/m))**m)**2.0
         return r
 
     if x is None and np.size(alfa) == 1:  # draws curve

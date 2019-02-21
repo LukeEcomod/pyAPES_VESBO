@@ -19,7 +19,7 @@ from .timeseries_tools import fill_gaps
 
 
 
-direc = "C:/Users/L1656/Documents/Git_repos/pyAPES/"
+direc = "C:/Users/L1656/Documents/Git_repos/Modeling_cases/pyAPES_Krycklan_C2/"
 
 """
 
@@ -36,7 +36,7 @@ create_forcingfile("Hyde_data_1997_2016", "Hyde_forcing_1997_2016",
 
 """
 
-def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
+def create_forcingfile(meteo_file, output_file, lat, lon, P_unit,timezone=+2.0):
     """
     Create forcing file from meteo.
     Args:
@@ -113,7 +113,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
 
     # zenith angle
     jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0
-    dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=+2.0)
+    dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=timezone)
     cols.append('Zen')
     readme += "\nZen: Zenith angle [rad], (lat = %.2f, lon = %.2f)" % (lat, lon)
 
@@ -156,6 +156,11 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     cols.append('Rnet')
     readme += "\nRnet: Net radiation [W/m2]"
 
+    if {'Tsoil', 'Wliq'}.issubset(dat.columns):
+        cols.extend(('Tsoil', 'Wliq'))
+        dat['Wliq'] = dat['Wliq'] / 100.0
+        readme += "\nTsoil: Soil surface layer temperature [degC]]"
+        readme += "\nWliq: Soil surface layer moisture content [m3 m-3]"
 
     X = np.zeros(len(dat))
     DDsum = np.zeros(len(dat))
@@ -179,7 +184,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     dat = dat[cols]
     dat[cols].plot(subplots=True, kind='line')
 
-    dat[['Tdaily','DDsum','X']].plot(subplots=True)
+    dat[['Tdaily','DDsum','X', 'Zen']].plot(subplots=True)
 
     print("NaN values in forcing data:")
     print(dat.isnull().any())
@@ -265,16 +270,22 @@ def read_Svb_data(forc_fp=None):
                    "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_profile/concat.csv",
                    "H:/Muut projektit/Natalia/Svartberget_data/SE-Svb_T-profile/concat.csv"]
 
-    index=pd.date_range('01-01-2014','01-01-2017',freq='0.5H')
+    index=pd.date_range('01-01-2014','01-01-2019',freq='0.5H')
     data=pd.DataFrame(index=index, columns=[])
 
     for fp in forc_fp:
         dat = pd.read_csv(fp, sep=',', header='infer')
-        dat.index = pd.to_datetime(dat.ix[:,0] + ' ' + dat.ix[:,1], dayfirst=True)
+        if dat.columns[0].upper() == 'DATETIME':
+            dat.index = pd.to_datetime(dat.ix[:,0], dayfirst=False)
+        else:
+            dat.index = pd.to_datetime(dat.ix[:,0] + ' ' + dat.ix[:,1], dayfirst=True)
         dat.index=dat.index.map(lambda x: x.replace(second=0))
         dat.ix[:,0]=dat.index
         dat = dat.drop_duplicates(subset=dat.columns[0])
-        dat = dat.drop([dat.columns[0], dat.columns[1]], axis=1)
+        if dat.columns[0].upper() == 'DATETIME':
+            dat = dat.drop([dat.columns[0]], axis=1)
+        else:
+            dat = dat.drop([dat.columns[0], dat.columns[1]], axis=1)
         dat.columns = fp.split("/")[-2] + ': ' + dat.columns
         if len(np.setdiff1d(dat.index, index)) > 0:
             print(fp, np.setdiff1d(dat.index, index))
@@ -561,7 +572,7 @@ def read_lettosuo_EC():
 
     save_df_to_csv(lettosuo_EC, "Lettosuo_EC", fp=direc + "forcing/")
 
-def gather_data(dir_path="H:/Lettosuo/Forcing_data/datat/meteo/", cols=None, sort=0):
+def gather_data(dir_path="H:/Lettosuo/Forcing_data/datat/meteo/", cols=None, dayfirst=True):
     """
     Collect files in one directory to one file.
     """
@@ -582,10 +593,13 @@ def gather_data(dir_path="H:/Lettosuo/Forcing_data/datat/meteo/", cols=None, sor
     data = pd.concat(frames, ignore_index=True, sort=False)
     data = data[data[data.columns[0]] != data.columns[0]]
     data = data[data[data.columns[0]] != 'dd/mm/yyyy']
-    if sort == 0: # datetime in first column
-        data = data.sort_values(by=data.columns[0])
-    elif sort == 1: # date in first column, time in second
-        data = data.sort_values(by=[data.columns[0], data.columns[1]])
+    if data.columns[0].upper() == 'DATETIME':
+        data['DATE'] = pd.to_datetime(data.ix[:,0], dayfirst=dayfirst)
+    else:
+        data['DATE'] =  pd.to_datetime(data.ix[:,0] + ' ' + data.ix[:,1], dayfirst=dayfirst)
+    
+    data = data.sort_values(by='DATE')
+    data = data.drop('DATE', axis=1)
     
     data.to_csv(path_or_buf=dir_path + 'concat.csv', sep=',', na_rep='NaN', index=False)
 

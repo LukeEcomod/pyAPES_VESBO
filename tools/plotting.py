@@ -64,22 +64,19 @@ def plot_results(results):
 
     plt.tight_layout(rect=(0, 0, 0.8, 1))
 
-def plot_fluxes(results, treatment='control-N', sim_idx=0, fmonth=4, lmonth=9):
-    Data = read_forcing("Lettosuo_EC.csv", cols='all',
+def plot_fluxes(results, sim_idx=0, fmonth=4, lmonth=9):
+    Data = read_forcing("Svarberget_EC_2014_2016_chi.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
-    Data.columns = Data.columns.str.split('_', expand=True)
-    Data = Data[treatment]
-    Data['ET'] = Data.LE / LATENT_HEAT * MOLAR_MASS_H2O * 3600  # W m-2 / J mol-1 * kg mol-1 * s h-1 = kg m-2 h-1 = mm h-1
-    Data.GPP = -Data.GPP
-    Data['GPP2'] = -Data.NEE + Data.Reco
+    Data.ET = Data.ET * 1e-3 * MOLAR_MASS_H2O * 3600  # mmol m-2 s-1 - > mm h-1
 
-    variables=['canopy_NEE','canopy_GPP','canopy_respiration','ffloor_respiration',
-               'canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
+    variables=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_SH','canopy_Rnet','canopy_transpiration','canopy_evaporation',
+               'forcing_precipitation','ffloor_evaporation','canopy_condensation','canopy_condensation_drip']
     df = xarray_to_df(results, variables, sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation) * 1e3 * 3600
-    Data.canopy_GPP = Data.canopy_GPP * MOLAR_MASS_CO2  # umol m-2 s-1 * kg mol-1 = mg m-2 s-1
-    Data.canopy_respiration = Data.canopy_respiration * MOLAR_MASS_CO2
+    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation
+        + Data.canopy_condensation + Data.canopy_condensation_drip) * 1e3 * 3600
+
+    Data['canopy_Reco'] = Data['canopy_respiration']
 
     dates = Data.index
 
@@ -88,61 +85,105 @@ def plot_fluxes(results, treatment='control-N', sim_idx=0, fmonth=4, lmonth=9):
     f = np.where(ix > 0.0)[0]  # wet canopy indices
     dryc[f] = 0.0
     months = Data.index.month
-#    Data.ET[Data.gapped == 1] = np.nan
     ixET = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data.ET))[0]
-#    Data.GPP[Data.gapped == 1] = np.nan
+    ixSH = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.SH))[0]
+    ixRnet = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Rnet))[0]
+    ixNEE = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.NEE))[0]
     ixGPP = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP))[0]
-#    Data.GPP2[Data.gapped == 1] = np.nan
-    ixGPP2 = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.GPP2))[0]
-#    Data.Reco[Data.gapped == 1] = np.nan
     ixReco = np.where((months >= fmonth) & (months <= lmonth) & np.isfinite(Data.Reco))[0]
     labels=['Modelled', 'Measured']
 
+    # Energy and ET
     plt.figure(figsize=(10,6))
-    plt.subplot(341)
-#    plot_xy(Data.GPP2[ixGPP2], Data.canopy_GPP[ixGPP2], color=['k'], axislabels={'x': '', 'y': 'Modelled'})
-    plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
-
-    plt.subplot(345)
-    plot_xy(Data.Reco[ixReco], Data.canopy_respiration[ixReco], color=pal[1], axislabels={'x': '', 'y': 'Modelled'})
+#    plt.subplot(341)
+#    plot_xy(Data.Rnet[ixRnet], Data.canopy_Rnet[ixRnet], color=pal[0], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
+#
+#    plt.subplot(345)
+#    plot_xy(Data.SH[ixSH], Data.canopy_SH[ixSH], color=pal[1], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
 
     plt.subplot(349)
-    plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
+    plot_xy(Data.ET[ixET], Data.ET_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'},alpha=0.2)
+
+#    ax = plt.subplot(3,4,(2,3))
+#    plot_timeseries_df(Data, ['canopy_Rnet', 'Rnet'], colors=[pal[0],'k'], xticks=False,
+#                       labels=['Modelled', 'Measured'], marker=[None, '.'])
+#    plt.title('Net radiation [W m-2]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+#
+#    plt.subplot(3,4,(6,7), sharex=ax)
+#    plot_timeseries_df(Data, ['canopy_SH','SH'], colors=[pal[1],'k'], xticks=False,
+#                       labels=labels, marker=[None, '.'])
+#    plt.title('Sensible heat flux [W m-2]', fontsize=10)
+#    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+
+    plt.subplot(3,4,(10,11))#, sharex=ax)
+    plot_timeseries_df(Data, ['ET_mod','ET'], colors=[pal[2],'k'], xticks=True,
+                       labels=labels, marker=[None, '.'])
+    plt.title('Evapotranspiration [mm h-1] with no precipitation in 24h', fontsize=10)
+    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+
+#    ax =plt.subplot(344)
+#    plot_diurnal(Data.Rnet[ixRnet], color='k', legend=False)
+#    plot_diurnal(Data.canopy_Rnet[ixRnet], color=pal[0], legend=False)
+#    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+#    plt.xlabel('')
+#
+#    plt.subplot(348, sharex=ax)
+#    plot_diurnal(Data.SH[ixSH], color='k', legend=False)
+#    plot_diurnal(Data.canopy_SH[ixSH], color=pal[1], legend=False)
+#    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+#    plt.xlabel('')
+
+    plt.subplot(3,4,12)#, sharex=ax)
+    plot_diurnal(Data.ET[ixET], color='k', legend=False)
+    plot_diurnal(Data.ET_mod[ixET], color=pal[2], legend=False)
+
+    plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
+
+    # CO2
+    plt.figure(figsize=(10,6))
+    plt.subplot(341)
+    plot_xy(Data.NEE[ixNEE], Data.canopy_NEE[ixNEE], color=pal[0], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
+
+    plt.subplot(345)
+    plot_xy(Data.GPP[ixGPP], Data.canopy_GPP[ixGPP], color=pal[1], axislabels={'x': '', 'y': 'Modelled'},alpha=0.2)
+
+    plt.subplot(349)
+    plot_xy(Data.Reco[ixReco], Data.canopy_Reco[ixReco], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'},alpha=0.2)
 
     ax = plt.subplot(3,4,(2,3))
-    plot_timeseries_df(Data, ['canopy_GPP', 'GPP', 'GPP2'], colors=[pal[0],'k','b'], xticks=False,
-                       labels=['Modelled', 'Measured', 'Measured2'], marker=[None, '.', '.'])
-    plt.title('GPP [mg CO2 m-2 s-1]', fontsize=10)
+    plot_timeseries_df(Data, ['canopy_NEE', 'NEE'], colors=[pal[0],'k'], xticks=False,
+                       labels=['Modelled', 'Measured'], marker=[None, '.'])
+    plt.title('Net ecosystem exchange [umol CO2 m-2 s-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(6,7), sharex=ax)
-    plot_timeseries_df(Data, ['canopy_respiration','Reco'], colors=[pal[1],'k'], xticks=False,
+    plot_timeseries_df(Data, ['canopy_GPP','GPP'], colors=[pal[1],'k'], xticks=False,
                        labels=labels, marker=[None, '.'])
-    plt.title('Reco [mg CO2 m-2 s-1]', fontsize=10)
+    plt.title('Gross primary production [umol CO2 m-2 s-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     plt.subplot(3,4,(10,11), sharex=ax)
-    plot_timeseries_df(Data, ['ET_mod','ET'], colors=[pal[2],'k'], xticks=True,
+    plot_timeseries_df(Data, ['canopy_Reco','Reco'], colors=[pal[2],'k'], xticks=True,
                        labels=labels, marker=[None, '.'])
-    plt.title('ET [mm h-1]', fontsize=10)
+    plt.title('Ecosystem respiration [umol CO2 m-2 s-1]', fontsize=10)
     plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
 
     ax =plt.subplot(344)
-    plot_diurnal(Data.GPP[ixGPP], color='k', legend=False)
-    plot_diurnal(Data.GPP2[ixGPP2], color='b', legend=False)
-    plot_diurnal(Data.canopy_GPP[ixGPP], color=pal[0], legend=False)
+    plot_diurnal(Data.NEE[ixNEE], color='k', legend=False)
+    plot_diurnal(Data.canopy_NEE[ixNEE], color=pal[0], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
     plt.subplot(348, sharex=ax)
-    plot_diurnal(Data.Reco[ixReco], color='k', legend=False)
-    plot_diurnal(Data.canopy_respiration[ixReco], color=pal[1], legend=False)
+    plot_diurnal(Data.GPP[ixGPP], color='k', legend=False)
+    plot_diurnal(Data.canopy_GPP[ixGPP], color=pal[1], legend=False)
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.xlabel('')
 
     plt.subplot(3,4,12, sharex=ax)
-    plot_diurnal(Data.ET[ixET], color='k', legend=False)
-    plot_diurnal(Data.ET_mod[ixET], color=pal[2], legend=False)
+    plot_diurnal(Data.Reco[ixReco], color='k', legend=False)
+    plot_diurnal(Data.canopy_Reco[ixReco], color=pal[2], legend=False)
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
 
@@ -265,7 +306,7 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
         plt.legend(bbox_to_anchor=(1.01,0.5), loc="center left", frameon=False, borderpad=0.0, fontsize=8)
 
 def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'conversion':1.0},
-                       labels=None, marker=None, colors=default, xticks=True, stack=False, cum=False, linestyle='-', limits=True,legend=True):
+                       labels=None, marker=None, colors=default, xticks=True, stack=False, cum=False, linestyles='-', limits=True,legend=True):
     """
     Plot timeseries from dataframe data.
     Args:
@@ -315,7 +356,11 @@ def plot_timeseries_df(data, variables, unit_conversion = {'unit':None, 'convers
             else:
                 markerstyle = marker[i]
                 if marker[i] is not None:
-                    linestyle = 'None'
+                    linestyles = 'None'
+            if type(linestyles) == list:
+                linestyle = linestyles[i]
+            else:
+                linestyle=linestyles
             plt.plot(data.index, values_all[i], color=colors[i], linewidth=1.5, label=labels[i], marker=markerstyle, markersize=1, linestyle=linestyle)
         ymax = max([np.nanmax(val) for val in values_all])
 
@@ -379,16 +424,42 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
 
     z = np.linspace(0, 30.0, 100)
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,
-        normed=normed, dbhfile="parameters/runkolukusarjat/" + filename, plot=True)
-    if normed == False:
-        lad = z * 0.0
+        normed=False, dbhfile="parameters/runkolukusarjat/" + filename, plot=False)        
+    
+    lad = z * 0.0
+    for k in range(len(quantiles)):
+        lad += lad_p[:,k] + lad_s[:,k] +lad_d[:,k]
+    lai_tot = sum(lai_p) + sum(lai_s) + sum(lai_d)
+    
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = prop_cycle.by_key()['color']
+    plt.figure(figsize=(3.2,4.5))
+    ax=plt.subplot(1,1,1)
+    if normed:
         for k in range(len(quantiles)):
-            lad += lad_p[:,k] + lad_s[:,k] +lad_d[:,k]
-        lai_tot = sum(lai_p) + sum(lai_s) + sum(lai_d)
-        plt.plot(lad, z,':k', label='total, %.2f m$^2$m$^{-2}$' % lai_tot)
-    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.1)
-
-def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
+            plt.plot(lad_p[:, k]/lai_tot,z,color=colors[0], label=r'Pine, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_p[k]/lai_tot))#(lai_p[k]/lai_tot))#,lad_g,z)
+            plt.plot(lad_s[:, k]/lai_tot,z,color=colors[1], label=r'Spruce, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_s[k]/lai_tot))
+            plt.plot(lad_d[:, k]/lai_tot,z,color=colors[2], label=r'Birch, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_d[k]/lai_tot))
+        plt.title("  ")#dbhfile.split("/")[-1])
+        plt.ylabel('Height [m]')
+        plt.xlabel(r'Normalized leaf area density [m$^2$m$^{-3}$]')
+        ax.set_xticks([0.0,0.05,0.1,0.15])
+        plt.plot(lad/lai_tot, z,':k', label='Total')
+    else:
+        for k in range(len(quantiles)):
+            plt.plot(lad_p[:, k],z,color=colors[0], label='Pine, %.2f m$^2$m$^{-2}$' % lai_p[k])#,lad_g,z)
+            plt.plot(lad_s[:, k],z,color=colors[1], label='Spruce, %.2f m$^2$m$^{-2}$' % lai_s[k])
+            plt.plot(lad_d[:, k],z,color=colors[2], label='Birch, %.2f m$^2$m$^{-2}$' % lai_d[k])
+        plt.title("  ")#dbhfile.split("/")[-1])
+        plt.ylabel('height [m]')
+        plt.xlabel('lad [m$^2$m$^{-3}$]')
+        plt.plot(lad, z,':k', label='Total, %.2f m$^2$m$^{-2}$' % lai_tot)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.3, loc="upper right",bbox_to_anchor=(1.1,1.05))
+    plt.tight_layout()
+    
+def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}, alpha=.5):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
     Args:
@@ -399,24 +470,28 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
             'x' (str): x-axis label
             'y' (str): y-axis label
     """
-    plt.scatter(x, y, marker='o', color=color, alpha=.1)
+    plt.scatter(x, y, marker='o', color=color, alpha=alpha)
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])
-    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
+    plt.annotate("y = %.2fx + %.2f \nR$^2$ = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
     lim = [min(min(y[np.isfinite(y)]),
+               min(x[np.isfinite(x)]))-100,
+           max(max(y[np.isfinite(y)]),
+               max(x[np.isfinite(x)]))+100]
+    lim2 = [min(min(y[np.isfinite(y)]),
                min(x[np.isfinite(x)])),
            max(max(y[np.isfinite(y)]),
                max(x[np.isfinite(x)]))]
     plt.plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
     plt.plot(lim, lim, 'k--', linewidth=1)
-    plt.ylim(lim)
-    plt.xlim(lim)
+    plt.ylim(lim2)
+    plt.xlim(lim2)
     plt.title(title)
     plt.xlabel(axislabels['x'])
     plt.ylabel(axislabels['y'])
 
-def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', label='median', legend=True):
+def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', label='median', legend=True, alpha=1.0):
     """
     Plot diurnal cycle (hourly) for variable
     Args:
@@ -433,7 +508,7 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
                          color=color, alpha=0.2, label='5...95%')
         plt.fill_between(var_diurnal['hour'], var_diurnal['25th'], var_diurnal['75th'],
                          color=color, alpha=0.4, label='25...75%')
-    plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label)
+    plt.plot(var_diurnal['hour'], var_diurnal['median'],'o-', markersize=3, color=color,label=label, alpha=alpha)
     print('Daily sum :' + str(sum(var_diurnal['median'])) + ' mm/d')
     plt.title(title)
     plt.xticks(np.linspace(0,24,4))

@@ -22,7 +22,7 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from .photo import leaf_interface
+from .photo import leaf_interface, acclimation_kattge
 from .phenology import Photo_cycle, LAI_cycle
 from .rootzone import RootUptake
 from canopy.constants import LATENT_HEAT, PAR_TO_UMOL, EPS
@@ -32,7 +32,7 @@ class PlantType(object):
     functions.
     """
 
-    def __init__(self, z, p, dz_soil, ctr):
+    def __init__(self, z, p, dz_soil, ctr, loc):
         r""" Initialises a planttype object and submodel objects
         using given parameters.
 
@@ -122,7 +122,7 @@ class PlantType(object):
         # dynamic LAI model
         if self.Switch_lai:
             # seasonality of leaf area
-            self.LAI_Model = LAI_cycle(p['laip'])  # LAI model instance
+            self.LAI_Model = LAI_cycle(p['laip'], loc)  # LAI model instance
             self.relative_LAI = self.LAI_Model.f  # LAI relative to annual maximum [0...1]
         else:
             self.relative_LAI = 1.0

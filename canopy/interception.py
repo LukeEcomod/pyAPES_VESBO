@@ -51,6 +51,9 @@ class Interception(object):
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
 
+        # Leaf orientation factor with respect to incident Prec (horizontal leaves -> 1)  -- into parameters!
+        self.leaf_orientation = p['leaf_orientation']
+
         # initial state
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)
 
@@ -127,8 +130,8 @@ class Interception(object):
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O
 
-        # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical  -- into parameters!
-        F = 0.5 # for randomdly oriented leaves
+        # Leaf orientation factor with respect to incident Prec (horizontal leaves -> 1)  -- into parameters!
+        F = self.leaf_orientation
 
         # --- state of precipitation (uses fW[-1] in end of code)---
         # fraction as water [-]
@@ -223,6 +226,7 @@ class Interception(object):
         LE = np.zeros(N)  # latent heat flux [W m-2(ground)]
         Fr = np.zeros(N)  # sensible heat flux [W m-2(ground)]
         wf = np.zeros(N)  # wetness ratio
+        Tr = np.zeros(N)  # throughfall within canopy [m]
         Trfall = 0.0  # throughfall below canopy [m]
 
         if Prec > 0 or np.any(np.less(Ep, 0)) or np.any(np.greater(W, 0)):
@@ -273,6 +277,7 @@ class Interception(object):
                 # interception and throughfall [m]
                 Interc += Ir * subdt
                 Trfall += P[0] * subdt
+                Tr += P[:-1] * subdt
 
         # throughfall to field layer or snowpack
         Trfall = Trfall + Unload
@@ -308,7 +313,10 @@ class Interception(object):
                   'sources': {'h2o': dqsource,
                               'sensible_heat': Heat / dt,
                               'fr': Fr / dt,
-                              'latent_heat': dqsource * L}
+                              'latent_heat': dqsource * L},
+                  'evaporation_ml': (Evap + Cond * (1 - wf)) / dt,
+                  'throughfall_ml': Tr / dt,
+                  'condensation_drip_ml': (Cond * wf) / dt
                   }
         return fluxes
 

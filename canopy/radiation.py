@@ -111,7 +111,9 @@ class Radiation(object):
 
             results = {'sunlit':{'incident': Q_sl, 'absorbed': q_sl, 'fraction': f_sl},
                        'shaded':{'incident': Q_sh, 'absorbed': q_sh},
-                       'ground': SWb[0] + SWd[0]}
+                       'ground': SWb[0] + SWd[0],
+                       'up': SWu,
+                       'down': SWb + SWd}
 
             return results
 
@@ -1110,7 +1112,8 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
         plt.legend()
     return LWleaf, LWdn, LWup, gr
 
-def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQualls", LAIz=None, leaf_emi=0.98, soil_emi=0.98):
+def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQualls", LAIz=None,
+                             leaf_emi=0.98, soil_emi=0.98, LeafAlbedo=0.12, SoilAlbedo=0.1):
     """
     Runs test script for SW and LW radiation methods.
     INPUT:
@@ -1130,13 +1133,11 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     #ZEN=35.0/180.0*np.pi
     IbSky = 100.0
     IdSky = 100.0
-    LeafAlbedo = 0.12
-    SoilAlbedo = 0.05
 
-    if LAIz == None:
-        LAIz = np.ones(102)*float(LAI) / 100.0
-        LAIz[0] = 0.
-        LAIz[-1] = 0.
+#    if LAIz == None:
+#        LAIz = np.ones(102)*float(LAI) / 100.0
+#        LAIz[0] = 0.
+#        LAIz[-1] = 0.
     N = len(LAIz)
 
     # for LW calculations
@@ -1150,7 +1151,7 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     if method == "canopy_sw_ZhaoQualls":
         print("------TestRun of radiation.canopy_sw_ZhaoQualls with given LAI and CLUMP -----------")
         SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")
-#        print SWb,SWd,SWu,Q_sl,Q_sh,q_sl,q_sh,q_soil,f_sl,alb
+        print(SWu[-1]/(SWb[-1]+SWd[-1]),alb)
 
     if method == "canopy_sw_Spitters":
         print("------TestRun of radiation.canopy_sw_Spitters with given LAI and predefined lad profile-----------")
