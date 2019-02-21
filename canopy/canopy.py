@@ -124,7 +124,7 @@ class CanopyModel(object):
                 pp = p.copy()
                 pp['LAImax'] = lai_max
                 pp['lad'] = p['lad'][:, idx]
-                ptypes.append(PlantType(self.z, pp, dz_soil, ctr=cpara['ctr']))
+                ptypes.append(PlantType(self.z, pp, dz_soil, ctr=cpara['ctr'], loc=cpara['loc']))
 
         self.planttypes = ptypes
 
@@ -585,7 +585,11 @@ class CanopyModel(object):
                 'evaporation': wetleaf_fluxes['evaporation'],
                 'condensation': wetleaf_fluxes['condensation'],
                 'condensation_drip': wetleaf_fluxes['condensation_drip'],
+                'evaporation_ml': wetleaf_fluxes['evaporation_ml'],
+                'throughfall_ml': wetleaf_fluxes['throughfall_ml'],
+                'condensation_drip_ml': wetleaf_fluxes['condensation_drip_ml'],
                 'transpiration': Tr,
+                'SH': flux_sensible_heat[-1],
                 'NEE': NEE,
                 'GPP': GPP,
                 'respiration': Reco,
@@ -619,6 +623,9 @@ class CanopyModel(object):
             Tleaf_wet = np.where(self.lad > 0.0,
                                  self.interception.Tl_wet,
                                  np.nan)
+            Rnet = (radiation_profiles['lw']['down'][-1] - radiation_profiles['lw']['up'][-1] +
+                    radiation_profiles['nir']['down'][-1] - radiation_profiles['nir']['up'][-1] +
+                    radiation_profiles['par']['down'][-1] - radiation_profiles['par']['up'][-1])
 
             state_canopy.update({
                     'Tleaf_wet': Tleaf_wet,
@@ -632,6 +639,7 @@ class CanopyModel(object):
                     'leaf_net_LW': radiation_profiles['lw']['net_leaf'],
                     'sensible_heat_flux': flux_sensible_heat,  # [W m-2]
                     'energy_closure': energy_closure,
+                    'Rnet': Rnet,
                     'fr_source': sum(sources['fr'] * self.dz)})
 
         return fluxes_canopy, state_canopy, fluxes_ffloor, states_ffloor
