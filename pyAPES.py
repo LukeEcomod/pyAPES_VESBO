@@ -35,20 +35,19 @@ from tools.iotools import jsonify
 from canopy.canopy import CanopyModel
 from soil.soil import Soil
 
-from parameters.canopy import get_cpara
-from parameters.soil import get_spara
-
-from parameters.sensitivity import get_parameters, iterate_parameters
+from parameters.parametersets import iterate_parameters
 
 import logging
 
 
 def driver(create_ncf=False,
-           soiltype='organic',
-           dbhfile="letto2014.txt",
-           parameter_set_name=None,
-           result_file=None):
+           result_file=None,
+           parametersets={}):
     """
+    Args:
+        create_ncf (bool): results saved to netCDF4 file
+        result_file (str): name of result file
+        parametersets (dict): parameter sets to overwrite default parameters
     """
     # --- LOGGING ---
     from parameters.general import logging_configuration
@@ -61,13 +60,24 @@ def driver(create_ncf=False,
     # Import general parameters
     from parameters.general import gpara
     # Import canopy model parameters
-    cpara = get_cpara(dbhfile)
+    from parameters.canopy import cpara
     # Import soil model parameters
-    spara = get_spara(soiltype)
-    # Impport sensitivity parameters
-    parameters = get_parameters(parameter_set_name)
+    from parameters.soil import spara
+    if parametersets == {}:
+        Nsim = 1
+    else:
+        Nsim = parametersets['count']
 
-    Nsim = parameters['count']
+    default_params = {
+            'canopy': cpara,
+            'soil': spara
+            }
+
+    param_space = [iterate_parameters(parametersets, copy(default_params), count) for count in range(Nsim)]
+
+    logger = logging.getLogger(__name__)
+
+    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
     # --- FORCING ---
     # Read forcing
@@ -75,29 +85,6 @@ def driver(create_ncf=False,
                            gpara['start_time'],
                            gpara['end_time'],
                            dt=gpara['dt'])
-    # read soil moisture and temperature
-    df = read_forcing(gpara['forc_filename'],
-                      gpara['start_time'],
-                      gpara['end_time'],
-                      dt=gpara['dt'],
-                      cols=['Tsoil','Wliq'])
-
-    forcing[['Tsoil','Wliq']] = df[['Tsoil','Wliq']].copy()
-    # set first values as initial conditions
-    spara['heat_model']['initial_condition']['temperature'] = forcing['Tsoil'].iloc[0]
-    spara['water_model']['initial_condition']['volumetric_water_content'] = forcing['Wliq'].iloc[0]
-
-    default_params = {
-            'canopy': cpara,
-            'soil': spara
-            }
-
-    param_space = [iterate_parameters(parameters, copy(default_params), count) for count in range(Nsim)]
-
-    logger = logging.getLogger(__name__)
-
-    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
-
 
     tasks = []
 
@@ -118,8 +105,7 @@ def driver(create_ncf=False,
                 tasks[k].Ncanopy_nodes,
                 tasks[k].Nplant_types,
                 forcing,
-                filename=filename,
-                description=dbhfile)
+                filename=filename)
 
         for task in tasks:
             logger.info('Running simulation number (start time %s): %s' % (
@@ -165,7 +151,7 @@ class Model(object):
 
         # create soil model instance
         self.soil = Soil(soil_para)
-
+        
         # initial delayed temperature and degreedaysum 
 
         if 'X' in forcing:
@@ -173,7 +159,7 @@ class Model(object):
                 canopy_para['planttypes'][pt]['phenop'].update({'Xo': forcing['X'].iloc[0]})
         if 'DDsum' in forcing:
             for pt in list(canopy_para['planttypes'].keys()):
-                canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})
+                canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})           
 
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para, self.soil.grid['dz'])
@@ -252,9 +238,7 @@ class Model(object):
                 ),
                 'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
                 'ground_heat_flux': -ffloor_flux['ground_heat'],
-                'date': self.forcing.index[k],
-                'state_water':{'volumetric_water_content': self.forcing['Wliq'].iloc[k]},
-                'state_heat':{'temperature': self.forcing['Tsoil'].iloc[k]}}
+                'date': self.forcing.index[k]}
 
             # transpiration sink [m s-1]
             rootsink =  self.canopy_model.rad * canopy_flux['transpiration']

@@ -30,9 +30,9 @@ K_WATER = 0.57
 K_ICE = 2.2
 K_AIR = 0.025
 K_ORG = 0.25
-K_SAND = 7.7  # Tian et al. 2016
-K_SILT = 2.74  # Tian et al. 2016
-K_CLAY = 1.93  # Tian et al. 2016
+K_SAND = 7.7  # Tian et al. 2007
+K_SILT = 2.74  # Tian et al. 2007
+K_CLAY = 1.93  # Tian et al. 2007
 
 #: volumetric heat capacieties  [J m\ :sup:`-3`\ K \ :sup:`-1`\]
 CV_AIR = 1297.0  # air at 101kPa

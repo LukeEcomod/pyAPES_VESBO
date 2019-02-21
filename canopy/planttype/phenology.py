@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 .. module: phenology
     :synopsis: APES-model component
@@ -153,11 +154,9 @@ class LAI_cycle(object):
 def daylength(lat, lon, doy):
     """
     Computes daylength from location and day of year.
-
     Args:
         lat, lon - in deg, float or arrays of floats
         doy - day of year, float or arrays of floats
-
     Returns:
         dl - daylength (hours), float or arrays of floats
     """

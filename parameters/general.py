@@ -6,9 +6,9 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2016-05-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2016-11-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
-        'forc_filename' : "Svarberget_forcing_2014_2016.csv",  # forcing data file*
+        'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2010-06-10",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'forc_filename' : "Hyde_forcing_1997_2016.csv",  # forcing data file*
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
                       ['forcing_pressure', 'ambient pressure [Pa]', ('date', 'simulation')],
@@ -20,7 +20,7 @@ gpara = {
 #                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
                       ['canopy_temperature','air temperature []degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
-                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
+#                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
                       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
                       ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
@@ -53,8 +53,6 @@ gpara = {
                       ['canopy_SH', 'sensible heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_LE', 'latent heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_Rnet', 'net radiation [W m-2]', ('date', 'simulation')],
-                      ['canopy_SWnet', 'net shortwave radiation [W m-2]', ('date', 'simulation')],
-                      ['canopy_LWnet', 'net longwave radiation [W m-2]', ('date', 'simulation')],
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_respiration', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],
@@ -85,7 +83,7 @@ gpara = {
                       ['ffloor_snow_water_closure', "water balance error (snowcover) [m s-1]", ('date', 'simulation')],
                       ['ffloor_bryo_water_closure', "water balance error (bryophytes) [m s-1]", ('date', 'simulation')],
                       ['ffloor_bryo_energy_closure', "energy balance error (bryophytes) [W m-2]", ('date', 'simulation')],
-                      ['ffloo_soil_energy_closure', "energy balance error (soil) [W m-2]", ('date', 'simulation')],
+                      ['ffloo_soilr_energy_closure', "energy balance error (soil) [W m-2]", ('date', 'simulation')],
                       ['ffloor_bryo_carbon_pool', 'carbon pool (bryophyte) [kg C m-2]', ('date', 'simulation')],
                       ['ffloor_bryo_photosynthesis', 'photosynthesis rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],
                       ['ffloor_bryo_respiration', 'respiration rate (bryophyte) [umol m-2(ground) s-1]', ('date', 'simulation')],

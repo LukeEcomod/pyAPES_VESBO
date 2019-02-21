@@ -76,14 +76,8 @@ class Micromet(object):
         if Utop is None:
             Utop = self.Utop
 
-        _, U_n, Km_n, _, _, _ = closure_1_model_U(
+        _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
                 z, self.Cd, lad, hc, Utop + EPS, self.Ubot, dPdx=self.dPdx, U_ini=self.U_n)
-
-        if any(U_n < 0.0):
-            logger.debug('Negative U_n, set to previous profile.')
-        else:
-            self.U_n = U_n.copy()
-            self.Km_n = Km_n.copy()
 
     def update_state(self, ustaro):
         r""" Updates wind speed profile.
@@ -279,10 +273,10 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None, U_ini
 
         # --- Use successive relaxations in iterations
         U = eps1*Un + (1.0 - eps1)*U
-        dPdx_m = eps1*dPdx + (1.0 - eps1)*dPdx_m
+        dPdx_m = eps1*dPdx + (1.0 - eps1)*dPdx_m  # ???
         if iter_no == iter_max:
-            logger.debug('Maximum number of iterations reached: U_n = %.2f, U_min = %.2f, U_max = %.2f, err = %.2f',
-                         np.mean(U), min(U), max(U), err)
+            logger.debug('Maximum number of iterations reached: U_n = %.2f, err = %.2f',
+                         np.mean(U), err)
 
     # ---- return values
     tau = tau / tau[-1]  # normalized shear stress

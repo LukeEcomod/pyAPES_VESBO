@@ -22,7 +22,7 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
 eps = np.finfo(float).eps  # machine epsilon
-from .photo import leaf_interface, acclimation_kattge
+from .photo import leaf_interface
 from .phenology import Photo_cycle, LAI_cycle
 from .rootzone import RootUptake
 from canopy.constants import LATENT_HEAT, PAR_TO_UMOL, EPS
