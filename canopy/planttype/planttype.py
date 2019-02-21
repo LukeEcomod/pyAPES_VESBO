@@ -32,7 +32,7 @@ class PlantType(object):
     functions.
     """
 
-    def __init__(self, z, p, dz_soil, ctr, loc):
+    def __init__(self, z, p, dz_soil, ctr):
         r""" Initialises a planttype object and submodel objects
         using given parameters.
 
@@ -122,7 +122,7 @@ class PlantType(object):
         # dynamic LAI model
         if self.Switch_lai:
             # seasonality of leaf area
-            self.LAI_Model = LAI_cycle(p['laip'], loc)  # LAI model instance
+            self.LAI_Model = LAI_cycle(p['laip'])  # LAI model instance
             self.relative_LAI = self.LAI_Model.f  # LAI relative to annual maximum [0...1]
         else:
             self.relative_LAI = 1.0

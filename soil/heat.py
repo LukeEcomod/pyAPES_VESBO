@@ -116,7 +116,7 @@ class Heat(object):
             upper_boundary ={'type': 'temperature', 'value': forcing['temperature']}
 
         if heat_sink is None:
-            heat_sink = self.zeros.copy()
+            heat_sink = self.zeros
 
         fluxes, state, self.subdt = heatflow1D(t_final=dt,
                                                grid=self.grid,

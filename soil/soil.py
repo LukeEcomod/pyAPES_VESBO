@@ -113,7 +113,7 @@ class Soil(object):
         self.heat = Heat(self.grid, profile_properties, p['heat_model'],
                                    self._fill(self.water.Wtot, 0.0))
 
-    def run(self, dt, forcing, water_sink=None, heat_sink=None, lbc_water=None, lbc_heat=None, state=None):
+    def run(self, dt, forcing, water_sink=None, heat_sink=None, lbc_water=None, lbc_heat=None, gwl=None):
         r""" Runs soil model for one timestep.
         Args:
             dt: time step [s]
@@ -123,10 +123,6 @@ class Soil(object):
                 'atmospheric_pressure_head': [m]
                 'ground_heat_flux' (float): heat flux from soil surface [W m-2]
                     OR 'temperature' (float): soil surface temperature [degC]
-                'state_water': if water model is not solved this allows state can be changed over time
-                    'ground_water_level' OR 'volumetric_water_content'
-                'state_heat': if heat model is not solved this allows state can be changed over time
-                    'temperature'
             water_sink (array or None): water sink from layers, e.g. root sink [m s-1]
                 ! array length can be only root zone or whole soil profile
                 ! if None set to zero
@@ -137,7 +133,7 @@ class Soil(object):
             lbc_heat (dict or None): allows boundary to be changed in time
                 '':
                 '':
-
+            gwl (float): if water model is not solved this allows gwl to be changed in time [m]
         Returns:
             fluxes (dict):[m s-1]
                 'infiltration'
@@ -165,8 +161,8 @@ class Soil(object):
                                           lower_boundary=lbc_water)
             fluxes.update(water_fluxes)
 
-        elif 'state_water' in forcing:
-            self.water.update_state(forcing['state_water'])
+        elif gwl is not None:
+            self.water.update_state({'ground_water_level': gwl})
 
         state = {'water_potential': self._fill(self.water.h),
                  'volumetric_water_content': self._fill(self.water.Wtot, 0.0),
@@ -183,11 +179,7 @@ class Soil(object):
 
             fluxes.update(heat_fluxes)
         else:
-            if'state_heat' in forcing:
-                self.heat.update_state(state=forcing['state_heat'],
-                                       Wtot=state['volumetric_water_content'])
-            else:
-                self.heat.update_state(Wtot=state['volumetric_water_content'])
+            self.heat.update_state(Wtot=state['volumetric_water_content'])
 
         state.update({'volumetric_ice_content': self.heat.Wice,
                       'temperature': self.heat.T,
