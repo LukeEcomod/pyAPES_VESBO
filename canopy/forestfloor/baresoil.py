@@ -19,7 +19,7 @@ from canopy.constants import STEFAN_BOLTZMANN, LATENT_HEAT, DEG_TO_KELVIN
 from canopy.constants import MOLAR_MASS_H2O, WATER_DENSITY, GRAVITY
 from canopy.constants import SPECIFIC_HEAT_AIR, SPECIFIC_HEAT_H2O, GAS_CONSTANT
 from canopy.micromet import e_sat
-from .heat_and_water import soil_boundary_layer_conductance
+from .heat_and_water import soil_boundary_layer_conductance, surface_atm_conductance
 
 logger = logging.getLogger(__name__)
 
@@ -143,15 +143,22 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
 
 # change this either to baresoil temperature or baresoil old_temperature
 
-    # boundary layer conductances for forcing['h2o'] and heat [mol m-2 s-1]
-    gb_h, _, gb_v = soil_boundary_layer_conductance(
-        u=forcing['wind_speed'],
-        z=parameters['height'],
-        zo=properties['roughness_length'],
-        Ta=forcing['air_temperature'],
-        dT=0.0,
-        P=forcing['air_pressure']
-    )  # OK to assume dt = 0.0?
+#    # boundary layer conductances for forcing['h2o'] and heat [mol m-2 s-1]
+#    gb_h, _, gb_v = soil_boundary_layer_conductance(
+#        u=forcing['wind_speed'],
+#        z=parameters['height'],
+#        zo=properties['roughness_length'],
+#        Ta=forcing['air_temperature'],
+#        dT=0.0,
+#        P=forcing['air_pressure']
+#    )  # OK to assume dt = 0.0?
+
+    atm_conductance = surface_atm_conductance(wind_speed=forcing['wind_speed'],
+                                              height=parameters['height'],
+                                              friction_velocity=forcing['friction_velocity'],
+                                              dT=0.0)
+    gb_v = atm_conductance['h2o']
+    gb_h = atm_conductance['heat']
 
     # Maximum LE
     # atm pressure head in equilibrium with atm. relative humidity

@@ -259,6 +259,7 @@ class ForestFloor(object):
                     'par': forcing['par'],
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
+                    'friction_velocity': forcing['friction_velocity'],
                     'soil_temperature': forcing['soil_temperature'],
                     'soil_pond_storage': forcing['soil_pond_storage'],
                     'soil_water_potential': forcing['soil_water_potential']
@@ -336,6 +337,7 @@ class ForestFloor(object):
                     'par': forcing['par'],
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
+                    'friction_velocity': forcing['friction_velocity'],
                     'soil_temperature': forcing['soil_temperature'],
                     'soil_pond_storage': forcing['soil_pond_storage'],
                     'soil_water_potential': forcing['soil_water_potential']
@@ -399,6 +401,7 @@ class ForestFloor(object):
 
                 bare_forcing = {
                     'wind_speed': forcing['wind_speed'],
+                    'friction_velocity': forcing['friction_velocity'],
                     'air_temperature': forcing['air_temperature'],
                     'h2o': forcing['h2o'],
                     'air_pressure': forcing['air_pressure'],

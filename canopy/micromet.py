@@ -59,7 +59,7 @@ class Micromet(object):
         self.dz = z[1] - z[0]
 
         # initialize state variables
-        _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
+        self.tau, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
                 z, self.Cd, lad, hc, self.Utop + EPS, self.Ubot, dPdx=self.dPdx)
 
     def normalized_flow_stats(self, z, lad, hc, Utop=None):
@@ -76,7 +76,7 @@ class Micromet(object):
         if Utop is None:
             Utop = self.Utop
 
-        _, U_n, Km_n, _, _, _ = closure_1_model_U(
+        tau, U_n, Km_n, _, _, _ = closure_1_model_U(
                 z, self.Cd, lad, hc, Utop + EPS, self.Ubot, dPdx=self.dPdx, U_ini=self.U_n)
 
         if any(U_n < 0.0):
@@ -84,6 +84,7 @@ class Micromet(object):
         else:
             self.U_n = U_n.copy()
             self.Km_n = Km_n.copy()
+            self.tau = tau.copy()
 
     def update_state(self, ustaro):
         r""" Updates wind speed profile.
@@ -98,7 +99,9 @@ class Micromet(object):
         Km[0] = Km[1]
         self.Km = Km
 
-        return U
+        ustar = np.sqrt(abs(self.tau)) * ustaro
+
+        return U, ustar
 
     def scalar_profiles(self, gam, H2O, CO2, T, P, source, lbc, Ebal):
         r""" Solves scalar profiles (H2O, CO2 and T) within canopy.

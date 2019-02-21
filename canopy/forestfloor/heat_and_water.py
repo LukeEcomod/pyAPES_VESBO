@@ -109,9 +109,13 @@ class heat_and_water:
         temp_difference = y[0] - self.states['air_temperature']
 
         # [mol m-2 s-1]
-        conductance_to_air = moss_atm_conductance(self.states['wind_speed'],
-                                                  self.properties['roughness_height'],
-                                                  dT=temp_difference)
+#        conductance_to_air = moss_atm_conductance(self.states['wind_speed'],
+#                                                  self.properties['roughness_height'],
+#                                                  dT=temp_difference)
+        conductance_to_air = surface_atm_conductance(wind_speed=self.states['wind_speed'],
+                                                     height=self.states['height'],
+                                                     friction_velocity=self.states['friction_velocity'],
+                                                     dT=temp_difference)
 
         # water vapor conductance from moss to air
         # Relative conductance is from Williams and Flanagan (1996), Oecologia.
@@ -390,6 +394,7 @@ def heat_and_water_exchange(properties,
         'lw_dn': forcing['lw_dn'],
         'air_temperature': forcing['air_temperature'],  # [deg C]
         'wind_speed': forcing['wind_speed'],
+        'friction_velocity': forcing['friction_velocity'],
         'soil_temperature': forcing['soil_temperature'],  # [deg C]
         'soil_water_potential': forcing['soil_water_potential'],
         'precipitation': precipitation,
@@ -398,6 +403,7 @@ def heat_and_water_exchange(properties,
         'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
         'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
         'soil_depth': parameters['soil_depth'],
+        'height': parameters['height']
     }
 
     # initializing state equation
@@ -666,11 +672,15 @@ def water_exchange(dt,
     temp_difference = temperature - forcing['air_temperature']
     # boundary layer conductances for H2O, heat and CO2
     # [mol m-2 s-1]
-    conductance_to_air = moss_atm_conductance(
-        forcing['wind_speed'],
-        properties['roughness_height'],
-        dT=temp_difference
-    )
+#    conductance_to_air = moss_atm_conductance(
+#        forcing['wind_speed'],
+#        properties['roughness_height'],
+#        dT=temp_difference
+#    )
+    conductance_to_air = surface_atm_conductance(wind_speed=forcing['wind_speed'],
+                                             height=parameters['height'],
+                                             friction_velocity=forcing['friction_velocity'],
+                                             dT=temp_difference)
 
     # water vapor conductance from moss to air
     # Relative conductance is from Williams and Flanagan (1996), Oecologia.
@@ -1214,18 +1224,77 @@ def moss_atm_conductance(wind_speed, roughness_height, dT=0.0, atten_factor=0.25
         'heat': conductance_heat
         }
 
+def surface_atm_conductance(wind_speed, height, friction_velocity=None, dT=0.0, zom=0.01, b=1.1e-3):
+    """
+    Soil surface - atmosphere transfer conductance for scalars. Two paralell
+    mechanisms: forced and free convection
+    Args:
+        wind_speed - wind speed (m/s) at zref
+        height - reference height (m). Log-profile assumed below zref.
+        zom - roughness height for momentum (m), ~0.1 x canopy height
+        ustar - friction velocity (m/s) at log-regime. if ustar not given,
+                it is computed from Uo, zref and zom
+        b - parameter for free convection. b=1.1e-3 ... 3.3e-3 from smooth...rough surface
+    Returns:
+        conductances for CO2, H2O and heat (mol m-2 s-1), dict
+    References:
+        Schuepp and White, 1975:Transfer Processes in Vegetation by Electrochemical Analog,
+        Boundary-Layer Meteorol. 8, 335-358.
+        Schuepp (1977): Turbulent transfer at the ground: on verification of
+        a simple predictive model. Boundary-Layer Meteorol., 171-186
+        Kondo & Ishida, 1997: Sensible Heat Flux from the Earth’s Surface under
+        Natural Convective Conditions. J. Atm. Sci.
+    """
+
+    """
+    KERSTI! Testaa tätä moss_atm_conductance(args) tilalla; katsotaan räjähtääkö malli / palaako sammalet.
+    Inputtina: Uref=U[1], zref = z[1], ustar = ustar[1] (tai zom = forest floor roughness length)
+    
+    ustar[1]: closure_model_1_U palauttaa tau/ustar0 - profiilin -->
+    ustar[1] = srt(abs(tau)) * ustar0, jossa ustar0 = mallin pakote
+    
+    Voi olla että pitää muuttaa Ubot = 0.01*Utop tms. ettei U mene ihan nollaan pinnan lähellä.
+    
+    Tämä funktio ei ota huomioon sammalten ominaisuuksia mutta voi olla robustimpi
+    ja samaa voi käyttää myös paljaalle maalle / litter -kerrokselle.
+    
+    """
+    
+    Sc_v = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_H2O  
+    Sc_c = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_CO2
+    Pr = AIR_VISCOSITY / THERMAL_DIFFUSIVITY_AIR 
+    kv = 0.4  # von Karman constant (-)
+    d = 0.0 # displacement height
+    
+    if friction_velocity == None:
+        friction_velocity = wind_speed * kv / np.log((height - d) / zom)
+
+    delta = MOLECULAR_DIFFUSIVITY_H2O / (kv*friction_velocity)
+    
+    gb_h = (kv*friction_velocity) / (Pr - np.log(delta / height))
+    gb_v = (kv*friction_velocity) / (Sc_v - np.log(delta / height))
+    gb_c = (kv*friction_velocity) / (Sc_c - np.log(delta / height))
+    
+    # free convection as parallel pathway, based on Condo and Ishida, 1997.
+    #b = 1.1e-3 #ms-1K-1 b=1.1e-3 for smooth, 3.3e-3 for rough surface
+    dT = np.maximum(dT, 0.0)
+    
+    gf_h = b * dT**0.33  # ms-1
+
+    # mol m-2 s-1    
+    gb_h = (gb_h + gf_h) * AIR_DENSITY
+    gb_v = (gb_v + Sc_v / Pr * gf_h) * AIR_DENSITY
+    gb_c = (gb_c + Sc_c / Pr * gf_h) * AIR_DENSITY
+    
+#    plt.figure()
+#    plt.plot(friction_velocity, gb_v, '-')
+    return {'co2': gb_c, 'h2o': gb_v, 'heat': gb_h}
 
 def evaporation_through(properties,
                         volumetric_water,
                         moss_temperature,
-                        air_temperature,
-                        atm_partial_pressure_h2o,
-                        wind_speed,
-                        ambient_pressure,
-                        soil_temperature,
-                        soil_hydraulic_head,
-                        soil_hydraulic_conductivity,
-                        soil_depth):
+                        forcing,
+                        parameters):
     r""" Estimates soil evaporation rate through bryophyte layer.
 
     Evaporation in bryophyte layer is limited either by atmospheric demand
@@ -1258,6 +1327,8 @@ def evaporation_through(properties,
         float:
             evaporation in [mol m\ :sup:`-2` s\ :sup:`-1`\ ]
     """
+    # [mol mol-1] -> [Pa]
+    h2o = forcing['h2o'] * forcing['air_pressure']
 
     # [mol/(m2 s)]
     # "from soil surface to moss canopy height"
@@ -1267,14 +1338,18 @@ def evaporation_through(properties,
         properties['porosity'],
         properties['height'],
         moss_temperature,
-        ambient_pressure)
+        forcing['air_pressure'])
 
     # [mol/(m2 s)]
     # "from moss canopy to the atmosphere"
-    temp_difference = moss_temperature - air_temperature
-    atm_conductance = moss_atm_conductance(wind_speed,
-                                           properties['roughness_height'],
-                                           dT=temp_difference)
+    temp_difference = moss_temperature - forcing['air_temperature']
+#    atm_conductance = moss_atm_conductance(forcing['wind_speed'],
+#                                           properties['roughness_height'],
+#                                           dT=temp_difference)
+    atm_conductance = surface_atm_conductance(wind_speed=forcing['wind_speed'],
+                                              height=parameters['height'],
+                                              friction_velocity=forcing['friction_velocity'],
+                                              dT=temp_difference)
 
     # [mol/(m2 s)], two resistors in series
     conductance_h2o = (
@@ -1286,24 +1361,24 @@ def evaporation_through(properties,
     # [mol/(m2 s)]
     # atmospheric evaporative demand
     evaporative_demand = (conductance_h2o
-                          * (saturation_vapor_pressure(soil_temperature) - atm_partial_pressure_h2o)
-                          / ambient_pressure)
+                          * (saturation_vapor_pressure(forcing['soil_temperature']) - h2o)
+                          / forcing['air_pressure'])
 
     # [-, fraction]
-    relative_humidity = min(1.0, atm_partial_pressure_h2o
-                         / saturation_vapor_pressure(air_temperature))
+    relative_humidity = min(1.0, h2o
+                         / saturation_vapor_pressure(forcing['air_temperature']))
 
     # [m], in equilibrium with atmospheric relative humidity
     atm_hydraulic_head = (
         GAS_CONSTANT
-        * (DEG_TO_KELVIN + air_temperature)
+        * (DEG_TO_KELVIN + forcing['air_temperature'])
         * np.log(relative_humidity)
         / (MOLAR_MASS_H2O * GRAVITY))
 
     # [mol/(m2 s)]: 1e3 is water density kgm-3: 1e-3 kgm-3 / (kg/mol) x m/s = mol m-2 s-1
     evaporative_supply = max(0.0,
-        1e3 / MOLAR_MASS_H2O * soil_hydraulic_conductivity
-        * ((atm_hydraulic_head - soil_hydraulic_head) / soil_depth - 1.0))
+        1e3 / MOLAR_MASS_H2O * parameters['soil_hydraulic_conductivity']
+        * ((atm_hydraulic_head - forcing['soil_water_potential']) / parameters['soil_depth'] - 1.0))
 
     # [mol/(m2 s)]
     # return min(evaporative_demand, evaporative_supply)

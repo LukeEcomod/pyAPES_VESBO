@@ -222,7 +222,7 @@ class CanopyModel(object):
                 hc=self.hc,
                 Utop=forcing['wind_speed'] / (forcing['friction_velocity'] + EPS))
         # update U
-        U = self.micromet.update_state(ustaro=forcing['friction_velocity'])
+        U, ustar = self.micromet.update_state(ustaro=forcing['friction_velocity'])
 
         # --- SW profiles within canopy ---
 
@@ -456,6 +456,7 @@ class CanopyModel(object):
                 'precipitation_temperature': T[1],
                 'air_pressure': forcing['air_pressure'],
                 'wind_speed': U[1],
+                'friction_velocity': ustar[1],
                 'soil_temperature': forcing['soil_temperature'],
                 'soil_water_potential': forcing['soil_water_potential'],
                 'soil_volumetric_water': forcing['soil_volumetric_water'],
@@ -580,6 +581,7 @@ class CanopyModel(object):
 
         fluxes_canopy = {
                 'wind_speed': U,
+                'friction_velocity': ustar,
                 'throughfall': wetleaf_fluxes['throughfall'],
                 'interception': wetleaf_fluxes['interception'],
                 'evaporation': wetleaf_fluxes['evaporation'],

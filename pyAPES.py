@@ -269,6 +269,7 @@ class Model(object):
 
             forcing_state = {
                     'wind_speed': self.forcing['U'].iloc[k],
+                    'friction_velocity': self.forcing['Ustar'].iloc[k],
                     'air_temperature': self.forcing['Tair'].iloc[k],
                     'precipitation': self.forcing['Prec'].iloc[k],
                     'h2o': self.forcing['H2O'].iloc[k],
