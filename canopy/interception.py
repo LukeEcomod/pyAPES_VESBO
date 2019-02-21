@@ -51,6 +51,9 @@ class Interception(object):
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
 
+        # Leaf orientation factor with respect to incident Prec (horizontal leaves -> 1)  -- into parameters!
+        self.leaf_orientation = p['leaf_orientation']
+
         # initial state
         self.W = np.minimum(p['w_ini'], p['wmax'] * LAIz)
 
@@ -127,8 +130,8 @@ class Interception(object):
         # latent heat of vaporization/sublimation at temperature T [J/mol]
         L = latent_heat(T) * MOLAR_MASS_H2O
 
-        # Leaf orientation factor with respect to incident Prec; assumed to be 1 when Prec is in vertical  -- into parameters!
-        F = 0.5 # for randomdly oriented leaves
+        # Leaf orientation factor with respect to incident Prec (horizontal leaves -> 1)
+        F = self.leaf_orientation
 
         # --- state of precipitation (uses fW[-1] in end of code)---
         # fraction as water [-]

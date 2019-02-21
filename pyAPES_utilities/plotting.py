@@ -392,12 +392,12 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
     ax=plt.subplot(1,1,1)
     if normed:
         for k in range(len(quantiles)):
-            plt.plot(lad_p[:, k]/lai_tot,z,color=colors[0], label=r'Pine, $%.2f\times \mathrm{LAI_{tot}}$' % 0.3)#(lai_p[k]/lai_tot))#,lad_g,z)
+            plt.plot(lad_p[:, k]/lai_tot,z,color=colors[0], label=r'Pine, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_p[k]/lai_tot))#(lai_p[k]/lai_tot))#,lad_g,z)
             plt.plot(lad_s[:, k]/lai_tot,z,color=colors[1], label=r'Spruce, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_s[k]/lai_tot))
             plt.plot(lad_d[:, k]/lai_tot,z,color=colors[2], label=r'Birch, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_d[k]/lai_tot))
         plt.title("  ")#dbhfile.split("/")[-1])
-        plt.ylabel('Height (m)')
-        plt.xlabel(r'Normalized leaf area density (m$^2$m$^{-3}$)')
+        plt.ylabel('Height [m]')
+        plt.xlabel(r'Normalized leaf area density [m$^2$m$^{-3}$]')
         ax.set_xticks([0.0,0.05,0.1,0.15])
         plt.plot(lad/lai_tot, z,':k', label='Total')
     else:
@@ -411,7 +411,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
         plt.plot(lad, z,':k', label='Total, %.2f m$^2$m$^{-2}$' % lai_tot)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.2)
+    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.3, loc="upper right",bbox_to_anchor=(1.1,1.05))
     plt.tight_layout()
 
 def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):

@@ -85,7 +85,6 @@ class LAI_cycle(object):
         self.LAImin = p['lai_min']  # minimum LAI, fraction of annual maximum
         self.ddo = p['ddo']
         self.ddmat = p['ddmat']
-        self.ddur = p['ddur']
 
         # senescence starts at first doy when daylength < sdl
         doy = np.arange(1, 366)

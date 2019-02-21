@@ -76,8 +76,14 @@ class Micromet(object):
         if Utop is None:
             Utop = self.Utop
 
-        _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
+        _, U_n, Km_n, _, _, _ = closure_1_model_U(
                 z, self.Cd, lad, hc, Utop + EPS, self.Ubot, dPdx=self.dPdx, U_ini=self.U_n)
+
+        if any(U_n < 0.0):
+            logger.debug('Negative U_n, set to previous profile.')
+        else:
+            self.U_n = U_n.copy()
+            self.Km_n = Km_n.copy()
 
     def update_state(self, ustaro):
         r""" Updates wind speed profile.
