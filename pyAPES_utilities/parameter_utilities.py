@@ -145,7 +145,14 @@ def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
         lad_g[1] = 1.0
     lad_g = lad_g / np.maximum(sum(lad_g * z[1]), eps)
 
-    return lad_p, lad_s, lad_d, lad_g, lai_p, lai_s, lai_d
+    return {'lad': {'pine': lad_p,
+                    'spruce': lad_s,
+                    'decid': lad_d,
+                    'shrubs': lad_g},
+            'lai': {'pine': lai_p,
+                    'spruce': lai_s,
+                    'decid': lai_d}
+            }
 
 def model_trees(z, quantiles, normed=False,
                 dbhfile='c:\\projects\\MLM_Hyde\\Data\\hyde_runkolukusarjat.txt',

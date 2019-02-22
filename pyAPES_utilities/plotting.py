@@ -367,7 +367,8 @@ def plot_columns(data, col_index=None, slope=None, plot_timeseries=True):
             axes[i, j].set_ylim(lim)
             axes[i, j].set_xlim(lim)
 
-def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles = [1.0]):
+def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles = [1.0],
+                      subplot=1, subplots=1):
     """
     Plots stand leaf area density profiles from given file.
     Args:
@@ -375,11 +376,11 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
         normed (boolean): normalized profiles
         quantiles (list): cumulative frequency limits for grouping trees, e.g. [0.5, 1.0]
     """
-    from parameters.utilities import model_trees
+    from .parameter_utilities import model_trees
 
     z = np.linspace(0, 30.0, 100)
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,
-        normed=False, dbhfile="parameters/runkolukusarjat/" + filename, plot=False)        
+        normed=False, dbhfile="pyAPES_utilities/runkolukusarjat/" + filename, plot=False)        
 
     lad = z * 0.0
     for k in range(len(quantiles)):
@@ -388,8 +389,8 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
 
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = prop_cycle.by_key()['color']
-    plt.figure(figsize=(3.2,4.5))
-    ax=plt.subplot(1,1,1)
+#    plt.figure(figsize=(3.2,4.5))
+    ax=plt.subplot(1,subplots,subplot)
     if normed:
         for k in range(len(quantiles)):
             plt.plot(lad_p[:, k]/lai_tot,z,color=colors[0], label=r'Pine, $%.2f\times \mathrm{LAI_{tot}}$' % (lai_p[k]/lai_tot))#(lai_p[k]/lai_tot))#,lad_g,z)
@@ -406,12 +407,12 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
             plt.plot(lad_s[:, k],z,color=colors[1], label='Spruce, %.2f m$^2$m$^{-2}$' % lai_s[k])
             plt.plot(lad_d[:, k],z,color=colors[2], label='Birch, %.2f m$^2$m$^{-2}$' % lai_d[k])
         plt.title("  ")#dbhfile.split("/")[-1])
-        plt.ylabel('height [m]')
-        plt.xlabel('lad [m$^2$m$^{-3}$]')
+        plt.ylabel('Height [m]')
+        plt.xlabel('Leaf area density [m$^2$m$^{-3}$]')
         plt.plot(lad, z,':k', label='Total, %.2f m$^2$m$^{-2}$' % lai_tot)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.3, loc="upper right",bbox_to_anchor=(1.1,1.05))
+    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.15, loc="upper right",bbox_to_anchor=(1.1,1.07))
     plt.tight_layout()
 
 def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):

@@ -40,7 +40,7 @@ water_model = {'solve': True,
                'type': 'Equilibrium', #'Richards',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
                'pond_storage_max': 0.05,  #  maximum pond depth [m]
                'initial_condition': {  # (dict) initial conditions
-                       'ground_water_level': -1.0,  # groundwater depth [m]
+                       'ground_water_level': -0.2,  # groundwater depth [m]
                        'pond_storage': 0.  # initial pond depth at surface [m]
                        },
                'lower_boundary': {  # lower boundary condition (type, value, depth)
