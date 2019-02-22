@@ -120,6 +120,7 @@ def driver(create_ncf=False,
                 tasks[k].Ncanopy_nodes,
                 tasks[k].Nplant_types,
                 forcing,
+                filepath=gpara['results_directory'],
                 filename=filename)
 
         for task in tasks:
@@ -132,7 +133,7 @@ def driver(create_ncf=False,
 
             del results
 
-        output_file = "results/" + filename
+        output_file = gpara['results_directory'] + filename
         logger.info('Ready! Results are in: ' + output_file)
         ncf.close()
 
