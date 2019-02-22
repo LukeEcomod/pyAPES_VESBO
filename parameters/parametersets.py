@@ -9,25 +9,25 @@ Created on Fri Oct 19 12:39:09 2018
 ranges = {}
 
 parameters = {
-        'count': 1,
+        'count': 5,
         'canopy': {
                 'forestfloor': {
                         'bryophytes': {
                                 'hylocomium': {
-                                        'ground_coverage': (0.3),
+                                        'ground_coverage': (0.0,0.0,1.0,0.0,0.25),
                                         },
                                 'sphagnum': {
-                                        'ground_coverage': (0.3),
+                                        'ground_coverage': (0.0,1.0,0.0,0.0,0.25),
                                         },
                                 'pleurozium': {
-                                        'ground_coverage': (0.0),
+                                        'ground_coverage': (0.0,0.0,0.0,0.0,0.0),
                                         }
                                 },
                         'litter': {
-                                'ground_coverage': (0.2)
+                                'ground_coverage': (1.0,0.0,0.0,0.0,0.25)
                                 },
                         'baresoil': {
-                                'ground_coverage': (0.2)
+                                'ground_coverage': (0.0,0.0,0.0,1.0,0.25)
                                 }
                         },
         }
