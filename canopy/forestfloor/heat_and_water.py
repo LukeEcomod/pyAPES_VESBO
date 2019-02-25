@@ -1257,28 +1257,28 @@ def surface_atm_conductance(wind_speed, height, friction_velocity=None, dT=0.0, 
     
     Tämä funktio ei ota huomioon sammalten ominaisuuksia mutta voi olla robustimpi
     ja samaa voi käyttää myös paljaalle maalle / litter -kerrokselle.
-    
+
     """
-    
+
     Sc_v = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_H2O  
     Sc_c = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_CO2
     Pr = AIR_VISCOSITY / THERMAL_DIFFUSIVITY_AIR 
     kv = 0.4  # von Karman constant (-)
     d = 0.0 # displacement height
-    
+
     if friction_velocity == None:
         friction_velocity = wind_speed * kv / np.log((height - d) / zom)
 
     delta = MOLECULAR_DIFFUSIVITY_H2O / (kv*friction_velocity)
-    
+
     gb_h = (kv*friction_velocity) / (Pr - np.log(delta / height))
     gb_v = (kv*friction_velocity) / (Sc_v - np.log(delta / height))
     gb_c = (kv*friction_velocity) / (Sc_c - np.log(delta / height))
-    
+
     # free convection as parallel pathway, based on Condo and Ishida, 1997.
     #b = 1.1e-3 #ms-1K-1 b=1.1e-3 for smooth, 3.3e-3 for rough surface
     dT = np.maximum(dT, 0.0)
-    
+
     gf_h = b * dT**0.33  # ms-1
 
     # mol m-2 s-1    
