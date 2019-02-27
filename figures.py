@@ -9,6 +9,9 @@ Created on Wed Feb 20 15:26:24 2019
 import numpy as np
 import pandas as pd
 
+vege=['khaki','lightgreen', 'limegreen', 'forestgreen']
+ff=['seagreen','peru','saddlebrown','khaki','lightgreen', 'limegreen', 'forestgreen']
+
 def plot_vegetation():
 
     def plot_regression(x, y, color='k', title='', axislabels={'x':'', 'y':''},alpha=0.5):
@@ -26,20 +29,20 @@ def plot_vegetation():
         idx = np.isfinite(x) & np.isfinite(y)
         model, resid, _, _ = np.linalg.lstsq(x[idx,np.newaxis], y[idx,np.newaxis])
         R2 = 1 -resid / (y[idx,np.newaxis].size*y[idx,np.newaxis].var())
-        plt.annotate("y = %.2fx \nR$^2$ = %.2f" % (model[0], R2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
+        plt.annotate("y = %.2fx\nR$^2$ = %.2f" % (model[0], R2), (0.35, 0.8), xycoords='axes fraction', ha='center', va='center', fontsize=9)
         limx = [0.0, 1.2*max(x[np.isfinite(x)])]
         limy = [0.0, 1.2*max(y[np.isfinite(y)])]
         plt.plot(limx, [model[0]*limx[0], model[0]*limx[1]], 'r', linewidth=1)
         plt.ylim(limy)
         plt.xlim(limx)
-        plt.title(title)
+        plt.title(title, fontsize=10)
         plt.xlabel(axislabels['x'])
         plt.ylabel(axislabels['y'])
 
     fp = r'H:\Lettosuo\aluskasvillisuus\regression_data.txt'
     dat = pd.read_csv(fp)
     pos = (-0.2,1.05)
-    plt.figure(figsize=(8,2.5))
+    plt.figure(figsize=(8,2.3))
     plt.subplot(1,4,1)
     plt.annotate('a', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
     plot_regression(dat['gra_cov'], dat['gra_bm'],
@@ -58,6 +61,54 @@ def plot_vegetation():
                     axislabels={'x':'biomass [g m$^{-2}$]', 'y':'LAI [m$^2$ m$^{-2}$]'})
     plt.tight_layout()
 #    plt.savefig('figures/case_Lettosuo/vege_regressions.png',dpi=300, transparent=False)
+
+    fp = r'H:\Lettosuo\aluskasvillisuus\inventory_data.txt'
+    dat = pd.read_csv(fp,index_col=0)
+    labels=['SP$_{\mathrm{all},2009}$', 'VP$_{\mathrm{clc},2015}$', 'VP$_{\mathrm{ref},2015}$', 'SP$_{\mathrm{ref},2017}$', 'VP$_{\mathrm{ref},2017}$', 'SP$_{\mathrm{par},2017}$', 'SP$_{\mathrm{par},2018}$', 'VP$_{\mathrm{clc},2017}$', 'VP$_{\mathrm{clc},2018}$']
+    pos = (-0.16,1.02)
+    width = 0.75
+    plt.figure(figsize=(6.5,4))
+    ax1=plt.subplot(2,1,1)
+    plt.annotate('a', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
+    plt.annotate('reference', (1.2,70))
+    plt.annotate(' partial\nharvest', (4.9,65))
+    plt.annotate('clear-cut', (6.9,70))
+    dat[['seedlings','shrubs','graminoid','forbs']].plot(kind='bar', stacked=True, ax=ax1, colors=vege, width=width)
+    plt.plot([4.5, 4.5],[0,1110],'--k')
+    plt.plot([6.5, 6.5],[0,1110],'--k')
+    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+    plt.ylim([0,75])
+    ax1.set_yticks([0, 25, 50, 75])
+    plt.ylabel('coverage [%]',labelpad=10.5)
+    ax1.legend().set_visible(False)
+    ax1_1 = ax1.twinx()
+    ax1_1.plot(range(9),dat['LAI'],'ok', markersize=4)
+    ax1_1.plot(range(9),dat['LAI_meas'],'xk', markersize=4)
+    plt.ylabel('LAI [m$^2$ m$^{-2}$]',labelpad=10)
+    plt.ylim([0,2])
+    ax1.legend().set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    ax1_1.spines['top'].set_visible(False)
+
+    ax2=plt.subplot(2,1,2)
+    plt.annotate('b', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
+    dat[['moss','litter','baresoil','seedlings','shrubs','graminoid','forbs']].plot(kind='bar', stacked=True, ax=ax2, colors=ff, width=width)
+    plt.plot([1, 2],[110,110],'ok', label='LAI estimated', markersize=4)
+    plt.plot([1, 2],[110,110],'xk', label='LAI measured', markersize=4)
+    handles, labels1 = ax2.get_legend_handles_labels()
+    labels1[2:]=labels1[:1:-1]
+    handles[2:]=handles[:1:-1]
+    ax2.legend(handles, labels1,bbox_to_anchor=(1.02,0.35), loc="center left", frameon=False, borderpad=0.0)
+    plt.plot([4.5, 4.5],[0,1110],'--k')
+    plt.plot([6.5, 6.5],[0,1110],'--k')
+    plt.ylabel('coverage [%]')
+    plt.ylim([0,100])
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    ax2.set_xticklabels(labels)
+    plt.xticks(rotation=65)
+    plt.tight_layout()
+#    plt.savefig('figures/case_Lettosuo/vege_inventories.png',dpi=300, transparent=False)
 
 # %% Plot lad profile
 from pyAPES_utilities.plotting import plot_lad_profiles
