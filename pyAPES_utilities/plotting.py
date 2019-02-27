@@ -415,7 +415,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
     plt.legend(frameon=False, borderpad=0.0, labelspacing=0.15, loc="upper right",bbox_to_anchor=(1.1,1.07))
     plt.tight_layout()
 
-def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
+def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=0.2):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
     Args:
@@ -426,11 +426,11 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''}):
             'x' (str): x-axis label
             'y' (str): y-axis label
     """
-    plt.scatter(x, y, marker='o', color=color, alpha=.1)
+    plt.scatter(x, y, marker='o', color=color, alpha=alpha)
     idx = np.isfinite(x) & np.isfinite(y)
     p = np.polyfit(x[idx], y[idx], 1)
     corr = np.corrcoef(x[idx], y[idx])
-    plt.annotate("y = %.2fx + %.2f \nR2 = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
+    plt.annotate("y = %.2fx + %.2f \nR$^2$ = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
     lim = [min(min(y[np.isfinite(y)]),
                min(x[np.isfinite(x)])),
            max(max(y[np.isfinite(y)]),
