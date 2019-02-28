@@ -14,10 +14,10 @@ import numpy as np
 import pandas as pd
 from os import listdir
 
-from timeseries_tools import fill_gaps
+from pyAPES_utilities.timeseries_tools import fill_gaps
 import datetime
 
-direc = "C:/Users/L1656/Documents/Git_repos/pyAPES/"
+direc = "C:/Users/L1656/Documents/Git_repos/pyAPES_Kersti/"
 
 """
 
