@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Soil parameters
+Soil submodel parameters
 """
 
 """ grid and soil properties (now from VT, except pF parameters of first layer..)"""
@@ -49,7 +49,7 @@ water_model = {'solve': True,
                        'depth': -2.0
                        },
                'drainage_equation': {  # drainage equation and drainage parameters
-                       'type': 'Hooghoudt',  # 
+                       'type': 'Hooghoudt',  #
                        'depth': 1.0,  # drain depth [m]
                        'spacing': 45.0,  # drain spacing [m]
                        'width': 1.0,  # drain width [m]

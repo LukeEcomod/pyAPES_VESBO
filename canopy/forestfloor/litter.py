@@ -225,7 +225,7 @@ class Litter(object):
 
         states['carbon_pool'] = self.carbon_pool
 
-        # compute soil evaporation through moss layer
+        # compute soil evaporation through litter layer
 
         # [mol m-2 s-1]
         soil_evaporation = evaporation_through(

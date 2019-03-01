@@ -25,7 +25,7 @@ from .odesolver import solver_array, ForwardEuler_array
 
 
 class heat_and_water:
-    """ Defines conservation of heat and water balance of bryotype object
+    """ Defines heat and water balance of bryotype object
 
     Note:
         Class is callable so it can be used with scipy odeint and odesolver
@@ -1249,20 +1249,20 @@ def surface_atm_conductance(wind_speed, height, friction_velocity=None, dT=0.0, 
     """
     KERSTI! Testaa tätä moss_atm_conductance(args) tilalla; katsotaan räjähtääkö malli / palaako sammalet.
     Inputtina: Uref=U[1], zref = z[1], ustar = ustar[1] (tai zom = forest floor roughness length)
-    
+
     ustar[1]: closure_model_1_U palauttaa tau/ustar0 - profiilin -->
     ustar[1] = srt(abs(tau)) * ustar0, jossa ustar0 = mallin pakote
-    
+
     Voi olla että pitää muuttaa Ubot = 0.01*Utop tms. ettei U mene ihan nollaan pinnan lähellä.
-    
+
     Tämä funktio ei ota huomioon sammalten ominaisuuksia mutta voi olla robustimpi
     ja samaa voi käyttää myös paljaalle maalle / litter -kerrokselle.
 
     """
 
-    Sc_v = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_H2O  
+    Sc_v = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_H2O
     Sc_c = AIR_VISCOSITY / MOLECULAR_DIFFUSIVITY_CO2
-    Pr = AIR_VISCOSITY / THERMAL_DIFFUSIVITY_AIR 
+    Pr = AIR_VISCOSITY / THERMAL_DIFFUSIVITY_AIR
     kv = 0.4  # von Karman constant (-)
     d = 0.0 # displacement height
 
@@ -1281,11 +1281,11 @@ def surface_atm_conductance(wind_speed, height, friction_velocity=None, dT=0.0, 
 
     gf_h = b * dT**0.33  # ms-1
 
-    # mol m-2 s-1    
+    # mol m-2 s-1
     gb_h = (gb_h + gf_h) * AIR_DENSITY
     gb_v = (gb_v + Sc_v / Pr * gf_h) * AIR_DENSITY
     gb_c = (gb_c + Sc_c / Pr * gf_h) * AIR_DENSITY
-    
+
 #    plt.figure()
 #    plt.plot(friction_velocity, gb_v, '-')
     return {'co2': gb_c, 'h2o': gb_v, 'heat': gb_h}
