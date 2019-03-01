@@ -63,10 +63,31 @@ def driver(create_ncf=False,
     from parameters.canopy import cpara
     # Import soil model parameters
     from parameters.soil import spara
+
     if parametersets == {}:
         Nsim = 1
     else:
         Nsim = parametersets['count']
+
+    # --- FORCING ---
+    # Read forcing
+    forcing = read_forcing(gpara['forc_filename'],
+                           gpara['start_time'],
+                           gpara['end_time'],
+                           dt=gpara['dt'])
+
+# SINGLE SOIL LAYER
+#    # read soil moisture and temperature
+#    df = read_forcing(gpara['forc_filename'],
+#                      gpara['start_time'],
+#                      gpara['end_time'],
+#                      dt=gpara['dt'],
+#                      cols=['Tsoil','Wliq'])
+#
+#    forcing[['Tsoil','Wliq']] = df[['Tsoil','Wliq']].copy()
+#    # set first values as initial conditions
+#    spara['heat_model']['initial_condition']['temperature'] = forcing['Tsoil'].iloc[0]
+#    spara['water_model']['initial_condition']['volumetric_water_content'] = forcing['Wliq'].iloc[0]
 
     default_params = {
             'canopy': cpara,
@@ -79,12 +100,6 @@ def driver(create_ncf=False,
 
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
-    # --- FORCING ---
-    # Read forcing
-    forcing = read_forcing(gpara['forc_filename'],
-                           gpara['start_time'],
-                           gpara['end_time'],
-                           dt=gpara['dt'])
 
     tasks = []
 
@@ -105,6 +120,7 @@ def driver(create_ncf=False,
                 tasks[k].Ncanopy_nodes,
                 tasks[k].Nplant_types,
                 forcing,
+                filepath=gpara['results_directory'],
                 filename=filename)
 
         for task in tasks:
@@ -117,7 +133,7 @@ def driver(create_ncf=False,
 
             del results
 
-        output_file = "results/" + filename
+        output_file = gpara['results_directory'] + filename
         logger.info('Ready! Results are in: ' + output_file)
         ncf.close()
 
@@ -219,6 +235,9 @@ class Model(object):
                 'soil_depth': self.soil.grid['z'][0],
                 'soil_hydraulic_conductivity': self.soil.water.Kv[0],
                 'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],
+# SINGLE SOIL LAYER
+#                'state_water':{'volumetric_water_content': self.forcing['Wliq'].iloc[k]},
+#                'state_heat':{'temperature': self.forcing['Tsoil'].iloc[k]}
                 'date': self.forcing.index[k]
             }
 
@@ -251,6 +270,7 @@ class Model(object):
 
             forcing_state = {
                     'wind_speed': self.forcing['U'].iloc[k],
+                    'friction_velocity': self.forcing['Ustar'].iloc[k],
                     'air_temperature': self.forcing['Tair'].iloc[k],
                     'precipitation': self.forcing['Prec'].iloc[k],
                     'h2o': self.forcing['H2O'].iloc[k],

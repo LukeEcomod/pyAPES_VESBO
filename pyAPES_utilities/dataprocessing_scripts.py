@@ -17,7 +17,7 @@ from os import listdir
 from timeseries_tools import fill_gaps
 import datetime
 
-direc = "C:/Users/L1656/Documents/Git_repos/pyAPES/"
+direc = "C:/Users/L1656/Documents/Git_repos/pyAPES_Kersti/"
 
 """
 
@@ -34,7 +34,7 @@ create_forcingfile("Hyde_data_1997_2016", "Hyde_forcing_1997_2016",
 
 """
 
-def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
+def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0):
     """
     Create forcing file from meteo.
     Args:
@@ -111,7 +111,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
 
     # zenith angle
     jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0
-    dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=+2.0)
+    dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=timezone)
     cols.append('Zen')
     readme += "\nZen: Zenith angle [rad], (lat = %.2f, lon = %.2f)" % (lat, lon)
 
@@ -144,14 +144,12 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
     cols.extend(('diffPar', 'dirPar', 'diffNir', 'dirNir'))
     readme += "\ndiffPar: Diffuse PAR [W/m2] \ndirPar: Direct PAR [W/m2]"
     readme += "\ndiffNir: Diffuse NIR [W/m2] \ndirNir: Direct NIR [W/m2]"
-#
-#    # approximate net radiation [W/m2]
-#    dat['Rnet'] = (1.0 - 0.08) * (dat['dirPar'] + dat['diffPar'] \
-#                   + dat['dirNir'] + dat['diffNir']) \
-#                   + dat['LWin'] - dat['LWout']
-#    cols.append('Rnet')
-#    readme += "\nRnet: Net radiation [W/m2]"
 
+    if {'Tsoil', 'Wliq'}.issubset(dat.columns):
+        cols.extend(('Tsoil', 'Wliq'))
+        dat['Wliq'] = dat['Wliq'] / 100.0
+        readme += "\nTsoil: Soil surface layer temperature [degC]]"
+        readme += "\nWliq: Soil surface layer moisture content [m3 m-3]"
 
     X = np.zeros(len(dat))
     DDsum = np.zeros(len(dat))
@@ -174,8 +172,6 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit):
 
     dat = dat[cols]
     dat[cols].plot(subplots=True, kind='line')
-
-    dat[['Tdaily','DDsum','X']].plot(subplots=True)
 
     print("NaN values in forcing data:")
     print(dat.isnull().any())

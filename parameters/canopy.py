@@ -51,8 +51,8 @@ interception = {'wmax': 0.2e-03,  # maximum interception storage capacity for ra
                 'w_ini': 0.0,  # initial canopy storage [m]
                 'Tmin': 0.0,  # temperature below which all is snow [degC]
                 'Tmax': 1.0,  # temperature above which all is water [degC]
+                'leaf_orientation': 0.5 # leaf orientation factor for randomdly oriented leaves
                 }
-
 
 cpara = {'loc': loc,
          'ctr': ctr,

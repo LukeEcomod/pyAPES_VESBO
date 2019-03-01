@@ -937,9 +937,8 @@ def hydraulic_conductivity(pF, x, Ksat=1):
     m = 1.0 - np.divide(1.0, n)
 
     def relcond(x):
-        nm = (1.0 - abs(alfa*x)**(n - 1.0) * (1 + abs(alfa*x)**n)**(-m))**2
-        dn = (1.0 + abs(alfa*x)**n)**(m / 2.0)
-        r = nm / (dn + EPS)
+        Seff = 1.0 / (1.0 + abs(alfa*x)**n)**m
+        r = Seff**0.5 * (1.0 - (1.0 - Seff**(1/m))**m)**2.0
         return r
 
     Kh = Ksat * relcond(100.0 * np.minimum(x, 0.0))
@@ -1148,9 +1147,8 @@ def unsat_conductivity(pF, x=None, var=None, Ksat=1):
         m = 1.0 - np.divide(1.0, n)
 
     def relcond(x):
-        nm = (1.0 - abs(alfa*x)**(n - 1.0) * (1 + abs(alfa*x)**n)**(-m))**2
-        dn = (1.0 + abs(alfa*x)**n)**(m / 2.0)
-        r = nm / (dn + EPS)
+        Seff = 1.0 / (1.0 + abs(alfa*x)**n)**m
+        r = Seff**0.5 * (1.0 - (1.0 - Seff**(1/m))**m)**2.0
         return r
 
     if x is None and np.size(alfa) == 1:  # draws curve

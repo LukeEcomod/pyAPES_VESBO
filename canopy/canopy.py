@@ -222,7 +222,7 @@ class CanopyModel(object):
                 hc=self.hc,
                 Utop=forcing['wind_speed'] / (forcing['friction_velocity'] + EPS))
         # update U
-        U = self.micromet.update_state(ustaro=forcing['friction_velocity'])
+        U, ustar = self.micromet.update_state(ustaro=forcing['friction_velocity'])
 
         # --- SW profiles within canopy ---
 
@@ -456,6 +456,7 @@ class CanopyModel(object):
                 'precipitation_temperature': T[1],
                 'air_pressure': forcing['air_pressure'],
                 'wind_speed': U[1],
+                'friction_velocity': ustar[1],
                 'soil_temperature': forcing['soil_temperature'],
                 'soil_water_potential': forcing['soil_water_potential'],
                 'soil_volumetric_water': forcing['soil_volumetric_water'],
@@ -580,6 +581,7 @@ class CanopyModel(object):
 
         fluxes_canopy = {
                 'wind_speed': U,
+                'friction_velocity': ustar,
                 'throughfall': wetleaf_fluxes['throughfall'],
                 'interception': wetleaf_fluxes['interception'],
                 'evaporation': wetleaf_fluxes['evaporation'],
@@ -623,9 +625,9 @@ class CanopyModel(object):
             Tleaf_wet = np.where(self.lad > 0.0,
                                  self.interception.Tl_wet,
                                  np.nan)
-            Rnet = (radiation_profiles['lw']['down'][-1] - radiation_profiles['lw']['up'][-1] +
-                    radiation_profiles['nir']['down'][-1] - radiation_profiles['nir']['up'][-1] +
-                    radiation_profiles['par']['down'][-1] - radiation_profiles['par']['up'][-1])
+            SWnet = (radiation_profiles['nir']['down'][-1] - radiation_profiles['nir']['up'][-1] +
+                     radiation_profiles['par']['down'][-1] - radiation_profiles['par']['up'][-1])
+            LWnet = (radiation_profiles['lw']['down'][-1] - radiation_profiles['lw']['up'][-1])
 
             state_canopy.update({
                     'Tleaf_wet': Tleaf_wet,
@@ -639,7 +641,8 @@ class CanopyModel(object):
                     'leaf_net_LW': radiation_profiles['lw']['net_leaf'],
                     'sensible_heat_flux': flux_sensible_heat,  # [W m-2]
                     'energy_closure': energy_closure,
-                    'Rnet': Rnet,
+                    'SWnet': SWnet,
+                    'LWnet': LWnet,
                     'fr_source': sum(sources['fr'] * self.dz)})
 
         return fluxes_canopy, state_canopy, fluxes_ffloor, states_ffloor

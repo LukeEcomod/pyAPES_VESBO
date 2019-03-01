@@ -23,7 +23,6 @@ planttypes (list):
             'DDsum0': degreedays at initial time [days]
             'Tbase': base temperature [degC]
             'ddo': degreedays at bud burst [days]
-            'ddur': duration of recovery period [days]
             'sdl':  daylength for senescence start [h]
             'sdur': duration of decreasing period [days]
         'photop' (dict): leaf gas-exchange parameters
@@ -44,9 +43,6 @@ planttypes (list):
                 'Rd': [Ha]; activation energy [kJmol-1)]
         'leafp' (dict): leaf properties
             'lt': leaf lengthscale [m]
-            'par_alb': leaf Par albedo [-]
-            'nir_alb': leaf Nir albedo [-]
-            'emi': leaf emissivity [-]
         'rootp' (dict): root zone properties
             'root_depth': root depth [m]
             'beta': shape parameter for root distribution model
@@ -70,9 +66,9 @@ Pine = {
         'phenop': {
             'Xo': 0.0,
             'fmin': 0.1,
-            'Tbase': -4.67,
-            'tau': 8.33,
-            'smax': 18.5
+            'Tbase': -4.67,  # Kolari 2007
+            'tau': 8.33,  # Kolari 2007
+            'smax': 15.0  # Kolari 2014
             },
         'laip': {
             'lai_min': 0.8,
@@ -81,33 +77,29 @@ Pine = {
             'Tbase': 5.0,
             'ddo': 45.0,
             'ddmat': 250.0,
-            'ddur': 23.0,
             'sdl': 12.0,
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 94.0,  # Tarvainen et al. 2018 Physiol. Plant.
-            'Jmax': 143.0,
-            'Rd': 1.3,
+            'Vcmax': 50.,
+            'Jmax': 98.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.2,  # 0.023*Vcmax
             'tresp': {
-                'Vcmax': [78.3, 200.0, 650.1],
-                'Jmax': [56.0, 200.0, 647.9],
+                'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                 'Rd': [33.0]
                 },
             'alpha': 0.2,
             'theta': 0.7,
             'La': 1600.0,
             'm': 2.5,
-            'g0': 1.0e-3,
+            'g0': 4.0e-3,
             'kn': 0.5,
             'beta': 0.95,
             'drp': 0.7
             },
         'leafp': {
             'lt': 0.02,
-            'par_alb': 0.12,
-            'nir_alb': 0.55,
-            'emi': 0.98
             },
         'rootp': {
             'root_depth': 0.2,
@@ -125,9 +117,9 @@ Spruce = {
         'phenop': {
             'Xo': 0.0,
             'fmin': 0.1,
-            'Tbase': -4.67,
-            'tau': 8.33,
-            'smax': 18.5
+            'Tbase': -4.67,  # Kolari 2007
+            'tau': 8.33,  # Kolari 2007
+            'smax': 15.0  # Kolari 2014
             },
         'laip': {
             'lai_min': 0.8,
@@ -136,33 +128,29 @@ Spruce = {
             'Tbase': 5.0,
             'ddo': 45.0,
             'ddmat': 250.0,
-            'ddur': 23.0,
             'sdl': 12.0,
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 69.7,  # Tarvainen et al. 2013 Oecologia
-            'Jmax': 130.2,
-            'Rd': 1.3,
+            'Vcmax': 60.,
+            'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.4,  # 0.023*Vcmax
             'tresp': {
-                'Vcmax': [53.2, 200.0, 640.0],
-                'Jmax': [38.4, 200.0, 655.5],
+                'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                 'Rd': [33.0]
                 },
             'alpha': 0.2,
             'theta': 0.7,
             'La': 1600.0,
             'm': 2.5,
-            'g0': 1.0e-3,
+            'g0': 4.0e-3,
             'kn': 0.5,
             'beta': 0.95,
             'drp': 0.7
             },
         'leafp': {
             'lt': 0.02,
-            'par_alb': 0.12,
-            'nir_alb': 0.55,
-            'emi': 0.98
             },
         'rootp': {
             'root_depth': 0.2,
@@ -180,9 +168,9 @@ Decidious = {
         'phenop': {
             'Xo': 0.0,
             'fmin': 0.01,
-            'Tbase': -4.67,
-            'tau': 8.33,
-            'smax': 18.5
+            'Tbase': -4.67,  # Kolari 2007
+            'tau': 8.33,  # Kolari 2007
+            'smax': 15.0  # Kolari 2014
             },
         'laip': {
             'lai_min': 0.1,
@@ -191,33 +179,29 @@ Decidious = {
             'Tbase': 5.0,
             'ddo': 45.0,
             'ddmat': 250.0,
-            'ddur': 23.0,
             'sdl': 12.0,
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 69.1,  # Medlyn et al 2002. Plant, Cell and Env.
-            'Jmax': 116.3,
-            'Rd': 1.3,
+            'Vcmax': 45.,
+            'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.0,  # 0.023*Vcmax
             'tresp': {
-                'Vcmax': [77.0, 200.0, 636.4],
-                'Jmax': [42.8, 200.0, 636.6],
+                'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                 'Rd': [33.0]
                 },
             'alpha': 0.2,
             'theta': 0.7,
             'La': 600.0,
             'm': 4.5,
-            'g0': 1.0e-3,
-            'kn': 0.5,
+            'g0': 1.0e-2,
+            'kn': 0.2,
             'beta': 0.95,
             'drp': 0.7
             },
         'leafp': {
             'lt': 0.05,
-            'par_alb': 0.12,
-            'nir_alb': 0.55,
-            'emi': 0.98
             },
         'rootp': {
             'root_depth': 0.2,
@@ -235,9 +219,9 @@ Shrubs = {
         'phenop': {
             'Xo': 0.0,
             'fmin': 0.01,
-            'Tbase': -4.67,
-            'tau': 8.33,
-            'smax': 18.5
+            'Tbase': -4.67,  # Kolari 2007
+            'tau': 8.33,  # Kolari 2007
+            'smax': 15.0  # Kolari 2014
             },
         'laip': {
             'lai_min': 0.5,
@@ -246,33 +230,29 @@ Shrubs = {
             'Tbase': 5.0,
             'ddo': 45.0,
             'ddmat': 250.0,
-            'ddur': 23.0,
             'sdl': 12.0,
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 69.1,  # Medlyn et al 2002. Plant, Cell and Env.
-            'Jmax': 116.3,
-            'Rd': 1.3,
+            'Vcmax': 45.,
+            'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.0,  # 0.023*Vcmax
             'tresp': {
-                'Vcmax': [77.0, 200.0, 636.4],
-                'Jmax': [42.8, 200.0, 636.6],
+                'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                 'Rd': [33.0]
                 },
             'alpha': 0.2,
             'theta': 0.7,
             'La': 600.0,
             'm': 4.5,
-            'g0': 1.0e-3,
+            'g0': 1.0e-2,
             'kn': 0.0,
             'beta': 0.95,
             'drp': 0.7
             },
         'leafp': {
             'lt': 0.05,
-            'par_alb': 0.12,
-            'nir_alb': 0.55,
-            'emi': 0.98
             },
         'rootp': {
             'root_depth': 0.2,
