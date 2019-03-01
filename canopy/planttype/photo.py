@@ -232,7 +232,7 @@ def leaf_interface(photop,
              'latent_heat': LE,
              'fr': Fr,
              'Tl': Tl,
-             'stomatal_conductance': np.minimum(gsv, 1.0), # gsv get high when VPD->0
+             'stomatal_conductance': np.minimum(gsv, 1.0), # gsv gets high when VPD->0
              'boundary_conductance': gb_v,
              'leaf_internal_co2': Ci,
              'leaf_surface_co2': Cs}
@@ -278,6 +278,7 @@ def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
     La = photop['La']
     g0 = photop['g0']
 
+    # From Bernacchi et al. 2001 
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
 
