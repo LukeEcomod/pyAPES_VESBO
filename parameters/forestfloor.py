@@ -55,7 +55,7 @@ baresoil = {
                 'albedo_NIR': 0.5,  # [-]
                 },
         'respiration': {
-                'R10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
+                'R10': 2.5,  # base heterotrophic respiration rate [umolm-2s-1]
                 'Q10': 2.0,  # temperature sensitivity [-]
                 'limitpara': [3.83, 4.43, 1.25, 0.854]  # Skopp respiration function param [a ,b, d, g]
                 }

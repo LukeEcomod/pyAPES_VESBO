@@ -4,18 +4,14 @@
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
-Describes flow and scalar profiles within canopy.
+Describes turbulent flow and scalar profiles within canopy.
 Based on MatLab implementation by Samuli Launiainen.
 
 Created on Tue Oct 02 09:04:05 2018
 
-Note:
-    migrated to python3
-    - absolute imports
-
 References:
 Launiainen, S., Katul, G.G., Lauren, A. and Kolari, P., 2015. Coupling boreal
-forest CO2, H2O and energy flows by a vertically structured forest canopy – 
+forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 """
 import numpy as np
@@ -24,17 +20,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 from tools.utilities import central_diff, forward_diff, tridiag, smooth, spatial_average
-from .constants import *
+from .constants import EPS, VON_KARMAN, GRAVITY
+from .constants import MOLECULAR_DIFFUSIVITY_CO2, MOLECULAR_DIFFUSIVITY_H2O
+from .constants import THERMAL_DIFFUSIVITY_AIR, AIR_VISCOSITY, MOLAR_MASS_AIR, SPECIFIC_HEAT_AIR
 
 class Micromet(object):
     r""" Computes flow and scalar profiles within canopy.
     """
     def __init__(self, z, lad, hc, p):
-        r""" Initializes micromet object for computation of flow 
+        r""" Initializes micromet object for computation of flow
         and scalar profiles within canopy.
 
         Args:
-            z (array): canopy model nodes, height from soil surface (= 0.0) [m]
+            z (array): canopy model nodes, equidistance, height from soil surface (= 0.0) [m]
             lad (array): leaf area density [m2 m-3]
             hc (float): canopy heigth [m]
             p (dict):
@@ -59,7 +57,7 @@ class Micromet(object):
         self.dz = z[1] - z[0]
 
         # initialize state variables
-        _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
+        self.tau, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
                 z, self.Cd, lad, hc, self.Utop + EPS, self.Ubot, dPdx=self.dPdx)
 
     def normalized_flow_stats(self, z, lad, hc, Utop=None):
@@ -76,8 +74,15 @@ class Micromet(object):
         if Utop is None:
             Utop = self.Utop
 
-        _, self.U_n, self.Km_n, _, _, _ = closure_1_model_U(
+        tau, U_n, Km_n, _, _, _ = closure_1_model_U(
                 z, self.Cd, lad, hc, Utop + EPS, self.Ubot, dPdx=self.dPdx, U_ini=self.U_n)
+
+        if any(U_n < 0.0):
+            logger.debug('Negative U_n, set to previous profile.')
+        else:
+            self.U_n = U_n.copy()
+            self.Km_n = Km_n.copy()
+            self.tau = tau.copy()
 
     def update_state(self, ustaro):
         r""" Updates wind speed profile.
@@ -92,7 +97,9 @@ class Micromet(object):
         Km[0] = Km[1]
         self.Km = Km
 
-        return U
+        ustar = np.sqrt(abs(self.tau)) * ustaro
+
+        return U, ustar
 
     def scalar_profiles(self, gam, H2O, CO2, T, P, source, lbc, Ebal):
         r""" Solves scalar profiles (H2O, CO2 and T) within canopy.
@@ -195,9 +202,9 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None, U_ini
        Uhi - U /u* at ground (0.0 for no-slip)
        dPdx - u* -normalized horizontal pressure gradient
     OUT:
-       tau - u* -normalized momentum flux 
-       U - u* normalized mean wind speed (-) 
-       Km - eddy diffusivity for momentum (m2s-1) 
+       tau - u* -normalized momentum flux
+       U - u* normalized mean wind speed (-)
+       Km - eddy diffusivity for momentum (m2s-1)
        l_mix - mixing length (m)
        d - zero-plane displacement height (m)
        zo - roughness lenght for momentum (m)
@@ -291,7 +298,7 @@ def closure_1_model_U(z, Cd, lad, hc, Utop, Ubot, dPdx=0.0, lbc_flux=None, U_ini
 #    plt.subplot(221); plt.plot(Un, z, 'r-'); plt.title('U')
 #    plt.subplot(222); plt.plot(y, z, 'b-'); plt.title('dUdz')
 #    plt.subplot(223); plt.plot(l_mix, z, 'r-'); plt.title('l mix')
-#    plt.subplot(224); plt.plot(Km, z, 'r-', Kmr, z, 'b-'); plt.title('Km')    
+#    plt.subplot(224); plt.plot(Km, z, 'r-', Kmr, z, 'b-'); plt.title('Km')
 
     return tau, U, Km, l_mix, d, zo
 
@@ -316,8 +323,8 @@ def closure_1_model_scalar(dz, Ks, source, ubc, lbc, scalar,
         x (array): mixing ratio profile
             CO2 [ppm], H2O [mol mol-1], T [degC]
     References:
-        Juang, J.-Y., Katul, G.G., Siqueira, M.B., Stoy, P.C., McCarthy, H.R., 2008. 
-        Investigating a hierarchy of Eulerian closure models for scalar transfer inside 
+        Juang, J.-Y., Katul, G.G., Siqueira, M.B., Stoy, P.C., McCarthy, H.R., 2008.
+        Investigating a hierarchy of Eulerian closure models for scalar transfer inside
         forested canopies. Boundary-Layer Meteorology 128, 1–32.
     Code:
         Gaby Katul & Samuli Launiainen, 2009 - 2017
@@ -396,11 +403,11 @@ def mixing_length(z, h, d, l_min=None):
 
     if not l_min:
         l_min = dz / 2.0
-    
+
     alpha = (h - d)*VON_KARMAN / (h + EPS)
     I_F = np.sign(z - h) + 1.0
     l_mix = alpha*h*(1 - I_F / 2) + (I_F / 2) * (VON_KARMAN*(z - d))
-    
+
     sc = (alpha*h) / VON_KARMAN
     ix = np.where(z < sc)
     l_mix[ix] = VON_KARMAN*(z[ix] + dz / 2)

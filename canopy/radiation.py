@@ -24,30 +24,24 @@ from builtins import range
 import numpy as np
 import pandas as pd
 import logging
-eps = np.finfo(float).eps  # machine epsilon
 from tools.utilities import tridiag
 from matplotlib import pyplot as plt
-from .constants import DEG_TO_RAD, PAR_TO_UMOL, DEG_TO_KELVIN, STEFAN_BOLTZMANN, SPECIFIC_HEAT_AIR
+from .constants import DEG_TO_RAD, DEG_TO_KELVIN, STEFAN_BOLTZMANN, SPECIFIC_HEAT_AIR, EPS
 logger = logging.getLogger(__name__)
 
 class Radiation(object):
     r""" Describes distribution of within canopy radiation.
     """
-    def __init__(self, p, ctr):
+    def __init__(self, p, Ebal):
         """
         Args:
             p (dict):
                 'clump': clumping index [-]
                 'leaf_angle': leaf-angle distribution [-]
                 'Par_alb': shoot Par-albedo [-]
-                'soil_Par_alb': soil (moss) Par-albedo [-] --- SHOULD COME FROM ForestFloor
                 'Nir_alb': shoot NIR-albedo [-]
-                'soil_Nir_alb': soil (moss) NIR-albedo [-] --- SHOULD COME FROM ForestFloor
-                'soil_emi': 0.98,
                 'leaf_emi': 0.98
-            ctr (dict):
-                'SwModel' (str): model for shortwave radiation, e.g. 'ZHAOQUALLS'
-                'LwModel' (str): model for longwave radiation, e.g. 'ZHAOQUALLS'
+            Ebal (bool): True solves LW radiation
         Returns:
             self (object)
         """
@@ -57,12 +51,14 @@ class Radiation(object):
         self.leaf_angle = p['leaf_angle']  # leaf-angle distribution [-]
         self.alb = {'PAR': p['Par_alb'],  # shoot Par-albedo [-]
                     'NIR': p['Nir_alb']}  # shoot Nir-albedo [-]
-
         self.leaf_emi = p['leaf_emi']
-        self.SWmodel = ctr['SwModel'].upper()
-        self.LWmodel = ctr['LwModel'].upper()
+
+        # model functions to use
+        self.SWmodel = 'ZHAOQUALLS'
+        self.LWmodel = 'ZHAOQUALLS'
+
         logger.info('Shortwave radiation model: %s', self.SWmodel)
-        if ctr['Ebal']:
+        if Ebal:
             logger.info('Longwave radiation model: %s', self.LWmodel)
 
     def shortwave_profiles(self, forcing, parameters):
@@ -107,13 +103,13 @@ class Radiation(object):
                     self.alb[radtype],
                     parameters['ff_albedo'][radtype])
 
-            # ADD OTHER MODELS??
-
             results = {'sunlit':{'incident': Q_sl, 'absorbed': q_sl, 'fraction': f_sl},
                        'shaded':{'incident': Q_sh, 'absorbed': q_sh},
                        'ground': SWb[0] + SWd[0],
                        'up': SWu,
                        'down': SWb + SWd}
+
+            # ADD OTHER MODELS??
 
             return results
 
@@ -131,7 +127,7 @@ class Radiation(object):
                 'lw_up' (float): upwelling longwave radiation below canopy (forest floor) [W m-2(ground)]
             parameters (dict):
                 'LAIz' (array): layewise one-sided leaf-area index [m2 m-2]
-                'forestfloor_emissivity' (float):
+                'ff_emissivity' (float):
         Returns:
             profiles (dict):
                 'net_leaf_lw' (array): leaf net longwave radiation [W m-2(leaf)]
@@ -168,7 +164,7 @@ class Radiation(object):
                 LWdn0=forcing['lw_in'],
                 LWup0=forcing['lw_up'],
                 leaf_emi=self.leaf_emi,
-                soil_emi=parameters['forestfloor_emissivity']
+                soil_emi=parameters['ff_emissivity']
             )
 
         # ADD OTHER MODELS??
@@ -182,6 +178,9 @@ class Radiation(object):
 
         return results
 
+"""
+stand-alone functions start here: these can be called with arguments only
+"""
 
 def solar_angles(lat, lon, jday, timezone=+2.0):
     """
@@ -248,7 +247,8 @@ def solar_angles(lat, lon, jday, timezone=+2.0):
 
 def kbeam(ZEN, x=1.0):
     """
-    COMPUTES BEAM ATTENUATION COEFFICIENT Kb (-) for given solar zenith angle ZEN (rad) and leaf angle distribution x (-)
+    COMPUTES BEAM ATTENUATION COEFFICIENT Kb (-) for given solar zenith angle
+    ZEN (rad) and leaf angle distribution x (-)
     IN:
         ZEN (rad): solar zenith angle
         x (-): leaf-angle distr. parameter (optional)
@@ -342,7 +342,8 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
         to simulate shortwave radiation distribution within a homogenous plant
          canopy. Water Resources Res. 41, W08409, 1-16.
     NOTE:
-        At least for conifers NIR LeafAlbedo has to be decreased from leaf-scale  values to correctly model canopy albedo of clumped canopies.
+        At least for conifers NIR LeafAlbedo has to be decreased from leaf-scale  values to
+        correctly model canopy albedo of clumped canopies.
         Adjustment from ~0.7 to 0.55 seems to be sufficient. This corresponds roughlty to
         a=a_needle*[4*STAR / (1- a_needle*(1-4*STAR))], where a_needle is needle albedo
         and STAR silhouette to total area ratio of a conifer shoot. STAR ~0.09-0.21 (mean 0.14)
@@ -511,14 +512,14 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
     aDiro = aLo*Kb*IbSky
 
     # stand albedo
-    alb = SWuo[-1] / (IbSky + IdSky + eps)
+    alb = SWuo[-1] / (IbSky + IdSky + EPS)
     # print alb
     # soil absorption (Wm-2 (ground))
     q_soil = (1 - SoilAlbedo)*(SWdo[0] + SWbo[0])
 
     # correction to match absorption-based and flux-based albedo, relative error <3% may occur
     # in daytime conditions, at nighttime relative error can be larger but fluxes are near zero
-    aa = (sum(aDiffo*Lo + aDiro*f_slo*Lo) + q_soil) / (IbSky + IdSky + eps)
+    aa = (sum(aDiffo*Lo + aDiro*f_slo*Lo) + q_soil) / (IbSky + IdSky + EPS)
     F = (1. - alb) / aa
     # print('F', F)
     if F <= 0 or np.isfinite(F) is False:
@@ -570,8 +571,8 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
 
         plt.subplot(224)
         plt.plot(q_sl, -Lcumo/Clump, 'ro-', q_sh, -Lcumo/Clump, 'bo-')
-#        plt.plot((-SWdo[:-1]+SWdo[1:]-SWuo[1:]+SWuo[:-1])/(LAIz[:-1]+eps),-Lcumo[1:]/Clump,'-k')
-        plt.plot((1-np.exp(-Kd*Lo))*(SWdo + SWuo)/(LAIz+eps),-Lcumo/Clump,'-k')
+#        plt.plot((-SWdo[:-1]+SWdo[1:]-SWuo[1:]+SWuo[:-1])/(LAIz[:-1]+EPS),-Lcumo[1:]/Clump,'-k')
+        plt.plot((1-np.exp(-Kd*Lo))*(SWdo + SWuo)/(LAIz+EPS),-Lcumo/Clump,'-k')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("Absorbed radiation (Wm-2 (leaf))")
         plt.legend(('sunlit', 'shaded'), loc='best')
@@ -848,10 +849,10 @@ def canopy_lw(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=1.0, PlotFigs=False):
     # Kd is mean projection of leaves
     LWleaf[0:cantop+1] = (1 - tau[0:cantop+1])*(
                         LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*STEFAN_BOLTZMANN*leaf_emi*(T[0:cantop+1] + DEG_TO_KELVIN)**4)/(
-                        LAIz[0:cantop+1] + eps)
-    LWnet[0:cantop+1] = (LWdn[1:cantop+2] - LWdn[0:cantop+1] + LWup[0:cantop+1] - LWup[1:cantop+2])/(LAIz[0:cantop+1]+eps)
+                        LAIz[0:cantop+1] + EPS)
+    LWnet[0:cantop+1] = (LWdn[1:cantop+2] - LWdn[0:cantop+1] + LWup[0:cantop+1] - LWup[1:cantop+2])/(LAIz[0:cantop+1]+EPS)
 
-    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - tau) * (T + DEG_TO_KELVIN) ** 3 / (LAIz + eps) / SPECIFIC_HEAT_AIR
+    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - tau) * (T + DEG_TO_KELVIN) ** 3 / (LAIz + EPS) / SPECIFIC_HEAT_AIR
 
     if PlotFigs:
         Lcum = np.cumsum(np.flipud(LAIz))  # cumulative plant area index from canopy top
@@ -1070,9 +1071,9 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
         cantop = max(ic)
     LWleaf[0:cantop+1] = (1 - taud[0:cantop+1])*leaf_emi*(
                           LWdn[1:cantop+2] + LWup[0:cantop+1] - 2*STEFAN_BOLTZMANN*(Tleaf[0:cantop+1] + DEG_TO_KELVIN)**4)/(
-                          LAIz[0:cantop+1] + eps)
+                          LAIz[0:cantop+1] + EPS)
 
-    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - taud) * (Tleaf + DEG_TO_KELVIN) ** 3 / (LAIz + eps) / SPECIFIC_HEAT_AIR
+    gr = 2 * 4 * leaf_emi * STEFAN_BOLTZMANN * ( 1 - taud) * (Tleaf + DEG_TO_KELVIN) ** 3 / (LAIz + EPS) / SPECIFIC_HEAT_AIR
 
     if PlotFigs:
         plt.figure(99)
@@ -1088,7 +1089,7 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
         plt.legend()
 
         plt.subplot(222)
-        plt.plot((-LWd[1:] + LWd[:-1] - LWu[:-1] + LWu[1:])/(L[1:-1]/Clump + eps), -xi[1:]/Clump, 'go',label='LWnet')
+        plt.plot((-LWd[1:] + LWd[:-1] - LWu[:-1] + LWu[1:])/(L[1:-1]/Clump + EPS), -xi[1:]/Clump, 'go',label='LWnet')
         plt.plot(LWleaf, -X/Clump, 'ro', label='LWleaf')
         plt.ylabel("-Lcum eff.")
         plt.xlabel("LW (Wm-2 )")
@@ -1105,14 +1106,15 @@ def canopy_lw_ZhaoQualls(LAIz, Clump, x, Tleaf, LWdn0, LWup0, leaf_emi=0.98, soi
 
         plt.subplot(224)
         plt.plot(LWleaf, list(range(len(X))), 'ro', label='LWleaf')
-#        plt.plot((LWdn[1:] - LWdn[:-1] + LWup[:-1] - LWup[1:])/(LAIz[:-1] + eps), range(len(X)-1), 'go',label='LWnet')
+#        plt.plot((LWdn[1:] - LWdn[:-1] + LWup[:-1] - LWup[1:])/(LAIz[:-1] + EPS), range(len(X)-1), 'go',label='LWnet')
         plt.ylabel("N")
         plt.xlabel("LW (Wm-2 )")
         plt.title('LWup0=%.1f, LWdn0=%.1f' % (LWup0, LWdn0))
         plt.legend()
     return LWleaf, LWdn, LWup, gr
 
-def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQualls", LAIz=None, leaf_emi=0.98, soil_emi=0.98):
+def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQualls", LAIz=None,
+                             leaf_emi=0.98, soil_emi=0.98, LeafAlbedo=0.12, SoilAlbedo=0.1):
     """
     Runs test script for SW and LW radiation methods.
     INPUT:
@@ -1132,8 +1134,6 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     #ZEN=35.0/180.0*np.pi
     IbSky = 100.0
     IdSky = 100.0
-    LeafAlbedo = 0.12
-    SoilAlbedo = 0.05
 
     if LAIz == None:
         LAIz = np.ones(102)*float(LAI) / 100.0
@@ -1145,13 +1145,14 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     T = np.linspace(15, 17, N) # Tair is 15degC at ground and 17 at upper boundary
     Tatm = 17
     Tsurf = 16
-    T = T * LAIz / (LAIz + eps)
+    T = T * LAIz / (LAIz + EPS)
     LWdn0 = 0.85*STEFAN_BOLTZMANN*(Tatm + DEG_TO_KELVIN)**4
     LWup0 = 0.98*STEFAN_BOLTZMANN*(Tsurf + DEG_TO_KELVIN)**4
 #    print LWdn0, LWup0
     if method == "canopy_sw_ZhaoQualls":
         print("------TestRun of radiation.canopy_sw_ZhaoQualls with given LAI and CLUMP -----------")
         SWb, SWd, SWu, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb = canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo, PlotFigs="True")
+        print(SWu[-1]/(SWb[-1]+SWd[-1]),alb)
 #        print SWb,SWd,SWu,Q_sl,Q_sh,q_sl,q_sh,q_soil,f_sl,alb
 
     if method == "canopy_sw_Spitters":

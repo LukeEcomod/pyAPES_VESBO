@@ -225,24 +225,15 @@ class Litter(object):
 
         states['carbon_pool'] = self.carbon_pool
 
-        # compute soil evaporation through moss layer
-
-        # [mol mol-1] -> [Pa]
-        h2o = forcing['h2o'] * forcing['air_pressure']
+        # compute soil evaporation through litter layer
 
         # [mol m-2 s-1]
         soil_evaporation = evaporation_through(
-            self.properties,
-            self.volumetric_water,  # old
-            self.temperature,  # old
-            forcing['air_temperature'],
-            h2o,
-            forcing['wind_speed'],
-            forcing['air_pressure'],
-            forcing['soil_temperature'],
-            forcing['soil_water_potential'],
-            parameters['soil_hydraulic_conductivity'],
-            parameters['soil_depth'])
+            properties=self.properties,
+            volumetric_water=self.volumetric_water,  # old
+            moss_temperature=self.temperature,  # old
+            forcing=forcing,
+            parameters=parameters)
 
         # unit conversion: 1000 kg m-2 s-1 = mm s-1
 

@@ -166,13 +166,12 @@ class ForestFloor(object):
                 'soil_volumetric_water': [m\ :sup:`3`\  m\`-3`\ ]
                 'soil_volumetric_air': [m\ :sup:`3`\  m\`-3`\ ]
                 'soil_pond_storage': [m]
-                'nsteps' number of steps in odesolver
             parameters (dict):
                 'soil_thermal_conductivity': [] if energy_balance is True
                 'soil_hydraulic_conductivity': []
                 'depth': [m] first soil calculation node
                 'height': [m] first canopy calculation node
-                'nsteps': number of steps in odesolver if energy_balance is True
+                'nsteps': number of steps in odesolver if energy_balance is True -- CHECK?
             controls (dict):
                 'energy_balance': boolean
         Returns:
@@ -259,6 +258,7 @@ class ForestFloor(object):
                     'par': forcing['par'],
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
+                    'friction_velocity': forcing['friction_velocity'],
                     'soil_temperature': forcing['soil_temperature'],
                     'soil_pond_storage': forcing['soil_pond_storage'],
                     'soil_water_potential': forcing['soil_water_potential']
@@ -336,6 +336,7 @@ class ForestFloor(object):
                     'par': forcing['par'],
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
+                    'friction_velocity': forcing['friction_velocity'],
                     'soil_temperature': forcing['soil_temperature'],
                     'soil_pond_storage': forcing['soil_pond_storage'],
                     'soil_water_potential': forcing['soil_water_potential']
@@ -399,6 +400,7 @@ class ForestFloor(object):
 
                 bare_forcing = {
                     'wind_speed': forcing['wind_speed'],
+                    'friction_velocity': forcing['friction_velocity'],
                     'air_temperature': forcing['air_temperature'],
                     'h2o': forcing['h2o'],
                     'air_pressure': forcing['air_pressure'],
