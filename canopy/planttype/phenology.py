@@ -8,7 +8,7 @@ Note:
     migrated to python3
     - nothing changed
 
-Describes plant phenology, seasonal cycle of photosynthetic 
+Describes plant phenology, seasonal cycle of photosynthetic
 capacity and leaf-area development.
 
 Created on Mon May 15 13:43:44 2017
@@ -57,14 +57,14 @@ class Photo_cycle(object):
         self.X = self.X + 1.0 / self.tau * (T - self.X)  # degC
 
         S = np.maximum(self.X - self.Tbase, 0.0)
-        self.f = np.maximum(self.fmin, 
+        self.f = np.maximum(self.fmin,
                             np.minimum(S / (self.Smax - self.Tbase), 1.0))
 
         if out:
             return self.f
 
 class LAI_cycle(object):
-    r"""Dercribes seasonal cycle of leaf-area index (LAI)
+    r"""Describes seasonal cycle of leaf-area index (LAI)
     """
     def __init__(self, p, loc):
         r""" Initializes LAI cycle model.
@@ -170,7 +170,7 @@ def daylength(lat, lon, doy):
     # --- compute day length, the period when sun is above horizon
     # i.e. neglects civil twilight conditions
     cosZEN = 0.0
-    dl = 2.0 * np.arccos(cosZEN - np.sin(lat)*np.sin(decl) / 
+    dl = 2.0 * np.arccos(cosZEN - np.sin(lat)*np.sin(decl) /
                          (np.cos(lat)*np.cos(decl))) / DEG_TO_RAD / 15.0  # hours
 
     return dl

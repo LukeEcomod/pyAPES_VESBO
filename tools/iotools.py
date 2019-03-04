@@ -149,9 +149,9 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
         start_time = dat.index[0]
     if end_time == None:
         end_time = dat.index[-1]
-    dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
+    dat = dat[(dat.index >= start_time) & (dat.index < end_time)]
 
-    # read inputs if cols is not defined
+    # if cols is not defined; return these
     if cols is None:
         cols = ['doy',
                 'Prec',
@@ -168,10 +168,12 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
                 'dirPar',
                 'diffNir',
                 'dirNir']
+        # these for phenology model initialization
         if 'X' in dat:
             cols.append('X')
         if 'DDsum' in dat:
             cols.append('DDsum')
+    # or return all columns
     elif cols == 'all':
         cols = [col for col in dat]
     # Forc dataframe from specified columns
@@ -183,9 +185,6 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
             sys.exit("Forcing file does not have constant time step")
         if (Forc.index[1] - Forc.index[0]).total_seconds() != dt:
             sys.exit("Forcing file time step differs from dt given in general parameters")
-
-    if Forc.columns[0] == 'doy':
-        Forc.loc[:,'Par'] = Forc['diffPar'].values + Forc['dirPar'].values
 
     return Forc
 

@@ -20,12 +20,12 @@ forest CO2, H2O and energy flows by a vertically structured forest canopy –
 Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 """
+
 import numpy as np
-eps = np.finfo(float).eps  # machine epsilon
 from .photo import leaf_interface
 from .phenology import Photo_cycle, LAI_cycle
 from .rootzone import RootUptake
-from canopy.constants import LATENT_HEAT, PAR_TO_UMOL, EPS
+from canopy.constants import PAR_TO_UMOL, EPS
 
 class PlantType(object):
     r""" Contains plant-specific properties, state variables and phenological
@@ -48,7 +48,7 @@ class PlantType(object):
                     'Tbase': base temperature [degC]
                     'tau': time constant [days]
                     'smax': threshold for full acclimation [degC]
-                'laip' (dict): parameters forleaf-area seasonal dynamics
+                'laip' (dict): parameters for LAI seasonal dynamics
                     'lai_min': minimum LAI, fraction of annual maximum [-]
                     'lai_ini': initial LAI fraction, if None lai_ini = Lai_min * LAImax
                     'DDsum0': degreedays at initial time [days]
@@ -64,7 +64,7 @@ class PlantType(object):
                     'alpha': quantum yield parameter [mol/mol]
                     'theta': co-limitation parameter of Farquhar-model
                     'La': stomatal parameter (Lambda, m, ...) depending on model
-                    'm':
+                    'g1':
                     'g0': residual conductance for CO2 [molm-2s-1]
                     'kn':
                     'beta':  co-limitation parameter of Farquhar-model
@@ -86,8 +86,7 @@ class PlantType(object):
                     'radial_K': maximum bulk root membrane conductance in radial direction [s-1]
             dz_soil (array): thickness of soilprofile layers, needed for rootzone [m]
             ctr (dict): switches and specifications for computation
-                'StomaModel' (str): stomatal model e.g. 'MEDLYN_FARQUHAR'
-                'WaterStress' (bool): account for water stress in planttypes --- TRUE NOT SUPPORTED!
+                'WaterStress' (str): account for water stress using 'Rew', 'PsiL' or 'None'
                 'seasonal_LAI' (bool): account for seasonal LAI dynamics
                 'pheno_cycle' (bool): account for phenological cycle
         Returns:
@@ -109,6 +108,7 @@ class PlantType(object):
         self.Switch_pheno = ctr['pheno_cycle']  # include phenology
         self.Switch_lai = ctr['seasonal_LAI']  # seasonal LAI
         self.Switch_WaterStress = ctr['WaterStress']  # water stress affects stomata
+        self.StomaModel = 'MEDLYN_FARQUHAR' # stomatal model
 
         self.name = p['name']
 
@@ -143,15 +143,15 @@ class PlantType(object):
         self.photop = self.photop0.copy()  # current A-gs parameters (dict)
         # leaf properties
         self.leafp = p['leafp']  # leaf properties (dict)
-        self.StomaModel = ctr['StomaModel']
 
-    def update_daily(self, doy, T, PsiL=0.0):
+    def update_daily(self, doy, T, PsiL=0.0, Rew=1.0):
         r""" Updates planttype pheno_state, gas-exchange parameters, LAI and lad.
 
         Args:
             doy (float): day of year [days]
             Ta (float): mean daily air temperature [degC]
             PsiL (float): leaf water potential [MPa] --- CHECK??
+            Rew (float): relatively extractable water (-)
 
         Note: Call once per day
         """
@@ -170,23 +170,43 @@ class PlantType(object):
         if 'kn' in self.photop0:
             kn = self.photop0['kn']
             Lc = np.flipud(np.cumsum(np.flipud(self.lad*self.dz)))
-            Lc = Lc / np.maximum(Lc[0], eps)
+            Lc = Lc / np.maximum(Lc[0], EPS)
             f = np.exp(-kn*Lc)
         # preserve proportionality of Jmax and Rd to Vcmax
         self.photop['Vcmax'] = f * self.pheno_state * self.photop0['Vcmax']
         self.photop['Jmax'] =  f * self.pheno_state * self.photop0['Jmax']
         self.photop['Rd'] =  f * self.pheno_state * self.photop0['Rd']
 
-        if self.Switch_WaterStress:
+
+        # water stress responses
+        if self.Switch_WaterStress == 'Rew':
+            # drought responses from Hyde pine shoot chambers, 2006
+            # for 'Medlyn - model'
+            b = self.photop['drp']
+            fm = np.minimum(1.0, (Rew / b[0])**b[1])
+            self.photop['g1'] = fm * self.photop0['g1']
+
+            # apparent Vcmax decrease with Rew
+            fv = np.minimum(1.0, (Rew / b[2])**b[3])
+            self.photop['Vcmax'] *= fv
+            self.photop['Jmax'] *= fv
+            self.photop['Rd'] *= fv
+
+        if self.Switch_WaterStress == 'PsiL':
             b = self.photop0['drp']
-            if 'La' in self.photop0:
-                # lambda increases with decreasing Psi as in Manzoni et al., 2011 Funct. Ecol.
-                self.photop['La'] = self.photop0['La'] * np.exp(-b*PsiL)
-            if 'm' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi
-                self.photop['m'] = self.photop0['m'] * np.maximum(0.05, np.exp(b*PsiL))
+            if 'g1' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi
+                self.photop['g1'] = self.photop0['g1'] * np.maximum(0.05, np.exp(b*PsiL))
+
+            # Vmax and Jmax responses to leaf water potential. Kellomäki & Wand, 1995.
+            fv = 1.0 / (1.0 + (PsiL / -2.04)**2.08)  # vcmax
+            fj = 1.0 / (1.0 + (PsiL / -1.56)**3.94)  # jmax
+            fr = 1.0 / (1.0 + (PsiL / -2.53)**6.07)  # rd
+            self.photop['Vcmax'] *= fv
+            self.photop['Jmax'] *= fj
+            self.photop['Rd'] *= fr
 
     def run(self, forcing, parameters, controls):
-        r"""Computes dry leaf gas-exchange shale and sunlit leaves.
+        r"""Computes dry leaf gas-exchange for shaded and sunlit leaves.
 
         Args:
             forcing (dict):
@@ -219,7 +239,7 @@ class PlantType(object):
             gr (array): radiative conductance [mol m-2 s-1]
         """
         df = parameters['dry_leaf_fraction']
-        
+
         controls.update({
             'photo_model': self.StomaModel
         })
@@ -233,11 +253,11 @@ class PlantType(object):
             'average_leaf_temperature': forcing['leaf_temperature']
         }
 
+        # --- compute sunlit leaves
         if controls['energy_balance']:
             sw_absorbed_sl = (forcing['par']['sunlit']['absorbed']
                         + forcing['nir']['sunlit']['absorbed'])
 
-            # for sunlit
             leaf_forcing.update({
                 'radiative_conductance': forcing['lw']['radiative_conductance'],
                 'lw_net': df * forcing['lw']['net_leaf'],
@@ -247,16 +267,11 @@ class PlantType(object):
 
         logger_info = controls['logger_info']
         logger_info = logger_info + ' leaftype: sunlit'
-        # logger_info = {
-        #     'date': forcing['date'],
-        #     'iteration': forcing['iteration'],
-        #     'leaftype': 'sunlit'
-        # }
+
 
         Qp_sl = forcing['par']['sunlit']['incident'] * PAR_TO_UMOL
         leaf_forcing.update({'par_incident': Qp_sl}) # for sunlit
 
-        # --- sunlit leaves
         sl = leaf_interface(
             photop=self.photop,
             leafp=self.leafp,
@@ -265,7 +280,7 @@ class PlantType(object):
             df=df,
             logger_info=logger_info)
 
-        # --- shaded leaves
+        # --- compute shaded leaves
         logger_info = controls['logger_info']
         logger_info = logger_info + ' leaftype: shaded'
 
@@ -292,7 +307,6 @@ class PlantType(object):
             self.Tl_sl = sl['Tl'].copy()
 
         # integrate water and C fluxes over all leaves in PlantType, store resuts
-
         f_sl = parameters['sunlit_fraction']
         pt_stats, layer_stats = self._integrate(sl, sh, f_sl)
 
@@ -317,7 +331,7 @@ class PlantType(object):
             y - plant level statistics
         """
 
-        # plant fluxes, weight factors is sunlit and shaded LAI at each layer
+        # plant fluxes, weight factors are sunlit and shaded LAI at each layer
         f1 = f_sl * self.lad
         f2 = (1.0 - f_sl) * self.lad
 
@@ -326,7 +340,7 @@ class PlantType(object):
         pt_stats = {k: np.sum((sl[k]*f1 + sh[k]*f2) * self.dz) for k in keys}  # flux per m-2(ground)
 
         layer_stats = {k: sl[k]*f1 + sh[k]*f2 for k in keys}  # flux per m-3
-        
+
         keys = ['stomatal_conductance', 'boundary_conductance','leaf_internal_co2', 'leaf_surface_co2']
         pt_stats.update({k: np.sum((sl[k]*f1 + sh[k]*f2)) / np.sum(self.lad + EPS) for k in keys})
 
