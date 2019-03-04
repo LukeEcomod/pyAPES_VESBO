@@ -19,11 +19,8 @@ grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
 # --- control flags (True/False) ---
 ctr = {'Eflow': True,  # ensemble flow
        'WMA': False, # well-mixed assumption
-       'StomaModel': 'MEDLYN_FARQUHAR',  # stomatal model
        'Ebal': True,  # computes leaf temperature by solving energy balance
-       'SwModel': 'ZhaoQualls',
-       'LwModel': 'ZhaoQualls',  #'Flerchinger'},  #
-       'WaterStress': False,  # TRUE NOT SUPPORTED YET!
+       'WaterStress': None,  # Rew or PsiL or None
        'seasonal_LAI': True,  # account for seasonal LAI dynamics
        'pheno_cycle': True  # account for phenological cycle
        }

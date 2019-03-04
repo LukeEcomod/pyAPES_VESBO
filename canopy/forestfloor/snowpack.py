@@ -15,7 +15,8 @@ import numpy as np
 EPS = np.finfo(float).eps  # machine epsilon
 
 class Snowpack(object):
-    """ Represents snow cover-soil-atmosphere interactions
+    """ Represents snow cover-soil-atmosphere interactions with simple
+     zero-dimensional degree-day model
     """
 
     def __init__(self, properties, initital_conditions):
