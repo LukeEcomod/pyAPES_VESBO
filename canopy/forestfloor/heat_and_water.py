@@ -831,7 +831,7 @@ def water_exchange(dt,
     )
 
     latent_heat = (
-        LATENT_HEAT / (MOLAR_MASS_H2O * evaporation_rate + EPS)
+        LATENT_HEAT * (evaporation_rate + EPS) / MOLAR_MASS_H2O
     )
 
     sensible_heat = (
