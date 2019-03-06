@@ -792,7 +792,7 @@ def water_exchange(dt,
     )
 
     # [kg m-2] or [mm]
-    new_water_storage = dy_water + water_storage
+    new_water_storage = dy_water * dt + water_storage
 
     # [g g-1]
     new_water_content = new_water_storage / properties['dry_mass']
