@@ -22,7 +22,7 @@ def soil_properties(sitetype, plot=False):
     if sitetype.upper() == 'OMT':
         zh = [-0.046, -0.18, -0.279, -0.378, -10.0]
         Khsat = [2.42e-05, 2.08e-06, 3.06e-06, 3.06e-06, 4.17e-06]
-        watcont = [[0.78, 0.634, 0.279, -999, 0.237, 0.205, 0.190, -999, 0.104, 0.067],  # Jauhiainen (2004), porosity from Westman (1990) 
+        watcont = [[0.78, 0.634, 0.279, -999, 0.237, 0.205, 0.190, -999, 0.104, 0.067],  # Jauhiainen (2004), porosity from Westman (1990)
                    [-999, 0.497, 0.439, -999, 0.342, 0.273, 0.217, -999, 0.112, 0.065],  # Jauhiainen (2004)
                    [-999, 0.495, 0.456, -999, 0.366, 0.286, 0.232, -999, 0.128, 0.082],  # Jauhiainen (2004)
                    [-999, 0.458, 0.413, -999, 0.322, 0.255, 0.206, -999, 0.094, 0.065],  # Jauhiainen (2004)
@@ -102,4 +102,4 @@ def soil_properties(sitetype, plot=False):
                                   }
                       }
 
-    return soil_properties, zh
+    return {'properties': soil_properties, 'zh': zh}

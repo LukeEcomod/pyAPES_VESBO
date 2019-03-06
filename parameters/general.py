@@ -6,8 +6,8 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2010-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2005-05-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2005-08-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Hyde_forcing_1997_2016.csv",  # forcing data file*
         'results_directory':'results/pyAPES/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
@@ -20,7 +20,7 @@ gpara = {
                       ['canopy_WMA_assumption','WMA assumed (1=True, 0=False)', ('date', 'simulation')],
                       ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
-                      ['canopy_temperature','air temperature []degC]', ('date', 'simulation', 'canopy')],
+                      ['canopy_temperature','air temperature [degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
                       ['canopy_friction_velocity','canopy friction velocity [m s-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
