@@ -36,13 +36,13 @@ def leaf_interface(photop,
                    dict_output=True,
                    logger_info=''):
     r""" Entry-point to coupled leaf gas-exchange and energy balance functions.
-    
+
     CALCULATES leaf photosynthesis (An), respiration (Rd), transpiration (E) and estimates of
     leaf temperature (Tl) and sensible heat fluxes (H) based onleaf energy balance equation coupled with
     leaf-level photosynthesis and stomatal control schemes.
     Energy balance is solved using Taylor's expansion (i.e isothermal net radiation -approximation) which
     eliminates need for iterations with radiation-sceme.
-    
+
     Depending on choise of 'model', photosynthesis is calculated based on biochemical model of Farquhar et
     al. (1980) coupled with various stomatal control schemes (Medlyn, Ball-Woodrow-Berry, Hari, Katul-Vico et al.)
     In all these models, stomatal conductance (gs) is directly linked to An, either by optimal stomatal control principles or
@@ -118,10 +118,10 @@ def leaf_interface(photop,
     P = forcing['air_pressure']
     U = forcing['wind_speed']
     CO2 = forcing['co2']
-    
+
     Ebal = controls['energy_balance']
     model = controls['photo_model']
-    
+
     if Ebal:
         SWabs = np.array(forcing['sw_absorbed'], ndmin=1)
         LWnet = np.array(forcing['lw_net'], ndmin=1)
@@ -137,7 +137,7 @@ def leaf_interface(photop,
 
     Tl = Tl_ini.copy()
     Told = Tl.copy()
-    
+
     if 'radiative_conductance' in forcing:
         gr = df * np.array(forcing['radiative_conductance'], ndmin=1)
     else:
@@ -155,9 +155,9 @@ def leaf_interface(photop,
 #    s[esat / P < H2O] = EPS
 #    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
     Dleaf = esat / P - H2O
-    
-    Lv = latent_heat(T) * MOLAR_MASS_H2O 
-    
+
+    Lv = latent_heat(T) * MOLAR_MASS_H2O
+
     itermax = 20
     err = 999.0
     iter_no = 0
@@ -187,8 +187,8 @@ def leaf_interface(photop,
 
         # solve  energy balance
         if Ebal:
-            # solve leaf temperature 
-            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - Lv[ic]*geff_v[ic]*Dleaf[ic] 
+            # solve leaf temperature
+            Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - Lv[ic]*geff_v[ic]*Dleaf[ic]
                   + Lv[ic]*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + Lv[ic]*s[ic]*geff_v[ic])
             err = np.nanmax(abs(Tl - Told))
 
@@ -278,7 +278,7 @@ def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
     La = photop['La']
     g0 = photop['g0']
 
-    # From Bernacchi et al. 2001 
+    # From Bernacchi et al. 2001
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
 
@@ -396,7 +396,7 @@ def photo_c3_medlyn(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
 
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
-    
+
     # ---- Kc & Ko (umol/mol), Rubisco activity for CO2 & O2 ------
     Kc = 404.9 * np.exp(79430.0*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
     Ko = 2.784e5 * np.exp(36380.0*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
@@ -491,7 +491,7 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
     #print beta
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
-    
+
     # ---- Kc & Ko (umol/mol), Rubisco activity for CO2 & O2 ------
     Kc = 404.9 * np.exp(79430.0*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
     Ko = 2.784e5 * np.exp(36380.0*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
@@ -633,7 +633,7 @@ def photo_c3_bwb(photop, Qp, T, RH, ca, gb_c, gb_v, P=101300.0):
 
         err = max(abs(ci0 - ci))
         cnt += 1
-        
+
     # when Rd > photo, assume stomata closed and ci == ca
     ix = np.where(An < 0)
     gs_opt[ix] = g0
@@ -957,15 +957,15 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'emi': 0.98
                 }
     # env. conditions
-    N=50   
+    N=50
     P = 101300.0
-    Qp = 1000. * np.ones(N)  # np.linspace(1.,1800.,50)#
+    Qp = np.linspace(1.,1800.,50)#1000. * np.ones(N)  # np.linspace(1.,1800.,50)#
     CO2 = 400. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = np.linspace(1.,39.,50) # 10. * np.ones(N) # 
+    T = 10. * np.ones(N) # np.linspace(1.,39.,50) # 10. * np.ones(N) #
     esat, s = e_sat(T)
     H2O = (85.0 / 100.0) * esat / P
-    SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL 
+    SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL
     LWnet = -30.0 * np.ones(N)
 
     forcing = {
@@ -983,10 +983,10 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
             'photo_model': method,
             'energy_balance': Ebal
             }
-    
+
     x = leaf_interface(photop, leafp, forcing, controls)
 #    print(x)
-    Y=T
+    Y=Qp
     plt.figure(5)
     plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
     plt.title('net_co2')
@@ -1053,7 +1053,7 @@ def test_photo_temperature_response(species='pine'):
                     'Rd': [33.0]
                     }
                 }
-    
+
     if species.upper() == 'PINE2':
         photop= {
                 'Vcmax': 67.33,
@@ -1096,7 +1096,7 @@ def test_photo_temperature_response(species='pine'):
     Jmax_T = tresp['Jmax']
     Rd_T = tresp['Rd']
     Vcmax, Jmax, Rd, Tau_c = photo_temperature_response(Vcmax, Jmax, Rd, Vcmax_T, Jmax_T, Rd_T, Tk)
-    
+
     plt.figure(4)
     plt.subplot(311); plt.plot(T, Vcmax, 'o')
     plt.title('Vcmax')
@@ -1104,7 +1104,7 @@ def test_photo_temperature_response(species='pine'):
     plt.title('Jmax')
     plt.subplot(313); plt.plot(T, Rd, 'o')
     plt.title('Rd')
-    
+
 def Topt_to_Sd(Ha, Hd, Topt):
     Sd = Hd * 1e3 / (Topt + DEG_TO_KELVIN) + GAS_CONSTANT * np.log(Ha /(Hd - Ha))
     return Sd
