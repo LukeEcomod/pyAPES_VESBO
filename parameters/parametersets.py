@@ -63,8 +63,8 @@ parameters = {
                                },
                        'drainage_equation': {  # drainage equation and drainage parameters
                                'type': 'Hooghoudt',  #
-                               'depth': 1.0,  # drain depth [m]
-                               'spacing': 45.0,  # drain spacing [m]
+                               'depth': 0.2,  # drain depth [m]
+                               'spacing': 200.0,  # drain spacing [m]
                                'width': 1.0,  # drain width [m]
                                }
                         }

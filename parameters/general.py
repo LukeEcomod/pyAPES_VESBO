@@ -7,7 +7,7 @@ gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2005-05-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2005-08-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2005-11-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Hyde_forcing_1997_2016.csv",  # forcing data file*
         'results_directory':'results/pyAPES/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],

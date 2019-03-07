@@ -46,7 +46,7 @@ water_model = {'solve': True,
                        },
                'lower_boundary': {  # lower boundary condition (type, value, depth)
                        'type': 'head_oneway',
-                       'value': -2.0,
+                       'value': -0.0,
 #                       'type': 'impermeable',
 #                       'value': None,
 #                       'depth': -2.0
