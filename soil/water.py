@@ -352,11 +352,15 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     q0 = Evap - Prec - h_pond / t_final
     # maximum infiltration and evaporation rates
     MaxInf = max(-KLh[0]*(- q0 * t_final - h[0] - z[0]) / dzu[0], -Ksat[0])
-    if q0 < 0 and q0 < MaxInf:
+    # net flow to soil profile during dt
+    Qin = (- sum(S * dz) - q0) * dt
+    # airvolume available in soil profile after previous time step
+    Airvol = max(0.0, sum((poros - W) * dz))
+    if Qin < Airvol and q0 < 0 and q0 < MaxInf:
         S[0:5] = S[0:5] - Prec / 5 / grid['dz'][0:5]
         Prec = 0.0
 #        dt = 30
-#        print('Dry conditions')
+        print('Dry conditions')
 
     """ solve water flow for 0...t_final """
     while t < t_final:
