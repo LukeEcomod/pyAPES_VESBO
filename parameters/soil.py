@@ -37,7 +37,7 @@ soil_properties = {'pF': {  # vanGenuchten water retention parameters
 
 """ water model specs """
 water_model = {'solve': True,
-               'type': 'Richards',  #'Equilibrium', #'Richards',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
+               'type': 'Equilibrium', #'Richards',  # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
                'pond_storage_max': 0.05,  #  maximum pond depth [m]
                'initial_condition': {  # (dict) initial conditions
                        'ground_water_level': -2.0,  # groundwater depth [m]

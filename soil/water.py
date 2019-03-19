@@ -718,17 +718,34 @@ def waterStorage1D(t_final, grid, forcing, initial_state, pF, Ksat, wsto_gwl,
     # time step
     dt = t_final
 
+
     """ lower boundary condition """
     if lbc['type'] == 'free_drain':
-        q_bot = -KLh[-1]*cosalfa
+        q_bot = - min(KLh[-1] * cosalfa, 1e-6)  # avoid extreme high drainage
+        lbcc_type = 'flux'
     elif lbc['type'] == 'impermeable':
         q_bot = 0.0
+        lbcc_type = 'flux'
     elif lbc['type'] == 'flux':
-        q_bot = max(lbc['value'], -KLh[-1] * cosalfa)
+        q_bot = np.sign(lbc['value']) * min(lbc['value'], KLh[-1] * cosalfa)
+        lbcc_type = 'flux'
     elif lbc['type'] == 'head':
         h_bot = lbc['value']
-        # flux through bottom
+        lbcc_type = 'head'
+        # approximate flux to calculate Qin
         q_bot = -KLh[-1] * (h_ini[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
+    elif lbc['type'] == 'head_oneway':
+        h_bot = lbc['value']
+        # approximate flux to calculate Qin
+        q_bot = -KLh[-1] * (h_ini[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
+        if q_bot > 0.0:
+            lbcc_type = 'flux'
+            q_bot = 0.0
+        else:
+            lbcc_type = 'head'
+    else:
+        raise ValueError("Unknown lower boundary condition %s"
+             % lbc['type'])
 
     """ soil column water balance """
     # potential flux at the soil surface (< 0 infiltration)
