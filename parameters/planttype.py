@@ -100,7 +100,7 @@ Pine = {
             'lt': 0.02,
             },
         'rootp': {
-            'root_depth': 0.2,
+            'root_depth': 0.5,
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
@@ -150,7 +150,7 @@ Spruce = {
             'lt': 0.02,
             },
         'rootp': {
-            'root_depth': 0.2,
+            'root_depth': 0.5,
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
@@ -200,7 +200,7 @@ Decidious = {
             'lt': 0.05,
             },
         'rootp': {
-            'root_depth': 0.2,
+            'root_depth': 0.5,
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
@@ -250,7 +250,7 @@ Shrubs = {
             'lt': 0.05,
             },
         'rootp': {
-            'root_depth': 0.2,
+            'root_depth': 0.3,
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,

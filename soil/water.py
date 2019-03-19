@@ -299,6 +299,9 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     else:
         h_atm = -1000.0
 
+# TESTI !!!!!!!!!!!!!!!!!!! KOSTEUSRAJOITE POISTAA TARPEEN TÄLLE !!!!!!!!!!!!!!!!!!!
+    q_sink = np.where(initial_state['water_potential'] < -150., 0.0, q_sink)
+
     # net sink/source term
     S = q_sink + q_drain  # root uptake + lateral flow (e.g. by ditches)
 
@@ -328,7 +331,7 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     h = h_ini.copy()
     h_pond = pond_ini
 
-    # specifications for iterative solution 
+    # specifications for iterative solution
     # running time [s]
     t = 0.0
     # initial and computational time step [s]
@@ -337,8 +340,26 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     if Prec > 0.0:  # decrease time step during precipitation
         dt = min(225.0, dt)
     # convergence criteria
-    Conv_crit = 1.0e-12  # for soil moisture 
+    Conv_crit = 1.0e-12  # for soil moisture
     Conv_crit2 = 1.0e-10  # for pressure head, decreased to 1.0e-8 when profile saturated
+
+# TESTI, DURING DRY CONDITIONS INFILTRATION FORCED TO FIRST 5 LAYERS
+    # hydraulic condictivity based on previous time step
+    KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
+    # get KLh at i-1/2, note len(KLh) = N + 1
+    KLh = spatial_average(KLh, method='arithmetic')
+    # potential flux at the soil surface (< 0 infiltration)
+    q0 = Evap - Prec - h_pond / t_final
+    # maximum infiltration and evaporation rates
+    MaxInf = max(-KLh[0]*(- q0 * t_final - h[0] - z[0]) / dzu[0], -Ksat[0])
+    # net flow to soil profile during dt
+    Qin = (- sum(S * dz) - q0) * dt
+    # airvolume available in soil profile after previous time step
+    Airvol = max(0.0, sum((poros - W) * dz))
+    if Qin < Airvol and q0 < 0 and q0 < MaxInf:
+        S[0:5] = S[0:5] - Prec / 5 / grid['dz'][0:5]
+        Prec = 0.0
+#        dt = 30
 
     """ solve water flow for 0...t_final """
     while t < t_final:
@@ -368,14 +389,27 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
             """ lower boundary condition """
             if lbc['type'] == 'free_drain':
                 q_bot = - min(KLh[-1] * cosalfa, 1e-6)  # avoid extreme high drainage
+                lbcc_type = 'flux'
             elif lbc['type'] == 'impermeable':
                 q_bot = 0.0
+                lbcc_type = 'flux'
             elif lbc['type'] == 'flux':
                 q_bot = np.sign(lbc['value']) * min(lbc['value'], KLh[-1] * cosalfa)
+                lbcc_type = 'flux'
             elif lbc['type'] == 'head':
+                h_bot = lbc['value']
+                lbcc_type = 'head'
+                # approximate flux to calculate Qin
+                q_bot = -KLh[-1] * (h_iter[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
+            elif lbc['type'] == 'head_oneway':
                 h_bot = lbc['value']
                 # approximate flux to calculate Qin
                 q_bot = -KLh[-1] * (h_iter[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
+                if q_bot > 0.0:
+                    lbcc_type = 'flux'
+                    q_bot = 0.0
+                else:
+                    lbcc_type = 'head'
             else:
                 raise ValueError("Unknown lower boundary condition %s"
                      % lbc['type'])
@@ -386,7 +420,7 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
             # potential flux at the soil surface (< 0 infiltration)
             q0 = Evap - Prec - h_pond / dt
             # maximum infiltration and evaporation rates
-            MaxInf = max(-KLh[0]*(h_pond - h_iter[0] - z[0]) / dzu[0], -Ksat[0])
+            MaxInf = max(-KLh[0]*(- q0 * dt - h_iter[0] - z[0]) / dzu[0], -Ksat[0])
             MaxEva = -KLh[0]*(h_atm - h_iter[0] - z[0]) / dzu[0]
             # net flow to soil profile during dt
             Qin = (q_bot - sum(S * dz) - q0) * dt
@@ -418,9 +452,10 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
                             h_iter -= dz[0]
                             W_iter = h_to_cellmoist(pF, h_iter, dz)
                         if q0 < MaxInf:  # limited by maximum infiltration
-                            h_sur = h_pond
+                            dt = 30.0
+                            h_sur = - q0 * dt
                             ubc_flag = 'head'
-#                            print 'all fits into profile, h_sur = ' + str(h_sur) + ' MaxInf = ' + str(MaxInf)
+#                            print('all fits into profile, h_sur = ' + str(h_sur) + ' MaxInf = ' + str(MaxInf)+ ' K_0 = ' + str(KLh[0])+ ' dt = ' + str(dt))
                         else:
                             q_sur = q0
                             ubc_flag = 'flux'
@@ -432,8 +467,12 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
                     h_iter -= dz[0]
                     W_iter = h_to_cellmoist(pF, h_iter, dz)
                 if q0 > MaxEva:
-                    h_sur = h_atm
-                    ubc_flag = 'head'
+                    if h_iter[0] + z[0] < h_atm:
+                        q_sur = 0.0
+                        ubc_flag = 'flux'
+                    else:
+                        h_sur = h_atm
+                        ubc_flag = 'head'
 #                    print 'case evaporation, limited by atm demand, q0 = ' + str(q0) + ' MaxEva = ' + str(MaxEva)
                 else:
                     q_sur = q0
@@ -471,7 +510,7 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
                         * ((KLh[0] - KLh[1]) * cosalfa + KLh[0] / dzu[0] * h_sur) - S[0] * dt
 
             # bottom node i=N
-            if lbc['type'] != 'head':  # flux bc
+            if lbcc_type == 'flux':  # flux bc
                 b[-1] = C[-1] + dt / (dz[-1] * dzu[-1]) * KLh[N-1]
                 a[-1] = -dt / (dz[-1] * dzu[-1]) * KLh[N-1]
                 g[-1] = 0.0
@@ -493,38 +532,23 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
             h_iter = thomas(a, b, g, f)
             W_iter = h_to_cellmoist(pF, h_iter, dz)
 
-            # check solution, if problem continues break
-            if any(abs(h_iter - h_iterold) > 1.0) or any(np.isnan(h_iter)):
-                if dt / 3.0 > 11.0:
-                    dt = max(dt / 3.0, 30.0)
-                    logger.debug('%s (iteration %s) Solution blowing up, retry with dt = %.1f s',
-                                 forcing['date'],
-                                 iterNo, dt)
-                    iterNo = 0
-                    h_iter = h_old.copy()
-                    W_iter = W_old.copy()
-                    continue
-                else:  # convergence not reached with dt=30s, break
-                    logger.debug('%s (iteration %s) No solution found (blow up), h and Wtot set to old values.',
-                                 forcing['date'],
-                                 iterNo)
-                    h_iter = h_old.copy()
-                    W_iter = W_old.copy()
-                    break
-
             # if problems reaching convergence devide time step and retry
-            if iterNo == 20:
+            if iterNo == 20 or any(np.isnan(h_iter)):
                 if dt / 3.0 > 11.0:
                     dt = max(dt / 3.0, 30.0)
                     logger.debug('%s (iteration %s) More than 20 iterations, retry with dt = %.1f s',
                                  forcing['date'],
                                  iterNo, dt)
                     iterNo = 0
+                    h_iter = h_old.copy()
+                    W_iter = W_old.copy()
                     continue
                 else:  # convergence not reached with dt=30s, break
-                    logger.debug('%s (iteration %s) Solution not converging, err_W: %.5f, err_h: %.5f',
+                    logger.debug('%s (iteration %s) Solution not converging, h and Wtot set to old values.',
                                  forcing['date'],
-                                 iterNo, err1, err2)
+                                 iterNo)
+                    h_iter = h_old.copy()
+                    W_iter = W_old.copy()
                     break
 
             # errors for determining convergence
@@ -544,10 +568,10 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
             q_bot = -KLh[-1] * (h[-1] - h_bot) / dzl[-1] - KLh[-1] * cosalfa
 
         """ cumulative fluxes and h_pond """
-        if q_sur <= EPS:  # infiltration dominates, evaporation at potential rate
-            h_pond -= (-Prec + Evap - q_sur) * dt
+        if q_sur < 0.0:  # infiltration dominates, evaporation at potential rate
+            h_pond = h_pond - (-Prec + Evap - q_sur) * dt
             rr = max(0, h_pond - h_pond_max)  # surface runoff if h_pond > maxpond
-            h_pond -= rr
+            h_pond = h_pond - rr
             C_roff += rr
             del rr
             C_inf += (q_sur - Evap) * dt
@@ -556,7 +580,7 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
             C_eva += (q_sur + Prec) * dt + h_pond
             h_pond = 0.0
 
-        if abs(h_pond) < EPS:  # eliminate h_pond caused by numerical innaccuracy (?)
+        if abs(h_pond) < EPS:
             h_pond = 0.0
 
         C_dra += -q_bot * dt + sum(q_drain * dz) * dt  # flux through bottom + net lateral flow
@@ -585,8 +609,9 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     gwl = get_gwl(h, z)
 
     # mass balance error [m]
-    mbe = Prec * t_final + (sum(W_ini*dz) - sum(W*dz)) + (pond_ini - h_pond)\
-            - C_dra - C_trans - C_roff - C_eva
+    mbe = forcing['potential_infiltration'] * t_final + (
+            sum(W_ini*dz) - sum(W*dz)) + (pond_ini - h_pond) - (
+            C_dra + C_trans + C_roff + C_eva)
 
     fluxes = {'infiltration': C_inf / t_final,
               'evaporation': C_eva / t_final,
@@ -847,7 +872,7 @@ def drainage_hooghoud(dz, Ksat, gwl, DitchDepth, DitchSpacing, DitchWidth, Zbot=
 
 def h_to_cellmoist(pF, h, dz):
     r""" Cell moisture based on vanGenuchten-Mualem soil water retention model.
-    Partly saturated cells calculated as thickness weigthed average of 
+    Partly saturated cells calculated as thickness weigthed average of
     saturated and unsaturated parts.
 
     Args:
@@ -912,7 +937,7 @@ def diff_wcapa(pF, h, dz):
     return dwcapa
 
 def hydraulic_conductivity(pF, x, Ksat=1):
-    r""" Unsaturated hydraulic conductivity following 
+    r""" Unsaturated hydraulic conductivity following
     vanGenuchten-Mualem -model.
 
     Args:
@@ -946,7 +971,7 @@ def hydraulic_conductivity(pF, x, Ksat=1):
     return Kh
 
 def gwl_Wsto(dz, pF):
-    r""" Forms interpolated function for soil column ground water dpeth, < 0 [m], as a 
+    r""" Forms interpolated function for soil column ground water dpeth, < 0 [m], as a
     function of water storage [m] and vice versa
 
     Args:
@@ -1005,7 +1030,15 @@ def get_gwl(head, x):
 
     return gwl
 
+def rew(theta, theta_wp, theta_fc):
+    """
+    Relative available water for plants
+    Rew = min[1.0, (theta – theta_wp)/(theta_fc – theta_wp)
+    """
 
+    Rew = np.minimum(1.0, (theta - theta_wp)/(theta_fc - theta_wp))
+
+    return Rew
 
 
 """ NOT IN USE """
@@ -1088,7 +1121,7 @@ def wrc(pF, x=None, var=None):
         fc = psi_theta(-1.0)
         wp = psi_theta(-150.0)
 
-        fig = plt.figure()
+        fig = plt.figure(99)
         fig.suptitle('vanGenuchten-Mualem WRC', fontsize=16)
         ttext = r'$\theta_s=$' + str(Ts) + r', $\theta_r=$' + str(Tr) +\
                 r', $\alpha=$' + str(alfa) + ',n=' + str(n)

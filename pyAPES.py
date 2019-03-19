@@ -253,9 +253,9 @@ class Model(object):
             soil_forcing = {
                 'potential_infiltration': ffloor_flux['potential_infiltration'],
                 'potential_evaporation': (
-                    ffloor_flux['evaporation_soil'] + ffloor_flux['capillar_rise']
+                    ffloor_flux['evaporation_soil'] + ffloor_flux['capillar_rise'] + ffloor_flux['pond_recharge']
                 ),
-                'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
+                'atmospheric_pressure_head': -1.0E6,  # set to large value, because potential_evaporation already account for h_soil
                 'ground_heat_flux': -ffloor_flux['ground_heat'],
                 'date': self.forcing.index[k]}
 

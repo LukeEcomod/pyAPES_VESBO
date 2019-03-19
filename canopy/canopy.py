@@ -126,8 +126,9 @@ class CanopyModel(object):
         rad = np.zeros(np.shape(dz_soil))
         for pt in self.planttypes:
             ix = np.where(pt.Roots.rad > 0)[0]
-            rad[ix] += pt.Roots.rad[ix]
-        rad = rad[rad > 0]
+            rad[ix] += pt.Roots.rad[ix] * pt.Roots.RAI
+        ix_max = max(np.where(rad > 0)[0])
+        rad = rad[0:ix_max]
         self.rad = rad / sum(rad)  # normalized total fine root density distribution [-]
 
         # canopy height [m]
