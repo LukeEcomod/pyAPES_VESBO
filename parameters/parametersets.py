@@ -6,7 +6,7 @@ Created on Fri Oct 19 12:39:09 2018
 @author: ajkieloaho
 """
 
-from pyAPES_utilities.parameter_utilities import lad_profiles
+from pyAPES_utilities.parameter_utilities import single_lad_profiles
 from pyAPES_utilities.soiltypes.organic import soil_properties, zh
 from parameters.canopy import grid
 
@@ -14,11 +14,10 @@ ranges = {}
 
 # normed leaf area density profiles
 fdir = 'pyAPES_utilities/runkolukusarjat/'
-quantiles = [1.0]  # quantiles used in creating tree lad profiles (groups of same planttype)
 hs = 0.5  # height of understory shrubs [m]
-control = lad_profiles(grid, fdir + 'letto2014.txt', quantiles, hs, plot=False)
-partial = lad_profiles(grid, fdir + 'letto2016_partial.txt', quantiles, hs, plot=False)
-clearcut = lad_profiles(grid, fdir + 'letto2016_clearcut.txt', quantiles, hs, plot=False)
+control = single_lad_profiles(grid, fdir + 'letto2014.txt', hs, plot=False)
+partial = single_lad_profiles(grid, fdir + 'letto2016_partial.txt', hs, plot=False)
+clearcut = single_lad_profiles(grid, fdir + 'letto2016_clearcut.txt', hs, plot=False)
 
 # spefify as one values (same for all simulations) or tuple of length 'count'
 lettosuo_parameters = {
@@ -57,7 +56,7 @@ lettosuo_parameters = {
                                 'lad': (control['lad']['decid'], partial['lad']['decid'], clearcut['lad']['decid'])
                                     },
                         'shrubs': {
-                                'LAImax': ([0.8], [0.8], [0.5]),
+                                'LAImax': (0.8, 0.8, 0.5),
                                 'lad': (control['lad']['shrubs'], partial['lad']['shrubs'], clearcut['lad']['shrubs'])
                                     },
                         },
@@ -66,7 +65,23 @@ lettosuo_parameters = {
                 'grid': {
                         'zh': zh
                         },
-                'soil_properties': soil_properties
+                'soil_properties': soil_properties,
+                'water_model': {
+                        'initial_condition':{
+                                'ground_water_level': -0.2
+                                },
+                        'lower_boundary': {  # lower boundary condition (type, value, depth)
+                               'type': 'impermeable',
+                               'value': None,
+                               'depth': -2.0
+                               },
+                       'drainage_equation': {  # drainage equation and drainage parameters
+                               'type': 'Hooghoudt',  #
+                               'depth': 1.0,  # drain depth [m]
+                               'spacing': 45.0,  # drain spacing [m]
+                               'width': 1.0,  # drain width [m]
+                               }
+                        }
                 }
         }
 

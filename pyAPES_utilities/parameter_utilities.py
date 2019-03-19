@@ -118,6 +118,14 @@ def peat_hydrol_properties(x, unit='g/cm3', var='bd', ptype='A', fig=False, labe
     return pF_para, Ksat
 
 """ Functions for computing lad profiles """
+def single_lad_profiles(grid, dbhfile, hs, plot=False):
+    quantiles = [1.0]
+    stand_data = lad_profiles(grid, dbhfile, quantiles, hs, plot=plot)
+    for key in stand_data['lai'].keys():
+        stand_data['lai'][key] = stand_data['lai'][key][0]
+    for key in stand_data['lad'].keys():
+        stand_data['lad'][key] = (stand_data['lad'][key]).flatten()
+    return stand_data
 
 def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
     """
