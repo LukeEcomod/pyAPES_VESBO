@@ -14,13 +14,13 @@ Note:
     - nothing changed
 
 References: --- SHOULD WE USE THIS??? Do we need to solve hroot???
-Volpe, V., Marani, M., Albertson, J.D. and Katul, G., 2013. Root controls 
-on water redistribution and carbon uptake in the soil–plant system under 
+Volpe, V., Marani, M., Albertson, J.D. and Katul, G., 2013. Root controls
+on water redistribution and carbon uptake in the soil–plant system under
 current and future climate. Advances in Water resources, 60, pp.110-120.
 """
 
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 class RootUptake(object):
     r""" Describes roots of planttype.
@@ -64,10 +64,12 @@ def RootDistribution(beta, dz, root_depth):
     """
     z = np.concatenate([[0.0], np.cumsum(dz)])
     z = np.concatenate([z[z < root_depth], [root_depth]])
-    d = abs(z * 100.0 )  # depth in cm
+    d = abs(z * 100.0)  # depth in cm
 
     Y = 1.0 - beta**d  # cumulative distribution (Gale & Grigal 1987)
     R = Y[1:] - Y[:-1]  # root area density distribution
+# TESTI, SET FIRST LAYER WITH NO ROOTS
+    R[0] = 0.0
 
     # addjust distribution to match soil profile depth
     R = R / sum(R)

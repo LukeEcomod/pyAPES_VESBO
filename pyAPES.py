@@ -167,15 +167,15 @@ class Model(object):
 
         # create soil model instance
         self.soil = Soil(soil_para)
-        
-        # initial delayed temperature and degreedaysum 
+
+        # initial delayed temperature and degreedaysum for pheno & LAI-models
 
         if 'X' in forcing:
             for pt in list(canopy_para['planttypes'].keys()):
                 canopy_para['planttypes'][pt]['phenop'].update({'Xo': forcing['X'].iloc[0]})
         if 'DDsum' in forcing:
             for pt in list(canopy_para['planttypes'].keys()):
-                canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})           
+                canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})
 
         # create canopy model instance
         self.canopy_model = CanopyModel(canopy_para, self.soil.grid['dz'])
@@ -253,9 +253,9 @@ class Model(object):
             soil_forcing = {
                 'potential_infiltration': ffloor_flux['potential_infiltration'],
                 'potential_evaporation': (
-                    ffloor_flux['evaporation_soil'] + ffloor_flux['capillar_rise']
+                    ffloor_flux['evaporation_soil'] + ffloor_flux['capillar_rise'] + ffloor_flux['pond_recharge']
                 ),
-                'atmospheric_pressure_head': -1000.0,  # should come from canopy? or set to large value?
+                'atmospheric_pressure_head': -1.0E6,  # set to large value, because potential_evaporation already account for h_soil
                 'ground_heat_flux': -ffloor_flux['ground_heat'],
                 'date': self.forcing.index[k]}
 

@@ -68,12 +68,12 @@ def peat_hydrol_properties(x, unit='g/cm3', var='bd', ptype='A', fig=False, labe
     Peat water retention and saturated hydraulic conductivity as a function of bulk density
     Päivänen 1973. Hydraulic conductivity and water retention in peat soils. Acta forestalia fennica 129.
     see bulk density: page 48, fig 19; degree of humification: page 51 fig 21
-    Hydraulic conductivity (cm/s) as a function of bulk density(g/cm3), page 18, as a function of degree of humification see page 51 
+    Hydraulic conductivity (cm/s) as a function of bulk density(g/cm3), page 18, as a function of degree of humification see page 51
     input:
         - x peat inputvariable in: db, bulk density or dgree of humification (von Post)  as array \n
         - bulk density unit 'g/cm3' or 'kg/m3' \n
         - var 'db' if input variable is as bulk density, 'H' if as degree of humification (von Post) \n
-        - ptype peat type: 'A': all, 'S': sphagnum, 'C': Carex, 'L': wood, list with length of x 
+        - ptype peat type: 'A': all, 'S': sphagnum, 'C': Carex, 'L': wood, list with length of x
     output: (ThetaS and ThetaR in m3 m-3)
         van Genuchten water retention parameters as array [ThetaS, ThetaR, alpha, n] \n
         hydraulic conductivity (m/s)
@@ -87,13 +87,13 @@ def peat_hydrol_properties(x, unit='g/cm3', var='bd', ptype='A', fig=False, labe
     para['H'] ={'pF0':(95.17, -1.26, 0.0), 'pF1.5':(46.20, 8.32, -0.54),
             'pF2': (27.03, 8.14, -0.43), 'pF3':(17.59, 3.22, -0.07),
             'pF4':(8.81, 3.03, -0.10), 'pF4.2':(5.8, 2.27, -0.08)}
-    
-    intp_pF1={}  # interpolation functions for pF1        
+
+    intp_pF1={}  # interpolation functions for pF1
     intp_pF1['bd'] = interp1d([0.04,0.08,0.1,0.2],[63.,84.,86.,80.],fill_value='extrapolate')
     intp_pF1['H'] = interp1d([1.,4.,6.,10.],[75.,84.,86.,80.],fill_value='extrapolate')
-    
+
     #Saturatated hydraulic conductivity parameters
-    Kpara ={'bd':{'A':(-2.271, -9.80), 'S':(-2.321, -13.22), 'C':(-1.921, -10.702), 'L':(-1.921, -10.702)}, 
+    Kpara ={'bd':{'A':(-2.271, -9.80), 'S':(-2.321, -13.22), 'C':(-1.921, -10.702), 'L':(-1.921, -10.702)},
             'H':{'A':(-2.261, -0.205), 'S':(-2.471, -0.253), 'C':(-1.850, -0.278), 'L':(-2.399, -0.124)}}
 
     x = np.array(x)
@@ -251,16 +251,16 @@ def profiles_hyde(data, species, z):
     d = data[:,0]  # dbh, cm
     N = data[:,1]  # trees ha-1
 
-    # compute 
+    # compute
     if species == 'pine':
         h = 1.3 + d**2.0 / (1.108 + 0.197*d)**2.0
         ht = -3.0 + 0.76*h
         ht = np.maximum(0.0, ht)
-        
+
         y, L = marklund(d, species)
         mleaf = y[3]*N  # kg/ha
         L = L*1e-4*N  # leaf area m2/m2
-        
+
     if species == 'birch':
         h = 1.3 + d**2.0 / (0.674 + 0.201*d)**2.0
         ht = -2.34 + 0.58*h
@@ -269,11 +269,11 @@ def profiles_hyde(data, species, z):
         y, L = marklund(d, species)
         mleaf = y[3]*N  # kg/ha
         L = L*1e-4*N  # leaf area m2/m2
-        
+
     if species == 'spruce':
         h = 1.3 + d**3.0 / (1.826 + 0.303*d)**3.0
         ht = -2.34 + 0.58*h
-        ht = np.maximum(0.0, ht)        
+        ht = np.maximum(0.0, ht)
 
         y, L = marklund(d, species)
         mleaf = y[3]*N  # kg/ha
@@ -328,9 +328,9 @@ def marklund(d, species):
 
         y=[y1, y2, y3, y4, y5, y6, y7, y8] # array of biomasses (kg)
         L=y4*SLA['pine'] # leaf area (m2) based on specific foliage area (SLA)
-        
+
         return y, L
-    
+
     elif species.lower()=='spruce':
         y1=np.exp(11.4873*(d/(d+14))-2.2471)   #stem wood
         y2=np.exp(9.8364*(d/(d+15))-3.3912)    #stem bark
@@ -340,12 +340,12 @@ def marklund(d, species):
         y6=np.exp(10.6686*(d/(d+17))-3.3645)   # stumps
         y7=np.exp(13.3703*(d/(d+8))-6.3851)    #roots, >=5cm
         y8=np.exp(7.6283*(d/(d+12))-2.5706)    #roots, <5cm
-        
+
         y=[y1, y2, y3, y4, y5, y6, y7, y8] # array of biomasses (kg)
-        L=y4*SLA['spruce'] # leaf area (m2) based on specific foliage area (SLA)   
-        
+        L=y4*SLA['spruce'] # leaf area (m2) based on specific foliage area (SLA)
+
         return y, L
-    
+
     elif species.lower()=='birch':
         #silver and downy birch
         y1=np.exp(10.8109*(d/(d+11))-2.3327)    #stem wood
@@ -355,19 +355,19 @@ def marklund(d, species):
         y5=np.exp(7.9266*(d/(d+5))-5.9507)      #dead branches
 
         y=[y1, y2, y3, y4, y5] # array of biomasses (kg)
-        
-        L=y4*SLA['decid'] # leaf area (m2) based on specific foliage area (SLA) 
-        
+
+        L=y4*SLA['decid'] # leaf area (m2) based on specific foliage area (SLA)
+
         return y, L
-        
+
     else:
         print('Vegetation.marklund: asked species (pine, spruce, birch) not found')
         return None
 
 def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
     """
-    crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):    
-    Computes vertical crown and needle biomass profiles for pine, spruce or birch using models 
+    crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
+    Computes vertical crown and needle biomass profiles for pine, spruce or birch using models
     of Fors & Tahvanainen (2008).
     INPUT:
         species - 'pine','spruce','birch'\n
@@ -383,19 +383,19 @@ def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
     AUTHOR:
         Samuli Launiainen, Metla, 26.6.2014\n
     NOTES:
-        Leaf biomass profiles are available only for pine and spruce, use 
+        Leaf biomass profiles are available only for pine and spruce, use
         crown biomass profile as surrogate for birch\n
     """
     species=species.lower()
     z=np.array(z)
     dz=z[1]-z[0] #m
     htop=float(htop) #m
-    hbase=float(hbase) #m       
+    hbase=float(hbase) #m
     N=np.size(z) #nodes
-    
+
     #hrel= np.maximum(0,(z - hbase)/(htop-hbase)) #relative height within crown
     hrel=(z - hbase)/(htop-hbase)
-    hrel[hrel>1]=1 
+    hrel[hrel>1]=1
     hrel[hrel<0]=0
 
     # dictionarys of parameter values, key is species string
@@ -407,59 +407,151 @@ def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
     CrownBiomasspara = {'pine':[0.07881, 1.03037,3.59557,3.66652,0.99071],
                         'spruce':[0.05892, 1.18495, 2.58915, 2.76521,0.98635],
                         'birch':[0.11902, 0.96061, 3.90684, 3.65942, 0.98929]}
-                      
+
     #compute cumulative biomasses and vertical profiles
     cnd=np.zeros(N)
-    Ldens=np.zeros(N)   
+    Ldens=np.zeros(N)
     ccd=np.zeros(N)
     Cdens=np.zeros(N)
-  
+
     #needle/leaf density
     beta=NeedleBiomasspara[species]
-        
+
     cnd=beta[0] + beta[1]*(1-np.exp(-beta[2]*hrel))**beta[3]*beta[4]
     cnd[hrel==0]=0
     cnd=cnd/max(cnd)    #cumulative needle biomass [0...1]
-    
+
     #needle density profile, integral(Ldens*dz) over z gives unity
     Ldens[1:N]=np.diff(cnd,1)/dz
     Ldens[Ldens<0]=0
 
     #eliminate kink at crown base
     ind = (Ldens > 0.0).nonzero()[0][0]
-    Ldens[ind]=np.mean(Ldens[ind-1:ind])       
-    Ldens=Ldens/sum(Ldens*dz) #normalize integral to unity    
+    Ldens[ind]=np.mean(Ldens[ind-1:ind])
+    Ldens=Ldens/sum(Ldens*dz) #normalize integral to unity
 
     del ind, beta
-    
+
     #print sum(Ldens*dz)
 
-    #crown biomass density                          
+    #crown biomass density
     beta=CrownBiomasspara[species]
-        
+
     ccd=beta[0] + beta[1]*(1-np.exp(-beta[2]*hrel))**beta[3]*beta[4]
     ccd[hrel==0]=0
     ccd=ccd/max(cnd)    #cumulative crown biomass [0...1]
-    
+
     #crown density profile, integral(Ldens*dz) over z gives unity
     Cdens[1:N]=np.diff(ccd,1)/dz
     Cdens[Cdens<0]=0
-    
+
     #eliminate kink at crown base
     ind = (Cdens > 0.0).nonzero()[0][0]
-    Cdens[ind]=np.mean(Ldens[ind-1:ind])       
-    Cdens=Cdens/sum(Cdens*dz) #normalize integral to unity    
+    Cdens[ind]=np.mean(Ldens[ind-1:ind])
+    Cdens=Cdens/sum(Cdens*dz) #normalize integral to unity
     #print sum(Cdens*dz)
-    
+
     del ind, beta
 
     if PlotFigs=="True":
-        
-        plt.figure(99)            
+
+        plt.figure(99)
         plt.plot(Ldens,z,'b.-',Cdens,z,'r.-')
         plt.title("Vegetation.crown_biomass_distr")
         plt.ylabel("z (m)")
-        plt.xlabel("density")    
-        plt.legend((species +' leafmass',species +' crownmass'),loc='best')      
-    
-    return Ldens,Cdens 
+        plt.xlabel("density")
+        plt.legend((species +' leafmass',species +' crownmass'),loc='best')
+
+    return Ldens,Cdens
+
+def lad_weibul(z, LAI, h, hb=0.0, b=None, c=None, species=None):
+    """
+    Generates leaf-area density profile from Weibull-distribution
+    Args:
+        z: height array (m), monotonic and constant steps
+        LAI: leaf-area index (m2m-2)
+        h: canopy height (m), scalar
+        hb: crown base height (m), scalar
+        b: Weibull shape parameter 1, scalar
+        c: Weibull shape parameter 2, scalar
+        species: 'pine', 'spruce', 'birch' to use table values
+    Returns:
+        LAD: leaf-area density (m2m-3), array \n
+    SOURCE:
+        Teske, M.E., and H.W. Thistle, 2004, A library of forest canopy structure for
+        use in interception modeling. Forest Ecology and Management, 198, 341-350.
+        Note: their formula is missing brackets for the scale param.
+        Here their profiles are used between hb and h
+    AUTHOR:
+        Gabriel Katul, 2009. Coverted to Python 16.4.2014 / Samuli Launiainen
+    """
+
+    para = {'pine': [0.906, 2.145], 'spruce': [2.375, 1.289], 'birch': [0.557, 1.914]}
+
+    if (max(z) <= h) | (h <= hb):
+        raise ValueError("h must be lower than uppermost gridpoint")
+
+    if b is None or c is None:
+        b, c = para[species]
+
+    z = np.array(z)
+    dz = abs(z[1]-z[0])
+    N = np.size(z)
+    LAD = np.zeros(N)
+
+    a = np.zeros(N)
+
+    # dummy variables
+    ix = np.where( (z > hb) & (z <= h)) [0]
+    x = np.linspace(0, 1, len(ix)) # normalized within-crown height
+
+    # weibul-distribution within crown
+    cc = -(c / b)*(((1.0 - x) / b)**(c - 1.0))*(np.exp(-((1.0 - x) / b)**c)) \
+            / (1.0 - np.exp(-(1.0 / b)**c))
+
+    a[ix] = cc
+    a = np.abs(a / sum(a*dz))
+
+    LAD = LAI * a
+
+    # plt.figure(1)
+    # plt.plot(LAD,z,'r-')
+    return LAD
+
+def lad_constant(z, LAI, h, hb=0.0):
+    """
+    creates constant leaf-area density distribution from ground to h.
+    INPUT:
+        z: height array (m), monotonic and constant steps
+        LAI: leaf-area index (m2m-2)
+        h: canopy height (m), scalar
+        hb: crown base height (m), scalar
+     OUTPUT:
+        LAD: leaf-area density (m2m-3), array
+    Note: LAD must cover at least node 1
+    """
+    if max(z) <= h:
+        raise ValueError("h must be lower than uppermost gridpoint")
+
+    z = np.array(z)
+    dz = abs(z[1]-z[0])
+    N = np.size(z)
+
+#    # dummy variables
+#    a = np.zeros(N)
+#    x = z[z <= h] / h  # normalized heigth
+#    n = np.size(x)
+#
+#    if n == 1: n = 2
+#    a[1:n] = 1.0
+
+    # dummy variables
+    a = np.zeros(N)
+    ix = np.where( (z > hb) & (z <= h)) [0]
+    if ix.size == 0:
+        ix = [1]
+
+    a[ix] = 1.0
+    a = a / sum(a*dz)
+    LAD = LAI * a
+    return LAD

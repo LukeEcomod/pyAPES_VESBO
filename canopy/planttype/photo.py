@@ -23,7 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from canopy.constants import DEG_TO_KELVIN, PAR_TO_UMOL, EPS
-from canopy.constants import SPECIFIC_HEAT_AIR, LATENT_HEAT
+from canopy.constants import SPECIFIC_HEAT_AIR
 from canopy.constants import GAS_CONSTANT, O2_IN_AIR, MOLAR_MASS_H2O
 H2O_CO2_RATIO = 1.6  # H2O to CO2 diffusivity ratio [-]
 TN = 25.0 + DEG_TO_KELVIN  # reference temperature [K]
@@ -56,11 +56,12 @@ def leaf_interface(photop,
             'alpha': quantum yield parameter [mol/mol]
             'theta': co-limitation parameter of Farquhar-model
             'La': stomatal parameter (Lambda, m, ...) depending on model
-            'm':
+            'g1': stomatal slope parameter
             'g0': residual conductance for CO2 [molm-2s-1]
             'kn': ?? not used ??
             'beta': co-limitation parameter of Farquhar-model
-            'drp': ?? not used ??
+            'drp': drought response parameters of Medlyn stomatal model and apparent Vcmax;
+                 list: [Rew_crit_g1, slope_g1, Rew_crit_appVcmax, slope_appVcmax]
             'tresp' (dict): temperature sensitivity parameters
                 'Vcmax' (list): [Ha, Hd, dS]; activation energy [kJmol-1], deactivation energy [kJmol-1], entropy factor [J mol-1]
                 'Jmax' (list): [Ha, Hd, dS];
@@ -166,28 +167,24 @@ def leaf_interface(photop,
         # boundary layer conductance
         gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(U, lt, T, 0.5 * (Tl + Told) - T, P)
 
-        #print Dleaf
         Told = Tl.copy()
 
-        # --- analytical co-limitation model Vico et al. 2013
-        if model.upper() == 'CO_OPTI':
-            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_analytical(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v)
-        if model.upper() == 'MEDLYN':
-            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v, P=P)
         if model.upper() == 'MEDLYN_FARQUHAR':
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn_farquhar(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v, P=P)
         if model.upper() == 'BWB':
             rh  = (1 - Dleaf*P / esat)  # rh at leaf (-)
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_bwb(photop, Qp, Tl, rh, CO2, gb_c, gb_v, P=P)
+        # --- analytical co-limitation model Vico et al. 2013
+        if model.upper() == 'CO_OPTI':
+            An, Rd, fe, gs_opt, Ci, Cs = photo_c3_analytical(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v)
 
         gsv = H2O_CO2_RATIO*gs_opt
-#        geff_v = (gb_v*gsv) / (gb_v + gsv)
+        # geff_v = (gb_v*gsv) / (gb_v + gsv)
         geff_v = np.where(Dleaf > 0.0, (gb_v*gsv) / (gb_v + gsv), df * gb_v)  # molm-2s-1, condensation only on dry leaf part
         gb_h = df * gb_h  # sensible heat exchange only through dry leaf part
 
-        # solve  energy balance
+        # solve leaf temperature from energy balance
         if Ebal:
-            # solve leaf temperature
             Tl[ic] = (Rabs[ic] + SPECIFIC_HEAT_AIR*gr[ic]*Tl_ave[ic] + SPECIFIC_HEAT_AIR*gb_h[ic]*T[ic] - Lv[ic]*geff_v[ic]*Dleaf[ic]
                   + Lv[ic]*s[ic]*geff_v[ic]*Told[ic]) / (SPECIFIC_HEAT_AIR*(gr[ic] + gb_h[ic]) + Lv[ic]*s[ic]*geff_v[ic])
             err = np.nanmax(abs(Tl - Told))
@@ -219,12 +216,8 @@ def leaf_interface(photop,
     E = geff_v * np.maximum(0.0, Dleaf)  # condensation accounted for in wetleaf water balance
     LE = E * Lv  # condensation accounted for in wetleaf energy balance
 
-#    if any(np.isnan(An)):
-#        print('leafinterface: ', Tl, Qp, Dleaf, CO2, gb_c, gb_v )
-
     if dict_output:  # return dict
-#        x = {'An': An, 'Rd': Rd, 'E': E, 'H': H, 'Fr': Fr, 'Tl': Tl, 'Ci': Ci,
-#             'Cs': Cs, 'gs_v': gsv, 'gs_c': gs_opt, 'gb_v': gb_v}
+
         x = {'net_co2': An,
              'dark_respiration': Rd,
              'transpiration': E,
@@ -240,7 +233,7 @@ def leaf_interface(photop,
     else:  # return 11 arrays
         return An, Rd, E, H, Fr, Tl, Ci, Cs, gsv, gs_opt, gb_v
 
-# ------- photosynthesis models -------
+""" ---- photosynthesis models ----- """
 
 def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
     """
@@ -279,6 +272,7 @@ def photo_c3_analytical(photop, Qp, T, VPD, ca, gb_c, gb_v):
     g0 = photop['g0']
 
     # From Bernacchi et al. 2001
+
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
 
@@ -391,7 +385,7 @@ def photo_c3_medlyn(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
     Rd = photop['Rd']
     alpha = photop['alpha']
     theta = photop['theta']
-    m = photop['m']  # slope parameter
+    g1 = photop['g1']  # slope parameter
     g0 = photop['g0']
 
     # --- CO2 compensation point -------
@@ -423,7 +417,7 @@ def photo_c3_medlyn(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         # CO2 demand (Vico eq. 1) & gs_opt (Medlyn eq. xx)
         An = k1_c * (ci - Tau_c) / (k2_c + ci) - Rd  # umolm-2s-1
         An1 = np.maximum(An, 0.0)
-        gs_opt = (1.0 + m / (VPD**0.5)) * An1 / (cs - Tau_c)  # mol m-2s-1
+        gs_opt = (1.0 + g1 / (VPD**0.5)) * An1 / (cs - Tau_c)  # mol m-2s-1
         gs_opt = np.maximum(g0, gs_opt)  # g0 is the lower limit
 
         # CO2 supply
@@ -485,7 +479,7 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
     Rd = photop['Rd']
     alpha = photop['alpha']
     theta = photop['theta']
-    m = photop['m']  # slope parameter
+    g1 = photop['g1']  # slope parameter
     g0 = photop['g0']
     beta = photop['beta']
     #print beta
@@ -528,7 +522,7 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         An1 = np.maximum(An, 0.0)
         #print An1
         # stomatal conductance
-        gs_opt = g0 + (1.0 + m / (VPD**0.5)) * An1 / cs
+        gs_opt = g0 + (1.0 + g1 / (VPD**0.5)) * An1 / cs
         gs_opt = np.maximum(g0, gs_opt)  # gcut is the lower limit
         #print gs_opt
         # CO2 supply
@@ -558,8 +552,8 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
 
 def photo_c3_bwb(photop, Qp, T, RH, ca, gb_c, gb_v, P=101300.0):
     """
-    Leaf gas-exchange by Farquhar-Ball-Woodrow-Berry model, where co-limitation as in
-    Vico et al. 2013 AFM
+    Leaf gas-exchange by Farquhar-Ball-Woodrow-Berry model, as in standard Farquhar-
+    model
     IN:
         photop - parameter dict with keys: Vcmax, Jmax, Rd, alpha, theta, La, tresp
            can be scalars or arrays.
@@ -590,7 +584,7 @@ def photo_c3_bwb(photop, Qp, T, RH, ca, gb_c, gb_v, P=101300.0):
     Rd = photop['Rd']
     alpha = photop['alpha']
     theta = photop['theta']
-    m = photop['m']  # slope parameter
+    g1 = photop['g1']  # slope parameter
     g0 = photop['g0']
 
     # --- CO2 compensation point -------
@@ -610,20 +604,27 @@ def photo_c3_bwb(photop, Qp, T, RH, ca, gb_c, gb_v, P=101300.0):
     # --- model parameters k1_c, k2_c [umol/m2/s]
     Km = Kc*(1.0 + O2_IN_AIR / Ko)
     J = (Jmax + alpha*Qp -((Jmax + alpha*Qp)**2.0 - (4*theta*Jmax*alpha*Qp))**(0.5)) / (2*theta)
-    k1_c = J / 4.0
-    k2_c = J / 4.0 * Km / Vcmax
 
-    # --- iterative solution for cs
+    # --- iterative solution for cs and ci
     err = 9999.0
     cnt = 1
     cs = ca  # leaf surface CO2
     ci = 0.8*ca  # internal CO2
     while err > 0.01 and cnt < MaxIter:
-        # CO2 demand (Vico eq. 1) & gs_opt (Medlyn eq. xx)
-        An = k1_c * (ci - Tau_c) / (k2_c + ci) - Rd  # umolm-2s-1
+        # -- rubisco -limited rate
+        Av = Vcmax * (ci - Tau_c) / (ci + Km)
+        # -- RuBP -regeneration limited rate
+        Aj = J/4.0 * (ci - Tau_c) / (ci + 2.0*Tau_c)
+
+        #An = np.minimum(Av, Aj) - Rd  # single limiting rate
+        # co-limitation
+        x = Av + Aj
+        y = Av * Aj
+        An = (x - (x**2.0 - 4.0*beta*y)**0.5) / (2.0*beta) - Rd
+
         An1 = np.maximum(An, 0.0)
         # bwb -scheme
-        gs_opt = g0 + m * An1 / ((cs - Tau_c))*RH
+        gs_opt = g0 + g1 * An1 / ((cs - Tau_c))*RH
         gs_opt = np.maximum(g0, gs_opt)  # gcut is the lower limit
 
         # CO2 supply
@@ -850,7 +851,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.3,
+                'g1': gfact * 2.3,
                 'g0': 1.0e-3,
                 'kn': 0.6,
                 'beta': 0.95,
@@ -884,7 +885,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'm': gfact * 2.3,
+                'g1': gfact * 2.3,
                 'g0': 1.0e-3,
                 'kn': 0.6,
                 'beta': 0.95,
@@ -918,7 +919,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 600.0,
-                'm': gfact * 4.5,
+                'g1': gfact * 4.5,
                 'g0': 1.0e-3,
                 'kn': 0.6,
                 'beta': 0.95,
@@ -939,7 +940,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 600.0,
-                'm': gfact * 4.5,
+                'g1': gfact * 4.5,
                 'g0': 1.0e-3,
                 'kn': 0.3,
                 'beta': 0.95,
@@ -959,10 +960,10 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     # env. conditions
     N=50
     P = 101300.0
-    Qp = np.linspace(1.,1800.,50)#1000. * np.ones(N)  # np.linspace(1.,1800.,50)#
+    Qp = 1000. * np.ones(N)  # np.linspace(1.,1800.,50)#
     CO2 = 400. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = 10. * np.ones(N) # np.linspace(1.,39.,50) # 10. * np.ones(N) #
+    T = np.linspace(1.,39.,50) # 10. * np.ones(N) #
     esat, s = e_sat(T)
     H2O = (85.0 / 100.0) * esat / P
     SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL
@@ -986,7 +987,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
 
     x = leaf_interface(photop, leafp, forcing, controls)
 #    print(x)
-    Y=Qp
+    Y=T
     plt.figure(5)
     plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
     plt.title('net_co2')
