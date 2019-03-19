@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Soil submodel parameters
-
 """
 
-""" grid and soil properties """
+""" grid and soil properties """  # (pF and conductivity from Launiainen et al.)
 
 grid = {#thickness of computational layer [m]
         'dz': [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
@@ -15,13 +14,13 @@ grid = {#thickness of computational layer [m]
         }
 
 soil_properties = {'pF': {  # vanGenuchten water retention parameters
-                        'ThetaS': [0.915, 0.50, 0.50, 0.50],
-                        'ThetaR': [0.058, 0.08, 0.08, 0.08],
-                        'alpha': [0.075, 0.06, 0.06, 0.06],
-                        'n': [1.335, 1.35, 1.35, 1.35]
+                        'ThetaS': [0.80, 0.50, 0.50, 0.41],
+                        'ThetaR': [0.01, 0.08, 0.08, 0.03],
+                        'alpha': [0.70, 0.06, 0.06, 0.05],
+                        'n': [1.25, 1.35, 1.35, 1.21]
                         },
-                  'saturated_conductivity_vertical': [2.42E-05, 1.23E-05, 1.23E-05, 1.23E-05],  # saturated vertical hydraulic conductivity [m s-1]
-                  'saturated_conductivity_horizontal': [2.42E-05, 1.23E-05, 1.23E-05, 1.23E-05],  # saturated horizontal hydraulic conductivity [m s-1]
+                  'saturated_conductivity_vertical': [2.42E-05, 2.08e-06, 3.06e-06, 4.17e-06],  # saturated vertical hydraulic conductivity [m s-1]
+                  'saturated_conductivity_horizontal': [2.42E-05, 2.08e-06, 3.06e-06, 4.17e-06],  # saturated horizontal hydraulic conductivity [m s-1]
                   'solid_heat_capacity': None,  # [J m-3 (solid) K-1] - if None, estimated from organic/mineral composition
                   'solid_composition': {
                          'organic': [0.1611, 0.0714, 0.1091, 0.028],
