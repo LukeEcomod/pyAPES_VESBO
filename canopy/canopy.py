@@ -26,6 +26,7 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 import logging
 import numpy as np
+import matplotlib.pyplot as plt
 from .constants import MOLAR_MASS_H2O, EPS
 
 from .radiation import Radiation
@@ -124,12 +125,13 @@ class CanopyModel(object):
 
         # root area density [m2 m-3]
         rad = np.zeros(np.shape(dz_soil))
+        imax = 1
         for pt in self.planttypes:
-            ix = np.where(pt.Roots.rad > 0)[0]
-            rad[ix] += pt.Roots.rad[ix] * pt.Roots.RAI
-        ix_max = max(np.where(rad > 0)[0])
-        rad = rad[0:ix_max]
-        self.rad = rad / sum(rad)  # normalized total fine root density distribution [-]
+            rad[:len(pt.Roots.rad)] += pt.Roots.rad
+            imax = max(imax, len(pt.Roots.rad))
+        self.rad = rad[0:imax]
+        # total root area index [m2 m-2]
+        self.RAI = sum([pt.Roots.RAI for pt in self.planttypes])
 
         # canopy height [m]
         if len(np.where(self.lad > 0)[0]) > 0:
@@ -547,6 +549,14 @@ class CanopyModel(object):
         # stand transpiration [m s-1]
         Tr = sum([pt_st['transpiration'] * MOLAR_MASS_H2O * 1e-3 for pt_st in pt_stats])
 
+        # root water uptake [m s-1]
+        rootsink = np.zeros(np.shape(self.rad))
+        pt_index = 0
+        for pt in self.planttypes:
+            Tr_pt = pt_stats[pt_index]['transpiration'] * MOLAR_MASS_H2O * 1e-3
+            rootsink[:len(pt.Roots.rad)] += pt.Roots.wateruptake(Tr_pt)
+            pt_index += 1
+
         if self.Switch_Ebal:
             # energy closure of canopy  -- THIS IS EQUAL TO frsource (the error caused by linearizing sigma*ef*T^4)
             energy_closure =  sum((radiation_profiles['sw_absorbed'] +
@@ -601,6 +611,7 @@ class CanopyModel(object):
                 'pt_leaf_internal_co2':  np.array([pt_st['leaf_internal_co2'] for pt_st in pt_stats]),
                 'pt_leaf_surface_co2':  np.array([pt_st['leaf_surface_co2'] for pt_st in pt_stats]),
                 'water_closure': wetleaf_fluxes['water_closure'],
+                'root_sink' : rootsink,
                 }
 
         if self.Switch_WMA is False:

@@ -22,6 +22,8 @@ current and future climate. Advances in Water resources, 60, pp.110-120.
 import numpy as np
 import matplotlib.pyplot as plt
 
+from canopy.constants import EPS
+
 class RootUptake(object):
     r""" Describes roots of planttype.
     """
@@ -41,15 +43,42 @@ class RootUptake(object):
             self (object)
         """
         # parameters
-        self.RAI = p['RAI_LAI_multiplier']*LAImax  # total fine root area index (m3/m2)
+        self.RAI = p['RAI_LAI_multiplier']*LAImax  # total fine root area index (m2/m2)
         self.rad = self.RAI * RootDistribution(p['beta'], dz_soil, p['root_depth'])
+        self.root_depth = p['root_depth']
         self.fine_radius = p['fine_radius']  # fine root radius [m]
-        self.radial_K = p['radial_K']  # maximum bulk root membrane conductance in radial direction [s-1]
+        self.root_cond = p['root_cond']  # [s]
+        self.dz = dz_soil[:len(self.rad)]
 
         # state variables
 
+    def wateruptake(self, transpiration, kh_soil=0.0):
+        r""" Root wateruptake based on root water potential (Volpe et al 2013)
+
+        Agrs:
+
+        Returns:
+
+        """
+#        imax = len(self.rad)
+#
+#        # conductance from soil to root-soil interface
+#        alpha = (np.sqrt(self.root_depth/self.RAI) / np.sqrt(2.0 * self.fine_radius)
+#        ks = alpha * kh_soil[:imax] * self.rad
+#
+#        # conductance from soil-root interface to base of xylem
+#        kr = self.rad * self.dz / self.root_cond
+#
+#        # soil to xylem conductance
+#        g_sr = ks * kr / (ks + kr + EPS)
+
+        rootsink = (self.rad * self.dz / self.RAI * transpiration)
+
+        return rootsink
+
 def RootDistribution(beta, dz, root_depth):
     r""" Computes normalized root area density distribution with depth.
+    (sum(dz*R) = 1)
 
     Args:
         beta: shape parameter for root distribution model
@@ -72,6 +101,6 @@ def RootDistribution(beta, dz, root_depth):
     R[0] = 0.0
 
     # addjust distribution to match soil profile depth
-    R = R / sum(R)
+    R = R / sum(R) / dz[:len(R)]
 
     return R

@@ -104,7 +104,7 @@ Pine = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 
@@ -154,7 +154,7 @@ Spruce = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 
@@ -204,7 +204,7 @@ Decidious = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 
@@ -254,7 +254,7 @@ Shrubs = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 

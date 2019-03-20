@@ -7,7 +7,7 @@ gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2005-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2005-07-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2005-06-02",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Hyde_forcing_1997_2016.csv",  # forcing data file*
         'results_directory':'results/pyAPES/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
@@ -67,6 +67,7 @@ gpara = {
                       ['soil_infiltration', 'infiltration [m s-1]', ('date', 'simulation')],
                       ['soil_surface_runoff', 'surface runoff [m s-1]', ('date', 'simulation')],
                       ['soil_evaporation', 'evaporation from soil surface [m s-1]', ('date', 'simulation')],
+                      ['soil_transpiration', 'transpiration from soil [m s-1]', ('date', 'simulation')],
                       ['soil_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
                       ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
                       ['soil_volumetric_water_content', 'soil water content [m3/m3]', ('date', 'simulation', 'soil')],

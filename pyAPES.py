@@ -259,14 +259,11 @@ class Model(object):
                 'ground_heat_flux': -ffloor_flux['ground_heat'],
                 'date': self.forcing.index[k]}
 
-            # transpiration sink [m s-1]
-            rootsink =  self.canopy_model.rad * canopy_flux['transpiration']
-
             # run soil water and heat flow
             soil_flux, soil_state = self.soil.run(
                     dt=self.dt,
                     forcing=soil_forcing,
-                    water_sink=rootsink)
+                    water_sink=canopy_flux['root_sink'])
 
             forcing_state = {
                     'wind_speed': self.forcing['U'].iloc[k],
