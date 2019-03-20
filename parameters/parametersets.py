@@ -45,19 +45,31 @@ lettosuo_parameters = {
                 'planttypes': {
                         'pine': {
                                 'LAImax': (control['lai']['pine'], partial['lai']['pine'], clearcut['lai']['pine']),
-                                'lad': (control['lad']['pine'], partial['lad']['pine'], clearcut['lad']['pine'])
+                                'lad': (control['lad']['pine'], partial['lad']['pine'], clearcut['lad']['pine']),
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
                                     },
                         'spruce': {
                                 'LAImax': (control['lai']['spruce'], partial['lai']['spruce'], clearcut['lai']['spruce']),
-                                'lad': (control['lad']['spruce'], partial['lad']['spruce'], clearcut['lad']['spruce'])
+                                'lad': (control['lad']['spruce'], partial['lad']['spruce'], clearcut['lad']['spruce']),
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
                                     },
                         'decidious': {
                                 'LAImax': (control['lai']['decid'], partial['lai']['decid'], clearcut['lai']['decid']),
-                                'lad': (control['lad']['decid'], partial['lad']['decid'], clearcut['lad']['decid'])
+                                'lad': (control['lad']['decid'], partial['lad']['decid'], clearcut['lad']['decid']),
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
                                     },
                         'shrubs': {
                                 'LAImax': (0.8, 0.8, 0.5),
-                                'lad': (control['lad']['shrubs'], partial['lad']['shrubs'], clearcut['lad']['shrubs'])
+                                'lad': (control['lad']['shrubs'], partial['lad']['shrubs'], clearcut['lad']['shrubs']),
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
                                     },
                         },
                 },

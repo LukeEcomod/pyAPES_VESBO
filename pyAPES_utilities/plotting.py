@@ -13,7 +13,7 @@ Note:
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from .timeseries_tools import diurnal_cycle, yearly_cumulative
+from pyAPES_utilities.timeseries_tools import diurnal_cycle, yearly_cumulative
 from tools.iotools import read_forcing
 from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O, MOLAR_MASS_CO2, PAR_TO_UMOL
 
@@ -380,7 +380,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
 
     z = np.linspace(0, 30.0, 100)
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,
-        normed=False, dbhfile="pyAPES_utilities/runkolukusarjat/" + filename, plot=False)        
+        normed=False, dbhfile="pyAPES_utilities/runkolukusarjat/" + filename, plot=False)
 
     lad = z * 0.0
     for k in range(len(quantiles)):
@@ -453,7 +453,7 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
         title (str): title of plot
         ylabel (str): y-axis label
     """
-    
+
     var_diurnal = diurnal_cycle(var)[var.name]
     if quantiles:
         plt.fill_between(var_diurnal['hour'], var_diurnal['5th'], var_diurnal['95th'],
@@ -553,8 +553,8 @@ def plot_efficiencies(results, treatment='control-N', sim_idx=0):
     plot_diurnal(Data.WUE_mod[ixET], color=pal[2], legend=False)
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
-	
-	
+
+
 def xarray_to_df(results, variables, sim_idx=0):
     series = []
     for var in variables:
