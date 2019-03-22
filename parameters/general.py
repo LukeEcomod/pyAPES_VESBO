@@ -7,7 +7,7 @@ gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
         'start_time' : "2005-06-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2005-06-02",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'end_time' : "2005-08-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Hyde_forcing_1997_2016.csv",  # forcing data file*
         'results_directory':'results/pyAPES/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
@@ -33,6 +33,7 @@ gpara = {
                       ['canopy_condensation', 'condensation to canopy interception storage [m s-1]', ('date', 'simulation')],
                       ['canopy_condensation_drip', 'condensation to canopy that drips [m s-1]', ('date', 'simulation')],
                       ['canopy_transpiration','transpiration [m s-1]', ('date', 'simulation')],
+                      ['canopy_pt_root_water_potential', 'root water potential [m]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_transpiration', 'transpiration [m s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_gpp', 'gross primary production [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
                       ['canopy_pt_respiration', 'dark respiration [umol m-2 s-1]', ('date', 'simulation', 'planttype')],

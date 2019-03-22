@@ -27,6 +27,7 @@ To call model and read results:
 """
 
 import numpy as np
+from matplotlib import pyplot as plt
 import time
 from copy import deepcopy as copy
 
@@ -212,7 +213,7 @@ class Model(object):
 
             canopy_forcing = {
                 'soil_temperature': self.soil.heat.T[0],
-                'soil_water_potential': self.soil.water.h[0],
+                'soil_water_potential': self.soil.water.h[self.canopy_model.ix_roots],
                 'soil_volumetric_water': self.soil.heat.Wliq[0],
                 'soil_volumetric_air': self.soil.heat.Wair[0],
                 'soil_pond_storage': self.soil.water.h_pond,
@@ -233,7 +234,7 @@ class Model(object):
 
             canopy_parameters = {
                 'soil_depth': self.soil.grid['z'][0],
-                'soil_hydraulic_conductivity': self.soil.water.Kv[0],
+                'soil_hydraulic_conductivity': self.soil.water.Kv[self.canopy_model.ix_roots],
                 'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],
 # SINGLE SOIL LAYER
 #                'state_water':{'volumetric_water_content': self.forcing['Wliq'].iloc[k]},
@@ -252,9 +253,9 @@ class Model(object):
             # potential infiltration and evaporation from ground surface
             soil_forcing = {
                 'potential_infiltration': ffloor_flux['potential_infiltration'],
-                'potential_evaporation': (
-                    ffloor_flux['evaporation_soil'] + ffloor_flux['capillar_rise'] + ffloor_flux['pond_recharge']
-                ),
+                'potential_evaporation': (ffloor_flux['evaporation_soil'] +
+                                          ffloor_flux['capillar_rise'] +
+                                          ffloor_flux['pond_recharge']),
                 'atmospheric_pressure_head': -1.0E6,  # set to large value, because potential_evaporation already account for h_soil
                 'ground_heat_flux': -ffloor_flux['ground_heat'],
                 'date': self.forcing.index[k]}
@@ -264,6 +265,18 @@ class Model(object):
                     dt=self.dt,
                     forcing=soil_forcing,
                     water_sink=canopy_flux['root_sink'])
+
+#            plt.figure(97)
+#            plt.plot(canopy_flux['root_sink']/self.soil.grid['dz'][self.canopy_model.ix_roots])
+#
+#            plt.figure(98)
+#            plt.plot(self.canopy_model.rad)
+#
+#            plt.figure(99)
+#            plt.plot(self.soil.water.h[self.canopy_model.ix_roots])
+#
+#            plt.figure(100)
+#            plt.plot(self.soil.water.Kv[self.canopy_model.ix_roots])
 
             forcing_state = {
                     'wind_speed': self.forcing['U'].iloc[k],

@@ -299,9 +299,6 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     else:
         h_atm = -1000.0
 
-# TESTI !!!!!!!!!!!!!!!!!!! KOSTEUSRAJOITE POISTAA TARPEEN TÄLLE !!!!!!!!!!!!!!!!!!!
-    q_sink = np.where(initial_state['water_potential'] < -150., 0.0, q_sink)
-
     # net sink/source term
     S = q_sink + q_drain  # root uptake + lateral flow (e.g. by ditches)
 

@@ -14,7 +14,31 @@ parameters = {
                 'water_model': {
                         'type': 'Richards',
                         }
-                }
+                },
+        'canopy': {
+                'planttypes': {
+                        'pine': {
+                                'photop': {
+                                        'g0': 1.0e-3
+                                        }
+                                    },
+                        'spruce': {
+                                'photop': {
+                                        'g0': 1.0e-3
+                                        }
+                                    },
+                        'decidious': {
+                                'photop': {
+                                        'g0': 1.0e-3
+                                        }
+                                    },
+                        'shrubs': {
+                                'photop': {
+                                        'g0': 1.0e-3
+                                        }
+                                    },
+                        },
+                },
     }
 
 def iterate_parameters(parameters, default, count):

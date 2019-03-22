@@ -155,7 +155,6 @@ class PlantType(object):
 
         Note: Call once per day
         """
-        PsiL = np.minimum(-1e-5, PsiL)
 
         if self.Switch_pheno:
             self.pheno_state = self.Pheno_Model.run(T, out=True)
@@ -193,14 +192,16 @@ class PlantType(object):
             self.photop['Rd'] *= fv
 
         if self.Switch_WaterStress == 'PsiL':
+            PsiL = np.maximum(np.minimum(-1e-5, PsiL),-3)
             b = self.photop0['drp']
-            if 'g1' in self.photop0:  # medlyn g1-model, decrease with decreasing Psi
-                self.photop['g1'] = self.photop0['g1'] * np.maximum(0.05, np.exp(b*PsiL))
+            # medlyn g1-model, decrease with decreasing Psi
+            self.photop['g1'] = self.photop0['g1'] * np.maximum(0.05, np.exp(b*PsiL))
 
-            # Vmax and Jmax responses to leaf water potential. Kellomäki & Wand, 1995.
-            fv = 1.0 / (1.0 + (PsiL / -2.04)**2.08)  # vcmax
-            fj = 1.0 / (1.0 + (PsiL / -1.56)**3.94)  # jmax
-            fr = 1.0 / (1.0 + (PsiL / -2.53)**6.07)  # rd
+            # Vmax and Jmax responses to leaf water potential. Kellomäki & Wang, 1996.
+            # (Huom! artikkelissa kertoimet väärinpäin, tarkistettu kuvista)
+            fv = 1.0 / (1.0 + (PsiL / - 2.04)**2.78)  # vcmax
+            fj = 1.0 / (1.0 + (PsiL / - 1.56)**3.94)  # jmax
+            fr = 1.0 / (1.0 + (PsiL / - 2.53)**6.07)  # rd
             self.photop['Vcmax'] *= fv
             self.photop['Jmax'] *= fj
             self.photop['Rd'] *= fr
