@@ -20,7 +20,7 @@ grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
 ctr = {'Eflow': True,  # ensemble flow
        'WMA': False, # well-mixed assumption
        'Ebal': True,  # computes leaf temperature by solving energy balance
-       'WaterStress': None,  # Rew or PsiL or None
+       'WaterStress': 'PsiL',  # Rew or PsiL or None
        'seasonal_LAI': True,  # account for seasonal LAI dynamics
        'pheno_cycle': True  # account for phenological cycle
        }

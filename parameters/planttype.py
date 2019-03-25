@@ -91,10 +91,10 @@ Pine = {
             'alpha': 0.2,
             'theta': 0.7,
             'g1': 2.5,
-            'g0': 4.0e-3,
+            'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.5,
             'beta': 0.95,
-            'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
+            'drp':  0.7,  # PsiL-based [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
             'lt': 0.02,
@@ -104,7 +104,7 @@ Pine = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 
@@ -141,10 +141,10 @@ Spruce = {
             'alpha': 0.2,
             'theta': 0.7,
             'g1': 2.5,
-            'g0': 4.0e-3,
+            'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.5,
             'beta': 0.95,
-            'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
+            'drp': 0.7, # PsiL-based [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
             'lt': 0.02,
@@ -154,7 +154,7 @@ Spruce = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 
@@ -191,10 +191,10 @@ Decidious = {
             'alpha': 0.2,
             'theta': 0.7,
             'g1': 4.5,
-            'g0': 1.0e-2,
+            'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.5,
             'beta': 0.95,
-            'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
+            'drp':  0.7, # PsiL-based [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
             'lt': 0.05,
@@ -204,7 +204,7 @@ Decidious = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 
@@ -241,10 +241,10 @@ Shrubs = {
             'alpha': 0.2,
             'theta': 0.7,
             'g1': 4.5,
-            'g0': 1.0e-2,
+            'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.0,
             'beta': 0.95,
-            'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
+            'drp': 0.7, # PsiL-based [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
             'lt': 0.05,
@@ -254,7 +254,7 @@ Shrubs = {
             'beta': 0.943,
             'RAI_LAI_multiplier': 2.0,
             'fine_radius': 2.0e-3,
-            'radial_K': 5.0e-8,
+            'root_cond': 5e8,  # [s]
             }
         }
 

@@ -26,6 +26,7 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 import logging
 import numpy as np
+import matplotlib.pyplot as plt
 from .constants import MOLAR_MASS_H2O, EPS
 
 from .radiation import Radiation
@@ -124,12 +125,14 @@ class CanopyModel(object):
 
         # root area density [m2 m-3]
         rad = np.zeros(np.shape(dz_soil))
+        imax = 1
         for pt in self.planttypes:
-            ix = np.where(pt.Roots.rad > 0)[0]
-            rad[ix] += pt.Roots.rad[ix] * pt.Roots.RAI
-        ix_max = max(np.where(rad > 0)[0])
-        rad = rad[0:ix_max]
-        self.rad = rad / sum(rad)  # normalized total fine root density distribution [-]
+            rad[:len(pt.Roots.rad)] += pt.Roots.rad
+            imax = max(imax, len(pt.Roots.rad))
+        self.ix_roots = np.array(range(imax))
+        self.rad = rad[self.ix_roots]
+        # total root area index [m2 m-2]
+        self.RAI = sum([pt.Roots.RAI for pt in self.planttypes])
 
         # canopy height [m]
         if len(np.where(self.lad > 0)[0]) > 0:
@@ -147,7 +150,7 @@ class CanopyModel(object):
 
         self.forestfloor = ForestFloor(cpara['forestfloor'])
 
-    def run_daily(self, doy, Ta, PsiL=0.0, Rew=1.0):
+    def run_daily(self, doy, Ta, Rew=1.0):
         r""" Computatations at daily timestep.
         Updates planttypes and total canopy leaf area index and phenological state.
         Recomputes normalize flow statistics with new leaf area density profile.
@@ -158,9 +161,9 @@ class CanopyModel(object):
             PsiL (float): leaf water potential [MPa] --- CHECK??
             Rew (float): relatively extractable water (-)
         """
-
         """ update physiology and leaf area of planttypes and canopy"""
         for pt in self.planttypes:
+            PsiL = (pt.Roots.h_root - self.z) / 100.0  # MPa
             pt.update_daily(doy, Ta, PsiL=PsiL, Rew=Rew)  # updates pt properties
         # total leaf area index [m2 m-2]
         self.LAI = sum([pt.LAI for pt in self.planttypes])
@@ -437,7 +440,7 @@ class CanopyModel(object):
                 'height': self.z[1],  # height to first calculation node
                 'soil_depth': parameters['soil_depth'],
                 'nsteps': 20,
-                'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'],
+                'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'][0],  # comes in for whle rooting depth
                 'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
                 'iteration': iter_no,
             }
@@ -453,7 +456,7 @@ class CanopyModel(object):
                 'wind_speed': U[1],
                 'friction_velocity': ustar[1],
                 'soil_temperature': forcing['soil_temperature'],
-                'soil_water_potential': forcing['soil_water_potential'],
+                'soil_water_potential': forcing['soil_water_potential'][0],  # comes in for whle rooting depth
                 'soil_volumetric_water': forcing['soil_volumetric_water'],
                 'soil_volumetric_air': forcing['soil_volumetric_water'],
                 'soil_pond_storage': forcing['soil_pond_storage']
@@ -547,6 +550,17 @@ class CanopyModel(object):
         # stand transpiration [m s-1]
         Tr = sum([pt_st['transpiration'] * MOLAR_MASS_H2O * 1e-3 for pt_st in pt_stats])
 
+        # root water uptake [m s-1]
+        rootsink = np.zeros(np.shape(self.rad))
+        pt_index = 0
+        for pt in self.planttypes:
+            Tr_pt = pt_stats[pt_index]['transpiration'] * MOLAR_MASS_H2O * 1e-3
+            rootsink[pt.Roots.ix] += pt.Roots.wateruptake(
+                    transpiration=Tr_pt,
+                    h_soil=forcing['soil_water_potential'],
+                    kh_soil=parameters['soil_hydraulic_conductivity'])
+            pt_index += 1
+
         if self.Switch_Ebal:
             # energy closure of canopy  -- THIS IS EQUAL TO frsource (the error caused by linearizing sigma*ef*T^4)
             energy_closure =  sum((radiation_profiles['sw_absorbed'] +
@@ -593,6 +607,7 @@ class CanopyModel(object):
                 'LE': flux_latent_heat[-1],
                 'co2_flux': flux_co2,  # [umol m-2 s-1]
                 'latent_heat_flux': flux_latent_heat,  # [W m-2]
+                'pt_root_water_potential': np.array([pt.Roots.h_root for pt in self.planttypes]),
                 'pt_transpiration': np.array([pt_st['transpiration'] * MOLAR_MASS_H2O * 1e-3 for pt_st in pt_stats]),
                 'pt_gpp': np.array([pt_st['net_co2'] + pt_st['dark_respiration'] for pt_st in pt_stats]),
                 'pt_respiration': np.array([pt_st['dark_respiration'] for pt_st in pt_stats]),
@@ -601,6 +616,7 @@ class CanopyModel(object):
                 'pt_leaf_internal_co2':  np.array([pt_st['leaf_internal_co2'] for pt_st in pt_stats]),
                 'pt_leaf_surface_co2':  np.array([pt_st['leaf_surface_co2'] for pt_st in pt_stats]),
                 'water_closure': wetleaf_fluxes['water_closure'],
+                'root_sink' : rootsink,
                 }
 
         if self.Switch_WMA is False:
