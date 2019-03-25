@@ -20,7 +20,7 @@ gpara = {
                       ['canopy_WMA_assumption','WMA assumed (1=True, 0=False)', ('date', 'simulation')],
                       ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
-                      ['canopy_temperature','air temperature []degC]', ('date', 'simulation', 'canopy')],
+                      ['canopy_temperature','air temperature [degC]', ('date', 'simulation', 'canopy')],
                       ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
                       ['canopy_friction_velocity','canopy friction velocity [m s-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
