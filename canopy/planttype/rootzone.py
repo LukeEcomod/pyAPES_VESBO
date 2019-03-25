@@ -64,7 +64,7 @@ class RootUptake(object):
         """
 
         # conductance from soil to root-soil interface [s-1]
-        alpha = np.sqrt(self.root_depth/self.RAI) / np.sqrt(2.0 * self.fine_radius)
+        alpha = np.sqrt(self.root_depth/(self.RAI + EPS)) / np.sqrt(2.0 * self.fine_radius)
         ks = alpha * kh_soil[self.ix] * self.rad
 
         # conductance from soil-root interface to base of xylem [s-1]
