@@ -11,7 +11,20 @@ ranges = {}
 parameters = {
         'count': 1,
         'canopy': {
-
+            'planttypes': {
+                        'pine': {
+                                'LAImax': 5.0
+                                },
+                        'spruce': {
+                                'LAImax': 0.0
+                                },
+                        'decidious': {
+                                'LAImax': 0.0
+                                },
+                        'shrubs': {
+                                'LAImax': 0.5
+                                },
+                        },
                 },
         'soil': {
 

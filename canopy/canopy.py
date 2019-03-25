@@ -163,8 +163,9 @@ class CanopyModel(object):
         """
         """ update physiology and leaf area of planttypes and canopy"""
         for pt in self.planttypes:
-            PsiL = (pt.Roots.h_root - self.z) / 100.0  # MPa
-            pt.update_daily(doy, Ta, PsiL=PsiL, Rew=Rew)  # updates pt properties
+            if pt.LAImax > 0.0:
+                PsiL = (pt.Roots.h_root - self.z) / 100.0  # MPa
+                pt.update_daily(doy, Ta, PsiL=PsiL, Rew=Rew)  # updates pt properties
         # total leaf area index [m2 m-2]
         self.LAI = sum([pt.LAI for pt in self.planttypes])
         # total leaf area density [m2 m-3]
@@ -554,11 +555,12 @@ class CanopyModel(object):
         rootsink = np.zeros(np.shape(self.rad))
         pt_index = 0
         for pt in self.planttypes:
-            Tr_pt = pt_stats[pt_index]['transpiration'] * MOLAR_MASS_H2O * 1e-3
-            rootsink[pt.Roots.ix] += pt.Roots.wateruptake(
-                    transpiration=Tr_pt,
-                    h_soil=forcing['soil_water_potential'],
-                    kh_soil=parameters['soil_hydraulic_conductivity'])
+            if pt.LAImax > 0.0:
+                Tr_pt = pt_stats[pt_index]['transpiration'] * MOLAR_MASS_H2O * 1e-3
+                rootsink[pt.Roots.ix] += pt.Roots.wateruptake(
+                        transpiration=Tr_pt,
+                        h_soil=forcing['soil_water_potential'],
+                        kh_soil=parameters['soil_hydraulic_conductivity'])
             pt_index += 1
 
         if self.Switch_Ebal:
