@@ -192,7 +192,8 @@ class PlantType(object):
             self.photop['Rd'] *= fv
 
         if self.Switch_WaterStress == 'PsiL':
-            PsiL = np.maximum(np.minimum(-1e-5, PsiL),-3)
+#            PsiL = np.maximum(np.minimum(-1e-5, PsiL),-3)
+            PsiL = np.minimum(-1e-5, PsiL)
             b = self.photop0['drp']
             # medlyn g1-model, decrease with decreasing Psi
             self.photop['g1'] = self.photop0['g1'] * np.maximum(0.05, np.exp(b*PsiL))

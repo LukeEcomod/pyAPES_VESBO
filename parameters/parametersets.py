@@ -10,34 +10,11 @@ ranges = {}
 
 parameters = {
         'count': 1,
-        'soil': {
-                'water_model': {
-                        'type': 'Richards',
-                        }
-                },
         'canopy': {
-                'planttypes': {
-                        'pine': {
-                                'photop': {
-                                        'g0': 1.0e-3
-                                        }
-                                    },
-                        'spruce': {
-                                'photop': {
-                                        'g0': 1.0e-3
-                                        }
-                                    },
-                        'decidious': {
-                                'photop': {
-                                        'g0': 1.0e-3
-                                        }
-                                    },
-                        'shrubs': {
-                                'photop': {
-                                        'g0': 1.0e-3
-                                        }
-                                    },
-                        },
+
+                },
+        'soil': {
+
                 },
     }
 
