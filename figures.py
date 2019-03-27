@@ -114,23 +114,23 @@ def plot_vegetation():
 from pyAPES_utilities.plotting import plot_lad_profiles
 import matplotlib.pyplot as plt
 
-def plot_lad():
+def plot_lad(biomass_function='marklund_mod'):
     pos = (-0.1,1.03)
     plt.figure(figsize=(8,4))
-    plot_lad_profiles("letto2009.txt",subplot=1,subplots=3)
+    plot_lad_profiles("letto2009.txt",subplot=1,subplots=3, biomass_function=biomass_function)
     plt.annotate('a', (-0.25,1.03), xycoords='axes fraction', fontsize=12, fontweight='bold')
-    plt.xlim([0.0,0.75])
-    plt.ylim([0.0,25])
-    plot_lad_profiles("letto2014.txt",subplot=2,subplots=3)
+    plt.xlim([0.0,0.6])
+    plt.ylim([0.0,27])
+    plot_lad_profiles("letto2014.txt",subplot=2,subplots=3, biomass_function=biomass_function)
     plt.annotate('b', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
-    plt.xlim([0.0,0.75])
-    plt.ylim([0.0,25])
+    plt.xlim([0.0,0.6])
+    plt.ylim([0.0,27])
     plt.ylabel('')
     plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
-    plot_lad_profiles("letto2016_partial.txt",subplot=3,subplots=3)
+    plot_lad_profiles("letto2016_partial.txt",subplot=3,subplots=3, biomass_function=biomass_function)
     plt.annotate('c', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
-    plt.xlim([0.0,0.75])
-    plt.ylim([0.0,25])
+    plt.xlim([0.0,0.6])
+    plt.ylim([0.0,27])
     plt.ylabel('')
     plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
     plt.tight_layout()

@@ -368,7 +368,7 @@ def plot_columns(data, col_index=None, slope=None, plot_timeseries=True):
             axes[i, j].set_xlim(lim)
 
 def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles = [1.0],
-                      subplot=1, subplots=1):
+                      subplot=1, subplots=1, biomass_function='marklund'):
     """
     Plots stand leaf area density profiles from given file.
     Args:
@@ -380,7 +380,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
 
     z = np.linspace(0, 30.0, 100)
     lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles,
-        normed=False, dbhfile="pyAPES_utilities/runkolukusarjat/" + filename, plot=False)
+        normed=False, dbhfile="pyAPES_utilities/runkolukusarjat/" + filename, plot=False, biomass_function=biomass_function)
 
     lad = z * 0.0
     for k in range(len(quantiles)):
@@ -412,7 +412,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
         plt.plot(lad, z,':k', label='Total, %.2f m$^2$m$^{-2}$' % lai_tot)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.15, loc="upper right",bbox_to_anchor=(1.1,1.07))
+    plt.legend(frameon=False, borderpad=0.0, labelspacing=0.1, loc="upper right",bbox_to_anchor=(1.1,1.1))
     plt.tight_layout()
 
 def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=0.2):
