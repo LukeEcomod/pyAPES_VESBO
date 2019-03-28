@@ -131,11 +131,11 @@ def process_WTD():
     plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
                      facecolor='k', alpha=0.3)
     plt.plot(WTD.index, WTD['control'].values,'-k', linewidth=1.0)
-    
+
     plt.fill_between(WTD.index, WTD['partial_max'].values, WTD['partial_min'].values,
                      facecolor='b', alpha=0.3)
     plt.plot(WTD.index, WTD['partial'].values,'-b', linewidth=1.0)
-    
+
     plt.fill_between(WTD.index, WTD['clearcut_max'].values, WTD['clearcut_min'].values,
                      facecolor='r', alpha=0.3)
     plt.plot(WTD.index, WTD['clearcut'].values,'-r', linewidth=1.0)
@@ -143,3 +143,29 @@ def process_WTD():
     # ja tiedostoon
     save_df_to_csv(WTD[['control','control_max','control_min','partial','partial_max','partial_min','clearcut','clearcut_max','clearcut_min']],
                        'lettosuo_WTD_pred', readme=' - Check timezone!! \nSee Lettosuo_dataprocessing.process_WTD()')
+
+def fit_pf_Laiho():
+    from pyAPES_utilities.parameter_utilities import fit_pF
+    # heads [kPa]
+    head = [0.01, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
+
+    # volumetric water content measurements corresponding to heads for different peat types [%]
+    watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54],
+               [91.41, 66.26, 56.98, 45.58, 41.44, 39.32, 37.89],
+               [89.12, -999, 72.83, 63.97, 54.40, 50.15, 48.80],
+               [89.46, -999, 82.46, 76.79, 66.93, 63.61, 62.53],
+               [92.22, -999, 87.06, 78.02, 74.76, 72.77, 71.70],
+               [91.98, 66.70, 57.49, 39.95, 34.41, 29.83, 28.39],
+               [88.75, 78.98, 78.77, 75.83, 72.37, 61.35, 45.66],
+               [91.93, -999, 83.65, 78.39, 75.56, 74.08, 73.10],
+               [93.45, 87.44, 87.33, 77.95, 76.46, 75.01, 73.01],
+               [93.32, 87.15, 86.73, 82.90, 81.84, 80.51, 79.55],
+               [93.05, 54.55, 42.88, 33.98, 29.80, 26.90, 25.87],
+               [92.90, 78.15, 72.19, 54.47, 51.05, 49.66, 48.35],
+               [90.11, -999, 80.86, 77.98, 69.66, 60.70, 53.40],
+               [93.14, -999, 83.81, 78.69, 74.86, 73.26, 72.25],
+               [93.17, -999, 89.76, 80.05, 76.67, 74.21, 72.84]]
+
+    fit_pF(head, watcont[0:5], fig=True,percentage=True, kPa=True)
+    fit_pF(head, watcont[5:10], fig=True,percentage=True, kPa=True)
+    fit_pF(head, watcont[10:15], fig=True,percentage=True, kPa=True)

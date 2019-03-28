@@ -89,7 +89,84 @@ lettosuo_parameters = {
                                },
                        'drainage_equation': {  # drainage equation and drainage parameters
                                'type': 'Hooghoudt',  #
-                               'depth': 1.0,  # drain depth [m]
+                               'depth': 0.8,  # drain depth [m]
+                               'spacing': 45.0,  # drain spacing [m]
+                               'width': 1.0,  # drain width [m]
+                               }
+                        }
+                }
+        }
+
+lettosuo_parameters_clc = {
+        'count': 1,
+        'canopy': {
+                'forestfloor': {
+                        'bryophytes': {
+                                'hylocomium': {
+                                        'ground_coverage': 0.0,
+                                        },
+                                'sphagnum': {
+                                        'ground_coverage': 0.0,
+                                        },
+                                'pleurozium': {
+                                        'ground_coverage': 0.1,
+                                        }
+                                },
+                        'litter': {
+                                'ground_coverage': 0.7
+                                },
+                        'baresoil': {
+                                'ground_coverage': 0.2
+                                }
+                        },
+                'planttypes': {
+                        'pine': {
+                                'LAImax': clearcut['lai']['pine'],
+                                'lad': clearcut['lad']['pine'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        'spruce': {
+                                'LAImax': clearcut['lai']['spruce'],
+                                'lad': clearcut['lad']['spruce'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        'decidious': {
+                                'LAImax': clearcut['lai']['decid'],
+                                'lad': clearcut['lad']['decid'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        'shrubs': {
+                                'LAImax': 0.5,
+                                'lad': clearcut['lad']['shrubs'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        },
+                },
+        'soil': {
+                'grid': {
+                        'zh': zh
+                        },
+                'soil_properties': soil_properties,
+                'water_model': {
+                        'initial_condition':{
+                                'ground_water_level': -0.2
+                                },
+                        'lower_boundary': {  # lower boundary condition (type, value, depth)
+                               'type': 'impermeable',
+                               'value': None,
+                               'depth': -2.0
+                               },
+                       'drainage_equation': {  # drainage equation and drainage parameters
+                               'type': 'Hooghoudt',  #
+                               'depth': 0.8,  # drain depth [m]
                                'spacing': 45.0,  # drain spacing [m]
                                'width': 1.0,  # drain width [m]
                                }
