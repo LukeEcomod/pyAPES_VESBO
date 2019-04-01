@@ -1269,7 +1269,7 @@ def surface_atm_conductance(wind_speed, height, friction_velocity=None, dT=0.0, 
     if friction_velocity == None:
         friction_velocity = wind_speed * kv / np.log((height - d) / zom)
 
-    delta = MOLECULAR_DIFFUSIVITY_H2O / (kv*friction_velocity)
+    delta = MOLECULAR_DIFFUSIVITY_H2O / (kv*friction_velocity + EPS)
 
     gb_h = (kv*friction_velocity) / (Pr - np.log(delta / height))
     gb_v = (kv*friction_velocity) / (Sc_v - np.log(delta / height))

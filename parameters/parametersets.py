@@ -36,10 +36,10 @@ lettosuo_parameters = {
                                         }
                                 },
                         'litter': {
-                                'ground_coverage': (0.5, 0.5, 0.7)
+                                'ground_coverage': (0.5, 0.5, 0.9)
                                 },
                         'baresoil': {
-                                'ground_coverage': (0.0, 0.0, 0.2)
+                                'ground_coverage': (0.0, 0.0, 0.0)
                                 }
                         },
                 'planttypes': {
@@ -113,10 +113,10 @@ lettosuo_parameters_clc = {
                                         }
                                 },
                         'litter': {
-                                'ground_coverage': 0.7
+                                'ground_coverage': 0.9
                                 },
                         'baresoil': {
-                                'ground_coverage': 0.2
+                                'ground_coverage': 0.0
                                 }
                         },
                 'planttypes': {

@@ -15,27 +15,29 @@ plot=False
 zh = [-0.1, -0.2, -0.3, -0.4, -0.5, -1.0, -2.0]
 N = len(zh)
 # pf based on bulk density
-bd = [0.1047, 0.1454, 0.1591,0.1300, 0.1119]
+bd = [0.1047, 0.1454, 0.1591,0.1300, 0.1119, 0.1119, 0.1119]
 vp = [1, 5.75, 4.5, 4.5, 4.75, 6, 6]
 
 #pf_para, Ksat = peat_hydrol_properties(bd, fig=plot, labels=['layer ' + str(i) for i in range(N)], ptype='C')
 pf_para, Ksat = peat_hydrol_properties(vp,  var='H', fig=plot, labels=['layer ' + str(i) for i in range(N)], ptype='C')
 
-# raw humus from Laihos measurements
-# heads [kPa]
-head = [0.01, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
-# volumetric water content [%]
-watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54]]
-pf_para[0] = fit_pF(head, watcont, fig=plot, percentage=True, kPa=True)[0]
+## raw humus from Laihos measurements
+## heads [kPa]
+#head = [0.01, 0.3, 0.981, 4.905, 9.81, 33.0, 98.1]
+## volumetric water content [%]
+#watcont = [[94.69, 49.42, 29.61, 21.56, 20.05, 17.83, 16.54]]
+#pf_para[0] = fit_pF(head, watcont, fig=plot, percentage=True, kPa=True)[0]
 
 porosity = [pf_para[k][0] for k in range(N)]
 residual_water_content = [pf_para[k][1] for k in range(N)]
 pf_alpha = [pf_para[k][2] for k in range(N)]
 pf_n = [pf_para[k][3] for k in range(N)]
 # function of humification and depth (Päivänen 1973)
-Kvsat = [4.8e-4, 2.3e-5, 2.3e-5, 1.3e-6, 5.9e-6, 1.7e-6, 1.7e-6]
+#Kvsat = [4.8e-4, 2.3e-5, 2.3e-5, 1.3e-5, 5.9e-6, 1.0e-6, 1.0e-7]
+Kvsat = [5.0e-5, 2.3e-5, 2.3e-5, 1.3e-5, 5.9e-6, 1.0e-6, 1.0e-7]
 #Kvsat = [1.7e-4, 2e-5, 5e-5, 5e-6, 3e-6, 1e-6, 1e-7]  # vertical
-Khmult = [5.0, 5.0, 5.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+Khmult = [20.0, 10.0, 5.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+#Khmult = [10.0, 10.0, 5.0, 5.0, 5.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
 Khsat = [Kvsat[i] * Khmult[i] for i in range(N)]
 
 soil_properties = {'pF': {  # vanGenuchten water retention parameters

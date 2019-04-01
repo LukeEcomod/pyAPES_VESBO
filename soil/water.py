@@ -354,9 +354,10 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     # airvolume available in soil profile after previous time step
     Airvol = max(0.0, sum((poros - W) * dz))
     if Qin < Airvol and q0 < 0 and q0 < MaxInf:
-        S[0:5] = S[0:5] - Prec / 5 / grid['dz'][0:5]
+        S[0:5] = S[0:5] - Prec / 5. / grid['dz'][0:5]
         Prec = 0.0
-#        dt = 30
+        dt = 30
+#        print('Dry conditions')
 
     """ solve water flow for 0...t_final """
     while t < t_final:
