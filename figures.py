@@ -135,3 +135,26 @@ def plot_lad(biomass_function='marklund_mod'):
     plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
     plt.tight_layout()
 #    plt.savefig('figures/case_Lettosuo/lad_profiles.png',dpi=300, transparent=False)
+
+def plot_wtd(results):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_timeseries_xr
+
+    # Read observed WTD
+    WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
+
+    plt.figure()
+    plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
+                     facecolor='k', alpha=0.3)
+    plt.plot(WTD.index, WTD['control'].values,':k', linewidth=1.0)
+
+    plt.fill_between(WTD.index, WTD['partial_max'].values, WTD['partial_min'].values,
+                     facecolor='b', alpha=0.3)
+    plt.plot(WTD.index, WTD['partial'].values,':b', linewidth=1.0)
+
+    plt.fill_between(WTD.index, WTD['clearcut_max'].values, WTD['clearcut_min'].values,
+                     facecolor='r', alpha=0.3)
+    plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
+
+    plot_timeseries_xr(results, 'soil_ground_water_level', colors=['k','b','r'], xticks=True)
