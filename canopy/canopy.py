@@ -656,6 +656,7 @@ class CanopyModel(object):
                     'energy_closure': energy_closure,
                     'SWnet': SWnet,
                     'LWnet': LWnet,
+                    'net_radiation': SWnet + LWnet,
                     'fr_source': sum(sources['fr'] * self.dz)})
 
         return fluxes_canopy, state_canopy, fluxes_ffloor, states_ffloor

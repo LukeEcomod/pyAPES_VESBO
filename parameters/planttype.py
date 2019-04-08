@@ -80,9 +80,9 @@ Pine = {
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 45.,
-            'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 1.0,  # 0.023*Vcmax
+            'Vcmax': 50.,
+            'Jmax': 98.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.2,  # 0.023*Vcmax
             'tresp': {
                 'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
                 'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
@@ -90,7 +90,7 @@ Pine = {
                 },
             'alpha': 0.2,
             'theta': 0.7,
-            'g1': 2.3,
+            'g1': 2.5,
             'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.5,
             'beta': 0.95,
@@ -130,9 +130,9 @@ Spruce = {
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 55.,
-            'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 1.3,  # 0.023*Vcmax
+            'Vcmax': 60.,
+            'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.4,  # 0.023*Vcmax
             'tresp': {
                 'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
                 'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
@@ -140,7 +140,7 @@ Spruce = {
                 },
             'alpha': 0.2,
             'theta': 0.7,
-            'g1': 2.3,
+            'g1': 2.5,
             'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.5,
             'beta': 0.95,
@@ -180,9 +180,9 @@ Decidious = {
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 40.,
-            'Jmax': 79.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 0.9,  # 0.023*Vcmax
+            'Vcmax': 45.,
+            'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.0,  # 0.023*Vcmax
             'tresp': {
                 'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
                 'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
@@ -190,7 +190,7 @@ Decidious = {
                 },
             'alpha': 0.2,
             'theta': 0.7,
-            'g1': 4.0,
+            'g1': 4.5,
             'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.5,
             'beta': 0.95,
@@ -240,7 +240,7 @@ Shrubs = {
                 },
             'alpha': 0.2,
             'theta': 0.7,
-            'g1': 4.0,
+            'g1': 4.5,
             'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
             'kn': 0.0,
             'beta': 0.95,

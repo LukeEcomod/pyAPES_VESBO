@@ -158,3 +158,33 @@ def plot_wtd(results):
     plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
 
     plot_timeseries_xr(results, 'soil_ground_water_level', colors=['k','b','r'], xticks=True)
+
+def plot_energy(results,treatment='control'):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    # period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+    plot_fluxes(results, Data, norain=True)
+
+def plot_CO2(results,treatment='control'):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    # period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+    Data['NEE'] *= 1.0 / 44.01e-3
+    Data['GPP'] *= -1.0 / 44.01e-3
+    Data['Reco'] *= 1.0 / 44.01e-3
+    plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_respiration'],
+                Data_var=['NEE','GPP','Reco'], norain=True)

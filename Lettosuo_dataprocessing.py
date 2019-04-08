@@ -169,3 +169,265 @@ def fit_pf_Laiho():
     fit_pF(head, watcont[0:5], fig=True,percentage=True, kPa=True)
     fit_pF(head, watcont[5:10], fig=True,percentage=True, kPa=True)
     fit_pF(head, watcont[10:15], fig=True,percentage=True, kPa=True)
+
+def EC_data():
+
+    # PERIOD START / PERIOD END???
+    # Energy fluxes on hourly time scale??
+
+    starttime = '01-01-2010'
+    endtime = '01-01-2019'
+
+    fpaths = [r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_energy.csv",  # period start/end??
+              r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_CO2.csv",
+              r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_energy.csv",  # period start/end??
+              r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_CO2.csv",
+              r"H:\Lettosuo\Forcing_data\Annalea2\Letto1_EC.csv",
+              r"H:\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]  # period start
+
+    fp_yearfirst = [r"H:\Forcing_data\datat\lettosuo_28.2.2019\osittaishakkuu_CO2.csv",
+                    r"H:\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
+
+    fp_hourly = [r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_energy.csv",
+                r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_energy.csv"]
+
+    fp_periodstart = [r"H:\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
+
+    index = pd.date_range(starttime, endtime, freq='0.5H')
+    data = pd.DataFrame(index=index, columns=[])
+
+    for fp in fpaths:
+        dat = pd.read_csv(fp, sep=',', header='infer', encoding = 'ISO-8859-1')
+        if fp in fp_yearfirst:
+            dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
+        else:
+            dat.index = pd.to_datetime(dat.ix[:,0], dayfirst=True)
+        dat.index=dat.index.map(lambda x: x.replace(second=0))
+        dat.ix[:,0]=dat.index
+        if fp in fp_periodstart:  # period start to period end
+            dat.index = dat.index + pd.Timedelta(hours=0.5)
+        dat = dat.drop_duplicates(subset=dat.columns[0])
+        dat = dat.drop([dat.columns[0]], axis=1)
+        dat.columns = fp.split("\\")[-1].split(".")[0] + ': ' + dat.columns
+        dat = dat[(dat.index >= starttime) & (dat.index < endtime)]
+        if len(np.setdiff1d(dat.index, index)) > 0:
+            print(fp, np.setdiff1d(dat.index, index))
+            raise ValueError("Error")
+        data=data.merge(dat, how='outer', left_index=True, right_index=True)
+        if fp in fp_hourly:
+            for col in dat.columns:
+                data[col][1:-1:2] = data[col][0:-2:2].values
+
+    variables = ['osittaishakkuu_energy: LE [W m-2]',
+                 'osittaishakkuu_energy: SH [W m-2]',
+                 'osittaishakkuu_CO2: NEE [mg CO2 m-2 s-1]',
+                 'avohakkuu_energy: LE [W m-2]',
+                 'avohakkuu_energy: SH [W m-2]',
+                 'avohakkuu_CO2: NEE [mg CO2 m-2 s-1]',
+                 ]
+    flags = ['osittaishakkuu_energy: Flag_LE',
+             'osittaishakkuu_energy: Flag_SH',
+             'osittaishakkuu_CO2: gapped',
+             'avohakkuu_energy: Flag_LE',
+             'avohakkuu_energy: Flag_SH',
+             'avohakkuu_CO2: Flag_NEE'
+             ]
+
+    for i in range(len(variables)):
+        data[variables[i] + ', not gapfilled'] = np.where(
+                data[flags[i]] == 0, data[variables[i]], np.nan)
+
+    lettosuo_EC = data[[
+           'osittaishakkuu_energy: LE [W m-2], not gapfilled',
+           'osittaishakkuu_energy: SH [W m-2], not gapfilled',
+           'osittaishakkuu_energy: SHF [W m-2]',
+           'osittaishakkuu_energy: NRAD [W m-2]',
+           'osittaishakkuu_CO2: NEE [mg CO2 m-2 s-1], not gapfilled',
+           'osittaishakkuu_CO2: Reco [mg CO2 m-2 s-1]',
+           'osittaishakkuu_CO2: GPP [mg CO2 m-2 s-1]',
+           'avohakkuu_energy: LE [W m-2], not gapfilled',
+           'avohakkuu_energy: SH [W m-2], not gapfilled',
+           'avohakkuu_energy: SHF [W m-2]',
+           'avohakkuu_energy: NRAD [W m-2]',
+           'avohakkuu_CO2: NEE [mg CO2 m-2 s-1], not gapfilled',
+           'avohakkuu_CO2: Reco [mg CO2 m-2 s-1]',
+           'avohakkuu_CO2: GPP [mg CO2 m-2 s-1]',
+           'Letto1_EC: LE (Wm-2)',
+           'Letto1_EC: SH (W m-2)',
+           'Letto1_meteo: avg(NetRad (W/m2))',
+           'Letto1_EC: NEE_South',
+           'Letto1_EC: NEE_North',
+           'Letto1_EC: GPP_S',
+           'Letto1_EC: GPP_N',
+           'Letto1_EC: Reco_S',
+           'Letto1_EC: Reco_N'
+            ]].copy()
+
+    lettosuo_EC = lettosuo_EC.rename(columns={
+           'osittaishakkuu_energy: LE [W m-2], not gapfilled': 'partial_LE',
+           'osittaishakkuu_energy: SH [W m-2], not gapfilled': 'partial_SH',
+           'osittaishakkuu_energy: NRAD [W m-2]': 'partial_GHF',  # huom nimet!
+           'osittaishakkuu_energy: SHF [W m-2]': 'partial_NRAD',  # huom nimet!
+           'osittaishakkuu_CO2: NEE [mg CO2 m-2 s-1], not gapfilled': 'partial_NEE',
+           'osittaishakkuu_CO2: GPP [mg CO2 m-2 s-1]': 'partial_GPP',
+           'osittaishakkuu_CO2: Reco [mg CO2 m-2 s-1]': 'partial_Reco',
+           'avohakkuu_energy: LE [W m-2], not gapfilled': 'clearcut_LE',
+           'avohakkuu_energy: SH [W m-2], not gapfilled': 'clearcut_SH',
+           'avohakkuu_energy: SHF [W m-2]': 'clearcut_GHF',
+           'avohakkuu_energy: NRAD [W m-2]': 'clearcut_NRAD',
+           'avohakkuu_CO2: NEE [mg CO2 m-2 s-1], not gapfilled': 'clearcut_NEE',
+           'avohakkuu_CO2: GPP [mg CO2 m-2 s-1]': 'clearcut_GPP',
+           'avohakkuu_CO2: Reco [mg CO2 m-2 s-1]': 'clearcut_Reco',
+           'Letto1_EC: LE (Wm-2)': 'control_LE',
+           'Letto1_EC: SH (W m-2)': 'control_SH',
+           'Letto1_meteo: avg(NetRad (W/m2))': 'control_NRAD',
+           'Letto1_EC: NEE_North': 'control_NEE',
+           'Letto1_EC: GPP_N': 'control_GPP',
+           'Letto1_EC: Reco_N': 'control_Reco',
+           'Letto1_EC: NEE_South': 'control-S_NEE',
+           'Letto1_EC: GPP_S': 'control-S_GPP',
+           'Letto1_EC: Reco_S': 'control-S_Reco'
+           })
+
+    for column in lettosuo_EC.columns:
+        if column.split('_')[-1] == 'LE':
+            lettosuo_EC[column][lettosuo_EC[column] < -100] = lettosuo_EC[column][lettosuo_EC[column] < -100] * np.nan
+            lettosuo_EC[column][lettosuo_EC[column] > 1000] = lettosuo_EC[column][lettosuo_EC[column] > 1000] * np.nan
+
+    treatments=['control','partial','clearcut']
+    variables=['_NRAD', '_LE', '_SH', '_NEE', '_GPP', '_Reco']
+    plt.figure()
+    for i in range(len(variables)):
+        if i == 0:
+            ax1 = plt.subplot(len(variables),1,i+1)
+            lettosuo_EC[[treatment + variables[i] for treatment in treatments]].plot(ax=ax1)
+        else:
+            ax = plt.subplot(len(variables),1,i+1,sharex=ax1)
+            lettosuo_EC[[treatment + variables[i] for treatment in treatments]].plot(ax=ax)
+
+    readme = "\nTreatment energy balance from hourly data\nPeriod end/start unclear"
+    save_df_to_csv(lettosuo_EC, "Lettosuo_EC_2010_2018", readme=readme)
+
+    return data
+
+def Tsoil_wsoil_data(starttime='01-01-2010',endtime='01-01-2019'):
+
+    # filepaths
+    forc_fp = ["H:/Lettosuo/Forcing_data/Annalea1/Letto1_metsanpohja.csv",
+               "H:/Lettosuo/Forcing_data/Annalea1/Letto2_metsanpohja.csv",
+               "H:/Lettosuo/Forcing_data/MikaK/metsanpohja_concat.csv",
+               "H:/Lettosuo/Forcing_data/datat/kontrolli_meteo/concat.csv",
+               "H:/Lettosuo/Forcing_data/datat/Avohakkuu_meteo.csv"]
+
+    index=pd.date_range(starttime, endtime, freq='0.5H')
+    lettosuo_data=pd.DataFrame(index=index, columns=[])
+
+    for fp in forc_fp:
+        dat = pd.read_csv(fp, sep=',', header='infer', encoding = 'ISO-8859-1')
+        dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
+        dat.index=dat.index.map(lambda x: x.replace(second=0))
+        dat.ix[:,0]=dat.index
+        dat = dat.drop_duplicates(subset=dat.columns[0])
+        dat = dat.drop(dat.columns[0], axis=1)
+        dat.columns = fp.split("/")[-1].split(".")[0] + ': ' + dat.columns
+        dat = dat[(dat.index >= starttime) & (dat.index < endtime)]
+        if len(np.setdiff1d(dat.index, index)) > 0:
+            print(fp, np.setdiff1d(dat.index, index))
+            raise ValueError("Error")
+        lettosuo_data=lettosuo_data.merge(dat, how='outer', left_index=True, right_index=True)
+
+    lettosuo_data = lettosuo_data[(lettosuo_data.index >= starttime) &
+                                  (lettosuo_data.index < endtime)]
+
+    columns1=[
+           'Letto1_metsanpohja: avg(Moist1 7cm (m3/m3))',
+           'Letto1_metsanpohja: avg(Moist2 20cm (m3/m3))',
+           'Letto1_metsanpohja: avg(T1 5cm (C))',
+           'Letto1_metsanpohja: avg(T2 15cm (C))',
+           'Letto1_metsanpohja: avg(T3 30cm (C))',
+           'Letto1_metsanpohja: avg(T4 40cm (C))',
+           'Letto2_metsanpohja: avg(SoilMoist-10cm (m3/m3))',
+           'Letto2_metsanpohja: avg(SoilMoist-20cm (m3/m3))',
+           'Letto2_metsanpohja: avg(T-5cm (C))',
+           'Letto2_metsanpohja: avg(T-10cm (C))',
+           'Letto2_metsanpohja: avg(T-20cm (C))',
+           'Letto2_metsanpohja: avg(T-30cm (C))'
+           ]
+    columns2=[
+           'metsanpohja_concat: avg(Moist1 7cm (?))',
+           'metsanpohja_concat: avg(Moist2 20cm (?))',
+           'metsanpohja_concat: avg(T1 5cm (C))',
+           'metsanpohja_concat: avg(T2 15cm (C))',
+           'metsanpohja_concat: avg(T3 30cm (C))',
+           'metsanpohja_concat: avg(T4 40cm (C))',
+           'concat: avg(SoilMoist-10cm (m3/m3))',
+           'concat: avg(SoilMoist-20cm (m3/m3))',
+           'concat: avg(T-5cm (C))',
+           'concat: avg(T-10cm (C))',
+           'concat: avg(T-20cm (C))',
+           'concat: avg(T-30cm (C))',
+           ]
+
+    for i in range(len(columns1)):
+        lettosuo_data[columns1[i]] = np.where(
+            lettosuo_data.index < '01-01-2018',
+            lettosuo_data[columns1[i]],
+            lettosuo_data[columns2[i]])
+
+    T_W_data = lettosuo_data[[
+           'Letto1_metsanpohja: avg(Moist1 7cm (m3/m3))',
+           'Letto1_metsanpohja: avg(Moist2 20cm (m3/m3))',
+           'Letto1_metsanpohja: avg(T1 5cm (C))',
+           'Letto1_metsanpohja: avg(T2 15cm (C))',
+           'Letto1_metsanpohja: avg(T3 30cm (C))',
+           'Letto1_metsanpohja: avg(T4 40cm (C))',
+           'Letto2_metsanpohja: avg(SoilMoist-10cm (m3/m3))',
+           'Letto2_metsanpohja: avg(SoilMoist-20cm (m3/m3))',
+           'Letto2_metsanpohja: avg(T-5cm (C))',
+           'Letto2_metsanpohja: avg(T-10cm (C))',
+           'Letto2_metsanpohja: avg(T-20cm (C))',
+           'Letto2_metsanpohja: avg(T-30cm (C))',
+           'Avohakkuu_meteo: STCH4avg',
+           'Avohakkuu_meteo: STCH5avg',
+           'Avohakkuu_meteo: STCH6avg',
+           'Avohakkuu_meteo: STCH7avg',
+           'Avohakkuu_meteo: SMCHA',
+           'Avohakkuu_meteo: SMCHB'
+           ]].copy()
+
+    T_W_data = T_W_data.rename(columns={
+           'Letto1_metsanpohja: avg(Moist1 7cm (m3/m3))':'Letto1_SMA',
+           'Letto1_metsanpohja: avg(Moist2 20cm (m3/m3))':'Letto1_SMB',
+           'Letto1_metsanpohja: avg(T1 5cm (C))':'Letto1_T5',
+           'Letto1_metsanpohja: avg(T2 15cm (C))':'Letto1_T15',
+           'Letto1_metsanpohja: avg(T3 30cm (C))':'Letto1_T30',
+           'Letto1_metsanpohja: avg(T4 40cm (C))':'Letto1_T40',
+           'Letto2_metsanpohja: avg(SoilMoist-10cm (m3/m3))':'Letto2_SMA',
+           'Letto2_metsanpohja: avg(SoilMoist-20cm (m3/m3))':'Letto2_SMB',
+           'Letto2_metsanpohja: avg(T-5cm (C))':'Letto2_T5',
+           'Letto2_metsanpohja: avg(T-10cm (C))':'Letto2_T10',
+           'Letto2_metsanpohja: avg(T-20cm (C))':'Letto2_T20',
+           'Letto2_metsanpohja: avg(T-30cm (C))':'Letto2_T30',
+           'Avohakkuu_meteo: SMCHA':'Clear_SMA',
+           'Avohakkuu_meteo: SMCHB':'Clear_SMB',
+           'Avohakkuu_meteo: STCH4avg':'Clear_T5',
+           'Avohakkuu_meteo: STCH5avg':'Clear_T10',
+           'Avohakkuu_meteo: STCH6avg':'Clear_T20',
+           'Avohakkuu_meteo: STCH7avg':'Clear_T30'
+           })
+
+    sites=['Letto1','Letto2','Clear']
+    variables=['_SMA', '_SMB', '_T5', '_T30']
+    plt.figure()
+    for i in range(len(variables)):
+        if i == 0:
+            ax1 = plt.subplot(len(variables),1,i+1)
+            T_W_data[[site + variables[i] for site in sites]].plot(ax=ax1)
+        else:
+            ax = plt.subplot(len(variables),1,i+1,sharex=ax1)
+            T_W_data[[site + variables[i] for site in sites]].plot(ax=ax)
+
+    readme = "\nSoil moisture data not ok?"
+    save_df_to_csv(T_W_data, "Lettosuo_Tsoil_2010_2018", readme=readme)
+
+    return lettosuo_data

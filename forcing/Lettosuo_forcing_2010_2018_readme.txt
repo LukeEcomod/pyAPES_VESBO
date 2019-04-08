@@ -1,6 +1,6 @@
 Readme for Lettosuo_forcing_2010_2018.csv
 
-Kersti Haahti, Luke 2019-03-20
+Kersti Haahti, Luke 2019-04-05
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 doy: Day of year [days]

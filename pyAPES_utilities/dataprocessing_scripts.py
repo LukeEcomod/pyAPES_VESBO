@@ -185,7 +185,7 @@ def read_lettosuo_data(starttime='01-01-2010',endtime='01-01-2019'):
     """
 
     # filepaths
-    forc_fp = ["H:/Lettosuo/Forcing_data/Annalea2/Letto1_EC.csv",
+    forc_fp = ["H:/Lettosuo/Forcing_data/Annalea2/Letto1_EC.csv",  # period end
                "H:/Lettosuo/Forcing_data/Annalea1/Letto1_meteo.csv",
                "H:/Lettosuo/Forcing_data/Annalea1/Letto1_metsanpohja.csv",
                "H:/Lettosuo/Forcing_data/FMI/jokioinen_meteo.txt",
@@ -195,7 +195,7 @@ def read_lettosuo_data(starttime='01-01-2010',endtime='01-01-2019'):
                "H:/Lettosuo/Forcing_data/FMI/jokioinen_prec2.txt",
                "H:/Lettosuo/Forcing_data/FMI/somero_meteo.txt",
                "H:/Lettosuo/Forcing_data/FMI/salo_kiikala_meteo.txt",
-               "H:/Lettosuo/Forcing_data/MikaK/osittaishakkuu_NEE_GPP_RECO.csv",
+               "H:/Lettosuo/Forcing_data/MikaK/osittaishakkuu_NEE_GPP_RECO.csv",  # period end
                "H:/Lettosuo/Forcing_data/MikaK/meteo_concat.csv",
                "H:/Lettosuo/Forcing_data/MikaK/metsanpohja_concat.csv"]
 
@@ -210,6 +210,9 @@ def read_lettosuo_data(starttime='01-01-2010',endtime='01-01-2019'):
             dat.index = dat.index - pd.Timedelta(hours=0.5)
         else:
             dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
+        if fp=="H:/Lettosuo/Forcing_data/MikaK/osittaishakkuu_NEE_GPP_RECO.csv":
+            # period end
+            dat.index = dat.index - pd.Timedelta(hours=0.5)
         if fp.split("/")[-2] == 'FMI':
             # UTC -> UTC + 2
             dat.index = dat.index + pd.Timedelta(hours=2)

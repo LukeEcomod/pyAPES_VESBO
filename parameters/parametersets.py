@@ -23,6 +23,13 @@ clearcut = single_lad_profiles(grid, fdir + 'letto2016_clearcut.txt', hs, plot=F
 lettosuo_parameters = {
         'count': 3,
         'canopy': {
+                'loc': {
+                        'lat': 60.63,
+                        'lon': 23.95
+                        },
+                'micromet': {
+                        'dPdx': 0.0
+                        },
                 'forestfloor': {
                         'bryophytes': {
                                 'hylocomium': {
@@ -98,8 +105,15 @@ lettosuo_parameters = {
         }
 
 lettosuo_parameters_clc = {
-        'count': 1,
+        'count': 2,
         'canopy': {
+                'loc': {
+                        'lat': 60.63,
+                        'lon': 23.95
+                        },
+                'micromet': {
+                        'dPdx': 0.0,
+                        },
                 'forestfloor': {
                         'bryophytes': {
                                 'hylocomium': {
@@ -144,6 +158,90 @@ lettosuo_parameters_clc = {
                         'shrubs': {
                                 'LAImax': 0.5,
                                 'lad': clearcut['lad']['shrubs'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        },
+                },
+        'soil': {
+                'grid': {
+                        'zh': zh
+                        },
+                'soil_properties': soil_properties,
+                'water_model': {
+                        'initial_condition':{
+                                'ground_water_level': -0.2
+                                },
+                        'lower_boundary': {  # lower boundary condition (type, value, depth)
+                               'type': 'impermeable',
+                               'value': None,
+                               'depth': -2.0
+                               },
+                       'drainage_equation': {  # drainage equation and drainage parameters
+                               'type': 'Hooghoudt',  #
+                               'depth': 0.8,  # drain depth [m]
+                               'spacing': 45.0,  # drain spacing [m]
+                               'width': 1.0,  # drain width [m]
+                               }
+                        }
+                }
+        }
+
+lettosuo_parameters_ctrl = {
+        'count': 1,
+        'canopy': {
+                'loc': {
+                        'lat': 60.63,
+                        'lon': 23.95
+                        },
+                'micromet': {
+                        'dPdx': 0.0
+                        },
+                'forestfloor': {
+                        'bryophytes': {
+                                'hylocomium': {
+                                        'ground_coverage': 0.0,
+                                        },
+                                'sphagnum': {
+                                        'ground_coverage': 0.0,
+                                        },
+                                'pleurozium': {
+                                        'ground_coverage': 0.5,
+                                        }
+                                },
+                        'litter': {
+                                'ground_coverage': 0.5
+                                },
+                        'baresoil': {
+                                'ground_coverage': 0.0
+                                }
+                        },
+                'planttypes': {
+                        'pine': {
+                                'LAImax': control['lai']['pine'],
+                                'lad': control['lad']['pine'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        'spruce': {
+                                'LAImax': control['lai']['spruce'],
+                                'lad': control['lad']['spruce'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        'decidious': {
+                                'LAImax': control['lai']['decid'],
+                                'lad': control['lad']['decid'],
+                                'rootp': {
+                                        'root_depth': 0.2
+                                        }
+                                    },
+                        'shrubs': {
+                                'LAImax': 0.8,
+                                'lad': control['lad']['shrubs'],
                                 'rootp': {
                                         'root_depth': 0.2
                                         }
