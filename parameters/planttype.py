@@ -230,9 +230,9 @@ Shrubs = {
             'sdur': 30.0
             },
         'photop': {
-            'Vcmax': 40.,
-            'Jmax': 79.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 0.9,  # 0.023*Vcmax
+            'Vcmax': 45.,
+            'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.0,  # 0.023*Vcmax
             'tresp': {
                 'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
                 'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)

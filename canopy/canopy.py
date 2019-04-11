@@ -26,7 +26,6 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
 from .constants import MOLAR_MASS_H2O, EPS
 
 from .radiation import Radiation

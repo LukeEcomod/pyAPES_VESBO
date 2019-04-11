@@ -157,9 +157,26 @@ def plot_wtd(results):
                      facecolor='r', alpha=0.3)
     plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
 
-    plot_timeseries_xr(results, 'soil_ground_water_level', colors=['k','b','r'], xticks=True)
+    plot_timeseries_xr(results, 'soil_ground_water_level', colors=['k','b','r','g','m'], xticks=True)
 
-def plot_energy(results,treatment='control'):
+def plot_snow(results):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df
+
+    # Read observed WTD
+    snow_depth = read_forcing("Lettosuo_meteo_2010_2018.csv", cols=['Snow_depth1','Snow_depth2','Snow_depth3'])
+
+    plt.figure()
+    ax=plt.subplot(3,1,1)
+    plot_timeseries_xr(results, 'forcing_air_temperature')
+    plt.subplot(3,1,2,sharex=ax)
+    plot_timeseries_xr(results, ['forcing_precipitation','canopy_throughfall'],unit_conversion={'unit':'mm/h', 'conversion':1e3*3600})
+    plt.subplot(3,1,3,sharex=ax)
+    plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
+    plot_timeseries_xr(results, 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3}, limits=False)
+
+def plot_energy(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -170,9 +187,29 @@ def plot_energy(results,treatment='control'):
     Data = Data[treatment]
     # period end (?)
     Data.index = Data.index - pd.Timedelta(hours=0.5)
-    plot_fluxes(results, Data, norain=True)
+    plot_fluxes(results, Data, norain=True,
+                res_var=['canopy_net_radiation','canopy_SWnet', 'canopy_SH','canopy_LE'],
+                Data_var=['NRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
 
-def plot_CO2(results,treatment='control'):
+def plot_fluxes_ebal(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    # period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+    Data['NEE'] *= 1.0 / 44.01e-3
+    Data['GPP'] *= -1.0 / 44.01e-3
+    Data['Reco'] *= 1.0 / 44.01e-3
+    plot_fluxes(results, Data, norain=True,
+                res_var=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_LE'],
+                Data_var=['NEE','GPP','Reco','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+
+def plot_CO2(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -187,4 +224,4 @@ def plot_CO2(results,treatment='control'):
     Data['GPP'] *= -1.0 / 44.01e-3
     Data['Reco'] *= 1.0 / 44.01e-3
     plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_respiration'],
-                Data_var=['NEE','GPP','Reco'], norain=True)
+                Data_var=['NEE','GPP','Reco'], norain=True, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)

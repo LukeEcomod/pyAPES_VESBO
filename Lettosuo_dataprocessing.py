@@ -237,6 +237,12 @@ def EC_data():
         data[variables[i] + ', not gapfilled'] = np.where(
                 data[flags[i]] == 0, data[variables[i]], np.nan)
 
+    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] < data['Letto1_meteo: avg(Glob (W/m2))'],
+                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
+    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] > 0.0,
+                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
+    data['control_NSWRAD'] = data['Letto1_meteo: avg(Glob (W/m2))'] - data['Letto1_meteo: avg(GlobRefl (W/m2))']
+
     lettosuo_EC = data[[
            'osittaishakkuu_energy: LE [W m-2], not gapfilled',
            'osittaishakkuu_energy: SH [W m-2], not gapfilled',
@@ -255,6 +261,7 @@ def EC_data():
            'Letto1_EC: LE (Wm-2)',
            'Letto1_EC: SH (W m-2)',
            'Letto1_meteo: avg(NetRad (W/m2))',
+           'control_NSWRAD',
            'Letto1_EC: NEE_South',
            'Letto1_EC: NEE_North',
            'Letto1_EC: GPP_S',
@@ -431,3 +438,26 @@ def Tsoil_wsoil_data(starttime='01-01-2010',endtime='01-01-2019'):
     save_df_to_csv(T_W_data, "Lettosuo_Tsoil_2010_2018", readme=readme)
 
     return lettosuo_data
+
+def fit_pf_paivanen():
+    from pyAPES_utilities.parameter_utilities import fit_pF
+
+    # heads [kPa]
+    head = [0.0001, 1, 3.2, 10, 20, 60, 100, 200, 500, 1000, 1500]
+    watcont_sedge = [[94.3, 68, 47.9, 35.5, 22, 18.4, 16.7, 12.6, 7.9, 6.3, -999],
+               [91.7, 82.9, 61.8, 35.9, 31.7, 25.2, 23.4, 19.2, 17.3, 14.4, -999],
+               [90.6, 86.2, 56.4, 36.4, 33.4, 29.8, 26.8, 23.5, 20.2, 16.4, -999],
+               [89.7, 85, 74.5, 53.4, 36, 29, 24.7, 22.1, 17.6, 14.7, -999],
+               [87.3, 85.4, 77.8, 64, 41.4, 28.8, 23.4, 22.7, 21.9, 17, -999],
+               [89.3, 86.5, 80.7, 52.5, 45.6, 35.4, 32, 25.1, 20.6, 18.4, -999],
+               [91, 89.9, 84.7, 60, -999, 33.8, 27.2, 29.3, -999, 17.2, 12.9],
+               [89.3, 87.2, 79.2, 59.8, 53.8, 46.3, 41.5, 36.1, 32, 28.6, -999],
+               [87.2, 77.7, 76.2, 56.4, -999, 33.3, 31.6, 28.8, -999, 17.3, 15.7],
+               [84.2, 83.7, 76, 56.6, 44.2, 41.2, 37.4, -999, 36.3, 32.6, -999],
+               [83.9, 80.7, 78.8, 67.1, 54.7, 41, 37.4, 35.2, 29.3, 27, -999],
+               [87.2, 84.3, 81.6, 71.7, 55.1, 43.4, 36.8, 33.4, 29, 27.3, -999],
+               [82.4, 81.8, 70.5, 57.5, 50.1, 48.2, 44.2, 42.5, 41.9, 32.4, -999],
+               [81.8, 77.7, 75.1, 64.7, 56.8, 43.4, 40, 32.6, 27.1, 27, -999]]
+
+    fit_pF(head, watcont_sedge, fig=True,percentage=True, kPa=True)
+    fit_pF(head, [np.average(watcont_sedge[1:], axis=0, weights=~np.isin(watcont_sedge[1:], -999)*1)], fig=True,percentage=True, kPa=True)

@@ -17,7 +17,7 @@ N = len(zh)
 # pf based on bulk density
 bd = [0.1047, 0.1454, 0.1591,0.1300, 0.1119, 0.1119, 0.1119]
 vp = [1, 5.75, 4.5, 4.5, 4.75, 6, 6]
-
+#vp = [1, 8, 8, 8, 8, 8, 8]
 #pf_para, Ksat = peat_hydrol_properties(bd, fig=plot, labels=['layer ' + str(i) for i in range(N)], ptype='C')
 pf_para, Ksat = peat_hydrol_properties(vp,  var='H', fig=plot, labels=['layer ' + str(i) for i in range(N)], ptype='C')
 
@@ -40,6 +40,11 @@ Khmult = [20.0, 10.0, 5.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kv
 #Khmult = [10.0, 10.0, 5.0, 5.0, 5.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
 Khsat = [Kvsat[i] * Khmult[i] for i in range(N)]
 
+#Khmult1 = [20.0, 10.0, 5.0, 5.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+#Khmult2 = [20.0, 10.0, 5.0, 5.0, 5.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+#Khmult3 = [30.0, 20.0, 5.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+#Khmult4 = [30.0, 20.0, 5.0, 5.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+
 soil_properties = {'pF': {  # vanGenuchten water retention parameters
                          'ThetaS': porosity,
                          'ThetaR': residual_water_content,
@@ -47,7 +52,11 @@ soil_properties = {'pF': {  # vanGenuchten water retention parameters
                          'n': pf_n
                          },
                   'saturated_conductivity_vertical': Kvsat,  # saturated vertical hydraulic conductivity [m s-1]
-                  'saturated_conductivity_horizontal': Khsat,  # saturated horizontal hydraulic conductivity [m s-1]
+                  'saturated_conductivity_horizontal': Khsat,
+#                                                        [Kvsat[i] * Khmult1[i] for i in range(N)],
+#                                                        [Kvsat[i] * Khmult2[i] for i in range(N)],
+#                                                        [Kvsat[i] * Khmult3[i] for i in range(N)],
+#                                                        [Kvsat[i] * Khmult4[i] for i in range(N)]),# saturated horizontal hydraulic conductivity [m s-1]
                   'solid_heat_capacity': None,  # [J m-3 (solid) K-1] - if None, estimated from organic/mineral composition
                   'solid_composition': {  # fractions of solid volume [-]
                                'organic': [1.0 for i in range(N)],

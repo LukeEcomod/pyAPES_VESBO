@@ -586,6 +586,7 @@ def photo_c3_bwb(photop, Qp, T, RH, ca, gb_c, gb_v, P=101300.0):
     theta = photop['theta']
     g1 = photop['g1']  # slope parameter
     g0 = photop['g0']
+    beta = photop['beta']
 
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))

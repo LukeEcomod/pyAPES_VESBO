@@ -69,7 +69,7 @@ def plot_fluxes(results, Data,
                 Data_var=['NRAD','SH','LE'],
                 sim_idx=0, fmonth=4, lmonth=9, norain=True):
 
-    N=len(res_var)
+    N=len(Data_var)
     res_var.append('forcing_precipitation')
 
     df = xarray_to_df(results, res_var, sim_idx=sim_idx)
@@ -99,9 +99,11 @@ def plot_fluxes(results, Data,
         plot_xy(Data[Data_var[i]][ix], Data[res_var[i]][ix], color=pal[i], axislabels=labels)
         if i == 0:
             ax1 = plt.subplot(N,4,(i*4+2,i*4+3))
+            plot_timeseries_df(Data, [res_var[i],Data_var[i]], colors=[pal[i],'k'], xticks=False,
+                       labels=['Modelled', 'Measured'], marker=[None, '.'])
         else:
             ax = plt.subplot(N,4,(i*4+2,i*4+3), sharex=ax1)
-        plot_timeseries_df(Data, [res_var[i],Data_var[i]], colors=[pal[i],'k'], xticks=False,
+            plot_timeseries_df(Data, [res_var[i],Data_var[i]], colors=[pal[i],'k'], xticks=True,
                        labels=['Modelled', 'Measured'], marker=[None, '.'])
         plt.title(results[res_var[i]].units, fontsize=10)
         plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)

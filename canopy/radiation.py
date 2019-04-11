@@ -1135,10 +1135,10 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     IbSky = 100.0
     IdSky = 100.0
 
-    if LAIz == None:
-        LAIz = np.ones(102)*float(LAI) / 100.0
-        LAIz[0] = 0.
-        LAIz[-1] = 0.
+#    if LAIz == None:
+#        LAIz = np.ones(102)*float(LAI) / 100.0
+#        LAIz[0] = 0.
+#        LAIz[-1] = 0.
     N = len(LAIz)
 
     # for LW calculations
@@ -1168,4 +1168,4 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     if method == "canopy_lw_ZhaoQualls":
         print("------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------")
         LWnet, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi, soil_emi=soil_emi, PlotFigs=True)
-        print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
+        print(LWdn[-1],LWdn[-1]-LWup[-1])

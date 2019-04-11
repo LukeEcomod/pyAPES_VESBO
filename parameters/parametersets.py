@@ -188,15 +188,30 @@ lettosuo_parameters_clc = {
                 }
         }
 
+alpha=0.3
+
 lettosuo_parameters_ctrl = {
         'count': 1,
         'canopy': {
+#                'ctr': { # speed up!
+#                        'WMA': True,  # well-mixed assumption
+#                        'Ebal': False,  # no energy balance
+#                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95
                         },
                 'micromet': {
                         'dPdx': 0.0
+                        },
+                'radiation':{
+                        'Par_alb': 0.1,
+                        'Nir_alb': 0.43
+                        },
+                'interception':{
+                        'wmaxsnow': 0.75e-3, #1.6e-03, 0.75e-3, 0.75e-3),  # maximum interception storage capacity for snow [m per unit of LAI]
+                        'Tmin': 0.0,  # temperature below which all is snow [degC]
+                        'Tmax': 2.0, #2.0, 1.0, 2.0),  # temperature above which all is water [degC]
                         },
                 'forestfloor': {
                         'bryophytes': {
@@ -223,28 +238,84 @@ lettosuo_parameters_ctrl = {
                                 'lad': control['lad']['pine'],
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 55.,
+                                    'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.3,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 2.3,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                    },
                                     },
                         'spruce': {
                                 'LAImax': control['lai']['spruce'],
                                 'lad': control['lad']['spruce'],
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 60.,
+                                    'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.4,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 2.3,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                    },
                                     },
                         'decidious': {
                                 'LAImax': control['lai']['decid'],
                                 'lad': control['lad']['decid'],
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 45.,
+                                    'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.0,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 4.0,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                    },
                                     },
                         'shrubs': {
                                 'LAImax': 0.8,
                                 'lad': control['lad']['shrubs'],
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 45.,
+                                    'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.0,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 4.0,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                    },
                                     },
                         },
                 },

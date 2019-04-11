@@ -178,7 +178,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0)
 
     save_df_to_csv(dat, output_file, readme=readme,fp=direc + "forcing/")
 
-def read_lettosuo_data(starttime='01-01-2010',endtime='01-01-2019'):
+def read_lettosuo_data(starttime='09-01-2009',endtime='01-01-2019'):
 
     """
     Reads data related to lettosuo case to dataframe.
@@ -309,17 +309,42 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False):
             lettosuo_data['Letto1_metsanpohja: avg(Rain (mm))'],
             30.0 * lettosuo_data['metsanpohja_concat: avg(Rain (?))'])
 
-    # Lettosuo
+    # Lettosuo, old
     # consider prec data unrealiable when Tair < 2C
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!']=np.where(
             lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
             np.nan, lettosuo_data['Letto1_metsanpohja: avg(Rain (mm))'])
+
     # if rolling 3 day mean prec less than 10% of jokionen rolling mean, remove
     Prec_daily_ref = df['Prec_ref'].rolling(3*48, 1).sum()
     Prec_daily_let = lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'].fillna(0).rolling(3*48, 1).sum()
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!']=np.where(
             Prec_daily_let < 0.1 * Prec_daily_ref,
             np.nan, lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'])
+
+    df, info = fill_gaps(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!',
+                                        'somero_meteo: Precipitation amount',
+                                        'jokioinen_prec1: Prec [mm h-1]',
+                                        'jokioinen_meteo: Precipitation amount',
+                                        'jokioinen_prec2: Prec [mm h-1]']],
+                         'Prec_old', 'Lettosuo gapfilled precipitaion [mm/30min]',
+                         fill_nan=0.0, plot=plot)
+    frames.append(df)
+    readme += info
+
+    # Lettosuo
+    # consider prec data unrealiable when Tair < 2C
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!']=np.where(
+            lettosuo_data['Letto1_metsanpohja: avg(Temp (C))'] < 2.0,
+            np.nan, lettosuo_data['Letto1_metsanpohja: avg(Rain (mm))'])
+    # clearly no rain event at lettosuo (wtd data)
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index > '07-03-2011') & (lettosuo_data.index < '07-05-2011')]=0.0
+    # problematic sections
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index > '01-01-2016') & (lettosuo_data.index < '08-08-2016')]=np.nan
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index > '01-01-2018') & (lettosuo_data.index < '04-24-2018')]=np.nan
 
     df, info = fill_gaps(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!',
                                         'somero_meteo: Precipitation amount',
@@ -420,8 +445,28 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False):
     frames.append(df)
     readme += info
 
+    # -- Snow ---
+    # Jokioinen
+    df, info = fill_gaps(lettosuo_data[['jokioinen_meteo: Snow depth']],
+                         'Snow_depth1', 'Jokioinen snow depth [cm]',
+                         fill_nan=np.nan, plot=plot)
+    frames.append(df)
+    readme += info
+    # Somero
+    df, info = fill_gaps(lettosuo_data[['somero_meteo: Snow depth']],
+                         'Snow_depth2', 'Somero snow depth [cm]',
+                         fill_nan=np.nan, plot=plot)
+    frames.append(df)
+    readme += info
+    # Salo kiikala
+    df, info = fill_gaps(lettosuo_data[['salo_kiikala_meteo: Snow depth']],
+                         'Snow_depth3', 'Salo-kiikala snow depth [cm]',
+                         fill_nan=np.nan, plot=plot)
+    frames.append(df)
+    readme += info
+
     letto_data=pd.concat(frames, axis=1)
-    letto_data[['Prec_ref', 'Prec', 'Tair', 'Rg', 'U', 'Ustar', 'RH', 'P']].plot(subplots=True,kind='line')
+    letto_data[['Prec_ref', 'Prec', 'Tair', 'Rg', 'U', 'Ustar', 'RH', 'P','Snow_depth1','Snow_depth2','Snow_depth3']].plot(subplots=True,kind='line')
 
     save_df_to_csv(letto_data, "Lettosuo_meteo_2010_2018", readme=readme, fp=direc + "forcing/")
 

@@ -6,8 +6,8 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2010-05-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-10-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2009-09-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2019-01-01",  #"2018-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'results_directory':'results/case_Lettosuo/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
@@ -23,7 +23,7 @@ gpara = {
                       ['canopy_temperature','air temperature [degC]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_friction_velocity','canopy friction velocity [m s-1]', ('date', 'simulation', 'canopy')],
-#                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
+                      ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
 #                      ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
                       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
                       ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
@@ -56,8 +56,8 @@ gpara = {
 #                      ['canopy_sensible_heat_flux', 'sensible heat flux [W m-2]', ('date', 'simulation', 'canopy')],
                       ['canopy_SH', 'sensible heat flux [W m-2]', ('date', 'simulation')],
                       ['canopy_LE', 'latent heat flux [W m-2]', ('date', 'simulation')],
-#                      ['canopy_SWnet', 'net shortwave radiation [W m-2]', ('date', 'simulation')],
-#                      ['canopy_LWnet', 'net longwave radiation [W m-2]', ('date', 'simulation')],
+                      ['canopy_SWnet', 'net shortwave radiation [W m-2]', ('date', 'simulation')],
+                      ['canopy_LWnet', 'net longwave radiation [W m-2]', ('date', 'simulation')],
                       ['canopy_net_radiation', 'net radiation [W m-2]', ('date', 'simulation')],
                       ['canopy_NEE', 'net ecosystem exchage [umol m-2 s-1]', ('date', 'simulation')],
                       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
