@@ -111,6 +111,8 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0)
 
     # zenith angle
     jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0
+# TEST (PERIOD START)
+    jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0 + dt / 2.0 / 86400.0
     dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=timezone)
     cols.append('Zen')
     readme += "\nZen: Zenith angle [rad], (lat = %.2f, lon = %.2f)" % (lat, lon)
