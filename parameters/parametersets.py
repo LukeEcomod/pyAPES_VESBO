@@ -193,10 +193,10 @@ alpha=0.3
 lettosuo_parameters_ctrl = {
         'count': 1,
         'canopy': {
-#                'ctr': { # speed up!
-#                        'WMA': True,  # well-mixed assumption
-#                        'Ebal': False,  # no energy balance
-#                        },
+                'ctr': { # speed up!
+                        'WMA': True,  # well-mixed assumption
+                        'Ebal': False,  # no energy balance
+                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95
@@ -207,11 +207,6 @@ lettosuo_parameters_ctrl = {
                 'radiation':{
                         'Par_alb': 0.1,
                         'Nir_alb': 0.43
-                        },
-                'interception':{
-                        'wmaxsnow': 0.75e-3, #1.6e-03, 0.75e-3, 0.75e-3),  # maximum interception storage capacity for snow [m per unit of LAI]
-                        'Tmin': 0.0,  # temperature below which all is snow [degC]
-                        'Tmax': 2.0, #2.0, 1.0, 2.0),  # temperature above which all is water [degC]
                         },
                 'forestfloor': {
                         'bryophytes': {

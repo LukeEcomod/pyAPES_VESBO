@@ -174,7 +174,7 @@ def plot_snow(results):
     plot_timeseries_xr(results, ['forcing_precipitation','canopy_throughfall'],unit_conversion={'unit':'mm/h', 'conversion':1e3*3600})
     plt.subplot(3,1,3,sharex=ax)
     plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
-    plot_timeseries_xr(results, 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3}, limits=False)
+    plot_timeseries_xr(results, 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3})
 
 def plot_energy(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
 

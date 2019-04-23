@@ -1,6 +1,6 @@
 Readme for Lettosuo_meteo_2010_2018.csv
 
-Kersti Haahti, Luke 2019-04-11
+Kersti Haahti, Luke 2019-04-23
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 Prec_ref2: Somero gapfilled precipitaion [mm/30min]
@@ -23,12 +23,12 @@ Prec_old: Lettosuo gapfilled precipitaion [mm/30min]
   flag 4 (19.65%): jokioinen_prec2: Prec [mm h-1]
   flag 5 (0.30%): filled with Prec_old = 0.0
 Prec: Lettosuo gapfilled precipitaion [mm/30min]
-  flag 0 (47.27%): Letto1_metsanpohja: avg(Rain (mm)) !sections removed!
-  flag 1 (25.59%): somero_meteo: Precipitation amount
-  flag 2 (10.55%): jokioinen_prec1: Prec [mm h-1]
-  flag 3 (0.01%): jokioinen_meteo: Precipitation amount
-  flag 4 (16.36%): jokioinen_prec2: Prec [mm h-1]
-  flag 5 (0.23%): filled with Prec = 0.0
+  flag 0 (34.80%): Letto1_metsanpohja: avg(Rain (mm)) !sections removed!
+  flag 1 (32.27%): somero_meteo: Precipitation amount
+  flag 2 (13.01%): jokioinen_prec1: Prec [mm h-1]
+  flag 3 (0.03%): jokioinen_meteo: Precipitation amount
+  flag 4 (19.60%): jokioinen_prec2: Prec [mm h-1]
+  flag 5 (0.30%): filled with Prec = 0.0
 Tair: Air temperature [degC]
   flag 0 (91.44%): Letto1_meteo: avg(Temp (C))
   flag 1 (5.04%): somero_meteo: Air temperature
