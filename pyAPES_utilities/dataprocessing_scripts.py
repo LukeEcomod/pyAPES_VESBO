@@ -126,13 +126,14 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0)
         f_cloud, f_diff, emi_sky = compute_clouds_rad(dat['doy'].values,
                                                       dat['Zen'].values,
                                                       dat['Rg'].values,
-                                                      dat['H2O'].values * dat['P'].values)
+                                                      dat['H2O'].values * dat['P'].values,
+                                                      dat['Tair'].values)
 
     if 'LWin' not in dat:
         print('Longwave radiation estimated')
         # estimated long wave budget
         b = 5.6697e-8  # Stefan-Boltzman constant (W m-2 K-4)
-        dat['LWin'] = 0.98 * emi_sky * b *(dat['Tair'] + 273.15)**4 # Wm-2 downwelling LW
+        dat['LWin'] = emi_sky * b *(dat['Tair'] + 273.15)**4 # Wm-2 downwelling LW
     cols.append('LWin')
     readme += "\nLWin: Downwelling long wave radiation [W/m2]"
 

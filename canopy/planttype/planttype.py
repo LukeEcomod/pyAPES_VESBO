@@ -176,10 +176,10 @@ class PlantType(object):
         self.photop['Jmax'] =  f * self.pheno_state * self.photop0['Jmax']
         self.photop['Rd'] =  f * self.pheno_state * self.photop0['Rd']
 
-# TEST
-        self.photop['Vcmax'] = f * self.pheno_state * self.relative_LAI * self.photop0['Vcmax']
-        self.photop['Jmax'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Jmax']
-        self.photop['Rd'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Rd']
+## TEST
+#        self.photop['Vcmax'] = f * self.pheno_state * self.relative_LAI * self.photop0['Vcmax']
+#        self.photop['Jmax'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Jmax']
+#        self.photop['Rd'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Rd']
 
         # water stress responses
         if self.Switch_WaterStress == 'Rew':

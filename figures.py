@@ -50,7 +50,7 @@ def plot_vegetation():
     plt.subplot(1,4,2)
     plt.annotate('b', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
     plot_regression(dat['for_cov'], dat['for_bm'],
-                    axislabels={'x':'coverage [%]', 'y':''}, title='Forbs')
+                    axislabels={'x':'coverage [%]', 'y':''}, title='Herbs')
     plt.subplot(1,4,3)
     plt.annotate('c', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
     plot_regression(dat['shr_cov'], dat['shr_bm'],
@@ -60,9 +60,9 @@ def plot_vegetation():
     plot_regression(dat['bm'], dat['LAI'], alpha=0.5, title='All',
                     axislabels={'x':'biomass [g m$^{-2}$]', 'y':'LAI [m$^2$ m$^{-2}$]'})
     plt.tight_layout()
-#    plt.savefig('figures/case_Lettosuo/vege_regressions.png',dpi=300, transparent=False)
+    plt.savefig('figures/case_Lettosuo/vege_regressions.png',dpi=300, transparent=False)
 
-    fp = r'H:\Lettosuo\aluskasvillisuus\inventory_data.txt'
+    fp = r'H:\Lettosuo\aluskasvillisuus\inventory_data_clc_mounding.txt'
     dat = pd.read_csv(fp,index_col=0)
     labels=['SP$_{\mathrm{all},2009}$', 'VP$_{\mathrm{clc},2015}$', 'VP$_{\mathrm{ref},2015}$', 'SP$_{\mathrm{ref},2017}$', 'VP$_{\mathrm{ref},2017}$', 'SP$_{\mathrm{par},2017}$', 'SP$_{\mathrm{par},2018}$', 'VP$_{\mathrm{clc},2017}$', 'VP$_{\mathrm{clc},2018}$']
     pos = (-0.16,1.02)
@@ -73,7 +73,7 @@ def plot_vegetation():
     plt.annotate('reference', (1.2,70))
     plt.annotate(' partial\nharvest', (4.9,65))
     plt.annotate('clear-cut', (6.9,70))
-    dat[['seedlings','shrubs','graminoid','forbs']].plot(kind='bar', stacked=True, ax=ax1, colors=vege, width=width)
+    dat[['seedlings','shrubs','graminoid','herbs']].plot(kind='bar', stacked=True, ax=ax1, colors=vege, width=width)
     plt.plot([4.5, 4.5],[0,1110],'--k')
     plt.plot([6.5, 6.5],[0,1110],'--k')
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
@@ -92,7 +92,7 @@ def plot_vegetation():
 
     ax2=plt.subplot(2,1,2)
     plt.annotate('b', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
-    dat[['moss','litter','baresoil','seedlings','shrubs','graminoid','forbs']].plot(kind='bar', stacked=True, ax=ax2, colors=ff, width=width)
+    dat[['moss','litter','baresoil','seedlings','shrubs','graminoid','herbs']].plot(kind='bar', stacked=True, ax=ax2, colors=ff, width=width)
     plt.plot([1, 2],[110,110],'ok', label='LAI estimated', markersize=4)
     plt.plot([1, 2],[110,110],'xk', label='LAI measured', markersize=4)
     handles, labels1 = ax2.get_legend_handles_labels()
@@ -108,7 +108,7 @@ def plot_vegetation():
     ax2.set_xticklabels(labels)
     plt.xticks(rotation=65)
     plt.tight_layout()
-#    plt.savefig('figures/case_Lettosuo/vege_inventories.png',dpi=300, transparent=False)
+    plt.savefig('figures/case_Lettosuo/vege_inventories.png',dpi=300, transparent=False)
 
 # %% Plot lad profile
 from pyAPES_utilities.plotting import plot_lad_profiles
@@ -187,9 +187,10 @@ def plot_energy(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
     Data = Data[treatment]
     # period end (?)
     Data.index = Data.index - pd.Timedelta(hours=0.5)
+    Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
     plot_fluxes(results, Data, norain=True,
-                res_var=['canopy_net_radiation','canopy_SWnet', 'canopy_SH','canopy_LE'],
-                Data_var=['NRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+                res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE'],
+                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
 
 def plot_fluxes_ebal(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
 
@@ -223,5 +224,6 @@ def plot_CO2(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
     Data['NEE'] *= 1.0 / 44.01e-3
     Data['GPP'] *= -1.0 / 44.01e-3
     Data['Reco'] *= 1.0 / 44.01e-3
-    plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_respiration'],
-                Data_var=['NEE','GPP','Reco'], norain=True, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+    Data['GPP2'] = Data['Reco'] - Data['NEE']
+    plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration'],
+                Data_var=['NEE','GPP','GPP2','Reco'], norain=True, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)

@@ -132,6 +132,8 @@ class CanopyModel(object):
         self.rad = rad[self.ix_roots]
         # total root area index [m2 m-2]
         self.RAI = sum([pt.Roots.RAI for pt in self.planttypes])
+        # distribution of roots [-]
+        self.root_distr = self.rad * dz_soil[self.ix_roots] / self.RAI
 
         # canopy height [m]
         if len(np.where(self.lad > 0)[0]) > 0:
@@ -443,6 +445,7 @@ class CanopyModel(object):
                 'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'][0],  # comes in for whle rooting depth
                 'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
                 'iteration': iter_no,
+                'root_distribution': self.root_distr
             }
 
             ff_forcing = {
@@ -456,7 +459,7 @@ class CanopyModel(object):
                 'wind_speed': U[1],
                 'friction_velocity': ustar[1],
                 'soil_temperature': forcing['soil_temperature'],
-                'soil_water_potential': forcing['soil_water_potential'][0],  # comes in for whle rooting depth
+                'soil_water_potential': forcing['soil_water_potential'][0],  # comes in for whole rooting depth
                 'soil_volumetric_water': forcing['soil_volumetric_water'],
                 'soil_volumetric_air': forcing['soil_volumetric_water'],
                 'soil_pond_storage': forcing['soil_pond_storage']

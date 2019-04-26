@@ -193,10 +193,10 @@ alpha=0.3
 lettosuo_parameters_ctrl = {
         'count': 1,
         'canopy': {
-                'ctr': { # speed up!
-                        'WMA': True,  # well-mixed assumption
-                        'Ebal': False,  # no energy balance
-                        },
+#                'ctr': { # speed up!
+#                        'WMA': True,  # well-mixed assumption
+#                        'Ebal': False,  # no energy balance
+#                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95

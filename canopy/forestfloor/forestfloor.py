@@ -226,11 +226,11 @@ class ForestFloor(object):
 
         # --- Soil respiration ---
 
-        fluxes['respiration'] = soil_respiration(
+        fluxes['respiration'] = sum(parameters['root_distribution'] * soil_respiration(
             self.baresoil.properties['respiration'],
             forcing['soil_temperature'],
             forcing['soil_volumetric_water'],
-            forcing['soil_volumetric_air'])
+            forcing['soil_volumetric_air']))
 
         if self.snowpack.snowcover():  # snow on the ground
 
@@ -239,11 +239,11 @@ class ForestFloor(object):
             fluxes['ground_heat'] += (
                 0.01 * parameters['soil_thermal_conductivity']
                 / abs(parameters['soil_depth'])
-                * (forcing['air_temperature'] - forcing['soil_temperature'])
+                * (forcing['air_temperature'] - forcing['soil_temperature'][0])
             )
 
             for bryo in self.bryotypes:
-                states['bryo.temperature'] = 0.0
+                states['bryo_temperature'] = 0.0
                 states['bryo_water_storage'] += bryo.coverage * bryo.old_water_storage / WATER_DENSITY
                 states['bryo_carbon_pool'] += bryo.old_carbon_pool
 
@@ -259,7 +259,7 @@ class ForestFloor(object):
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
                     'friction_velocity': forcing['friction_velocity'],
-                    'soil_temperature': forcing['soil_temperature'],
+                    'soil_temperature': forcing['soil_temperature'][0],
                     'soil_pond_storage': forcing['soil_pond_storage'],
                     'soil_water_potential': forcing['soil_water_potential']
                 }
@@ -337,7 +337,7 @@ class ForestFloor(object):
                     'air_temperature': forcing['air_temperature'],
                     'wind_speed': forcing['wind_speed'],
                     'friction_velocity': forcing['friction_velocity'],
-                    'soil_temperature': forcing['soil_temperature'],
+                    'soil_temperature': forcing['soil_temperature'][0],
                     'soil_pond_storage': forcing['soil_pond_storage'],
                     'soil_water_potential': forcing['soil_water_potential']
                 }
@@ -405,7 +405,7 @@ class ForestFloor(object):
                     'h2o': forcing['h2o'],
                     'air_pressure': forcing['air_pressure'],
                     'forestfloor_temperature': self.temperature,
-                    'soil_temperature': forcing['soil_temperature'],
+                    'soil_temperature': forcing['soil_temperature'][0],
                     'soil_water_potential': forcing['soil_water_potential'],
                     'par': forcing['par'],
                 }

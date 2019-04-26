@@ -212,10 +212,10 @@ class Model(object):
             # properties of first soil node
 
             canopy_forcing = {
-                'soil_temperature': self.soil.heat.T[0],
+                'soil_temperature': self.soil.heat.T[self.canopy_model.ix_roots],
                 'soil_water_potential': self.soil.water.h[self.canopy_model.ix_roots],
-                'soil_volumetric_water': self.soil.heat.Wliq[0],
-                'soil_volumetric_air': self.soil.heat.Wair[0],
+                'soil_volumetric_water': self.soil.heat.Wliq[self.canopy_model.ix_roots],
+                'soil_volumetric_air': self.soil.heat.Wair[self.canopy_model.ix_roots],
                 'soil_pond_storage': self.soil.water.h_pond,
                 'wind_speed': self.forcing['U'].iloc[k],
                 'air_temperature': self.forcing['Tair'].iloc[k],

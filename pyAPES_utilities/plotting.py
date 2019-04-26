@@ -72,7 +72,7 @@ def plot_fluxes(results, Data,
     N=len(Data_var)
     res_var.append('forcing_precipitation')
 
-    df = xarray_to_df(results, res_var, sim_idx=sim_idx)
+    df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
 
     dates = Data.index
@@ -388,7 +388,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
     plt.legend(frameon=False, borderpad=0.0, labelspacing=0.1, loc="upper right",bbox_to_anchor=(1.1,1.1))
     plt.tight_layout()
 
-def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=0.2):
+def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=0.05):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
     Args:
