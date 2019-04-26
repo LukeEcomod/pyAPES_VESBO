@@ -365,11 +365,9 @@ def _append_results(group, step, step_results, results):
 
     return results
 
-#if __name__ == 'main':
-#    import logging
-#    from parameters.general import logging_configuration
-#    from logging.config import dictConfig
-#    dictConfig(logging_configuration)
+if __name__ == '__main__':
 
-#    driver(create_ncf=True, dbhfile='letto2014.txt')
+    from parameters.parametersets import lettosuo_parameters_ctrl
+    outputfile=driver(create_ncf=True, parametersets=lettosuo_parameters_ctrl)
 
+    print(outputfile)
