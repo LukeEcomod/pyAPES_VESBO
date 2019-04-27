@@ -1,14 +1,15 @@
 #!/bin/bash -l
 # created: Apr 26, 2019 1:28 PM
 # author: haahtike
-#SBATCH -J pyAPES_test
-#SBATCH -o pyAPES_test_%j
+#SBATCH -J pyAPES_lettosuo
+#SBATCH -o lettosuo_out_%j
+#SBATCH -e lettosuo_err_%j
 #SBATCH --mail-type=END
 #SBATCH --mail-user=kersti.haahti@luke.fi
-#SBATCH --mem-per-cpu=100
-#SBATCH --time=00:06:00
+#SBATCH --mem-per-cpu=1000
+#SBATCH --time=00:01:00
 #SBATCH --ntasks=1
-#SBATCH --partition=serial
+#SBATCH --partition=test
 
 module load python-env/3.5.3
 

@@ -6,8 +6,8 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2010-06-01",  #"2009-10-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2010-07-01",  #"2019-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2009-10-01",  #"2009-10-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2019-01-01",  #"2019-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'results_directory':'results/case_Lettosuo/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
@@ -158,27 +158,27 @@ parallel_logging_configuration = {
                 'model': {
                     'class': 'logging.Formatter',
                     'format': '%(process)d %(levelname)s %(name)s %(funcName)s %(message)s'},
-                },
+        },
         'handlers': {
                 'console': {
                         'class' : 'logging.StreamHandler',
                         'formatter': 'model',
                         'level': 'INFO'  # CRITICAL, ERROR, WARNING, INFO, DEBUG
-                        },
+                },
                 'pyAPES_file': {
                         'class': 'logging.FileHandler',
-                        'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'level': 'WARNING',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
                         'formatter': 'model',
                         'filename': 'pyAPES.log',
                         'mode': 'w',  # a == append, w == overwrite
-                        },
+                },
                 'parallelAPES_file': {
                         'class': 'logging.FileHandler',
                         'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
                         'formatter': 'default',
                         'filename': 'parallelAPES.log',
                         'mode': 'w',  # a == append, w == overwrite
-                        },
+                },
         },
         'loggers': {
                 'pyAPES': {
@@ -186,21 +186,22 @@ parallel_logging_configuration = {
                         'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
                         'propagate': True,
                         },
-        #        'canopy':{
-        #                #'handlers': ['file'],
-        #                'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
-        #                },
-        #        'soil':{
-        #                #'handlers': ['file'],
-        #                'level': 'DEBUG',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
-        #                },
+                'canopy':{
+                        #'handlers': ['file'],
+                        'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagete': True,
+                        },
+                'soil':{
+                        #'handlers': ['file'],
+                        'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+                        'propagete': True,
                 },
+        },
         'root': {
-                'level': 'DEBUG',
+                'level': 'INFO',
                 'handlers': ['console', 'parallelAPES_file']
-                }
         }
-
+    }
 
 #  output_folder: "results"
 #  output_format: "netcdf"

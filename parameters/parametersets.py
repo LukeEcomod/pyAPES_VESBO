@@ -19,16 +19,30 @@ control = single_lad_profiles(grid, fdir + 'letto2014.txt', hs, plot=False, biom
 partial = single_lad_profiles(grid, fdir + 'letto2016_partial.txt', hs, plot=False, biomass_function='marklund_mod')
 clearcut = single_lad_profiles(grid, fdir + 'letto2016_clearcut.txt', hs, plot=False, biomass_function='marklund_mod')
 
+alpha=0.3
+
 # spefify as one values (same for all simulations) or tuple of length 'count'
 lettosuo_parameters = {
         'count': 3,
         'canopy': {
+                'ctr': { # speed up!
+                        'WMA': True,  # well-mixed assumption
+                        'Ebal': False,  # no energy balance
+                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95
                         },
                 'micromet': {
                         'dPdx': 0.0
+                        },
+                'radiation':{
+                        'Par_alb': 0.1,
+                        'Nir_alb': 0.43
+                        },
+                'interception':{
+                        'wmax': 0.35e-03,
+                        'wmaxsnow': 1.4e-03
                         },
                 'forestfloor': {
                         'bryophytes': {
@@ -55,29 +69,85 @@ lettosuo_parameters = {
                                 'lad': (control['lad']['pine'], partial['lad']['pine'], clearcut['lad']['pine']),
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 55.,
+                                    'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.3,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 2.3,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
+                                },
                         'spruce': {
                                 'LAImax': (control['lai']['spruce'], partial['lai']['spruce'], clearcut['lai']['spruce']),
                                 'lad': (control['lad']['spruce'], partial['lad']['spruce'], clearcut['lad']['spruce']),
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 60.,
+                                    'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.4,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 2.3,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
+                                },
                         'decidious': {
                                 'LAImax': (control['lai']['decid'], partial['lai']['decid'], clearcut['lai']['decid']),
                                 'lad': (control['lad']['decid'], partial['lad']['decid'], clearcut['lad']['decid']),
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 45.,
+                                    'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.0,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 4.0,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
+                                },
                         'shrubs': {
                                 'LAImax': (0.8, 0.8, 0.5),
                                 'lad': (control['lad']['shrubs'], partial['lad']['shrubs'], clearcut['lad']['shrubs']),
                                 'rootp': {
                                         'root_depth': 0.2
-                                        }
+                                        },
+                                'photop': {
+                                    'Vcmax': 45.,
+                                    'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.0,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 4.0,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
+                                },
                         },
                 },
         'soil': {
@@ -193,10 +263,10 @@ alpha=0.3
 lettosuo_parameters_ctrl = {
         'count': 1,
         'canopy': {
-#                'ctr': { # speed up!
-#                        'WMA': True,  # well-mixed assumption
-#                        'Ebal': False,  # no energy balance
-#                        },
+                'ctr': { # speed up!
+                        'WMA': True,  # well-mixed assumption
+                        'Ebal': False,  # no energy balance
+                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95
@@ -207,6 +277,10 @@ lettosuo_parameters_ctrl = {
                 'radiation':{
                         'Par_alb': 0.1,
                         'Nir_alb': 0.43
+                        },
+                'interception':{
+                        'wmax': 0.35e-03,
+                        'wmaxsnow': 1.4e-03
                         },
                 'forestfloor': {
                         'bryophytes': {
@@ -248,7 +322,7 @@ lettosuo_parameters_ctrl = {
                                     'g1': 2.3,
                                     'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
-                                    },
+                                },
                         'spruce': {
                                 'LAImax': control['lai']['spruce'],
                                 'lad': control['lad']['spruce'],
@@ -269,7 +343,7 @@ lettosuo_parameters_ctrl = {
                                     'g1': 2.3,
                                     'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
-                                    },
+                                },
                         'decidious': {
                                 'LAImax': control['lai']['decid'],
                                 'lad': control['lad']['decid'],
@@ -290,7 +364,7 @@ lettosuo_parameters_ctrl = {
                                     'g1': 4.0,
                                     'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
-                                    },
+                                },
                         'shrubs': {
                                 'LAImax': 0.8,
                                 'lad': control['lad']['shrubs'],
@@ -311,7 +385,7 @@ lettosuo_parameters_ctrl = {
                                     'g1': 4.0,
                                     'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
-                                    },
+                                },
                         },
                 },
         'soil': {
