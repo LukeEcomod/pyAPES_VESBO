@@ -73,7 +73,7 @@ gpara = {
                       ['soil_drainage', 'subsurface drainage [m s-1]', ('date', 'simulation')],
                       ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
                       ['soil_volumetric_water_content', 'soil water content [m3/m3]', ('date', 'simulation', 'soil')],
-#                      ['soil_volumetric_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
+                      ['soil_volumetric_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
 #                      ['soil_thermal_conductivity', 'thermal conductivity [W m-1 K-1]', ('date', 'simulation', 'soil')],
                       ['canopy_water_closure', 'interception model mass balance error [m s-1]', ('date', 'simulation')],
                       ['canopy_energy_closure', 'energy closure in canopy [W m-2]', ('date', 'simulation')],

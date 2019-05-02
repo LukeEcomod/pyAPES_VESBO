@@ -20,15 +20,16 @@ partial = single_lad_profiles(grid, fdir + 'letto2016_partial.txt', hs, plot=Fal
 clearcut = single_lad_profiles(grid, fdir + 'letto2016_clearcut.txt', hs, plot=False, biomass_function='marklund_mod')
 
 alpha=0.3
+root_depth=0.2
 
 # spefify as one values (same for all simulations) or tuple of length 'count'
 lettosuo_parameters = {
         'count': 3,
         'canopy': {
-                'ctr': { # speed up!
-                        'WMA': True,  # well-mixed assumption
-                        'Ebal': False,  # no energy balance
-                        },
+#                'ctr': { # speed up!
+#                        'WMA': True,  # well-mixed assumption
+#                        'Ebal': False,  # no energy balance
+#                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95
@@ -68,7 +69,7 @@ lettosuo_parameters = {
                                 'LAImax': (control['lai']['pine'], partial['lai']['pine'], clearcut['lai']['pine']),
                                 'lad': (control['lad']['pine'], partial['lad']['pine'], clearcut['lad']['pine']),
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
                                     'Vcmax': 55.,
@@ -81,7 +82,7 @@ lettosuo_parameters = {
                                         },
                                     'alpha': alpha,
                                     'theta': 0.7,
-                                    'g1': 2.3,
+                                    'g1': 2.5,
                                     'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
                                 },
@@ -89,7 +90,7 @@ lettosuo_parameters = {
                                 'LAImax': (control['lai']['spruce'], partial['lai']['spruce'], clearcut['lai']['spruce']),
                                 'lad': (control['lad']['spruce'], partial['lad']['spruce'], clearcut['lad']['spruce']),
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
                                     'Vcmax': 60.,
@@ -102,7 +103,7 @@ lettosuo_parameters = {
                                         },
                                     'alpha': alpha,
                                     'theta': 0.7,
-                                    'g1': 2.3,
+                                    'g1': 2.5,
                                     'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
                                 },
@@ -110,12 +111,12 @@ lettosuo_parameters = {
                                 'LAImax': (control['lai']['decid'], partial['lai']['decid'], clearcut['lai']['decid']),
                                 'lad': (control['lad']['decid'], partial['lad']['decid'], clearcut['lad']['decid']),
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
-                                    'Vcmax': 45.,
-                                    'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-                                    'Rd': 1.0,  # 0.023*Vcmax
+                                    'Vcmax': 50.,
+                                    'Jmax': 100.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.2,  # 0.023*Vcmax
                                     'tresp': {
                                         'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
                                         'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
@@ -131,7 +132,7 @@ lettosuo_parameters = {
                                 'LAImax': (0.8, 0.8, 0.5),
                                 'lad': (control['lad']['shrubs'], partial['lad']['shrubs'], clearcut['lad']['shrubs']),
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
                                     'Vcmax': 45.,
@@ -156,6 +157,7 @@ lettosuo_parameters = {
                         },
                 'soil_properties': soil_properties,
                 'water_model': {
+#                        'type': 'Equilibrium',
                         'initial_condition':{
                                 'ground_water_level': -0.2
                                 },
@@ -177,12 +179,24 @@ lettosuo_parameters = {
 lettosuo_parameters_clc = {
         'count': 2,
         'canopy': {
+                'ctr': { # speed up!
+                        'WMA': True,  # well-mixed assumption
+                        'Ebal': False,  # no energy balance
+                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95
                         },
                 'micromet': {
-                        'dPdx': 0.0,
+                        'dPdx': 0.0
+                        },
+                'radiation':{
+                        'Par_alb': 0.1,
+                        'Nir_alb': 0.43
+                        },
+                'interception':{
+                        'wmax': 0.35e-03,
+                        'wmaxsnow': 1.4e-03
                         },
                 'forestfloor': {
                         'bryophytes': {
@@ -193,14 +207,14 @@ lettosuo_parameters_clc = {
                                         'ground_coverage': 0.0,
                                         },
                                 'pleurozium': {
-                                        'ground_coverage': 0.1,
+                                        'ground_coverage': (0.1, 0.0),
                                         }
                                 },
                         'litter': {
-                                'ground_coverage': 0.9
+                                'ground_coverage': (0.9, 0.7)
                                 },
                         'baresoil': {
-                                'ground_coverage': 0.0
+                                'ground_coverage': (0.0, 0.3)
                                 }
                         },
                 'planttypes': {
@@ -208,30 +222,44 @@ lettosuo_parameters_clc = {
                                 'LAImax': clearcut['lai']['pine'],
                                 'lad': clearcut['lad']['pine'],
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         }
                                     },
                         'spruce': {
                                 'LAImax': clearcut['lai']['spruce'],
                                 'lad': clearcut['lad']['spruce'],
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         }
                                     },
                         'decidious': {
                                 'LAImax': clearcut['lai']['decid'],
                                 'lad': clearcut['lad']['decid'],
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         }
                                     },
                         'shrubs': {
                                 'LAImax': 0.5,
                                 'lad': clearcut['lad']['shrubs'],
                                 'rootp': {
-                                        'root_depth': 0.2
-                                        }
+                                        'root_depth': root_depth,
+                                        },
+                                'photop': {
+                                    'Vcmax': 45.,
+                                    'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                    'Rd': 1.0,  # 0.023*Vcmax
+                                    'tresp': {
+                                        'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                        'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                        'Rd': [33.0]
+                                        },
+                                    'alpha': alpha,
+                                    'theta': 0.7,
+                                    'g1': 4.0,
+                                    'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                     },
+                                },
                         },
                 },
         'soil': {
@@ -240,6 +268,7 @@ lettosuo_parameters_clc = {
                         },
                 'soil_properties': soil_properties,
                 'water_model': {
+                        'type': 'Equilibrium',
                         'initial_condition':{
                                 'ground_water_level': -0.2
                                 },
@@ -306,7 +335,7 @@ lettosuo_parameters_ctrl = {
                                 'LAImax': control['lai']['pine'],
                                 'lad': control['lad']['pine'],
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
                                     'Vcmax': 55.,
@@ -327,7 +356,7 @@ lettosuo_parameters_ctrl = {
                                 'LAImax': control['lai']['spruce'],
                                 'lad': control['lad']['spruce'],
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
                                     'Vcmax': 60.,
@@ -348,7 +377,7 @@ lettosuo_parameters_ctrl = {
                                 'LAImax': control['lai']['decid'],
                                 'lad': control['lad']['decid'],
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
                                     'Vcmax': 45.,
@@ -369,7 +398,7 @@ lettosuo_parameters_ctrl = {
                                 'LAImax': 0.8,
                                 'lad': control['lad']['shrubs'],
                                 'rootp': {
-                                        'root_depth': 0.2
+                                        'root_depth': root_depth,
                                         },
                                 'photop': {
                                     'Vcmax': 45.,
@@ -394,6 +423,7 @@ lettosuo_parameters_ctrl = {
                         },
                 'soil_properties': soil_properties,
                 'water_model': {
+                        'type': 'Equilibrium',
                         'initial_condition':{
                                 'ground_water_level': -0.2
                                 },

@@ -349,7 +349,7 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False):
 
     # clearly no rain event at lettosuo (wtd data)
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
-            (lettosuo_data.index > '07-03-2011') & (lettosuo_data.index < '07-05-2011')]=0.0
+            (lettosuo_data.index > '07-03-2011') & (lettosuo_data.index < '07-11-2011')]=0.0
 
 #    # problematic sections
 #    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][

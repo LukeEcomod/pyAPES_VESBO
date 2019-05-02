@@ -340,11 +340,26 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     Conv_crit = 1.0e-12  # for soil moisture
     Conv_crit2 = 1.0e-10  # for pressure head, decreased to 1.0e-8 when profile saturated
 
+# TESTI, 70% sateesta suoraan pohjaveden pinnan kerrokseen
+    f_macro = 0.7
+    sid = np.where(h_ini <= 0)[0]
+    if len(sid) > 0 and Prec > 0.5 * 1e-3 / 3600:
+        cell_airvol = (poros - W)*dz
+        id_cell = sid[-1] + 1
+        bypass = np.zeros(N)
+        while sum(bypass) < (f_macro * Prec) * t_final and id_cell > 0:
+            bypass[id_cell] = min((f_macro * Prec) * t_final - sum(bypass), cell_airvol[id_cell])
+            id_cell -= 1
+        S = S - bypass / t_final / dz
+        Prec = Prec - sum(bypass) / t_final
+
 # TESTI, DURING DRY CONDITIONS INFILTRATION FORCED TO FIRST 5 LAYERS
     # hydraulic condictivity based on previous time step
     KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
     # get KLh at i-1/2, note len(KLh) = N + 1
-    KLh = spatial_average(KLh, method='arithmetic')
+#    KLh = spatial_average(KLh, method='arithmetic')
+# TEST
+    KLh = spatial_average(KLh, method='geometric')
     # potential flux at the soil surface (< 0 infiltration)
     q0 = Evap - Prec - h_pond / t_final
     # maximum infiltration and evaporation rates
@@ -354,7 +369,7 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     # airvolume available in soil profile after previous time step
     Airvol = max(0.0, sum((poros - W) * dz))
     if Qin < Airvol and q0 < 0 and q0 < MaxInf:
-        S[0:5] = S[0:5] - Prec / 5. / grid['dz'][0:5]
+        S[0:10] = S[0:10] - Prec / 10. / grid['dz'][0:10]
         Prec = 0.0
         dt = 30
 #        print('Dry conditions')
@@ -371,8 +386,14 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
 
         # hydraulic condictivity based on previous time step
         KLh = hydraulic_conductivity(pF, x=h_iter, Ksat=Ksat)
+
         # get KLh at i-1/2, note len(KLh) = N + 1
-        KLh = spatial_average(KLh, method='arithmetic')
+#        KLh = spatial_average(KLh, method='arithmetic')
+# TEST
+        KLh = spatial_average(KLh, method='geometric')
+
+## TEST: upward flow K_unsat, downward flow "K_macro"
+#        KLh[1:-1] = np.where((h[:-1] - h[1:] - dzu[1:]) < 0.0, KLh[1:-1], 5.0e-4)
 
         # initiate iteration
         err1 = 999.0
@@ -812,7 +833,8 @@ def waterStorage1D(t_final, grid, forcing, initial_state, pF, Ksat, wsto_gwl,
 
 """ drainage equations """
 
-def drainage_hooghoud(dz, Ksat, gwl, DitchDepth, DitchSpacing, DitchWidth, Zbot=None):
+def drainage_hooghoud(dz, Ksat, gwl, DitchDepth, DitchSpacing, DitchWidth, Zbot=None,
+                      below_ditch_drain=False):
     r""" Calculates drainage to ditch using Hooghoud's drainage equation,
     accounts for drainage from saturated layers above and below ditch bottom.
 
@@ -861,25 +883,26 @@ def drainage_hooghoud(dz, Ksat, gwl, DitchDepth, DitchSpacing, DitchWidth, Zbot=
             # sink term s-1, partitions Qa by relative transmissivity of layer
             Qz_drain[ix] = Qa * Trans[ix] / sum(Trans[ix]) / dz[ix]
 
-        """ drainage from saturated layers below ditch base """
-        # layers below ditch bottom where drainage is possible
-        ix = np.where(z <= -DitchDepth)
+        if below_ditch_drain:
+            """ drainage from saturated layers below ditch base """
+            # layers below ditch bottom where drainage is possible
+            ix = np.where(z <= -DitchDepth)
 
-        # effective hydraulic conductivity ms-1
-        Kb = sum(Trans[ix]) / sum(dz_sat[ix])
+            # effective hydraulic conductivity ms-1
+            Kb = sum(Trans[ix]) / sum(dz_sat[ix])
 
-        # compute equivalent depth Deq
-        Dbt = Zbot - DitchDepth  # distance from impermeable layer to ditch bottom
-        A = 3.55 - 1.6 * Dbt / DitchSpacing + 2 * (2.0 / DitchSpacing)**2.0
-        Reff = DitchWidth / 2.0  # effective radius of ditch
+            # compute equivalent depth Deq
+            Dbt = Zbot - DitchDepth  # distance from impermeable layer to ditch bottom
+            A = 3.55 - 1.6 * Dbt / DitchSpacing + 2 * (2.0 / DitchSpacing)**2.0
+            Reff = DitchWidth / 2.0  # effective radius of ditch
 
-        if Dbt / DitchSpacing <= 0.3:
-            Deq = Dbt / (1.0 + Dbt / DitchSpacing * (8 / np.pi * np.log(Dbt / Reff) - A))  # m
-        else:
-            Deq = np.pi * DitchSpacing / (8 * (np.log(DitchSpacing / Reff) - 1.15))  # m
+            if Dbt / DitchSpacing <= 0.3:
+                Deq = Dbt / (1.0 + Dbt / DitchSpacing * (8 / np.pi * np.log(Dbt / Reff) - A))  # m
+            else:
+                Deq = np.pi * DitchSpacing / (8 * (np.log(DitchSpacing / Reff) - 1.15))  # m
 
-        Qb = 8 * Kb * Deq * Hdr / DitchSpacing**2  # m s-1, total drainage below ditches
-        Qz_drain[ix] = Qb * Trans[ix] / sum(Trans[ix]) / dz[ix]  # sink term s-1
+            Qb = 8 * Kb * Deq * Hdr / DitchSpacing**2  # m s-1, total drainage below ditches
+            Qz_drain[ix] = Qb * Trans[ix] / sum(Trans[ix]) / dz[ix]  # sink term s-1
 
     return Qz_drain
 

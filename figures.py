@@ -176,7 +176,7 @@ def plot_snow(results):
     plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
     plot_timeseries_xr(results, 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3})
 
-def plot_energy(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
+def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -185,14 +185,23 @@ def plot_energy(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
+    if treatment == 'partial':
+        Data['LE'][
+            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     # period end (?)
     Data.index = Data.index - pd.Timedelta(hours=0.5)
-    Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
-    plot_fluxes(results, Data, norain=True,
+    if treatment=='control':
+        Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
+        plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE'],
                 Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+    else:
+        plot_fluxes(results, Data, norain=norain,
+                res_var=['canopy_net_radiation', 'canopy_SH','canopy_LE'],
+                Data_var=['NRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
 
-def plot_fluxes_ebal(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
+
+def plot_fluxes_ebal(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -206,11 +215,12 @@ def plot_fluxes_ebal(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
     Data['NEE'] *= 1.0 / 44.01e-3
     Data['GPP'] *= -1.0 / 44.01e-3
     Data['Reco'] *= 1.0 / 44.01e-3
-    plot_fluxes(results, Data, norain=True,
-                res_var=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_LE'],
-                Data_var=['NEE','GPP','Reco','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+    Data['GPP2'] = Data['Reco'] - Data['NEE']
+    plot_fluxes(results, Data, norain=norain,
+                res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration','canopy_LE'],
+                Data_var=['NEE','GPP','GPP2','Reco','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
 
-def plot_CO2(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
+def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -226,4 +236,95 @@ def plot_CO2(results,treatment='control',fmonth=4, lmonth=9,sim_idx=0):
     Data['Reco'] *= 1.0 / 44.01e-3
     Data['GPP2'] = Data['Reco'] - Data['NEE']
     plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration'],
-                Data_var=['NEE','GPP','GPP2','Reco'], norain=True, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+                Data_var=['NEE','GPP','GPP2','Reco'], norain=norain, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+
+def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True):
+
+    from tools.iotools import read_forcing
+    import matplotlib.dates
+    from pyAPES_utilities.plotting import xarray_to_df, plot_xy, plot_timeseries_xr
+    import seaborn as sns
+    pal = sns.color_palette("hls", 6)
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    # period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+    Data['NEE'] *= 1.0 / 44.01e-3
+    Data['Reco'] *= 1.0 / 44.01e-3
+    Data['GPP'] = Data['Reco'] - Data['NEE']
+
+    Data_var = ['GPP', 'LE']
+    if treatment == 'partial':
+        for var in Data_var:
+            Data[var][
+                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+    res_var=['canopy_GPP', 'canopy_LE']
+    res_var.append('forcing_precipitation')
+
+    df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
+    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+
+    dates = Data.index
+
+    ix = Data['forcing_precipitation'].rolling(48, 1).sum()
+
+    dryc = np.ones(len(dates))
+    f = np.where(ix > 0.0)[0]  # wet canopy indices
+    dryc[f] = 0.0
+
+    months = Data.index.month
+    year = Data.index.year
+
+    years = range(fyear, lyear+1)
+    N = len(years)
+    M = len(Data_var)
+
+    plt.figure(figsize=(N*2 + 0.5,7))
+    for j in range(M):
+        for i in range(N):
+            if norain:
+                ix = np.where((year == years[i]) & (months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data[Data_var[j]]))[0]
+            else:
+                ix = np.where((year == years[i]) & (months >= fmonth) & (months <= lmonth) & np.isfinite(Data[Data_var[j]]))[0]
+            if i == 0:
+                ax=plt.subplot(M+1, N, j*N+i+1)
+                labels = {'x': 'Measured ' + Data_var[j], 'y': 'Modelled ' + Data_var[j]}
+            else:
+                labels = {'x': 'Measured ' + Data_var[j], 'y': ''}
+                plt.subplot(M+1, N, j*N+i+1,sharex=ax, sharey=ax)
+                plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+            plot_xy(Data[Data_var[j]][ix], Data[res_var[j]][ix], color=pal[j+2], axislabels=labels)
+            plt.title(str(years[i]))
+
+    # Read observed WTD
+    WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
+
+    ax = plt.subplot(M+1, N, (M*N+1,M*N+N))
+    plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
+                     facecolor='k', alpha=0.3)
+    plt.plot(WTD.index, WTD['control'].values,':k', linewidth=1.0)
+    if treatment is not 'control':
+        plt.fill_between(WTD.index, WTD['partial_max'].values, WTD['partial_min'].values,
+                         facecolor='b', alpha=0.3)
+        plt.plot(WTD.index, WTD['partial'].values,':b', linewidth=1.0)
+
+        plt.fill_between(WTD.index, WTD['clearcut_max'].values, WTD['clearcut_min'].values,
+                         facecolor='r', alpha=0.3)
+        plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
+
+    colors = {'control':  'k', 'partial': 'b', 'clearcut': 'r'}
+    plot_timeseries_xr(results.isel(simulation=sim_idx), 'soil_ground_water_level', colors=[colors[treatment]], xticks=True, legend=False)
+    plt.ylim([-1.0,0.0])
+    plt.xlim(['01-01-'+str(fyear),'01-01-'+str(lyear+1)])
+
+    ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator(interval=6))
+    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%m-%Y'))
+
+    plt.tight_layout()
+
+#plot_scatters(results)
+#plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018)
+#plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018)

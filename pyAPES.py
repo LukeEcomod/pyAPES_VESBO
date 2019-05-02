@@ -367,7 +367,7 @@ def _append_results(group, step, step_results, results):
 
 if __name__ == '__main__':
 
-    from parameters.parametersets import lettosuo_parameters_ctrl
-    outputfile=driver(create_ncf=True, parametersets=lettosuo_parameters_ctrl)
+    from parameters.parametersets import lettosuo_parameters
+    outputfile=driver(create_ncf=True, parametersets=lettosuo_parameters)
 
     print(outputfile)

@@ -6,10 +6,10 @@
 #SBATCH -e lettosuo_err_%j
 #SBATCH --mail-type=END
 #SBATCH --mail-user=kersti.haahti@luke.fi
-#SBATCH --mem-per-cpu=1000
-#SBATCH --time=00:01:00
+#SBATCH --mem-per-cpu=3500
+#SBATCH --time=17:00:00
 #SBATCH --ntasks=1
-#SBATCH --partition=test
+#SBATCH --partition=serial
 
 module load python-env/3.5.3
 

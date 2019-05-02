@@ -36,7 +36,7 @@ initial_conditions = {
 snowpack = {
         'kmelt': 2.31e-8,  # Melting coefficient [m degC-1 s-1] (=2.0 mm/C/d)
         'kfreeze': 5.79e-9,  # Freezing  coefficient [m degC-1 s-1] (=0.5 mm/C/d)
-        'retention': 0.1,  # max fraction of liquid water in snow [-]
+        'retention': 0.2,  # max fraction of liquid water in snow [-]
         'Tmelt': 0.0,  # temperature when melting starts [degC]
         'swe_ini': 0.0,  # initial snow water equivalent [m],
         'optical_properties': {
