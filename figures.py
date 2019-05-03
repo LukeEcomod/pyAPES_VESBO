@@ -12,6 +12,9 @@ import pandas as pd
 vege=['khaki','lightgreen', 'limegreen', 'forestgreen']
 ff=['seagreen','peru','saddlebrown','khaki','lightgreen', 'limegreen', 'forestgreen']
 
+import seaborn as sns
+pal = sns.color_palette("hls", 6)
+
 def plot_vegetation():
 
     def plot_regression(x, y, color='k', title='', axislabels={'x':'', 'y':''},alpha=0.5):
@@ -238,7 +241,8 @@ def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
     plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration'],
                 Data_var=['NEE','GPP','GPP2','Reco'], norain=norain, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
 
-def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True):
+def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True,
+                  plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}):
 
     from tools.iotools import read_forcing
     import matplotlib.dates
@@ -255,12 +259,13 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     Data['NEE'] *= 1.0 / 44.01e-3
     Data['Reco'] *= 1.0 / 44.01e-3
     Data['GPP'] = Data['Reco'] - Data['NEE']
+    Data['GPP'][Data['GPP']<0]=np.nan
 
     Data_var = ['GPP', 'LE']
-    if treatment == 'partial':
-        for var in Data_var:
-            Data[var][
-                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#    if treatment == 'partial':
+#        for var in Data_var:
+#            Data[var][
+#                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     res_var=['canopy_GPP', 'canopy_LE']
     res_var.append('forcing_precipitation')
 
@@ -282,7 +287,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     N = len(years)
     M = len(Data_var)
 
-    plt.figure(figsize=(N*2 + 0.5,7))
+    plt.figure(figsize=(N*2 + 0.5,10))
     for j in range(M):
         for i in range(N):
             if norain:
@@ -290,11 +295,11 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
             else:
                 ix = np.where((year == years[i]) & (months >= fmonth) & (months <= lmonth) & np.isfinite(Data[Data_var[j]]))[0]
             if i == 0:
-                ax=plt.subplot(M+1, N, j*N+i+1)
+                ax=plt.subplot(M+2, N, j*N+i+1)
                 labels = {'x': 'Measured ' + Data_var[j], 'y': 'Modelled ' + Data_var[j]}
             else:
                 labels = {'x': 'Measured ' + Data_var[j], 'y': ''}
-                plt.subplot(M+1, N, j*N+i+1,sharex=ax, sharey=ax)
+                plt.subplot(M+2, N, j*N+i+1,sharex=ax, sharey=ax)
                 plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
             plot_xy(Data[Data_var[j]][ix], Data[res_var[j]][ix], color=pal[j+2], axislabels=labels)
             plt.title(str(years[i]))
@@ -302,29 +307,87 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
 
-    ax = plt.subplot(M+1, N, (M*N+1,M*N+N))
+    ax = plt.subplot(M+2, N, (M*N+1,M*N+N))
     plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
                      facecolor='k', alpha=0.3)
     plt.plot(WTD.index, WTD['control'].values,':k', linewidth=1.0)
     if treatment is not 'control':
-        plt.fill_between(WTD.index, WTD['partial_max'].values, WTD['partial_min'].values,
-                         facecolor='b', alpha=0.3)
-        plt.plot(WTD.index, WTD['partial'].values,':b', linewidth=1.0)
+        plot_timeseries_xr(results.isel(simulation=0), 'soil_ground_water_level', colors=['k'], xticks=True, legend=False)
+        if treatment is 'partial':
+            plt.fill_between(WTD.index, WTD['partial_max'].values, WTD['partial_min'].values,
+                             facecolor='b', alpha=0.3)
+            plt.plot(WTD.index, WTD['partial'].values,':b', linewidth=1.0)
 
-        plt.fill_between(WTD.index, WTD['clearcut_max'].values, WTD['clearcut_min'].values,
-                         facecolor='r', alpha=0.3)
-        plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
+        if treatment is 'clearcut':
+            plt.fill_between(WTD.index, WTD['clearcut_max'].values, WTD['clearcut_min'].values,
+                             facecolor='r', alpha=0.3)
+            plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
+
 
     colors = {'control':  'k', 'partial': 'b', 'clearcut': 'r'}
     plot_timeseries_xr(results.isel(simulation=sim_idx), 'soil_ground_water_level', colors=[colors[treatment]], xticks=True, legend=False)
     plt.ylim([-1.0,0.0])
-    plt.xlim(['01-01-'+str(fyear),'01-01-'+str(lyear+1)])
+    plt.xlim(['01-01-'+str(fyear),'12-31-'+str(lyear)])
 
     ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator(interval=6))
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%m-%Y'))
 
+    ax = plt.subplot(M+2, N, ((M+1)*N+1,(M+1)*N+N))
+    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
+
     plt.tight_layout()
 
-#plot_scatters(results)
-#plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018)
-#plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018)
+#plot_scatters(results, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
+#plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018, legend=False, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
+#plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018, legend=False,plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
+
+def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}):
+
+    if sim_idx > 0:
+        WB_ref={}
+        WB_ref['year']=results['date.year'].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').mean().values
+        WB_ref['interception evaporation']=(results['canopy_evaporation'].isel(simulation=0).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values + results['canopy_condensation'].isel(simulation=0).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values)*1800*1000
+        WB_ref['transpiration']=results['canopy_transpiration'].isel(simulation=0).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+        WB_ref['forest floor evaporation']=results['ffloor_evaporation'].isel(simulation=0).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+        WB_ref = pd.DataFrame.from_dict(WB_ref)
+
+    WB={}
+    WB['year']=results['date.year'].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').mean().values
+    WB['precipitation']=results['forcing_precipitation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['interception evaporation']=(results['canopy_evaporation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values + results['canopy_condensation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values)*1800*1000
+    WB['pine transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['pine']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['spruce transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['spruce']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['birch transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['birch']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['understory transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['understory']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['forest floor evaporation']=results['ffloor_evaporation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+
+    WB = pd.DataFrame.from_dict(WB)
+
+    # set width of bar
+    barWidth = 0.15
+    # Set position of bar on X axis
+    r1 = np.arange(len(WB['year'])) - barWidth
+    r2 = [x + barWidth for x in r1]
+    r3 = [x + barWidth for x in r2]
+
+    # Make the plot
+    plt.bar(r1, WB['interception evaporation'], color=pal[3], width=barWidth, edgecolor='white', label='Interception E')
+    plt.bar(r2, WB['pine transpiration'], color=vege[3], width=barWidth, edgecolor='white', label='Pine T')
+    plt.bar(r2, WB['spruce transpiration'], bottom=WB['pine transpiration'], color=vege[2], edgecolor='white', width=barWidth, label='Spruce T')
+    plt.bar(r2, WB['birch transpiration'], bottom=WB['spruce transpiration']+WB['pine transpiration'], color=vege[1], edgecolor='white', width=barWidth, label='Birch T')
+    plt.bar(r2, WB['understory transpiration'], bottom=WB['birch transpiration']+WB['spruce transpiration']+WB['pine transpiration'], color=vege[0], edgecolor='white', width=barWidth, label='Understory T')
+    plt.bar(r3, WB['forest floor evaporation'], color=pal[4], width=barWidth, edgecolor='white', label='Forest floor E')
+
+    plt.xticks([r for r in range(len(WB['year']))], [int(WB['year'][i]) for i in range(len(WB['year']))])
+    plt.ylabel('[mm]')
+    if legend:
+        plt.legend(loc='upper center', ncol=3, borderaxespad=-3, frameon=False, borderpad=0.0, fontsize=12)
+
+    if sim_idx > 0:
+        plt.bar(r1, WB_ref['interception evaporation'], fill=False, width=barWidth, edgecolor='black', linestyle=':')
+        plt.bar(r2, WB_ref['transpiration'], fill=False, width=barWidth, edgecolor='black', linestyle=':')
+        plt.bar(r3, WB_ref['forest floor evaporation'], fill=False, width=barWidth, edgecolor='black', linestyle=':')
+
+    plt.xlim([-0.5, len(WB['year']) - 0.5])
+#    plt.tight_layout(rect=(0, 0, 0.95, 1))
+    return WB
