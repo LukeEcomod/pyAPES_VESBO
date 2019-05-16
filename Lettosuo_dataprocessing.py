@@ -17,7 +17,7 @@ def read_WTD_data():
     fpaths = [r"H:\Lettosuo\WTD_paavolta\Lettosuo_WTD_EC.csv",
                r"H:\Lettosuo\WTD_paavolta\Lettosuo_WTD_trans.csv"]
 
-    index=pd.date_range('01-01-2010','01-01-2019',freq='1H')
+    index=pd.date_range('01-01-2010','06-01-2019',freq='1H')
     data=pd.DataFrame(index=index, columns=[])
 
     for fp in fpaths:
@@ -143,6 +143,84 @@ def process_WTD():
     # ja tiedostoon
     save_df_to_csv(WTD[['control','control_max','control_min','partial','partial_max','partial_min','clearcut','clearcut_max','clearcut_min']],
                        'lettosuo_WTD_pred', readme=' - Check timezone!! \nSee Lettosuo_dataprocessing.process_WTD()')
+
+def read_weir_data():
+
+    fpaths = [r"H:\Lettosuo\WTD_paavolta\pato\logger_data.csv",
+               r"H:\Lettosuo\WTD_paavolta\pato\tarkistusmittaukset.csv"]
+
+    index=pd.date_range('01-01-2012','06-01-2019',freq='1H')
+    data=pd.DataFrame(index=index, columns=[])
+
+    for fp in fpaths:
+        dat = pd.read_csv(fp, sep=';', header='infer', encoding = 'ISO-8859-1')
+        dat.index = pd.to_datetime(dat.ix[:,0], dayfirst=True)
+        dat.index = dat.index + datetime.timedelta(hours=0.5)
+        dat.index = dat.index.map(lambda x: x.replace(minute=0, second=0))
+        dat.ix[:,0]=dat.index
+        dat = dat.drop_duplicates(subset=dat.columns[0])
+        dat = dat.drop([dat.columns[0]], axis=1)
+        if len(np.setdiff1d(dat.index, index)) > 0:
+            print(fp, np.setdiff1d(dat.index, index))
+            raise ValueError("Error")
+        data=data.merge(dat, how='outer', left_index=True, right_index=True)
+
+    return data
+
+def process_runoff_data():
+
+    weir_data = read_weir_data()
+
+    plt.figure()
+    ax=plt.subplot(4,1,1)
+    plt.title('Loggeri- ja tarkistusmittausten erotus ja interpoloitu virhe (mm)')
+    weir_data['error'] = weir_data['Water Height Point mm'] - weir_data['Tarkistusmittaus']
+    weir_data['interpolated error'] = weir_data['error'].interpolate()
+    weir_data['interpolated error'] = weir_data['interpolated error'].fillna(method='bfill')
+    plt.plot(weir_data.index,weir_data['interpolated error'],'--r')
+    plt.plot(weir_data.index,weir_data['Water Height Point mm'] - weir_data['Tarkistusmittaus'],'or')
+    ax=plt.subplot(4,1,2,sharex=ax)
+    plt.title('Loggerin vedenpinta, korjattu vedepinta ja tarkistusmittaukset (mm)')
+    weir_data['Water Height Corrected mm'] = weir_data['Water Height Point mm'] -  weir_data['interpolated error']
+    plt.plot(weir_data.index,weir_data['Water Height Point mm'])
+    plt.plot(weir_data.index,weir_data['Water Height Corrected mm'],'--r')
+    plt.plot(weir_data.index,weir_data['Tarkistusmittaus'],'or')
+    ax=plt.subplot(4,1,3,sharex=ax)
+    plt.title('Virtaama (l/s) - kaavalla Q=min(1381*(h[m])^2.5, 60)')
+    weir_data['Discharge l/s uncorrected'] = 1381.0*(weir_data['Water Height Point mm']/1000.0)**2.5
+    weir_data['Discharge l/s uncorrected'] = np.minimum(weir_data['Discharge l/s uncorrected'],60.0)
+    weir_data['Discharge l/s'] = 1381.0*(weir_data['Water Height Corrected mm']/1000.0)**2.5
+    weir_data['Discharge l/s'] = np.minimum(weir_data['Discharge l/s'],60.0)
+    plt.plot(weir_data.index,weir_data['Discharge l/s uncorrected'])
+    plt.plot(weir_data.index,weir_data['Discharge l/s'],'r')
+    ax=plt.subplot(4,1,4,sharex=ax)
+    plt.title('Valunta (mm/h) - valuma-alueen pinta-alana käytetty 17.1 ha')
+    weir_data['Runoff mm/h'] = weir_data['Discharge l/s'] * 0.001 * 3600. / 171000. * 1000.
+    weir_data['Runoff mm/h uncorrected'] = weir_data['Discharge l/s uncorrected'] * 0.001 * 3600. / 171000. * 1000.
+    plt.plot(weir_data.index,weir_data['Runoff mm/h uncorrected'])
+    plt.plot(weir_data.index,weir_data['Runoff mm/h'],'r')
+    plt.tight_layout()
+
+    plt.figure()
+    ax=plt.subplot(2,1,1)
+    plt.title('Erotus vedenpinta (mm)')
+    plt.plot(weir_data.index,weir_data['Water Height Point mm'] - weir_data['Water Height Corrected mm'])
+    print(np.nanmean(np.where(abs((weir_data['Water Height Point mm'] - weir_data['Water Height Corrected mm']).values) < 100,
+                          abs((weir_data['Water Height Point mm'] - weir_data['Water Height Corrected mm']).values), np.nan)))
+    print(np.nanmax(np.where(abs((weir_data['Water Height Point mm'] - weir_data['Water Height Corrected mm']).values) < 100,
+                          abs((weir_data['Water Height Point mm'] - weir_data['Water Height Corrected mm']).values), np.nan)))
+
+    plt.subplot(2,1,2,sharex=ax)
+    plt.title('Erotus valunta (mm/h)')
+    plt.plot(weir_data.index,weir_data['Runoff mm/h'] - weir_data['Runoff mm/h uncorrected'])
+    print(np.nanmean(np.where(abs((weir_data['Runoff mm/h uncorrected'] - weir_data['Runoff mm/h']).values) < 0.5,
+                          abs((weir_data['Runoff mm/h uncorrected'] - weir_data['Runoff mm/h']).values), np.nan)))
+    print(np.nanmax(np.where(abs((weir_data['Runoff mm/h uncorrected'] - weir_data['Runoff mm/h']).values) < 0.5,
+                          abs((weir_data['Runoff mm/h uncorrected'] - weir_data['Runoff mm/h']).values), np.nan)))
+
+    # ja tiedostoon
+    save_df_to_csv(weir_data[['Water Height Point mm','Tarkistusmittaus','Water Height Corrected mm','Discharge l/s','Runoff mm/h']],
+                       'lettosuo_weir_data', readme=' - Check timezone!! \nSee Lettosuo_dataprocessing.process_runoff_data()')
 
 def fit_pf_Laiho():
     from pyAPES_utilities.parameter_utilities import fit_pF

@@ -262,10 +262,10 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     Data['GPP'][Data['GPP']<0]=np.nan
 
     Data_var = ['GPP', 'LE']
-#    if treatment == 'partial':
-#        for var in Data_var:
-#            Data[var][
-#                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+    if treatment == 'partial':
+        for var in Data_var:
+            Data[var][
+                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     res_var=['canopy_GPP', 'canopy_LE']
     res_var.append('forcing_precipitation')
 
