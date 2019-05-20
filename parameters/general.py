@@ -6,7 +6,7 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2009-10-01",  #"2009-10-01",  # start time of simulation [yyyy-mm-dd]
+        'start_time' : "2015-10-01",  #"2009-10-01",  # start time of simulation [yyyy-mm-dd]
         'end_time' : "2019-01-01",  #"2019-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'results_directory':'results/case_Lettosuo/',
@@ -74,6 +74,7 @@ gpara = {
                       ['soil_temperature', 'soil temperature [degC]', ('date', 'simulation', 'soil')],
                       ['soil_volumetric_water_content', 'soil water content [m3/m3]', ('date', 'simulation', 'soil')],
                       ['soil_volumetric_ice_content', 'soil ice content [m3/m3]', ('date', 'simulation', 'soil')],
+                      ['soil_heat_flux', 'soil heat flux [W m-2]', ('date', 'simulation', 'soil')],
 #                      ['soil_thermal_conductivity', 'thermal conductivity [W m-1 K-1]', ('date', 'simulation', 'soil')],
                       ['canopy_water_closure', 'interception model mass balance error [m s-1]', ('date', 'simulation')],
                       ['canopy_energy_closure', 'energy closure in canopy [W m-2]', ('date', 'simulation')],

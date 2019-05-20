@@ -310,7 +310,7 @@ def heatflow1D(t_final, grid, T_ini, Wtot, poros, solid_composition, cs, bedrock
                 g[-1] = 0.0
                 f[-1] = CP_old[-1]*T_old[-1] + A[-1]*T_iter[-1] + LATENT_HEAT_FREEZING*ICE_DENSITY*(Wice_iter[-1] - Wice_old[-1])\
                         - dt / dz[-1]*F_bot - dt*sink[-1]
-    
+
             if lbc['type'] == 'temperature':  # temperature bc
                 T_bot = lbc['value']
                 b[-1] = CP[-1] + A[-1] + dt / dz[-1] * (Kt[N-1] / dzu[-1] + Kt[N] / dzl[-1])
@@ -341,6 +341,8 @@ def heatflow1D(t_final, grid, T_ini, Wtot, poros, solid_composition, cs, bedrock
                 else:  # convergence not reached with dt=300.0s, break
 #                    logger.debug('%s (iteration %s) Solution not converging, err_T: %.5f, err_Wice: %.5f, dt = %.1f s',
 #                                 date, iterNo, err1, err2, dt)
+                    T_iter = T_old.copy()
+                    Wice_iter = Wice_old.copy()
                     break
             # check solution, if problem continues break
             elif any(np.isnan(T_iter)):
@@ -413,7 +415,8 @@ def heatflow1D(t_final, grid, T_ini, Wtot, poros, solid_composition, cs, bedrock
 
     heat_be = sum(dz * heat_balance(T))
 
-    fluxes = {'energy_closure': heat_be / t_final}
+    fluxes = {'energy_closure': heat_be / t_final,
+              'heat_flux': Fheat[:-1]}
 
     state = {'temperature': T,
              'volumetric_ice_content': Wice}
@@ -489,7 +492,7 @@ def volumetric_heat_capacity(poros, cv_solids, wtot=0.0, wice=0.0):
     return cv
 
 def thermal_conductivity(poros, wliq, wice, solid_composition, bedrockL):
-    r""" Thermal conductivity of soil using Tian et al. 2016 simplified 
+    r""" Thermal conductivity of soil using Tian et al. 2016 simplified
     deVries-model. For organic layers (organic fraction > 0.9) uses o'Donnell et al. 2009.
     deVries-type model gives reasonable approximation also in organic layers when
     wliq < 0.4, at ~0.9 ~25% underestimate compated to o'Donnell.
@@ -515,7 +518,7 @@ def thermal_conductivity(poros, wliq, wice, solid_composition, bedrockL):
     f_silt = solid_composition['silt']
     f_clay = solid_composition['clay']
     f_org = solid_composition['organic']
-    
+
     poros = np.array(poros, ndmin=1)
     wliq = np.array(wliq, ndmin=1)
     wice = np.array(wice, ndmin=1)
@@ -540,12 +543,12 @@ def thermal_conductivity(poros, wliq, wice, solid_composition, bedrockL):
      # --- weight factors [-]------
     r = 2.0 / 3.0
     # solid minerals
-    f_min = r*(1.0 + g_min*(ks / kw - 1.0))**(-1) + (1.0 - r)*(1.0 + (1.0-2*g_min)*(ks / kw - 1.0))**(-1.)  
+    f_min = r*(1.0 + g_min*(ks / kw - 1.0))**(-1) + (1.0 - r)*(1.0 + (1.0-2*g_min)*(ks / kw - 1.0))**(-1.)
     # gas phase
     f_gas = r*(1.0 + g_air*(kg / kw - 1.0))**(-1) + (1.0 - r)*(1.0 + (1.0 - 2*g_air)*(kg / kw - 1.0))**(-1.)
-    # liquid phase                
+    # liquid phase
     f_ice = r*(1.0 + g_ice*(ki / kw - 1.0))**(-1) + (1.0 - r)*(1.0 + (1.0-2*g_ice)*(ki / kw - 1.0))**(-1.)
-    
+
     #print f_min, f_gas
     # thermal conductivity W m-1 K-1
     L = (wliq*kw + f_gas*wair*kg + f_min*poros*ks + f_ice*wice*ki) \

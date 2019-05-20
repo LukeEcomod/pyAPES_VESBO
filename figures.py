@@ -162,6 +162,29 @@ def plot_wtd(results):
 
     plot_timeseries_xr(results, 'soil_ground_water_level', colors=['k','b','r','g','m'], xticks=True)
 
+def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=6, lmonth=9):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes, xarray_to_df
+
+    # Read observed
+    Data = read_forcing("Lettosuo_Tsoil_2010_2018.csv", cols='all')
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[site]
+
+    df = xarray_to_df(results.isel(soil=4), ['soil_temperature'], sim_idx=sim_idx)
+    df['soil_temperature_5cm'] = df['soil_temperature'].copy()
+    df2 = xarray_to_df(results.isel(soil=19), ['soil_temperature'], sim_idx=sim_idx)
+    df['soil_temperature_30cm'] = df2['soil_temperature'].copy()
+
+    plot_fluxes(df, Data, norain=False,
+                res_var=['soil_temperature_5cm','soil_temperature_30cm'],
+                Data_var=['T5','T30'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx, dataframe=True)
+
+#plot_Tsoil(results.sel(date=(results['date.year']<2016)), site='Letto1', sim_idx=0)
+#plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Letto1', sim_idx=1)
+#plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Clear', sim_idx=2)
+
 def plot_snow(results):
 
     from tools.iotools import read_forcing
@@ -184,6 +207,8 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
 
+    results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
+
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
@@ -198,11 +223,16 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE'],
                 Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+    elif treatment=='partial':
+        Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
+        plot_fluxes(results, Data, norain=norain,
+                res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE','ground_heat_flux'],
+                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+
     else:
         plot_fluxes(results, Data, norain=norain,
-                res_var=['canopy_net_radiation', 'canopy_SH','canopy_LE'],
-                Data_var=['NRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
-
+                res_var=['canopy_net_radiation', 'canopy_SH','canopy_LE','ground_heat_flux'],
+                Data_var=['NRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
 
 def plot_fluxes_ebal(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
 
@@ -261,12 +291,12 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     Data['GPP'] = Data['Reco'] - Data['NEE']
     Data['GPP'][Data['GPP']<0]=np.nan
 
-    Data_var = ['GPP', 'LE']
+    Data_var = ['NRAD', 'LE', 'SH', 'GPP']
     if treatment == 'partial':
         for var in Data_var:
             Data[var][
                 (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
-    res_var=['canopy_GPP', 'canopy_LE']
+    res_var=['canopy_net_radiation', 'canopy_LE', 'canopy_SH', 'canopy_GPP']
     res_var.append('forcing_precipitation')
 
     df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
@@ -287,7 +317,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     N = len(years)
     M = len(Data_var)
 
-    plt.figure(figsize=(N*2 + 0.5,10))
+    plt.figure(figsize=(N*2 + 0.5,M*3.3 + 0.5))
     for j in range(M):
         for i in range(N):
             if norain:
@@ -301,8 +331,10 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
                 labels = {'x': 'Measured ' + Data_var[j], 'y': ''}
                 plt.subplot(M+2, N, j*N+i+1,sharex=ax, sharey=ax)
                 plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
-            plot_xy(Data[Data_var[j]][ix], Data[res_var[j]][ix], color=pal[j+2], axislabels=labels)
-            plt.title(str(years[i]))
+            if len(ix) > 0:
+                plot_xy(Data[Data_var[j]][ix], Data[res_var[j]][ix], color=pal[j], axislabels=labels)
+            if j == 0:
+                plt.title(str(years[i]))
 
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
@@ -337,7 +369,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
 
     plt.tight_layout()
 
-#plot_scatters(results, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
+#plot_scatters(results, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0}, legend=False)
 #plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018, legend=False, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
 #plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018, legend=False,plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
 

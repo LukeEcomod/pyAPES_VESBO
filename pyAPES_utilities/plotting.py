@@ -67,21 +67,26 @@ def plot_results(results):
 def plot_fluxes(results, Data,
                 res_var=['canopy_net_radiation','canopy_SH','canopy_LE'],
                 Data_var=['NRAD','SH','LE'],
-                sim_idx=0, fmonth=4, lmonth=9, norain=True):
+                sim_idx=0, fmonth=4, lmonth=9, norain=True, dataframe=False):
 
     N=len(Data_var)
-    res_var.append('forcing_precipitation')
 
-    df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
-    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+    if norain:
+        res_var.append('forcing_precipitation')
+
+    if dataframe is False:
+        df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
+        Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+    else:
+        Data = Data.merge(results[res_var], how='outer', left_index=True, right_index=True)
 
     dates = Data.index
 
-    ix = Data['forcing_precipitation'].rolling(48, 1).sum()
-
     dryc = np.ones(len(dates))
-    f = np.where(ix > 0.0)[0]  # wet canopy indices
-    dryc[f] = 0.0
+    if norain:
+        ix = Data['forcing_precipitation'].rolling(48, 1).sum()
+        f = np.where(ix > 0.0)[0]  # wet canopy indices
+        dryc[f] = 0.0
 
     months = Data.index.month
 
@@ -105,7 +110,10 @@ def plot_fluxes(results, Data,
             ax = plt.subplot(N,4,(i*4+2,i*4+3), sharex=ax1)
             plot_timeseries_df(Data, [res_var[i],Data_var[i]], colors=[pal[i],'k'], xticks=True,
                        labels=['Modelled', 'Measured'], marker=[None, '.'])
-        plt.title(results[res_var[i]].units, fontsize=10)
+        if dataframe:
+            plt.title(res_var[i], fontsize=10)
+        else:
+            plt.title(results[res_var[i]].units, fontsize=10)
         plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
         if i == 0:
             ax2 = plt.subplot(N,4,i*4+4)

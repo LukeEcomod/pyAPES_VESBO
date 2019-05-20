@@ -374,6 +374,15 @@ def EC_data():
            'Letto1_EC: Reco_S': 'control-S_Reco'
            })
 
+    lettosuo_EC['partial_NRAD'] = lettosuo_EC['control_NRAD'].copy()
+    lettosuo_EC['partial_NSWRAD'] = lettosuo_EC['control_NSWRAD'].copy()
+
+    lettosuo_EC['partial_NRAD'][lettosuo_EC.index < '01-01-2016'] = np.nan
+    lettosuo_EC['partial_NSWRAD'][lettosuo_EC.index < '01-01-2016'] = np.nan
+
+    lettosuo_EC['control_NRAD'][lettosuo_EC.index >= '01-01-2016'] = np.nan
+    lettosuo_EC['control_NSWRAD'][lettosuo_EC.index >= '01-01-2016'] = np.nan
+
     for column in lettosuo_EC.columns:
         if column.split('_')[-1] == 'LE':
             lettosuo_EC[column][lettosuo_EC[column] < -100] = lettosuo_EC[column][lettosuo_EC[column] < -100] * np.nan

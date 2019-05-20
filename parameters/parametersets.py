@@ -177,12 +177,12 @@ lettosuo_parameters = {
         }
 
 lettosuo_parameters_clc = {
-        'count': 2,
+        'count': 1,
         'canopy': {
-                'ctr': { # speed up!
-                        'WMA': True,  # well-mixed assumption
-                        'Ebal': False,  # no energy balance
-                        },
+#                'ctr': { # speed up!
+#                        'WMA': True,  # well-mixed assumption
+#                        'Ebal': False,  # no energy balance
+#                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95
@@ -207,14 +207,19 @@ lettosuo_parameters_clc = {
                                         'ground_coverage': 0.0,
                                         },
                                 'pleurozium': {
-                                        'ground_coverage': (0.1, 0.0),
+                                        'ground_coverage': 0.1,
                                         }
                                 },
                         'litter': {
-                                'ground_coverage': (0.9, 0.7)
+                                'ground_coverage': 0.9,
+                                'optical_properties': {  # [0.1102, 0.2909, 0.98]
+                                        'emissivity': 0.98,  # [-]
+                                        'albedo_PAR': (0.1102, 0.1),  # [-]
+                                        'albedo_NIR': (0.2909, 0.5), # [-]
+                                        },
                                 },
                         'baresoil': {
-                                'ground_coverage': (0.0, 0.3)
+                                'ground_coverage': 0.0,
                                 }
                         },
                 'planttypes': {

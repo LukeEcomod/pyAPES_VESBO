@@ -237,10 +237,15 @@ class ForestFloor(object):
             fluxes['potential_infiltration'] += fluxes_snow['potential_infiltration']
             # some groundheat flux to keep soil temperatures reasonable
             fluxes['ground_heat'] += (
-                0.01 * parameters['soil_thermal_conductivity']
+                parameters['soil_thermal_conductivity']
                 / abs(parameters['soil_depth'])
-                * (forcing['air_temperature'] - forcing['soil_temperature'][0])
+                * (min(forcing['air_temperature'],0.0) - forcing['soil_temperature'][0])
             )
+#            fluxes['ground_heat'] += (
+#                0.01 * parameters['soil_thermal_conductivity']
+#                / abs(parameters['soil_depth'])
+#                * (forcing['air_temperature'] - forcing['soil_temperature'][0])
+#            )
 
             for bryo in self.bryotypes:
                 states['bryo_temperature'] = 0.0
@@ -488,6 +493,15 @@ class ForestFloor(object):
                     par_albedo += bryo.coverage * bryo_albedo['PAR']
                     nir_albedo += bryo.coverage * bryo_albedo['NIR']
 
+            if self.f_litter > 0.0:
+
+                litter_albedo = bryophyte_shortwave_albedo(
+                    water_content=self.litter.water_content,
+                    properties=self.litter.properties)
+
+                par_albedo += self.litter.coverage * litter_albedo['PAR']
+                nir_albedo += self.litter.coverage * litter_albedo['NIR']
+
             if self.f_baresoil > 0.0:
 
                 bare_optical = self.baresoil.properties['optical_properties']
@@ -532,6 +546,17 @@ class ForestFloor(object):
 
                     emissivity += (bryo.coverage
                                    * bryo.properties['optical_properties']['emissivity'])
+
+            if self.f_litter > 0.0:
+
+                lw_radiation += (
+                        self.litter.coverage
+                        * emitted_longwave_radiation(
+                            self.litter.temperature,
+                            self.litter.properties))
+
+                emissivity += (self.litter.coverage
+                               * self.litter.properties['optical_properties']['emissivity'])
 
             if self.f_baresoil > 0.0:
 
