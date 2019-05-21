@@ -341,8 +341,9 @@ def heatflow1D(t_final, grid, T_ini, Wtot, poros, solid_composition, cs, bedrock
                 else:  # convergence not reached with dt=300.0s, break
 #                    logger.debug('%s (iteration %s) Solution not converging, err_T: %.5f, err_Wice: %.5f, dt = %.1f s',
 #                                 date, iterNo, err1, err2, dt)
-                    T_iter = T_old.copy()
-                    Wice_iter = Wice_old.copy()
+                    if err1 > 0.01:
+                        T_iter = T_old.copy()
+                        Wice_iter = Wice_old.copy()
                     break
             # check solution, if problem continues break
             elif any(np.isnan(T_iter)):

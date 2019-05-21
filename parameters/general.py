@@ -6,8 +6,8 @@ GENERAL PARAMETERS
 gpara = {
         'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2015-10-01",  #"2009-10-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2019-01-01",  #"2019-01-01",  # end time of simulation [yyyy-mm-dd]
+        'start_time' : "2009-10-01",  #"2009-10-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2016-01-01",  #"2019-01-01",  # end time of simulation [yyyy-mm-dd]
         'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
         'results_directory':'results/case_Lettosuo/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],

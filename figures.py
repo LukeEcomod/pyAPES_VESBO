@@ -162,7 +162,7 @@ def plot_wtd(results):
 
     plot_timeseries_xr(results, 'soil_ground_water_level', colors=['k','b','r','g','m'], xticks=True)
 
-def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=6, lmonth=9):
+def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=5, lmonth=9):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes, xarray_to_df
@@ -207,15 +207,13 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
 
-    results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
-
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
-    if treatment == 'partial':
-        Data['LE'][
-            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#    if treatment == 'partial':
+#        Data['LE'][
+#            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     # period end (?)
     Data.index = Data.index - pd.Timedelta(hours=0.5)
     if treatment=='control':
@@ -224,12 +222,13 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE'],
                 Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
     elif treatment=='partial':
+        results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
         Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE','ground_heat_flux'],
                 Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
-
     else:
+        results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation', 'canopy_SH','canopy_LE','ground_heat_flux'],
                 Data_var=['NRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
@@ -291,12 +290,19 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     Data['GPP'] = Data['Reco'] - Data['NEE']
     Data['GPP'][Data['GPP']<0]=np.nan
 
-    Data_var = ['NRAD', 'LE', 'SH', 'GPP']
-    if treatment == 'partial':
-        for var in Data_var:
-            Data[var][
-                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
-    res_var=['canopy_net_radiation', 'canopy_LE', 'canopy_SH', 'canopy_GPP']
+    Data_var = ['NRAD', 'LE', 'SH', 'GHF','GPP','Reco']
+#    if treatment == 'partial':
+#        for var in Data_var:
+#            Data[var][
+#                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+    results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
+    res_var=['canopy_net_radiation', 'canopy_LE', 'canopy_SH', 'ground_heat_flux', 'canopy_GPP','canopy_respiration']
+
+    if treatment == 'control':
+        Data_var.remove('GHF')
+        res_var.remove('ground_heat_flux')
+        pal.remove(pal[3])
+
     res_var.append('forcing_precipitation')
 
     df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
@@ -317,7 +323,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     N = len(years)
     M = len(Data_var)
 
-    plt.figure(figsize=(N*2 + 0.5,M*3.3 + 0.5))
+    plt.figure(figsize=(N*2 + 0.5,M*2 + 0.5))
     for j in range(M):
         for i in range(N):
             if norain:
@@ -325,21 +331,27 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
             else:
                 ix = np.where((year == years[i]) & (months >= fmonth) & (months <= lmonth) & np.isfinite(Data[Data_var[j]]))[0]
             if i == 0:
-                ax=plt.subplot(M+2, N, j*N+i+1)
+                ax=plt.subplot(M, N, j*N+i+1)
                 labels = {'x': 'Measured ' + Data_var[j], 'y': 'Modelled ' + Data_var[j]}
             else:
                 labels = {'x': 'Measured ' + Data_var[j], 'y': ''}
-                plt.subplot(M+2, N, j*N+i+1,sharex=ax, sharey=ax)
+                plt.subplot(M, N, j*N+i+1,sharex=ax, sharey=ax)
                 plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
             if len(ix) > 0:
                 plot_xy(Data[Data_var[j]][ix], Data[res_var[j]][ix], color=pal[j], axislabels=labels)
             if j == 0:
                 plt.title(str(years[i]))
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
+
+    plt.figure(figsize=(N*2 + 0.5,5))
+
+    ax = plt.subplot(2, N, (1,N))
+    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
 
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
+    ax = plt.subplot(2, N, (N+1,2*N))
 
-    ax = plt.subplot(M+2, N, (M*N+1,M*N+N))
     plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
                      facecolor='k', alpha=0.3)
     plt.plot(WTD.index, WTD['control'].values,':k', linewidth=1.0)
@@ -355,7 +367,6 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
                              facecolor='r', alpha=0.3)
             plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
 
-
     colors = {'control':  'k', 'partial': 'b', 'clearcut': 'r'}
     plot_timeseries_xr(results.isel(simulation=sim_idx), 'soil_ground_water_level', colors=[colors[treatment]], xticks=True, legend=False)
     plt.ylim([-1.0,0.0])
@@ -363,15 +374,13 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
 
     ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator(interval=6))
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%m-%Y'))
-
-    ax = plt.subplot(M+2, N, ((M+1)*N+1,(M+1)*N+N))
-    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
+    plt.ylabel('Water table level [m]')
 
     plt.tight_layout()
 
-#plot_scatters(results, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0}, legend=False)
-#plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018, legend=False, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
-#plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018, legend=False,plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
+#plot_scatters(results, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0}, legend=True)
+#plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018, legend=True)#, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
+#plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018, legend=True)#,plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
 
 def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}):
 
@@ -411,9 +420,9 @@ def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine
     plt.bar(r3, WB['forest floor evaporation'], color=pal[4], width=barWidth, edgecolor='white', label='Forest floor E')
 
     plt.xticks([r for r in range(len(WB['year']))], [int(WB['year'][i]) for i in range(len(WB['year']))])
-    plt.ylabel('[mm]')
+    plt.ylabel('ET components [mm]')
     if legend:
-        plt.legend(loc='upper center', ncol=3, borderaxespad=-3, frameon=False, borderpad=0.0, fontsize=12)
+        plt.legend(loc='upper center', ncol=3, frameon=False, borderpad=0.0, borderaxespad=-3)
 
     if sim_idx > 0:
         plt.bar(r1, WB_ref['interception evaporation'], fill=False, width=barWidth, edgecolor='black', linestyle=':')

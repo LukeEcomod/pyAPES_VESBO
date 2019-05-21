@@ -77,8 +77,10 @@ def plot_fluxes(results, Data,
     if dataframe is False:
         df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
         Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+        res_dates=results.date.values
     else:
         Data = Data.merge(results[res_var], how='outer', left_index=True, right_index=True)
+        res_dates=results.index
 
     dates = Data.index
 
@@ -92,7 +94,7 @@ def plot_fluxes(results, Data,
 
     labels = {'x': '', 'y': 'Modelled'}
 
-    plt.figure(figsize=(10,6))
+    plt.figure(figsize=(10,N*1.7 + 0.5))
     for i in range(N):
         if norain:
             ix = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data[Data_var[i]]))[0]
@@ -110,11 +112,15 @@ def plot_fluxes(results, Data,
             ax = plt.subplot(N,4,(i*4+2,i*4+3), sharex=ax1)
             plot_timeseries_df(Data, [res_var[i],Data_var[i]], colors=[pal[i],'k'], xticks=True,
                        labels=['Modelled', 'Measured'], marker=[None, '.'])
+            plt.xlim([res_dates[0], res_dates[-1]])
         if dataframe:
             plt.title(res_var[i], fontsize=10)
         else:
             plt.title(results[res_var[i]].units, fontsize=10)
         plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+        if i + 1 < N:
+            plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+            plt.xlabel('')
         if i == 0:
             ax2 = plt.subplot(N,4,i*4+4)
         else:
