@@ -211,10 +211,10 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
-#    if treatment == 'partial':
-#        Data['LE'][
-#            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
-    # period end (?)
+    if treatment == 'partial':
+        Data['LE'][
+            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#     period end (?)
     Data.index = Data.index - pd.Timedelta(hours=0.5)
     if treatment=='control':
         Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']

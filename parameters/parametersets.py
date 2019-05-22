@@ -24,12 +24,12 @@ root_depth=0.2
 
 # spefify as one values (same for all simulations) or tuple of length 'count'
 lettosuo_parameters = {
-        'count': 1,
+        'count': 3,
         'canopy': {
-#                'ctr': { # speed up!
-#                        'WMA': True,  # well-mixed assumption
-#                        'Ebal': False,  # no energy balance
-#                        },
+                'ctr': { # speed up!
+                        'WMA': True,  # well-mixed assumption
+                        'Ebal': False,  # no energy balance
+                        },
                 'loc': {
                         'lat': 60.63,
                         'lon': 23.95

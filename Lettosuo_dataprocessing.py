@@ -348,6 +348,9 @@ def EC_data():
            'Letto1_EC: Reco_N'
             ]].copy()
 
+    lettosuo_EC['Letto1_EC: NEE'] = np.where(lettosuo_EC['Letto1_EC: NEE_South'].notnull(),
+               lettosuo_EC['Letto1_EC: NEE_South'], lettosuo_EC['Letto1_EC: NEE_North'])
+
     lettosuo_EC = lettosuo_EC.rename(columns={
            'osittaishakkuu_energy: LE [W m-2], not gapfilled': 'partial_LE',
            'osittaishakkuu_energy: SH [W m-2], not gapfilled': 'partial_SH',

@@ -215,9 +215,9 @@ def get_tasks():
     """
 #    from parameters.ebal import sensitivity_sampling
 #    from parameters.parametersets import parameters, iterate_parameters
-    from parameters.parametersets import lettosuo_parameters_ctrl, iterate_parameters
+    from parameters.parametersets import lettosuo_parameters, iterate_parameters
     from copy import deepcopy as copy
-    parametersets = lettosuo_parameters_ctrl
+    parametersets = lettosuo_parameters
 
     from parameters.general import gpara
     from parameters.canopy import cpara
@@ -325,7 +325,7 @@ if __name__ == '__main__':
 
     # --- Number of workers ---
 #    Ncpu = args.cpu
-    Ncpu = 2
+    Ncpu = 4
 
     if Ncpu is None:
         #Ncpu = cpu_count(logical=False)
@@ -342,9 +342,9 @@ if __name__ == '__main__':
     outputfile = driver(
         ncf_params=ncf_params,
         logging_configuration=parallel_logging_configuration,
-        #task_queue=task_queue,
-        #logging_queue=logging_queue,
-        #writing_queue=writing_queue,
+#        task_queue=task_queue,
+#        logging_queue=logging_queue,
+#        writing_queue=writing_queue,
         N_workers=N_workers)
 
     print(outputfile)
