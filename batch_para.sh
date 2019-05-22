@@ -6,8 +6,9 @@
 #SBATCH --mail-user=kersti.haahti@luke.fi
 #SBATCH --mem-per-cpu=500
 #SBATCH --time=00:01:00
+#SBATCH -n 1
 #SBATCH --nodes=1
-#SBATCH --ntasks=4
+#SBATCH --cpus-per-task=6
 #SBATCH --partition=serial
 
 module load python-env/3.5.3
