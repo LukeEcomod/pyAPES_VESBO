@@ -8,8 +8,8 @@
 #SBATCH --time=00:01:00
 #SBATCH -n 1
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=6
-#SBATCH --partition=serial
+#SBATCH --cpus-per-task=4
+#SBATCH --partition=test
 
 module load python-env/3.5.3
 
