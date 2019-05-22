@@ -6,7 +6,7 @@
 #SBATCH -e lettosuo_err_%j
 #SBATCH --mail-type=END
 #SBATCH --mail-user=kersti.haahti@luke.fi
-#SBATCH --mem-per-cpu=100
+#SBATCH --mem-per-cpu=500
 #SBATCH --time=00:01:00
 #SBATCH --ntasks=4
 #SBATCH --partition=test

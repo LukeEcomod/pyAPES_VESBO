@@ -41,6 +41,7 @@ def _result_writer(ncf):
 
         if results is None:
             ncf.close()
+            print('results done')
             break
 
         write_ncf(nsim=results[0], results=results[1], ncf=ncf)
@@ -58,6 +59,7 @@ def _logger_listener():
         record = logging_queue.get()
 
         if record is None:
+            print('logger done')
             break
 
         logger = logging.getLogger(record.name)
@@ -88,6 +90,7 @@ def _worker():
         task = task_queue.get()
 
         if task is None:
+            print('worker done')
             break
 
         root.info("Creating simulation {}".format(task['nsim']))
