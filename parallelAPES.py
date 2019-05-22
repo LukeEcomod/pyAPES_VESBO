@@ -231,6 +231,7 @@ def get_tasks():
 #        save_samples = False
 
     default_params = {
+            'general': gpara,
             'canopy': cpara,
             'soil': spara
             }
