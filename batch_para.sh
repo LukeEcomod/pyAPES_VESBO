@@ -21,5 +21,3 @@ export VECLIB_MAXIMUM_THREADS=1
 
 # run commands
 srun python parallelAPES.py
-
-seff $SLURM_JOBID
