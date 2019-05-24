@@ -9,7 +9,7 @@
 #SBATCH -n 1
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-#SBATCH --partition=test
+#SBATCH --partition=serial
 
 module load python-env/3.5.3
 
