@@ -114,3 +114,5 @@ bryo_ebal.ipynb
 .DS_Store
 
 *.log
+
+*.sh
