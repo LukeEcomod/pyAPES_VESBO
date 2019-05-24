@@ -67,7 +67,7 @@ def plot_results(results):
 def plot_fluxes(results, Data,
                 res_var=['canopy_net_radiation','canopy_SH','canopy_LE'],
                 Data_var=['NRAD','SH','LE'],
-                sim_idx=0, fmonth=4, lmonth=9, norain=True, dataframe=False):
+                sim_idx=0, fmonth=4, lmonth=9, norain=True, dataframe=False, l1=False):
 
     N=len(Data_var)
 
@@ -103,7 +103,7 @@ def plot_fluxes(results, Data,
         plt.subplot(N, 4, i*4+1)
         if i + 1 == N:
             labels = {'x': 'Measured', 'y': 'Modelled'}
-        plot_xy(Data[Data_var[i]][ix], Data[res_var[i]][ix], color=pal[i], axislabels=labels)
+        plot_xy(Data[Data_var[i]][ix], Data[res_var[i]][ix], color=pal[i], axislabels=labels,l1=l1)
         if i == 0:
             ax1 = plt.subplot(N,4,(i*4+2,i*4+3))
             plot_timeseries_df(Data, [res_var[i],Data_var[i]], colors=[pal[i],'k'], xticks=False,
@@ -402,7 +402,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
     plt.legend(frameon=False, borderpad=0.0, labelspacing=0.1, loc="upper right",bbox_to_anchor=(1.1,1.1))
     plt.tight_layout()
 
-def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=0.05):
+def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=0.05,l1=False):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
     Args:
@@ -415,9 +415,18 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=
     """
     plt.scatter(x, y, marker='o', color=color, alpha=alpha)
     idx = np.isfinite(x) & np.isfinite(y)
-    p = np.polyfit(x[idx], y[idx], 1)
-    corr = np.corrcoef(x[idx], y[idx])
-    plt.annotate("y = %.2fx + %.2f \nR$^2$ = %.2f" % (p[0], p[1], corr[1,0]**2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
+
+    if l1:
+        p = l1_fit(x[idx], y[idx])
+    else:
+        p = np.polyfit(x[idx], y[idx], 1)
+
+    residuals = y[idx] - (p[0]*x[idx] + p[1])
+    R2 = 1 - sum(residuals**2)/sum((y[idx]-np.mean(y[idx]))**2)
+    MAE = np.mean(np.abs(residuals))
+#    plt.annotate("y = %.2fx + %.2f\nR$^2$ = %.2f\nMAE = %.1f" % (p[0], p[1], R2, MAE), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
+    plt.annotate("y = %.2fx + %.2f\nR$^2$ = %.2f" % (p[0], p[1], R2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
+
     lim = [min(min(y[np.isfinite(y)]),
                min(x[np.isfinite(x)]))-1000,
            max(max(y[np.isfinite(y)]),
@@ -553,3 +562,28 @@ def xarray_to_df(results, variables, sim_idx=0):
     df = pd.concat(series, axis=1)
     df.columns = variables
     return df
+
+import numpy as np
+import scipy.optimize
+
+def l1_fit(U, v):
+    """
+    Find a least absolute error solution (m, k) to U * m + k = v + e.
+    Minimize sum of absolute values of vector e (the residuals).
+    Returned result is a dictionary with fit parameters result["m"] and result["k"]
+    and other information.
+    source:
+    https://github.com/flatironinstitute/least_absolute_regression/blob/master/lae_regression/lae_regression/least_abs_err_regression.py
+    """
+    from scipy.optimize import minimize
+
+    def fit(x, params):
+        y = params[0] * x + params[1]
+        return y
+
+    def cost_function(params, x, y):
+        return np.sum(np.abs(y - fit(x, params)))
+
+    output = minimize(cost_function, np.array([1,1]), args=(U, v))
+
+    return output.x

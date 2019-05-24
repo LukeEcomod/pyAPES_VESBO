@@ -213,14 +213,14 @@ def driver(ncf_params,
     return ncf_params['output_path']
 
 
-def get_tasks():
+def get_tasks(scenario='all'):
     """ Creates parameters space for tasks
     """
 #    from parameters.ebal import sensitivity_sampling
 #    from parameters.parametersets import parameters, iterate_parameters
-    from parameters.parametersets import lettosuo_parameters, iterate_parameters
+    from parameters.parametersets import get_parameters, iterate_parameters
     from copy import deepcopy as copy
-    parametersets = lettosuo_parameters
+    parametersets = get_parameters(scenario)
 
     from parameters.general import gpara
     from parameters.canopy import cpara
@@ -290,20 +290,21 @@ def get_tasks():
 
 
 if __name__ == '__main__':
-#    import argparse
+    import argparse
     from parameters.general import parallel_logging_configuration
 #    from parameters.parametersets import parameters
     #mp.set_start_method('spawn')
 
-#    parser = argparse.ArgumentParser()
-#    parser.add_argument('--cpu', help='number of cpus to be used', type=int)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cpu', help='number of cpus to be used', type=int)
+    parser.add_argument('--scenario', help='scenario name (all, control, partial, clearcut)', type=str)
 #    parser.add_argument('--moss_type', help='hylocomium or sphagnum', type=str)
 #    parser.add_argument('--soil_type', help='organic or mineral', type=str)
 #    parser.add_argument('--trajectories', help='number of optimal trajectories to be used', type=int)
 #    parser.add_argument('--levels', help='number of levels to be used', type=int)
 #    parser.add_argument('--samples', help='predefined sample space', type=str)
 #
-#    args = parser.parse_args()
+    args = parser.parse_args()
 #
 #    timestr = time.strftime('%Y%m%d%H%M')
 
@@ -320,7 +321,7 @@ if __name__ == '__main__':
 #    num_levels = args.levels
 #    predefined = args.samples
 
-    tasks, ncf_params = get_tasks()
+    tasks, ncf_params = get_tasks(args.scenario)
 
     Nsim = len(tasks)
 
@@ -328,8 +329,8 @@ if __name__ == '__main__':
         task_queue.put(deepcopy(para))
 
     # --- Number of workers ---
-#    Ncpu = args.cpu
-    Ncpu = 4
+    Ncpu = args.cpu
+
 
     if Ncpu is None:
         #Ncpu = cpu_count(logical=False)

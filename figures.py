@@ -162,7 +162,7 @@ def plot_wtd(results):
 
     plot_timeseries_xr(results, 'soil_ground_water_level', colors=['k','b','r','g','m'], xticks=True)
 
-def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=5, lmonth=9):
+def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=5, lmonth=9,l1=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes, xarray_to_df
@@ -179,7 +179,7 @@ def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=5, lmonth=9):
 
     plot_fluxes(df, Data, norain=False,
                 res_var=['soil_temperature_5cm','soil_temperature_30cm'],
-                Data_var=['T5','T30'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx, dataframe=True)
+                Data_var=['T5','T30'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx, dataframe=True,l1=l1)
 
 #plot_Tsoil(results.sel(date=(results['date.year']<2016)), site='Letto1', sim_idx=0)
 #plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Letto1', sim_idx=1)
@@ -202,7 +202,7 @@ def plot_snow(results):
     plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
     plot_timeseries_xr(results, 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3})
 
-def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
+def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True,l1=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -220,20 +220,20 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
         Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE'],
-                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
     elif treatment=='partial':
         results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
         Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE','ground_heat_flux'],
-                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
     else:
         results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation', 'canopy_SH','canopy_LE','ground_heat_flux'],
-                Data_var=['NRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+                Data_var=['NRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
 
-def plot_fluxes_ebal(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
+def plot_fluxes_ebal(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True,l1=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -250,9 +250,9 @@ def plot_fluxes_ebal(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,no
     Data['GPP2'] = Data['Reco'] - Data['NEE']
     plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration','canopy_LE'],
-                Data_var=['NEE','GPP','GPP2','Reco','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+                Data_var=['NEE','GPP','GPP2','Reco','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
 
-def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
+def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True,l1=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
@@ -268,10 +268,10 @@ def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
     Data['Reco'] *= 1.0 / 44.01e-3
     Data['GPP2'] = Data['Reco'] - Data['NEE']
     plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration'],
-                Data_var=['NEE','GPP','GPP2','Reco'], norain=norain, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx)
+                Data_var=['NEE','GPP','GPP2','Reco'], norain=norain, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
 
 def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True,
-                  plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}):
+                  plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, l1=True):
 
     from tools.iotools import read_forcing
     import matplotlib.dates
@@ -338,7 +338,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
                 plt.subplot(M, N, j*N+i+1,sharex=ax, sharey=ax)
                 plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
             if len(ix) > 0:
-                plot_xy(Data[Data_var[j]][ix], Data[res_var[j]][ix], color=pal[j], axislabels=labels)
+                plot_xy(Data[Data_var[j]][ix], Data[res_var[j]][ix], color=pal[j], axislabels=labels, l1=l1)
             if j == 0:
                 plt.title(str(years[i]))
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
