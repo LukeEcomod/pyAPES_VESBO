@@ -432,3 +432,25 @@ def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine
     plt.xlim([-0.5, len(WB['year']) - 0.5])
 #    plt.tight_layout(rect=(0, 0, 0.95, 1))
     return WB
+
+def plot_WUE(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all')
+
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    # period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+    Data['NEE'] *= 1.0 / 44.01e-3
+    Data['GPP'] *= -1.0 / 44.01e-3
+    Data['Reco'] *= 1.0 / 44.01e-3
+    Data['GPP2'] = Data['Reco'] - Data['NEE']
+
+    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    plt.figure()
+    plt.plot(Data['GPP2'], Data['LE'],'.r')

@@ -54,11 +54,11 @@ lettosuo_parameters = {
                                         'ground_coverage': 0.0,
                                         },
                                 'pleurozium': {
-                                        'ground_coverage': (0.5, 0.5, 0.1),
+                                        'ground_coverage': (0.5, 0.5, 0.0),
                                         }
                                 },
                         'litter': {
-                                'ground_coverage': (0.5, 0.5, 0.9)
+                                'ground_coverage': (0.5, 0.5, 1.0)
                                 },
                         'baresoil': {
                                 'ground_coverage': (0.0, 0.0, 0.0)
@@ -360,16 +360,11 @@ lettosuo_parameters_clc = {
                                         'ground_coverage': 0.0,
                                         },
                                 'pleurozium': {
-                                        'ground_coverage': 0.1,
+                                        'ground_coverage': 0.0,
                                         }
                                 },
                         'litter': {
-                                'ground_coverage': 0.9,
-                                'optical_properties': {  # [0.1102, 0.2909, 0.98]
-                                        'emissivity': 0.98,  # [-]
-                                        'albedo_PAR': (0.1102, 0.1),  # [-]
-                                        'albedo_NIR': (0.2909, 0.5), # [-]
-                                        },
+                                'ground_coverage': 1.0,
                                 },
                         'baresoil': {
                                 'ground_coverage': 0.0,

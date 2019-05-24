@@ -122,7 +122,7 @@ class heat_and_water:
         # Crosses 1 at appr. when water content/dry mass is 8.8
         relative_conductance = min(1.0,
                                    (0.1285 * y[1]
-                                    / self.properties['dry_mass'] - 0.1285))
+                                    / self.properties['dry_mass'] - 0.1285)) * 0.5  ## TESTING!
 
         # [mol m-2 s-1]
         conductance_to_air_h2o = (

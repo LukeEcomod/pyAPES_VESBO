@@ -351,6 +351,9 @@ def EC_data():
     lettosuo_EC['Letto1_EC: NEE'] = np.where(lettosuo_EC['Letto1_EC: NEE_South'].notnull(),
                lettosuo_EC['Letto1_EC: NEE_South'], lettosuo_EC['Letto1_EC: NEE_North'])
 
+    lettosuo_EC['Letto1_EC: Reco'] = (310/360*lettosuo_EC['Letto1_EC: Reco_N'] + 50/360*lettosuo_EC['Letto1_EC: Reco_S'])
+    lettosuo_EC['Letto1_EC: GPP'] = lettosuo_EC['Letto1_EC: NEE'] - lettosuo_EC['Letto1_EC: Reco']
+
     lettosuo_EC = lettosuo_EC.rename(columns={
            'osittaishakkuu_energy: LE [W m-2], not gapfilled': 'partial_LE',
            'osittaishakkuu_energy: SH [W m-2], not gapfilled': 'partial_SH',
@@ -369,9 +372,12 @@ def EC_data():
            'Letto1_EC: LE (Wm-2)': 'control_LE',
            'Letto1_EC: SH (W m-2)': 'control_SH',
            'Letto1_meteo: avg(NetRad (W/m2))': 'control_NRAD',
-           'Letto1_EC: NEE_North': 'control_NEE',
-           'Letto1_EC: GPP_N': 'control_GPP',
-           'Letto1_EC: Reco_N': 'control_Reco',
+           'Letto1_EC: NEE': 'control_NEE',
+           'Letto1_EC: GPP': 'control_GPP',
+           'Letto1_EC: Reco': 'control_Reco',
+           'Letto1_EC: NEE_North': 'control-N_NEE',
+           'Letto1_EC: GPP_N': 'control-N_GPP',
+           'Letto1_EC: Reco_N': 'control-N_Reco',
            'Letto1_EC: NEE_South': 'control-S_NEE',
            'Letto1_EC: GPP_S': 'control-S_GPP',
            'Letto1_EC: Reco_S': 'control-S_Reco'

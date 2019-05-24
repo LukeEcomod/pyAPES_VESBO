@@ -66,7 +66,7 @@ litter = {
         'height': 0.03,  # [m]
         'roughness_height': 0.01,  # [m]
         'bulk_density': 45.0,  # [kg m\ :sup:`-3`]
-        'max_water_content': 4.0,  # [g g\ :sup:`-1`\ ]
+        'max_water_content': 10.0, # 4.0,  # [g g\ :sup:`-1`\ ]
         'min_water_content': 1.0,  # [g g\ :sup:`-1`\ ]
         'porosity': 0.95,  # [m\ :sup:`3` m\ :sup:`-3`\ ]
         'respiration': {  # Taken from baresoil!!
