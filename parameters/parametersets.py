@@ -27,6 +27,10 @@ def get_parameters(scenario):
     if scenario.upper() == 'ALL':
         lettosuo_parameters = {
             'count': 3,
+            'general':{
+                        'start_time' : "2009-10-01",
+                        'end_time' : "2019-01-01"
+                        },
             'canopy': {
 #                    'ctr': { # speed up!
 #                            'WMA': True,  # well-mixed assumption
@@ -175,6 +179,322 @@ def get_parameters(scenario):
                                    'width': 1.0,  # drain width [m]
                                    }
                             }
+                    }
+            }
+        return lettosuo_parameters
+    elif scenario.upper() == 'CLEARCUT':
+        lettosuo_parameters = {
+            'count': 4,
+            'general':{
+                        'start_time' : "2015-10-01",
+                        'end_time' : "2019-01-01"
+                        },
+            'canopy': {
+#                    'ctr': { # speed up!
+#                            'WMA': True,  # well-mixed assumption
+#                            'Ebal': False,  # no energy balance
+#                            },
+                    'loc': {
+                            'lat': 60.63,
+                            'lon': 23.95
+                            },
+                    'micromet': {
+                            'dPdx': 0.0
+                            },
+                    'radiation':{
+                            'Par_alb': 0.1,
+                            'Nir_alb': 0.43
+                            },
+                    'interception':{
+                            'wmax': 0.35e-03,
+                            'wmaxsnow': 1.4e-03
+                            },
+                    'forestfloor': {
+                            'bryophytes': {
+                                    'hylocomium': {
+                                            'ground_coverage': 0.0,
+                                            },
+                                    'sphagnum': {
+                                            'ground_coverage': 0.0,
+                                            },
+                                    'pleurozium': {
+                                            'ground_coverage': 0.0,
+                                            }
+                                    },
+                            'litter': {
+                                    'ground_coverage': 1.0,
+                                    },
+                            'baresoil': {
+                                    'ground_coverage': 0.0,
+                                    }
+                            },
+                    'planttypes': {
+                            'pine': {
+                                    'LAImax': clearcut['lai']['pine'],
+                                    'lad': clearcut['lad']['pine'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 55.,
+                                        'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.3,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 2.5,
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            'spruce': {
+                                    'LAImax': clearcut['lai']['spruce'],
+                                    'lad': clearcut['lad']['spruce'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 60.,
+                                        'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.4,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 2.5,
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            'decidious': {
+                                    'LAImax': clearcut['lai']['decid'],
+                                    'lad': clearcut['lad']['decid'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 45.,
+                                        'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.0,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 4.0,
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            'shrubs': {
+                                    'LAImax': (0.1, 0.5, 1.0, 1.5),
+                                    'lad': clearcut['lad']['shrubs'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 45.,
+                                        'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.0,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 4.0,
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            },
+                    },
+            'soil': {
+                    'grid': {
+                            'zh': zh
+                            },
+                    'soil_properties': soil_properties,
+                    'water_model': {
+    #                        'type': 'Equilibrium',
+                            'initial_condition':{
+                                    'ground_water_level': -0.2
+                                    },
+                            'lower_boundary': {  # lower boundary condition (type, value, depth)
+                                   'type': 'impermeable',
+                                   'value': None,
+                                   'depth': -2.0
+                                   },
+                           'drainage_equation': {  # drainage equation and drainage parameters
+                                   'type': 'Hooghoudt',  #
+                                   'depth': 0.8,  # drain depth [m]
+                                   'spacing': 45.0,  # drain spacing [m]
+                                   'width': 1.0,  # drain width [m]
+                                   },
+                            },
+                    }
+            }
+        return lettosuo_parameters
+    elif scenario.upper() == 'PARTIAL':
+        lettosuo_parameters = {
+            'count': 3,
+            'general':{
+                        'start_time' : "2015-10-01",
+                        'end_time' : "2019-01-01"
+                        },
+            'canopy': {
+#                    'ctr': { # speed up!
+#                            'WMA': True,  # well-mixed assumption
+#                            'Ebal': False,  # no energy balance
+#                            },
+                    'loc': {
+                            'lat': 60.63,
+                            'lon': 23.95
+                            },
+                    'micromet': {
+                            'dPdx': 0.0
+                            },
+                    'radiation':{
+                            'Par_alb': 0.1,
+                            'Nir_alb': 0.43
+                            },
+                    'interception':{
+                            'wmax': 0.35e-03,
+                            'wmaxsnow': 1.4e-03
+                            },
+                    'forestfloor': {
+                            'bryophytes': {
+                                    'hylocomium': {
+                                            'ground_coverage': 0.0,
+                                            },
+                                    'sphagnum': {
+                                            'ground_coverage': 0.0,
+                                            },
+                                    'pleurozium': {
+                                            'ground_coverage': 0.0,
+                                            }
+                                    },
+                            'litter': {
+                                    'ground_coverage': 1.0,
+                                    },
+                            'baresoil': {
+                                    'ground_coverage': 0.0,
+                                    }
+                            },
+                    'planttypes': {
+                            'pine': {
+                                    'LAImax': partial['lai']['pine'],
+                                    'lad': partial['lad']['pine'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 55.,
+                                        'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.3,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 2.5,
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            'spruce': {
+                                    'LAImax': partial['lai']['spruce'],
+                                    'lad': partial['lad']['spruce'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 60.,
+                                        'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.4,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 2.5,
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            'decidious': {
+                                    'LAImax': partial['lai']['decid'],
+                                    'lad': partial['lad']['decid'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 45.,
+                                        'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.0,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 4.0,
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            'shrubs': {
+                                    'LAImax': (0.4, 0.8, 1.2),
+                                    'lad': partial['lad']['shrubs'],
+                                    'rootp': {
+                                            'root_depth': root_depth,
+                                            },
+                                    'photop': {
+                                        'Vcmax': 45.,
+                                        'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.0,  # 0.023*Vcmax
+                                        'tresp': {
+                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
+                                            'Rd': [33.0]
+                                            },
+                                        'alpha': alpha,
+                                        'theta': 0.7,
+                                        'g1': 4.0,
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    },
+                            },
+                    },
+            'soil': {
+                    'grid': {
+                            'zh': zh
+                            },
+                    'soil_properties': soil_properties,
+                    'water_model': {
+    #                        'type': 'Equilibrium',
+                            'initial_condition':{
+                                    'ground_water_level': -0.2
+                                    },
+                            'lower_boundary': {  # lower boundary condition (type, value, depth)
+                                   'type': 'impermeable',
+                                   'value': None,
+                                   'depth': -2.0
+                                   },
+                           'drainage_equation': {  # drainage equation and drainage parameters
+                                   'type': 'Hooghoudt',  #
+                                   'depth': 0.8,  # drain depth [m]
+                                   'spacing': 45.0,  # drain spacing [m]
+                                   'width': 1.0,  # drain width [m]
+                                   },
+                            },
                     }
             }
         return lettosuo_parameters

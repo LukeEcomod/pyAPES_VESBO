@@ -133,7 +133,7 @@ class CanopyModel(object):
         # total root area index [m2 m-2]
         self.RAI = sum([pt.Roots.RAI for pt in self.planttypes])
         # distribution of roots [-]
-        self.root_distr = self.rad * dz_soil[self.ix_roots] / self.RAI
+        self.root_distr = self.rad * dz_soil[self.ix_roots] / (self.RAI + EPS)
 
         # canopy height [m]
         if len(np.where(self.lad > 0)[0]) > 0:
@@ -588,7 +588,7 @@ class CanopyModel(object):
                 'LAI': self.LAI,
                 'lad': self.lad,
                 'sunlit_fraction': f_sl,
-                'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.planttypes])/self.LAI,
+                'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.planttypes])/(self.LAI + EPS),
                 'IterWMA': iter_no
                 }
 

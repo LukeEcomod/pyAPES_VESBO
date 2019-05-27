@@ -70,14 +70,28 @@ def driver(create_ncf=False,
     else:
         Nsim = parametersets['count']
 
+    default_params = {
+            'general': gpara,
+            'canopy': cpara,
+            'soil': spara
+            }
+
+    param_space = [iterate_parameters(parametersets, copy(default_params), count) for count in range(Nsim)]
+
+    logger = logging.getLogger(__name__)
+
+    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
+
     # --- FORCING ---
     # Read forcing
-    forcing = read_forcing(gpara['forc_filename'],
-                           gpara['start_time'],
-                           gpara['end_time'],
-                           dt=gpara['dt'])
+    forcing = read_forcing(
+        param_space[0]['general']['forc_filename'],
+        param_space[0]['general']['start_time'],
+        param_space[0]['general']['end_time'],
+        dt=param_space[0]['general']['dt']
+    )
 
-# SINGLE SOIL LAYER
+    # SINGLE SOIL LAYER
 #    # read soil moisture and temperature
 #    df = read_forcing(gpara['forc_filename'],
 #                      gpara['start_time'],
@@ -90,22 +104,11 @@ def driver(create_ncf=False,
 #    spara['heat_model']['initial_condition']['temperature'] = forcing['Tsoil'].iloc[0]
 #    spara['water_model']['initial_condition']['volumetric_water_content'] = forcing['Wliq'].iloc[0]
 
-    default_params = {
-            'canopy': cpara,
-            'soil': spara
-            }
-
-    param_space = [iterate_parameters(parametersets, copy(default_params), count) for count in range(Nsim)]
-
-    logger = logging.getLogger(__name__)
-
-    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
-
 
     tasks = []
 
     for k in range(Nsim):
-        tasks.append(Model(gpara, param_space[k]['canopy'], param_space[k]['soil'], forcing, nsim=k))
+        tasks.append(Model(param_space[k]['general'], param_space[k]['canopy'], param_space[k]['soil'], forcing, nsim=k))
 
     if create_ncf:
         timestr = time.strftime('%Y%m%d%H%M')

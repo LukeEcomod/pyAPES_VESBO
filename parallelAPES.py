@@ -252,10 +252,10 @@ def get_tasks(scenario='all'):
 #    )
 
     forcing = read_forcing(
-        gpara['forc_filename'],
-        gpara['start_time'],
-        gpara['end_time'],
-        dt=gpara['dt']
+        para_space[0]['general']['forc_filename'],
+        para_space[0]['general']['start_time'],
+        para_space[0]['general']['end_time'],
+        dt=para_space[0]['general']['dt']
     )
 
     # save parameters into json file

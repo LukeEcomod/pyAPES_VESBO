@@ -304,7 +304,7 @@ def kdiffuse(LAI, x=1.0):
     YY = np.exp(-Kb*LAI)*np.sin(ang)*np.cos(ang)
 
     Taud = 2.0*np.trapz(YY*dang)
-    Kd = -np.log(Taud) / LAI  # extinction coefficient for diffuse radiation
+    Kd = -np.log(Taud) / (LAI + EPS)  # extinction coefficient for diffuse radiation
 
     return Kd
 
