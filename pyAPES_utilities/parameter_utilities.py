@@ -148,7 +148,7 @@ def lad_profiles(grid, dbhfile, quantiles, hs, plot=False, biomass_function='mar
             z, quantiles, normed=True, dbhfile=dbhfile, plot=plot, biomass_function=biomass_function)
     # understory shrubs
     lad_g = np.zeros([len(z), 1])
-    lad_g[z < hs] = 1.0
+    lad_g[z <= hs] = 1.0
     lad_g[0] = 0.0
     if sum(lad_g) < 1.0:
         lad_g[1] = 1.0

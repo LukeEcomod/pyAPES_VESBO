@@ -12,8 +12,8 @@ loc = {'lat': 61.51,  # latitude
        }
 
 # grid
-grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
-        'Nlayers': 100  # number of layers in grid [-]
+grid = {'zmax': 25.0,  # heigth of grid from ground surface [m]
+        'Nlayers': 101  # number of layers in grid [-]
         }
 
 # --- control flags (True/False) ---

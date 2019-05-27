@@ -293,7 +293,7 @@ def get_parameters(scenario):
                                         },
                                     },
                             'shrubs': {
-                                    'LAImax': (0.1, 0.5, 1.0, 1.5),
+                                    'LAImax': (0.2, 0.4, 0.8, 1.0),
                                     'lad': clearcut['lad']['shrubs'],
                                     'rootp': {
                                             'root_depth': root_depth,
@@ -376,11 +376,11 @@ def get_parameters(scenario):
                                             'ground_coverage': 0.0,
                                             },
                                     'pleurozium': {
-                                            'ground_coverage': 0.0,
+                                            'ground_coverage': 0.4,
                                             }
                                     },
                             'litter': {
-                                    'ground_coverage': 1.0,
+                                    'ground_coverage': 0.6,
                                     },
                             'baresoil': {
                                     'ground_coverage': 0.0,

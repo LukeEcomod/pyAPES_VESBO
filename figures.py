@@ -15,7 +15,7 @@ ff=['seagreen','peru','saddlebrown','khaki','lightgreen', 'limegreen', 'forestgr
 import seaborn as sns
 pal = sns.color_palette("hls", 6)
 
-def plot_vegetation():
+def plot_vegetation(save=False):
 
     def plot_regression(x, y, color='k', title='', axislabels={'x':'', 'y':''},alpha=0.5):
         """
@@ -63,30 +63,31 @@ def plot_vegetation():
     plot_regression(dat['bm'], dat['LAI'], alpha=0.5, title='All',
                     axislabels={'x':'biomass [g m$^{-2}$]', 'y':'LAI [m$^2$ m$^{-2}$]'})
     plt.tight_layout()
-    plt.savefig('figures/case_Lettosuo/vege_regressions.png',dpi=300, transparent=False)
+    if save:
+        plt.savefig('figures/case_Lettosuo/vege_regressions.png',dpi=300, transparent=False)
 
     fp = r'H:\Lettosuo\aluskasvillisuus\inventory_data_clc_mounding.txt'
     dat = pd.read_csv(fp,index_col=0)
-    labels=['SP$_{\mathrm{all},2009}$', 'VP$_{\mathrm{clc},2015}$', 'VP$_{\mathrm{ref},2015}$', 'SP$_{\mathrm{ref},2017}$', 'VP$_{\mathrm{ref},2017}$', 'SP$_{\mathrm{par},2017}$', 'SP$_{\mathrm{par},2018}$', 'VP$_{\mathrm{clc},2017}$', 'VP$_{\mathrm{clc},2018}$']
+    labels=['SP$_{\mathrm{all},2009}$', 'VP$_{\mathrm{ref},2015}$', 'VP$_{\mathrm{par},2015}$', 'VP$_{\mathrm{clc},2015}$', 'SP$_{\mathrm{ref},2017}$', 'VP$_{\mathrm{ref},2017}$', 'SP$_{\mathrm{par},2017}$', 'VP$_{\mathrm{par},2017}$', 'SP$_{\mathrm{par},2018}$', 'VP$_{\mathrm{par},2018}$', 'VP$_{\mathrm{clc},2017}$', 'VP$_{\mathrm{clc},2018}$']
     pos = (-0.16,1.02)
     width = 0.75
-    plt.figure(figsize=(6.5,4))
+    plt.figure(figsize=(7.5,4))
     ax1=plt.subplot(2,1,1)
     plt.annotate('a', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
-    plt.annotate('reference', (1.2,70))
-    plt.annotate(' partial\nharvest', (4.9,65))
-    plt.annotate('clear-cut', (6.9,70))
+    plt.annotate('reference', (1.8,70))
+    plt.annotate(' partial harvest', (6.2,70))
+    plt.annotate('clear-cut', (9.8,70))
     dat[['seedlings','shrubs','graminoid','herbs']].plot(kind='bar', stacked=True, ax=ax1, colors=vege, width=width)
-    plt.plot([4.5, 4.5],[0,1110],'--k')
-    plt.plot([6.5, 6.5],[0,1110],'--k')
+    plt.plot([5.5, 5.5],[0,1110],'--k')
+    plt.plot([9.5, 9.5],[0,1110],'--k')
     plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
     plt.ylim([0,75])
     ax1.set_yticks([0, 25, 50, 75])
     plt.ylabel('coverage [%]',labelpad=10.5)
     ax1.legend().set_visible(False)
     ax1_1 = ax1.twinx()
-    ax1_1.plot(range(9),dat['LAI'],'ok', markersize=4)
-    ax1_1.plot(range(9),dat['LAI_meas'],'xk', markersize=4)
+    ax1_1.plot(range(12),dat['LAI'],'ok', markersize=4)
+    ax1_1.plot([8, 11],[0.88, 1.52],'xk', markersize=4)
     plt.ylabel('LAI [m$^2$ m$^{-2}$]',labelpad=10)
     plt.ylim([0,2])
     ax1.legend().set_visible(False)
@@ -102,8 +103,8 @@ def plot_vegetation():
     labels1[2:]=labels1[:1:-1]
     handles[2:]=handles[:1:-1]
     ax2.legend(handles, labels1,bbox_to_anchor=(1.02,0.35), loc="center left", frameon=False, borderpad=0.0)
-    plt.plot([4.5, 4.5],[0,1110],'--k')
-    plt.plot([6.5, 6.5],[0,1110],'--k')
+    plt.plot([5.5, 5.5],[0,1110],'--k')
+    plt.plot([9.5, 9.5],[0,1110],'--k')
     plt.ylabel('coverage [%]')
     plt.ylim([0,100])
     ax2.spines['top'].set_visible(False)
@@ -111,7 +112,8 @@ def plot_vegetation():
     ax2.set_xticklabels(labels)
     plt.xticks(rotation=65)
     plt.tight_layout()
-    plt.savefig('figures/case_Lettosuo/vege_inventories.png',dpi=300, transparent=False)
+    if save:
+        plt.savefig('figures/case_Lettosuo/vege_inventories.png',dpi=300, transparent=False)
 
 # %% Plot lad profile
 from pyAPES_utilities.plotting import plot_lad_profiles
@@ -249,8 +251,8 @@ def plot_fluxes_ebal(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,no
     Data['Reco'] *= 1.0 / 44.01e-3
     Data['GPP2'] = Data['Reco'] - Data['NEE']
     plot_fluxes(results, Data, norain=norain,
-                res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration','canopy_LE'],
-                Data_var=['NEE','GPP','GPP2','Reco','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
+                res_var=['canopy_NEE','canopy_GPP','canopy_respiration','canopy_GPP','canopy_LE'],
+                Data_var=['NEE','GPP','Reco','GPP2','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
 
 def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True,l1=True):
 
