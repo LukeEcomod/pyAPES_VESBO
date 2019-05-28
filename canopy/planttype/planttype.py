@@ -144,7 +144,7 @@ class PlantType(object):
         # leaf properties
         self.leafp = p['leafp']  # leaf properties (dict)
 
-    def update_daily(self, doy, T, PsiL=0.0, Rew=1.0):
+    def update_daily(self, doy, T, Tsoil=None, PsiL=0.0, Rew=1.0):
         r""" Updates planttype pheno_state, gas-exchange parameters, LAI and lad.
 
         Args:
@@ -157,7 +157,7 @@ class PlantType(object):
         """
 
         if self.Switch_pheno:
-            self.pheno_state = self.Pheno_Model.run(T, out=True)
+            self.pheno_state = self.Pheno_Model.run(T, Tsoil=Tsoil, out=True)
 
         if self.Switch_lai:
             self.relative_LAI =self.LAI_Model.run(doy, T, out=True)
@@ -176,10 +176,10 @@ class PlantType(object):
         self.photop['Jmax'] =  f * self.pheno_state * self.photop0['Jmax']
         self.photop['Rd'] =  f * self.pheno_state * self.photop0['Rd']
 
-# TEST
-        self.photop['Vcmax'] = f * self.pheno_state * self.relative_LAI * self.photop0['Vcmax']
-        self.photop['Jmax'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Jmax']
-        self.photop['Rd'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Rd']
+## TEST
+#        self.photop['Vcmax'] = f * self.pheno_state * self.relative_LAI * self.photop0['Vcmax']
+#        self.photop['Jmax'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Jmax']
+#        self.photop['Rd'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Rd']
 
         # water stress responses
         if self.Switch_WaterStress == 'Rew':

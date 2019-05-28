@@ -87,7 +87,7 @@ def plot_vegetation(save=False):
     ax1.legend().set_visible(False)
     ax1_1 = ax1.twinx()
     ax1_1.plot(range(12),dat['LAI'],'ok', markersize=4)
-    ax1_1.plot([8, 11],[0.88, 1.52],'xk', markersize=4)
+#    ax1_1.plot([8, 11],[0.88, 1.52],'xk', markersize=4)
     plt.ylabel('LAI [m$^2$ m$^{-2}$]',labelpad=10)
     plt.ylim([0,2])
     ax1.legend().set_visible(False)
@@ -98,7 +98,7 @@ def plot_vegetation(save=False):
     plt.annotate('b', pos, xycoords='axes fraction', fontsize=12, fontweight='bold')
     dat[['moss','litter','baresoil','seedlings','shrubs','graminoid','herbs']].plot(kind='bar', stacked=True, ax=ax2, colors=ff, width=width)
     plt.plot([1, 2],[110,110],'ok', label='LAI estimated', markersize=4)
-    plt.plot([1, 2],[110,110],'xk', label='LAI measured', markersize=4)
+#    plt.plot([1, 2],[110,110],'xk', label='LAI measured', markersize=4)
     handles, labels1 = ax2.get_legend_handles_labels()
     labels1[2:]=labels1[:1:-1]
     handles[2:]=handles[:1:-1]

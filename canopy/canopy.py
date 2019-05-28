@@ -151,7 +151,7 @@ class CanopyModel(object):
 
         self.forestfloor = ForestFloor(cpara['forestfloor'])
 
-    def run_daily(self, doy, Ta, Rew=1.0):
+    def run_daily(self, doy, Ta, Tsoil=None, Rew=1.0):
         r""" Computatations at daily timestep.
         Updates planttypes and total canopy leaf area index and phenological state.
         Recomputes normalize flow statistics with new leaf area density profile.
@@ -166,7 +166,7 @@ class CanopyModel(object):
         for pt in self.planttypes:
             if pt.LAImax > 0.0:
                 PsiL = (pt.Roots.h_root - self.z) / 100.0  # MPa
-                pt.update_daily(doy, Ta, PsiL=PsiL, Rew=Rew)  # updates pt properties
+                pt.update_daily(doy, Ta, Tsoil=Tsoil, PsiL=PsiL, Rew=Rew)  # updates pt properties
         # total leaf area index [m2 m-2]
         self.LAI = sum([pt.LAI for pt in self.planttypes])
         # total leaf area density [m2 m-3]
