@@ -17,6 +17,9 @@ from os import listdir
 from pyAPES_utilities.timeseries_tools import fill_gaps
 import datetime
 
+#: machine epsilon
+EPS = np.finfo(float).eps
+
 direc = "C:/Users/L1656/Documents/Git_repos/pyAPES_Kersti/"
 
 """
@@ -118,10 +121,7 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0)
     readme += "\nZen: Zenith angle [rad], (lat = %.2f, lon = %.2f)" % (lat, lon)
 
     # radiation components
-#
-#    # global radiation
-#    cols.append('Rg')
-#    readme += "\nRg: Global radiation [W/m2]"
+
     if {'LWin','diffPar', 'dirPar', 'diffNir', 'dirNir'}.issubset(dat.columns) == False:
         f_cloud, f_diff, emi_sky = compute_clouds_rad(dat['doy'].values,
                                                       dat['Zen'].values,
@@ -131,9 +131,40 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0)
 
     if 'LWin' not in dat:
         print('Longwave radiation estimated')
+        # Downwelling longwve radiation
+        # solar constant at top of atm.
+        So = 1367
+        # clear sky Global radiation at surface
+        dat['Qclear'] = np.maximum(0.0,
+                        (So * (1.0 + 0.033 * np.cos(2.0 * np.pi * (np.minimum(dat['doy'].values, 365) - 10) / 365)) * np.cos(dat['Zen'].values)))
+        tau_atm = tau_atm = dat['Rg'].rolling(4,1).sum() / (dat['Qclear'].rolling(4,1).sum() + EPS)
+        # cloud cover fraction
+        dat['f_cloud'] = 1.0 - (tau_atm - 0.2) / (0.7 - 0.2)
+        dat['f_cloud'][dat['Qclear'] < 10] = np.nan
+
+        dat['Qclear_12h'] = dat['Qclear'].resample('12H').sum()
+        dat['Qclear_12h'] = dat['Qclear_12h'].fillna(method='ffill')
+        dat['Rg_12h'] = dat['Rg'].resample('12H').sum()
+        dat['Rg_12h'] = dat['Rg_12h'].fillna(method='ffill')
+
+        tau_atm = dat['Rg_12h'] / (dat['Qclear_12h'] + EPS)
+        dat['f_cloud_12h'] = 1.0 - (tau_atm -0.2) / (0.7 - 0.2)
+
+        dat['f_cloud'] = np.where((dat.index.hour > 12) & (dat['f_cloud_12h'] < 0.2), 0.0, dat['f_cloud'])
+        dat['f_cloud'] = dat['f_cloud'].fillna(method='ffill')
+        dat['f_cloud'] = dat['f_cloud'].fillna(method='bfill')
+        dat['f_cloud'][dat['f_cloud'] < 0.0] = 0.0
+        dat['f_cloud'][dat['f_cloud'] > 1.0] = 1.0
+
+        emi0 = 1.24 * (dat['H2O'].values * dat['P'].values / 100 /(dat['Tair'].values + 273.15))**(1./7.)
+        emi_sky = (1 - 0.84 * dat['f_cloud']) * emi0 + 0.84 * dat['f_cloud']
+
         # estimated long wave budget
         b = 5.6697e-8  # Stefan-Boltzman constant (W m-2 K-4)
         dat['LWin'] = emi_sky * b *(dat['Tair'] + 273.15)**4 # Wm-2 downwelling LW
+
+        dat[['LWin','f_cloud']].plot(subplots=True, kind='line')
+
     cols.append('LWin')
     readme += "\nLWin: Downwelling long wave radiation [W/m2]"
 
