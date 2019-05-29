@@ -29,7 +29,7 @@ def get_parameters(scenario):
             'count': 1,
             'general':{
                         'start_time' : "2009-10-01",
-                        'end_time' : "2010-11-01"
+                        'end_time' : "2019-01-01"
                         },
             'canopy': {
 #                    'ctr': { # speed up!
@@ -594,8 +594,8 @@ def get_parameters(scenario):
                                         },
                                     },
                             'decidious': {
-                                    'LAImax': (control['lai']['decid'], partial['lai']['decid'], clearcut['lai']['decid']),
-                                    'lad': (control['lad']['decid'], partial['lad']['decid'], clearcut['lad']['decid']),
+                                    'LAImax': control['lai']['decid'],
+                                    'lad': control['lad']['decid'],
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
