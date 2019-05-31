@@ -503,7 +503,7 @@ def get_parameters(scenario):
             'count': 3,
             'general':{
                         'start_time' : "2009-10-01",
-                        'end_time' : "2019-01-01"
+                        'end_time' : "2010-11-01"
                         },
             'canopy': {
 #                    'ctr': { # speed up!

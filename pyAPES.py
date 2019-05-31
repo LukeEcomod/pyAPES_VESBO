@@ -197,6 +197,7 @@ class Model(object):
 
         logger = logging.getLogger(__name__)
         logger.info('Running simulation {}'.format(self.Nsim))
+        time0 = time.time()
 
         #print('RUNNING')
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
@@ -309,6 +310,8 @@ class Model(object):
         self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
 
         self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)
+
+        logger.info('Finished simulation %.0f, running time %.2f seconds' % (self.Nsim, time.time() - time0))
 
         return self.results
 

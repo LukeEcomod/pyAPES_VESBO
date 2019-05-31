@@ -118,6 +118,8 @@ def _worker():
             result = model.run()
             writing_queue.put((task['nsim'], result))
 
+            root.info("Simulation {} finished".format(task['nsim']))
+
         except:
             message = 'FAILED: simulation {}'.format(task['nsim'])
             root.info(message + '_' + sys.exc_info()[0])
