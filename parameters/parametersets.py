@@ -32,10 +32,10 @@ def get_parameters(scenario):
                         'end_time' : "2019-01-01"
                         },
             'canopy': {
-                    'ctr': { # speed up!
-                            'WMA': True,  # well-mixed assumption
-                            'Ebal': False,  # no energy balance
-                            },
+#                    'ctr': { # speed up!
+#                            'WMA': True,  # well-mixed assumption
+#                            'Ebal': False,  # no energy balance
+#                            },
                     'loc': {
                             'lat': 60.63,
                             'lon': 23.95
