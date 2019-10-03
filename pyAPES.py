@@ -210,9 +210,10 @@ class Model(object):
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
             if self.forcing['doy'].iloc[k] != self.forcing['doy'].iloc[k-1] or k == 0:
-# TESTING
                 if self.soil.solve_heat:
-                    Tsoil = self.soil.heat.T[9]
+                    Tsoil = None
+# TESTING
+#                    Tsoil = self.soil.heat.T[9]
                 else:
                     Tsoil = None
                 self.canopy_model.run_daily(

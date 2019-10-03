@@ -26,16 +26,16 @@ def get_parameters(scenario):
     # spefify as one values (same for all simulations) or tuple of length 'count'
     if scenario.upper() == 'ALL':
         lettosuo_parameters = {
-            'count': 1,
+            'count': 3,
             'general':{
-                        'start_time' : "2009-10-01",
+                        'start_time' : "2015-10-01",
                         'end_time' : "2019-01-01"
                         },
             'canopy': {
-#                    'ctr': { # speed up!
-#                            'WMA': True,  # well-mixed assumption
-#                            'Ebal': False,  # no energy balance
-#                            },
+                    'ctr': { # speed up!
+                            'WMA': True,  # well-mixed assumption
+                            'Ebal': False,  # no energy balance
+                            },
                     'loc': {
                             'lat': 60.63,
                             'lon': 23.95
@@ -89,7 +89,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
@@ -110,7 +110,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decidious': {
@@ -131,7 +131,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'shrubs': {
@@ -152,7 +152,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },
@@ -500,16 +500,16 @@ def get_parameters(scenario):
         return lettosuo_parameters
     if scenario.upper() == 'CONTROL':
         lettosuo_parameters = {
-            'count': 3,
+            'count': 1,
             'general':{
                         'start_time' : "2009-10-01",
                         'end_time' : "2019-01-01"
                         },
             'canopy': {
-#                    'ctr': { # speed up!
-#                            'WMA': True,  # well-mixed assumption
-#                            'Ebal': False,  # no energy balance
-#                            },
+                    'ctr': { # speed up!
+                            'WMA': True,  # well-mixed assumption
+                            'Ebal': False,  # no energy balance
+                            },
                     'loc': {
                             'lat': 60.63,
                             'lon': 23.95
@@ -552,7 +552,7 @@ def get_parameters(scenario):
                                             'root_depth': root_depth,
                                             },
                                     'laip': {
-                                            'sdl': (12.0, 12.0, 9.0),
+                                            'sdl': (12.0, 12.0, 12.0),
                                             },
                                     'photop': {
                                         'Vcmax': 55.,
@@ -566,7 +566,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': (4.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
@@ -576,7 +576,7 @@ def get_parameters(scenario):
                                             'root_depth': root_depth,
                                             },
                                     'laip': {
-                                            'sdl': (12.0, 12.0, 9.0),
+                                            'sdl': (12.0, 12.0, 12.0),
                                             },
                                     'photop': {
                                         'Vcmax': 60.,
@@ -590,7 +590,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': (4.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decidious': {
@@ -600,7 +600,7 @@ def get_parameters(scenario):
                                             'root_depth': root_depth,
                                             },
                                     'laip': {
-                                            'sdl': (12.0, 12.0, 9.0),
+                                            'sdl': (12.0, 12.0, 12.0),
                                             },
                                     'photop': {
                                         'Vcmax': 45.,
@@ -614,7 +614,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': (1.0e-2, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'shrubs': {
@@ -624,7 +624,7 @@ def get_parameters(scenario):
                                             'root_depth': root_depth,
                                             },
                                     'laip': {
-                                            'sdl': (12.0, 12.0, 9.0),
+                                            'sdl': (12.0, 12.0, 12.0),
                                             },
                                     'photop': {
                                         'Vcmax': 45.,
@@ -638,7 +638,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': (1.0e-2, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },

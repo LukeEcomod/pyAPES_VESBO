@@ -176,7 +176,7 @@ class PlantType(object):
         self.photop['Jmax'] =  f * self.pheno_state * self.photop0['Jmax']
         self.photop['Rd'] =  f * self.pheno_state * self.photop0['Rd']
 
-## TEST
+## TEST: relative_LAI * phenostate
 #        self.photop['Vcmax'] = f * self.pheno_state * self.relative_LAI * self.photop0['Vcmax']
 #        self.photop['Jmax'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Jmax']
 #        self.photop['Rd'] =  f * self.pheno_state * self.relative_LAI * self.photop0['Rd']

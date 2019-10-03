@@ -19,6 +19,7 @@ from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O, MOLAR_MASS_CO2, PAR_TO
 
 import seaborn as sns
 pal = sns.color_palette("hls", 6)
+EPS = np.finfo(float).eps
 
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default = prop_cycle.by_key()['color']
@@ -87,7 +88,7 @@ def plot_fluxes(results, Data,
     dryc = np.ones(len(dates))
     if norain:
         ix = Data['forcing_precipitation'].rolling(48, 1).sum()
-        f = np.where(ix > 0.0)[0]  # wet canopy indices
+        f = np.where(ix > EPS)[0]  # wet canopy indices
         dryc[f] = 0.0
 
     months = Data.index.month

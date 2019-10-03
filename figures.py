@@ -14,6 +14,7 @@ ff=['seagreen','peru','saddlebrown','khaki','lightgreen', 'limegreen', 'forestgr
 
 import seaborn as sns
 pal = sns.color_palette("hls", 6)
+EPS = np.finfo(float).eps
 
 def plot_vegetation(save=False):
 
@@ -456,3 +457,112 @@ def plot_WUE(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
 
     plt.figure()
     plt.plot(Data['GPP2'], Data['LE'],'.r')
+
+def data_analysis(fmonth=5, lmonth=9,norain=True):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes
+    from canopy.micromet import e_sat
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
+                        start_time="2010-01-01", end_time="2019-01-01")
+
+    Data['partial_LE'][
+        (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#     period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+
+    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
+                    start_time="2010-01-01", end_time="2019-01-01")
+    # vapor pressure
+    esat, s = e_sat(Forc['Tair'].values)
+    Forc['VPD'] = 1e-3 * (esat - Forc['H2O'].values * Forc['P'].values)
+
+    dryc = np.ones(len(Data.index))
+#    if norain:
+#        ix = Forc['Prec'].rolling(48, 1).sum()
+#        f = np.where(ix > EPS)[0]  # wet canopy indices
+#        dryc[f] = 0.0
+
+    Forc['RH'] = Forc['H2O'] * Forc['P'].values / esat * 100
+    f = np.where(Forc['RH'] > 70)[0]  # wet canopy indices
+    dryc[f] = 0.0
+    f = np.where(Forc['diffPar'] + Forc['dirPar'] < 100)[0]  # wet canopy indices
+    dryc[f] = 0.0
+
+    months = Data.index.month
+
+    if norain:
+        ix = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
+    else:
+        ix = np.where((months >= fmonth) & (months <= lmonth))[0]
+
+    plt.figure()
+    ax=plt.subplot(1,3,1)
+    plt.scatter(Forc['VPD'][ix],Data['control_LE'][ix],alpha=0.1)
+    plt.subplot(1,3,2,sharey=ax)
+    plt.scatter(Forc['VPD'][ix],Data['partial_LE'][ix],color='r',alpha=0.1)
+    plt.subplot(1,3,3,sharey=ax)
+    plt.scatter(Forc['VPD'][ix],Data['clearcut_LE'][ix],color='g',alpha=0.1)
+
+    Data['control_Gs'] = Data['control_LE']/Forc['VPD']
+    Data['partial_Gs'] = Data['partial_LE']/Forc['VPD']
+    Data['clearcut_Gs'] = Data['clearcut_LE']/Forc['VPD']
+    plt.figure()
+#    ax=plt.subplot(1,3,1)
+    plt.scatter(Forc['VPD'][ix],Data['control_Gs'][ix],alpha=0.1)
+#    plt.subplot(1,3,2,sharey=ax)
+    plt.scatter(Forc['VPD'][ix],Data['partial_Gs'][ix],color='r',alpha=0.1)
+#    plt.subplot(1,3,3,sharey=ax)
+    plt.scatter(Forc['VPD'][ix],Data['clearcut_Gs'][ix],color='g',alpha=0.1)
+
+    Data_daily=Data.resample('D',how=lambda x: x.values.mean())
+
+    Data_daily.plot(subplots=True,kind='line',marker='o',markersize=1)
+
+def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True,
+                  plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, l1=True):
+
+    from tools.iotools import read_forcing
+    import matplotlib.dates
+    from pyAPES_utilities.plotting import xarray_to_df, plot_xy, plot_timeseries_xr
+    import seaborn as sns
+    pal = sns.color_palette("hls", 6)
+
+    years = range(fyear, lyear+1)
+    N = len(years)
+
+    plt.figure(figsize=(N*2 + 0.5,5))
+
+    ax = plt.subplot(2, N, (1,N))
+    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
+
+    # Read observed WTD
+    WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
+    ax = plt.subplot(2, N, (N+1,2*N))
+
+    plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
+                     facecolor='k', alpha=0.3)
+    plt.plot(WTD.index, WTD['control'].values,':k', linewidth=1.0)
+    if treatment is not 'control':
+        plot_timeseries_xr(results.isel(simulation=0), 'soil_ground_water_level', colors=['k'], xticks=True, legend=False)
+        if treatment is 'partial':
+            plt.fill_between(WTD.index, WTD['partial_max'].values, WTD['partial_min'].values,
+                             facecolor='b', alpha=0.3)
+            plt.plot(WTD.index, WTD['partial'].values,':b', linewidth=1.0)
+
+        if treatment is 'clearcut':
+            plt.fill_between(WTD.index, WTD['clearcut_max'].values, WTD['clearcut_min'].values,
+                             facecolor='r', alpha=0.3)
+            plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
+
+    colors = {'control':  'k', 'partial': 'b', 'clearcut': 'r'}
+    plot_timeseries_xr(results.isel(simulation=sim_idx), 'soil_ground_water_level', colors=[colors[treatment]], xticks=True, legend=False)
+    plt.ylim([-1.0,0.0])
+    plt.xlim(['01-01-'+str(fyear),'12-31-'+str(lyear)])
+
+    ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator(interval=6))
+    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%m-%Y'))
+    plt.ylabel('Water table level [m]')
+
+    plt.tight_layout()
