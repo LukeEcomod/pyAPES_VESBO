@@ -458,10 +458,10 @@ def plot_WUE(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
     plt.figure()
     plt.plot(Data['GPP2'], Data['LE'],'.r')
 
-def data_analysis(fmonth=5, lmonth=9,norain=True):
+def data_analysis(results, fmonth=5, lmonth=9,norain=True):
 
     from tools.iotools import read_forcing
-    from pyAPES_utilities.plotting import plot_fluxes
+    from pyAPES_utilities.plotting import plot_fluxes, xarray_to_df
     from canopy.micromet import e_sat
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
@@ -478,16 +478,18 @@ def data_analysis(fmonth=5, lmonth=9,norain=True):
     esat, s = e_sat(Forc['Tair'].values)
     Forc['VPD'] = 1e-3 * (esat - Forc['H2O'].values * Forc['P'].values)
 
+    Data = Data.merge(Forc, how='outer', left_index=True, right_index=True)
+
     dryc = np.ones(len(Data.index))
 #    if norain:
 #        ix = Forc['Prec'].rolling(48, 1).sum()
 #        f = np.where(ix > EPS)[0]  # wet canopy indices
 #        dryc[f] = 0.0
 
-    Forc['RH'] = Forc['H2O'] * Forc['P'].values / esat * 100
-    f = np.where(Forc['RH'] > 70)[0]  # wet canopy indices
+    Data['RH'] = Data['H2O'] * Data['P'].values / esat * 100
+    f = np.where(Data['RH'] > 70)[0]  # wet canopy indices
     dryc[f] = 0.0
-    f = np.where(Forc['diffPar'] + Forc['dirPar'] < 100)[0]  # wet canopy indices
+    f = np.where(Data['diffPar'] + Data['dirPar'] < 100)[0]  # wet canopy indices
     dryc[f] = 0.0
 
     months = Data.index.month
@@ -497,28 +499,36 @@ def data_analysis(fmonth=5, lmonth=9,norain=True):
     else:
         ix = np.where((months >= fmonth) & (months <= lmonth))[0]
 
+    df = xarray_to_df(results, ['canopy_LE'], sim_idx=1)
+    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+    Data['mod_Gs'] = Data['canopy_LE'] / Data['VPD']
+
     plt.figure()
     ax=plt.subplot(1,3,1)
-    plt.scatter(Forc['VPD'][ix],Data['control_LE'][ix],alpha=0.1)
+    plt.scatter(Data['VPD'][ix],Data['control_LE'][ix],alpha=0.1)
     plt.subplot(1,3,2,sharey=ax)
-    plt.scatter(Forc['VPD'][ix],Data['partial_LE'][ix],color='r',alpha=0.1)
+    plt.scatter(Data['VPD'][ix],Data['partial_LE'][ix],color='r',alpha=0.1)
     plt.subplot(1,3,3,sharey=ax)
-    plt.scatter(Forc['VPD'][ix],Data['clearcut_LE'][ix],color='g',alpha=0.1)
+    plt.scatter(Data['VPD'][ix],Data['clearcut_LE'][ix],color='g',alpha=0.1)
 
-    Data['control_Gs'] = Data['control_LE']/Forc['VPD']
-    Data['partial_Gs'] = Data['partial_LE']/Forc['VPD']
-    Data['clearcut_Gs'] = Data['clearcut_LE']/Forc['VPD']
+    Data['control_Gs'] = Data['control_LE']/Data['VPD']
+    Data['partial_Gs'] = Data['partial_LE']/Data['VPD']
+    Data['clearcut_Gs'] = Data['clearcut_LE']/Data['VPD']
     plt.figure()
-#    ax=plt.subplot(1,3,1)
-    plt.scatter(Forc['VPD'][ix],Data['control_Gs'][ix],alpha=0.1)
-#    plt.subplot(1,3,2,sharey=ax)
-    plt.scatter(Forc['VPD'][ix],Data['partial_Gs'][ix],color='r',alpha=0.1)
-#    plt.subplot(1,3,3,sharey=ax)
-    plt.scatter(Forc['VPD'][ix],Data['clearcut_Gs'][ix],color='g',alpha=0.1)
+    ax=plt.subplot(1,3,1)
+    plt.scatter(Data['VPD'][ix],Data['control_Gs'][ix],alpha=0.1)
+    plt.scatter(Data['VPD'][ix],Data['mod_Gs'][ix],color='k',alpha=0.1)
+    plt.subplot(1,3,2,sharey=ax)
+    plt.scatter(Data['VPD'][ix],Data['partial_Gs'][ix],color='r',alpha=0.1)
+    plt.subplot(1,3,3,sharey=ax)
+    plt.scatter(Data['VPD'][ix],Data['clearcut_Gs'][ix],color='g',alpha=0.1)
 
-    Data_daily=Data.resample('D',how=lambda x: x.values.mean())
+    plt.figure()
+    plt.scatter(Data['control_Gs'][ix],Data['mod_Gs'][ix],alpha=0.1)
 
-    Data_daily.plot(subplots=True,kind='line',marker='o',markersize=1)
+#    Data_daily=Data.resample('D',how=lambda x: x.values.mean())
+#
+#    Data_daily.plot(subplots=True,kind='line',marker='o',markersize=1)
 
 def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True,
                   plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, l1=True):
