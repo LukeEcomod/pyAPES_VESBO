@@ -222,10 +222,16 @@ def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conv
             for var in variables:
                 values_all.append(result[var].values)
         for var in variables:
-            labels.append(result[var].units.split('[')[0])
+            try:
+                labels.append(result[var].units.split('[')[0])
+            except:
+                labels.append(var)
         title = ''
 
-    unit = '[' + results[0][variables[0]].units.split('[')[-1]
+    try:
+        unit = '[' + results[0][variables[0]].units.split('[')[-1]
+    except:
+        unit='unit'
     if cum:
         unit = unit.split(' ')[-2]+']'
     if unit_conversion['unit'] != None:

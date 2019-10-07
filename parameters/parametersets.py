@@ -15,9 +15,9 @@ ranges = {}
 # normed leaf area density profiles
 fdir = 'pyAPES_utilities/runkolukusarjat/'
 hs = 0.5  # height of understory shrubs [m]
-control = single_lad_profiles(grid, fdir + 'letto2014.txt', hs, plot=False, biomass_function='marklund_mod')
-partial = single_lad_profiles(grid, fdir + 'letto2016_partial.txt', hs, plot=False, biomass_function='marklund_mod')
-clearcut = single_lad_profiles(grid, fdir + 'letto2016_clearcut.txt', hs, plot=False, biomass_function='marklund_mod')
+control = single_lad_profiles(grid, fdir + 'letto2014.txt', hs, plot=False, biomass_function='aleksis_combination')  #, biomass_function='marklund_mod')
+partial = single_lad_profiles(grid, fdir + 'letto2016_partial.txt', hs, plot=False, biomass_function='aleksis_combination')  #, biomass_function='marklund_mod')
+clearcut = single_lad_profiles(grid, fdir + 'letto2016_clearcut.txt', hs, plot=False, biomass_function='aleksis_combination')  #, biomass_function='marklund_mod')
 
 alpha=0.3
 root_depth=0.2
@@ -28,7 +28,7 @@ def get_parameters(scenario):
         lettosuo_parameters = {
             'count': 3,
             'general':{
-                        'start_time' : "2015-10-01",
+                        'start_time' : "2009-10-01",
                         'end_time' : "2019-01-01"
                         },
             'canopy': {

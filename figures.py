@@ -205,6 +205,20 @@ def plot_snow(results):
     plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
     plot_timeseries_xr(results, 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3})
 
+def plot_runoff(results, sim_idx=0):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df
+
+    # Read observed WTD
+    Data = read_forcing("lettosuo_weir_data.csv", cols=['Runoff mm/h'])
+
+    results['runoff'] = results['soil_drainage'].copy() * 1e3 * 3600
+
+    plt.figure()
+    plot_timeseries_xr(results.sel(simulation=sim_idx), 'runoff', colors=['r'])
+    plot_timeseries_df(Data, 'Runoff mm/h', colors='k', linestyle=':')
+
 def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True,l1=True):
 
     from tools.iotools import read_forcing
@@ -270,8 +284,8 @@ def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
     Data['GPP'] *= -1.0 / 44.01e-3
     Data['Reco'] *= 1.0 / 44.01e-3
     Data['GPP2'] = Data['Reco'] - Data['NEE']
-    plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_GPP','canopy_respiration'],
-                Data_var=['NEE','GPP','GPP2','Reco'], norain=norain, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
+    plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_respiration'],
+                Data_var=['NEE','GPP2','Reco'], norain=norain, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
 
 def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True,
                   plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, l1=True):
@@ -294,10 +308,10 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     Data['GPP'][Data['GPP']<0]=np.nan
 
     Data_var = ['NRAD', 'LE', 'SH', 'GHF','GPP','Reco']
-#    if treatment == 'partial':
-#        for var in Data_var:
-#            Data[var][
-#                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+    if treatment == 'partial':
+        for var in Data_var:
+            Data[var][
+                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
     res_var=['canopy_net_radiation', 'canopy_LE', 'canopy_SH', 'ground_heat_flux', 'canopy_GPP','canopy_respiration']
 
@@ -349,7 +363,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     plt.figure(figsize=(N*2 + 0.5,5))
 
     ax = plt.subplot(2, N, (1,N))
-    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
+    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id, treatment=treatment)
 
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
@@ -385,7 +399,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
 #plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018, legend=True)#, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
 #plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018, legend=True)#,plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
 
-def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}):
+def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, treatment='control'):
 
     if sim_idx > 0:
         WB_ref={}
@@ -427,7 +441,7 @@ def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine
     if legend:
         plt.legend(loc='upper center', ncol=3, frameon=False, borderpad=0.0, borderaxespad=-3)
 
-    if sim_idx > 0:
+    if treatment is not 'control':
         plt.bar(r1, WB_ref['interception evaporation'], fill=False, width=barWidth, edgecolor='black', linestyle=':')
         plt.bar(r2, WB_ref['transpiration'], fill=False, width=barWidth, edgecolor='black', linestyle=':')
         plt.bar(r3, WB_ref['forest floor evaporation'], fill=False, width=barWidth, edgecolor='black', linestyle=':')
@@ -545,7 +559,7 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
     plt.figure(figsize=(N*2 + 0.5,5))
 
     ax = plt.subplot(2, N, (1,N))
-    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
+    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), treatment=treatment, sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
 
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')

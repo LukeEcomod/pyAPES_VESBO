@@ -275,6 +275,8 @@ def profiles_hyde(data, species, z, biomass_function='marklund'):
             y, L = marklund_mod(d, h, species)
         elif biomass_function=='repola':
             y, L = repola(d, h, species)
+        elif biomass_function=='aleksis_combination':
+            y, L = aleksis_combination(d, h, ht, species)
         else:
             raise ValueError("Unknown biomass_function")
         mleaf = y[3]*N  # kg/ha
@@ -293,6 +295,8 @@ def profiles_hyde(data, species, z, biomass_function='marklund'):
             y, L = marklund_mod(d, h, species)
         elif biomass_function=='repola':
             y, L = repola(d, h, species)
+        elif biomass_function=='aleksis_combination':
+            y, L = aleksis_combination(d, h, ht, species)
         else:
             raise ValueError("Unknown biomass_function")
         mleaf = y[3]*N  # kg/ha
@@ -311,6 +315,8 @@ def profiles_hyde(data, species, z, biomass_function='marklund'):
             y, L = marklund_mod(d, h, species)
         elif biomass_function=='repola':
             y, L = repola(d, h, species)
+        elif biomass_function=='aleksis_combination':
+            y, L = aleksis_combination(d, h, ht, species)
         else:
             raise ValueError("Unknown biomass_function")
         mleaf = y[3]*N  # kg/ha
@@ -526,6 +532,48 @@ def repola(d, h, species):
         y5=np.exp(-7.742 + 11.362*d_ski/(d_ski+16))     #dead branches
 
         y=[y1, y2, y3, y4, y5] # array of biomasses (kg)
+
+        L=y4*SLA['decid'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    else:
+        print('Vegetation.repola: asked species (pine, spruce, birch) not found')
+        return None
+
+def aleksis_combination(d, h, ch, species):
+    """
+    Computes needle biomasses for Scots pine, Norway spruce or birch
+
+    """
+    SLA = {'pine': 6.8, 'spruce': 4.7, 'decid': 14.0}  # Härkönen et al. 2015 BER 20, 181-195
+    #d=np.array(float(d))
+
+    d_ski = 2 + 1.25 * d
+
+    if species.lower()=='pine':
+        # Repola et al. 2009
+        y4=np.exp(-1.748+14.824*d_ski/(d_ski+4)-12.684*h/(h+1)+1.209*np.log(h - ch)+(0.032+0.093)/2)
+
+        y=[0, 0, 0, y4, 0] # array of biomasses (kg)
+        L=y4*SLA['pine'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='spruce':
+        # Marklund 1988
+        y4=np.exp(-1.5732 + 8.4127*(d/(d+12))-1.5628*np.log(h)+1.4032*np.log(h - ch))
+
+        y=[0, 0, 0, y4, 0] # array of biomasses (kg)
+        L=y4*SLA['spruce'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='birch':
+        # Tupek et al 2015
+        y4=np.exp(-7.832+10.043*(d_ski/(d_ski+8.37))+2.875*((h-ch)/h)+(0.004182519*0.004182519)/2)
+
+        y=[0, 0, 0, y4, 0] # array of biomasses (kg)
 
         L=y4*SLA['decid'] # leaf area (m2) based on specific foliage area (SLA)
 

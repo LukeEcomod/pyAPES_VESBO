@@ -50,6 +50,11 @@ Kvsat = Ksat
 #Kvsat[-2:] = 1.0e-7
 
 Khmult = [30.0, 20.0, 10.0, 5.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+
+# TEST
+Kvsat = [4.97E-05, 3.21E-05, 2.07E-05, 1.34E-05, 8.63E-06, 2.32E-06, 2.61E-07]
+Khmult = [30.0, 10.0, 5.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+
 Khsat = [Kvsat[i] * Khmult[i] for i in range(N)]
 
 #Khmult1 = [20.0, 10.0, 5.0, 5.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
