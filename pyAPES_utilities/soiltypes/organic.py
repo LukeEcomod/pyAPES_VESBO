@@ -12,11 +12,11 @@ from pyAPES_utilities.parameter_utilities import fit_pF, peat_hydrol_properties
 plot=False
 
 # depth of layer bottom [m], soil surface at 0.0
-zh = [-0.1, -0.2, -0.3, -0.4, -0.5, -1.0, -2.0]
+zh = [-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9, -1., -1.5, -2.0]
 N = len(zh)
 # pf based on bulk density
-bd = [0.1047, 0.1454, 0.1591,0.1300, 0.1119, 0.1591, 0.1591]
-vp = [1, 5.75, 4.5, 4.5, 4.75, 8, 8]
+bd = [0.1047, 0.1454, 0.1591,0.1300, 0.1119, 0.1591, 0.1591, 0.1591, 0.1591, 0.1591, 0.1591, 0.1591]
+vp = [1, 5.75, 4.5, 4.5, 4.75, 8, 8, 8, 8, 8, 8, 8]
 
 pf_para, Ksat = peat_hydrol_properties(vp,  var='H', fig=plot, labels=['layer ' + str(i) for i in range(N)], ptype='C')
 #pf_para, Ksat = peat_hydrol_properties(bd,  var='bd', fig=plot, labels=['layer ' + str(i) for i in range(N)], ptype='C')
@@ -49,11 +49,16 @@ pf_n = [pf_para[k][3] for k in range(N)]
 Kvsat = Ksat
 #Kvsat[-2:] = 1.0e-7
 
-Khmult = [30.0, 20.0, 10.0, 5.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+Khmult = [30.0, 20.0, 10.0, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
 
 # TEST
-Kvsat = [4.97E-05, 3.21E-05, 2.07E-05, 1.34E-05, 8.63E-06, 2.32E-06, 2.61E-07]
-Khmult = [30.0, 10.0, 5.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
+porosity = [0.943, 0.882, 0.882, 0.882, 0.882, 0.882, 0.882, 0.882, 0.882, 0.882, 0.882, 0.882]
+residual_water_content = [0.002, 0.104, 0.104, 0.104, 0.104, 0.104, 0.104, 0.104, 0.104, 0.104, 0.104, 0.104]
+pf_alpha = [0.202, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044]
+pf_n = [1.349, 1.349, 1.349, 1.349, 1.349, 1.349, 1.349, 1.349, 1.349, 1.349, 1.349, 1.349]
+
+Kvsat = [4.97E-05, 3.21E-05, 2.07E-05, 1.34E-05, 8.63E-06, 5.57E-06, 3.60E-06, 2.32E-06, 1.50E-06, 9.68E-07, 2.61E-07, 1.16E-07]
+Khmult = [30.0, 10.0, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # horizontal Khsat = Khmult * Kvsat
 
 Khsat = [Kvsat[i] * Khmult[i] for i in range(N)]
 

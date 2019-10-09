@@ -308,7 +308,10 @@ class Model(object):
             self.results = _append_results('soil', k, soil_state, self.results)
 
         print('100%')
-        self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
+        ptnames = [pt.name for pt in self.canopy_model.planttypes]
+        ptnames.sort()
+        self.results = _append_results('canopy', None, {'z': self.canopy_model.z,
+                                                        'planttypes': np.array(ptnames)}, self.results)
 
         self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)
 
@@ -370,7 +373,7 @@ def _append_results(group, step, step_results, results):
 #        print(variable)
 
         if variable in results_keys:
-            if variable == 'z':
+            if key == 'z' or key == 'planttypes':
                 results[variable] = step_results[key]
             else:
 #                print(type(step_results[key]))

@@ -108,7 +108,9 @@ class CanopyModel(object):
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
-        for pt in cpara['planttypes']:
+        ptnames = list(cpara['planttypes'].keys())
+        ptnames.sort()
+        for pt in ptnames:
             ptypes.append(PlantType(self.z, cpara['planttypes'][pt], dz_soil, ctr=cpara['ctr'], loc=cpara['loc']))
         self.planttypes = ptypes
 

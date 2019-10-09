@@ -43,7 +43,7 @@ def plot_vegetation(save=False):
         plt.xlabel(axislabels['x'])
         plt.ylabel(axislabels['y'])
 
-    fp = r'H:\Lettosuo\aluskasvillisuus\regression_data.txt'
+    fp = r'O:\H-levy\Lettosuo\aluskasvillisuus\regression_data.txt'
     dat = pd.read_csv(fp)
     pos = (-0.2,1.05)
     plt.figure(figsize=(8,2.3))
@@ -67,7 +67,7 @@ def plot_vegetation(save=False):
     if save:
         plt.savefig('figures/case_Lettosuo/vege_regressions.png',dpi=300, transparent=False)
 
-    fp = r'H:\Lettosuo\aluskasvillisuus\inventory_data_clc_mounding.txt'
+    fp = r'O:\H-levy\Lettosuo\aluskasvillisuus\inventory_data_clc_mounding.txt'
     dat = pd.read_csv(fp,index_col=0)
     labels=['SP$_{\mathrm{all},2009}$', 'VP$_{\mathrm{ref},2015}$', 'VP$_{\mathrm{par},2015}$', 'VP$_{\mathrm{clc},2015}$', 'SP$_{\mathrm{ref},2017}$', 'VP$_{\mathrm{ref},2017}$', 'SP$_{\mathrm{par},2017}$', 'VP$_{\mathrm{par},2017}$', 'SP$_{\mathrm{par},2018}$', 'VP$_{\mathrm{par},2018}$', 'VP$_{\mathrm{clc},2017}$', 'VP$_{\mathrm{clc},2018}$']
     pos = (-0.16,1.02)
@@ -101,8 +101,8 @@ def plot_vegetation(save=False):
     plt.plot([1, 2],[110,110],'ok', label='LAI estimated', markersize=4)
 #    plt.plot([1, 2],[110,110],'xk', label='LAI measured', markersize=4)
     handles, labels1 = ax2.get_legend_handles_labels()
-    labels1[2:]=labels1[:1:-1]
-    handles[2:]=handles[:1:-1]
+    labels1[1:]=labels1[:0:-1]
+    handles[1:]=handles[:0:-1]
     ax2.legend(handles, labels1,bbox_to_anchor=(1.02,0.35), loc="center left", frameon=False, borderpad=0.0)
     plt.plot([5.5, 5.5],[0,1110],'--k')
     plt.plot([9.5, 9.5],[0,1110],'--k')
@@ -213,7 +213,7 @@ def plot_runoff(results, sim_idx=0):
     # Read observed WTD
     Data = read_forcing("lettosuo_weir_data.csv", cols=['Runoff mm/h'])
 
-    results['runoff'] = results['soil_drainage'].copy() * 1e3 * 3600
+    results['runoff'] = (results['soil_drainage'].copy() + results['soil_surface_runoff'].values) * 1e3 * 3600
 
     plt.figure()
     plot_timeseries_xr(results.sel(simulation=sim_idx), 'runoff', colors=['r'])
@@ -287,8 +287,7 @@ def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
     plot_fluxes(results, Data, res_var=['canopy_NEE','canopy_GPP','canopy_respiration'],
                 Data_var=['NEE','GPP2','Reco'], norain=norain, fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
 
-def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True,
-                  plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, l1=True):
+def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True, l1=True):
 
     from tools.iotools import read_forcing
     import matplotlib.dates
@@ -363,7 +362,7 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     plt.figure(figsize=(N*2 + 0.5,5))
 
     ax = plt.subplot(2, N, (1,N))
-    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id, treatment=treatment)
+    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, treatment=treatment)
 
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
@@ -395,11 +394,9 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
 
     plt.tight_layout()
 
-#plot_scatters(results, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0}, legend=True)
-#plot_scatters(results, sim_idx=1, treatment='partial', fyear=2016, lyear=2018, legend=True)#, plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
-#plot_scatters(results, sim_idx=2, treatment='clearcut', fyear=2016, lyear=2018, legend=True)#,plant_id={'pine':1, 'spruce':3, 'birch':2, 'understory':0})
+def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, treatment='control'):
 
-def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, treatment='control'):
+    ptnames=list(results['canopy_planttypes'].values)
 
     if sim_idx > 0:
         WB_ref={}
@@ -413,10 +410,10 @@ def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, plant_id={'pine
     WB['year']=results['date.year'].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').mean().values
     WB['precipitation']=results['forcing_precipitation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
     WB['interception evaporation']=(results['canopy_evaporation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values + results['canopy_condensation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values)*1800*1000
-    WB['pine transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['pine']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
-    WB['spruce transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['spruce']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
-    WB['birch transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['birch']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
-    WB['understory transpiration']=results['canopy_pt_transpiration'][:,sim_idx,plant_id['understory']].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['pine transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('pine')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['spruce transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('spruce')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['birch transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('decidious')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['understory transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('shrubs')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
     WB['forest floor evaporation']=results['ffloor_evaporation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
 
     WB = pd.DataFrame.from_dict(WB)
@@ -544,14 +541,11 @@ def data_analysis(results, fmonth=5, lmonth=9,norain=True):
 #
 #    Data_daily.plot(subplots=True,kind='line',marker='o',markersize=1)
 
-def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True,
-                  plant_id={'pine':0, 'spruce':1, 'birch':2, 'understory':3}, l1=True):
+def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True, l1=True):
 
     from tools.iotools import read_forcing
     import matplotlib.dates
     from pyAPES_utilities.plotting import xarray_to_df, plot_xy, plot_timeseries_xr
-    import seaborn as sns
-    pal = sns.color_palette("hls", 6)
 
     years = range(fyear, lyear+1)
     N = len(years)
@@ -559,7 +553,7 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
     plt.figure(figsize=(N*2 + 0.5,5))
 
     ax = plt.subplot(2, N, (1,N))
-    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), treatment=treatment, sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, plant_id=plant_id)
+    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), treatment=treatment, sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend)
 
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')

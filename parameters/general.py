@@ -82,6 +82,7 @@ gpara = {
                       ['soil_water_closure', 'soil water balance error [m s-1]', ('date', 'simulation')],
                       ['soil_energy_closure', 'soil heat balance error [W m-2]', ('date', 'simulation')],
                       ['canopy_z', 'canopy model grid node elevations [m]', ('canopy')],
+                      ['canopy_planttypes', 'canopy planttype names', ('planttype')],
                       ['soil_z', 'soil model grid node elevations [m]', ('soil')],
                       ['ffloor_potential_infiltration', 'potential infiltration to soil [m s-1]', ('date', 'simulation')],
                       ['ffloor_snow_water_equivalent', 'snow water equivalent [m]', ('date', 'simulation')],
