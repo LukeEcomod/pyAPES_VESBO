@@ -870,14 +870,15 @@ def drainage_hooghoud(dz, Ksat, gwl, DitchDepth, DitchSpacing, DitchWidth, Zbot=
     if Hdr > 0:
         # saturated layer thickness [m]
         dz_sat = np.minimum(np.maximum(gwl - (z - dz / 2), 0), dz)
-        # transmissivity of layers  [m2 s-1]
-        Trans = Ksat * dz_sat
 
         """ drainage from saturated layers above ditch base """
         # layers above ditch bottom where drainage is possible
-        ix = np.intersect1d(np.where((z - dz / 2)- gwl < 0), np.where(z > -DitchDepth))
+        ix = np.intersect1d(np.where((z - dz / 2)- gwl < 0), np.where(z + dz / 2 > -DitchDepth))
 
         if ix.size > 0:
+            dz_sat[ix[-1]] = dz_sat[ix[-1]] + (z[ix][-1] - dz[ix][-1] / 2 + DitchDepth)
+            # transmissivity of layers  [m2 s-1]
+            Trans = Ksat * dz_sat
             Ka = sum(Trans[ix]) / sum(dz_sat[ix])  # effective hydraulic conductivity ms-1
             Qa = 4 * Ka * Hdr**2 / (DitchSpacing**2)  # m s-1, total drainage above ditches
             # sink term s-1, partitions Qa by relative transmissivity of layer
@@ -886,8 +887,12 @@ def drainage_hooghoud(dz, Ksat, gwl, DitchDepth, DitchSpacing, DitchWidth, Zbot=
         if below_ditch_drain:
             """ drainage from saturated layers below ditch base """
             # layers below ditch bottom where drainage is possible
-            ix = np.where(z <= -DitchDepth)
-
+            ix = np.where(z - dz / 2 <= -DitchDepth)
+            dz_sat = np.where(dz_sat < np.minimum(np.maximum(gwl - (z - dz / 2), 0), dz),
+                              np.minimum(np.maximum(gwl - (z - dz / 2), 0), dz) - dz_sat,
+                              dz_sat)
+            # transmissivity of layers  [m2 s-1]
+            Trans = Ksat * dz_sat
             # effective hydraulic conductivity ms-1
             Kb = sum(Trans[ix]) / sum(dz_sat[ix])
 
