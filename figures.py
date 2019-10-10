@@ -188,7 +188,7 @@ def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=5, lmonth=9,l1=True):
 #plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Letto1', sim_idx=1)
 #plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Clear', sim_idx=2)
 
-def plot_snow(results):
+def plot_snow(results, sim_idx=0):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df
@@ -198,12 +198,12 @@ def plot_snow(results):
 
     plt.figure()
     ax=plt.subplot(3,1,1)
-    plot_timeseries_xr(results, 'forcing_air_temperature')
+    plot_timeseries_xr(results.sel(simulation=sim_idx), 'forcing_air_temperature')
     plt.subplot(3,1,2,sharex=ax)
-    plot_timeseries_xr(results, ['forcing_precipitation','canopy_throughfall'],unit_conversion={'unit':'mm/h', 'conversion':1e3*3600})
+    plot_timeseries_xr(results.sel(simulation=sim_idx), ['forcing_precipitation','canopy_throughfall'],unit_conversion={'unit':'mm/h', 'conversion':1e3*3600})
     plt.subplot(3,1,3,sharex=ax)
     plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
-    plot_timeseries_xr(results, 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3})
+    plot_timeseries_xr(results.sel(simulation=sim_idx), 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3})
 
 def plot_runoff(results, sim_idx=0):
 
@@ -416,7 +416,7 @@ def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, treatment='cont
     WB['interception evaporation']=(results['canopy_evaporation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values + results['canopy_condensation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values)*1800*1000
     WB['pine transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('pine')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
     WB['spruce transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('spruce')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
-    WB['birch transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('decidious')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
+    WB['birch transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('decid')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
     WB['understory transpiration']=results['canopy_pt_transpiration'][:,sim_idx,ptnames.index('shrubs')].sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
     WB['forest floor evaporation']=results['ffloor_evaporation'].isel(simulation=sim_idx).sel(date=(results['date.month']>=fmonth) & (results['date.month']<=lmonth)).groupby('date.year').sum().values*1800*1000
 

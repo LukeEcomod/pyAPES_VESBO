@@ -257,7 +257,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
@@ -278,7 +278,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decid': {
@@ -299,7 +299,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.5,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'shrubs': {
@@ -320,7 +320,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.5,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },
