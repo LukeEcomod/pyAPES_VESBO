@@ -396,7 +396,11 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
 
 def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, treatment='control'):
 
-    ptnames=list(results['canopy_planttypes'].values)
+    try:
+        ptnames=list(results['canopy_planttypes'].values)
+    except:
+        ptnames=['pine', 'spruce','decid','shrubs']
+        print("no plant type names found")
 
     if sim_idx > 0:
         WB_ref={}

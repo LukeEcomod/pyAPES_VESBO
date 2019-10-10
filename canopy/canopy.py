@@ -597,6 +597,7 @@ class CanopyModel(object):
         fluxes_canopy = {
                 'wind_speed': U,
                 'friction_velocity': ustar,
+                'corrected_precipitation': wetleaf_fluxes['corrected_precipitation'],
                 'throughfall': wetleaf_fluxes['throughfall'],
                 'interception': wetleaf_fluxes['interception'],
                 'evaporation': wetleaf_fluxes['evaporation'],

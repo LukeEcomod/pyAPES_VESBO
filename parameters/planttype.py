@@ -158,8 +158,8 @@ Spruce = {
             }
         }
 
-Decidious = {
-        'name': 'decidious',
+Decid = {
+        'name': 'decid',
         'LAImax': 1.2,
         'lad': lad_decid,
         'phenop': {
@@ -260,6 +260,6 @@ Shrubs = {
 
 planttypes = {'pine': Pine,
               'spruce': Spruce,
-              'decidious': Decidious,
+              'decid': Decid,
               'shrubs': Shrubs
               }

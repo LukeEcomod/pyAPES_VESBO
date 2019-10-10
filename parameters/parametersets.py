@@ -26,7 +26,7 @@ def get_parameters(scenario):
     # spefify as one values (same for all simulations) or tuple of length 'count'
     if scenario.upper() == 'ALL':
         lettosuo_parameters = {
-            'count': 1,
+            'count': 3,
             'general':{
                         'start_time' : "2009-10-01",
                         'end_time' : "2019-01-01"
@@ -49,7 +49,9 @@ def get_parameters(scenario):
                             },
                     'interception':{
                             'wmax': 0.35e-03,
-                            'wmaxsnow': 1.4e-03
+                            'wmaxsnow': 1.4e-03,
+                            'c_rain': 1.05,
+                            'c_snow': 1.3
                             },
                     'forestfloor': {
                             'bryophytes': {
@@ -68,6 +70,9 @@ def get_parameters(scenario):
                                     },
                             'baresoil': {
                                     'ground_coverage': (0.0, 0.0, 0.0)
+                                    },
+                            'snowpack': {
+                                    'kmelt': 0.75*2.31e-8
                                     }
                             },
                     'planttypes': {
@@ -113,7 +118,7 @@ def get_parameters(scenario):
                                         'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
-                            'decidious': {
+                            'decid': {
                                     'LAImax': (control['lai']['decid'], partial['lai']['decid'], clearcut['lai']['decid']),
                                     'lad': (control['lad']['decid'], partial['lad']['decid'], clearcut['lad']['decid']),
                                     'rootp': {
@@ -271,7 +276,7 @@ def get_parameters(scenario):
                                         'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
-                            'decidious': {
+                            'decid': {
                                     'LAImax': clearcut['lai']['decid'],
                                     'lad': clearcut['lad']['decid'],
                                     'rootp': {
@@ -429,7 +434,7 @@ def get_parameters(scenario):
                                         'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
-                            'decidious': {
+                            'decid': {
                                     'LAImax': partial['lai']['decid'],
                                     'lad': partial['lad']['decid'],
                                     'rootp': {
@@ -593,7 +598,7 @@ def get_parameters(scenario):
                                         'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
-                            'decidious': {
+                            'decid': {
                                     'LAImax': control['lai']['decid'],
                                     'lad': control['lad']['decid'],
                                     'rootp': {

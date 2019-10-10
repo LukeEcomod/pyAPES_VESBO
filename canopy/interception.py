@@ -51,6 +51,9 @@ class Interception(object):
         self.Tmin = p['Tmin']
         self.Tmax = p['Tmax']
 
+        self.c_rain = p['c_rain']
+        self.c_snow = p['c_snow']
+
         # Leaf orientation factor with respect to incident Prec (horizontal leaves -> 1)
         self.leaf_orientation = p['leaf_orientation']
 
@@ -141,6 +144,9 @@ class Interception(object):
         fW[ix] = 0.0
         ix = np.where((T >= self.Tmin) & (T <= self.Tmax))
         fW[ix] = (T[ix] - self.Tmin) / (self.Tmax - self.Tmin)
+
+        # correction of precipitation
+        Prec = Prec * fW[-1] * self.c_rain + Prec * (1 - fW[-1]) * self.c_snow
 
         # maximum interception storage capacities layerwise [m]
         Wmax = (fW * self.wmax + (1 - fW) * self.wmaxsnow) * LAIz + eps
@@ -302,7 +308,8 @@ class Interception(object):
         # mass-balance error [m] ! self.W is old storage
         water_closure = sum(self.W) - sum(self.oldW) - (Prec * dt - sum(Evap) - sum(Cond) - (Trfall_rain + Trfall_snow))
 
-        fluxes = {'throughfall': (Trfall_rain + Trfall_snow) / dt,
+        fluxes = {'corrected_precipitation': Prec,
+                  'throughfall': (Trfall_rain + Trfall_snow) / dt,
                   'throughfall_rain': Trfall_rain / dt,
                   'throughfall_snow': Trfall_snow / dt,
                   'interception': sum(Interc) / dt,
