@@ -86,11 +86,6 @@ def get_parameters(scenario):
                                         'Vcmax': 55.,
                                         'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.3,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
@@ -107,11 +102,6 @@ def get_parameters(scenario):
                                         'Vcmax': 60.,
                                         'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.4,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
@@ -128,11 +118,6 @@ def get_parameters(scenario):
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
@@ -149,11 +134,6 @@ def get_parameters(scenario):
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
@@ -246,18 +226,13 @@ def get_parameters(scenario):
                                             'root_depth': root_depth,
                                             },
                                     'photop': {
-                                        'Vcmax': 50.,
-                                        'Jmax': 98.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-                                        'Rd': 1.2,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
+                                        'Vcmax': 55.,
+                                        'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 1.3,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
@@ -270,15 +245,10 @@ def get_parameters(scenario):
                                         'Vcmax': 60.,
                                         'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.4,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decid': {
@@ -291,15 +261,10 @@ def get_parameters(scenario):
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.5,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'shrubs': {
@@ -312,15 +277,10 @@ def get_parameters(scenario):
                                         'Vcmax': 40.,
                                         'Jmax': 79.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 0.9,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.5,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },
@@ -358,10 +318,10 @@ def get_parameters(scenario):
                         'end_time' : "2019-01-01"
                         },
             'canopy': {
-#                    'ctr': { # speed up!
-#                            'WMA': True,  # well-mixed assumption
-#                            'Ebal': False,  # no energy balance
-#                            },
+                    'ctr': { # speed up!
+                            'WMA': True,  # well-mixed assumption
+                            'Ebal': False,  # no energy balance
+                            },
                     'loc': {
                             'lat': 60.63,
                             'lon': 23.95
@@ -375,7 +335,9 @@ def get_parameters(scenario):
                             },
                     'interception':{
                             'wmax': 0.35e-03,
-                            'wmaxsnow': 1.4e-03
+                            'wmaxsnow': 1.4e-03,
+                            'c_rain': 1.05,
+                            'c_snow': 1.3
                             },
                     'forestfloor': {
                             'bryophytes': {
@@ -394,6 +356,9 @@ def get_parameters(scenario):
                                     },
                             'baresoil': {
                                     'ground_coverage': 0.0,
+                                    },
+                            'snowpack': {
+                                    'kmelt': 0.75*2.31e-8
                                     }
                             },
                     'planttypes': {
@@ -407,15 +372,10 @@ def get_parameters(scenario):
                                         'Vcmax': 55.,
                                         'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.3,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
@@ -428,15 +388,10 @@ def get_parameters(scenario):
                                         'Vcmax': 60.,
                                         'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.4,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decid': {
@@ -449,15 +404,10 @@ def get_parameters(scenario):
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'shrubs': {
@@ -470,15 +420,10 @@ def get_parameters(scenario):
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },
@@ -516,10 +461,10 @@ def get_parameters(scenario):
                         'end_time' : "2019-01-01"
                         },
             'canopy': {
-#                    'ctr': { # speed up!
-#                            'WMA': True,  # well-mixed assumption
-#                            'Ebal': False,  # no energy balance
-#                            },
+                    'ctr': { # speed up!
+                            'WMA': True,  # well-mixed assumption
+                            'Ebal': False,  # no energy balance
+                            },
                     'loc': {
                             'lat': 60.63,
                             'lon': 23.95
@@ -533,7 +478,9 @@ def get_parameters(scenario):
                             },
                     'interception':{
                             'wmax': 0.35e-03,
-                            'wmaxsnow': 1.4e-03
+                            'wmaxsnow': 1.4e-03,
+                            'c_rain': 1.05,
+                            'c_snow': 1.3
                             },
                     'forestfloor': {
                             'bryophytes': {
@@ -552,6 +499,9 @@ def get_parameters(scenario):
                                     },
                             'baresoil': {
                                     'ground_coverage': 0.0,
+                                    },
+                            'snowpack': {
+                                    'kmelt': 0.75*2.31e-8
                                     }
                             },
                     'planttypes': {
@@ -565,15 +515,10 @@ def get_parameters(scenario):
                                         'Vcmax': 55.,
                                         'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.3,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
@@ -586,15 +531,10 @@ def get_parameters(scenario):
                                         'Vcmax': 60.,
                                         'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.4,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decid': {
@@ -607,15 +547,10 @@ def get_parameters(scenario):
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'shrubs': {
@@ -628,15 +563,10 @@ def get_parameters(scenario):
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },
@@ -668,16 +598,16 @@ def get_parameters(scenario):
         return lettosuo_parameters
     if scenario.upper() == 'CONTROL':
         lettosuo_parameters = {
-            'count': 1,
+            'count': 3,
             'general':{
                         'start_time' : "2009-10-01",
                         'end_time' : "2019-01-01"
                         },
             'canopy': {
-                    'ctr': { # speed up!
-                            'WMA': True,  # well-mixed assumption
-                            'Ebal': False,  # no energy balance
-                            },
+#                    'ctr': { # speed up!
+#                            'WMA': True,  # well-mixed assumption
+#                            'Ebal': False,  # no energy balance
+#                            },
                     'loc': {
                             'lat': 60.63,
                             'lon': 23.95
@@ -691,7 +621,9 @@ def get_parameters(scenario):
                             },
                     'interception':{
                             'wmax': 0.35e-03,
-                            'wmaxsnow': 1.4e-03
+                            'wmaxsnow': 1.4e-03,
+                            'c_rain': 1.05,
+                            'c_snow': 1.3
                             },
                     'forestfloor': {
                             'bryophytes': {
@@ -710,6 +642,9 @@ def get_parameters(scenario):
                                     },
                             'baresoil': {
                                     'ground_coverage': 0.0,
+                                    },
+                            'snowpack': {
+                                    'kmelt': 0.75*2.31e-8
                                     }
                             },
                     'planttypes': {
@@ -719,22 +654,14 @@ def get_parameters(scenario):
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
-                                    'laip': {
-                                            'sdl': (12.0, 12.0, 12.0),
-                                            },
                                     'photop': {
                                         'Vcmax': 55.,
                                         'Jmax': 108.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.3,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
@@ -743,22 +670,14 @@ def get_parameters(scenario):
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
-                                    'laip': {
-                                            'sdl': (12.0, 12.0, 12.0),
-                                            },
                                     'photop': {
                                         'Vcmax': 60.,
                                         'Jmax': 118.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.4,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decid': {
@@ -767,46 +686,30 @@ def get_parameters(scenario):
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
-                                    'laip': {
-                                            'sdl': (12.0, 12.0, 12.0),
-                                            },
                                     'photop': {
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'shrubs': {
-                                    'LAImax': 0.8,
+                                    'LAImax': (0.5, 0.8, 1.1),
                                     'lad': control['lad']['shrubs'],
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
-                                    'laip': {
-                                            'sdl': (12.0, 12.0, 12.0),
-                                            },
                                     'photop': {
                                         'Vcmax': 45.,
                                         'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
                                         'Rd': 1.0,  # 0.023*Vcmax
-                                        'tresp': {
-                                            'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                                            'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                                            'Rd': [33.0]
-                                            },
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': (1.0e-3, 1.0e-3, 1.0e-3),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },

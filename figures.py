@@ -188,7 +188,7 @@ def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=5, lmonth=9,l1=True):
 #plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Letto1', sim_idx=1)
 #plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Clear', sim_idx=2)
 
-def plot_snow(results, sim_idx=0):
+def plot_snow_runoff(results, sim_idx=0):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df
@@ -196,28 +196,22 @@ def plot_snow(results, sim_idx=0):
     # Read observed WTD
     snow_depth = read_forcing("Lettosuo_meteo_2010_2018.csv", cols=['Snow_depth1','Snow_depth2','Snow_depth3'])
 
-    plt.figure()
-    ax=plt.subplot(3,1,1)
-    plot_timeseries_xr(results.sel(simulation=sim_idx), 'forcing_air_temperature')
-    plt.subplot(3,1,2,sharex=ax)
-    plot_timeseries_xr(results.sel(simulation=sim_idx), ['forcing_precipitation','canopy_throughfall'],unit_conversion={'unit':'mm/h', 'conversion':1e3*3600})
-    plt.subplot(3,1,3,sharex=ax)
-    plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
-    plot_timeseries_xr(results.sel(simulation=sim_idx), 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3})
-
-def plot_runoff(results, sim_idx=0):
-
-    from tools.iotools import read_forcing
-    from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df
-
     # Read observed WTD
     Data = read_forcing("lettosuo_weir_data.csv", cols=['Runoff mm/h'])
 
     results['runoff'] = (results['soil_drainage'].copy() + results['soil_surface_runoff'].values) * 1e3 * 3600
 
     plt.figure()
+    ax=plt.subplot(3,1,1)
+    plot_timeseries_xr(results.sel(simulation=sim_idx), 'forcing_air_temperature', xticks=False)
+    plt.subplot(3,1,3,sharex=ax)
     plot_timeseries_xr(results.sel(simulation=sim_idx), 'runoff', colors=['r'])
     plot_timeseries_df(Data, 'Runoff mm/h', colors='k', linestyle=':')
+    plt.ylabel('[mm/h]')
+    plt.subplot(3,1,2,sharex=ax)
+    plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
+    plot_timeseries_xr(results.sel(simulation=sim_idx), 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3}, xticks=False)
+
 
 def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True,l1=True):
 

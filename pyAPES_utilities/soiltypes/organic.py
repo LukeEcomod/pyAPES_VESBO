@@ -70,7 +70,7 @@ Khsat = [Kvsat[i] * Khmult[i] for i in range(N)]
 soil_properties = {'pF': {  # vanGenuchten water retention parameters
                          'ThetaS': porosity,
                          'ThetaR': residual_water_content,
-                         'alpha': pf_alpha,
+                         'alpha': pf_alpha,  # [cm-1]
                          'n': pf_n
                          },
                   'saturated_conductivity_vertical': Kvsat,  # saturated vertical hydraulic conductivity [m s-1]
