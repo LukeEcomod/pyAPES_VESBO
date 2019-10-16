@@ -171,8 +171,8 @@ def get_parameters(scenario):
         lettosuo_parameters = {
             'count': 1,
             'general':{
-                        'start_time' : "2009-10-01",
-                        'end_time' : "2013-05-01"
+                        'start_time' : "2015-10-01",
+                        'end_time' : "2017-01-01"
                         },
             'canopy': {
                     'ctr': { # speed up!
@@ -192,7 +192,7 @@ def get_parameters(scenario):
                             },
                     'interception':{
                             'wmax': 0.35e-03,
-                            'wmaxsnow': 1.05e-03,
+                            'wmaxsnow': 1.4e-03,
                             'c_rain': 1.05,
                             'c_snow': 1.3
                             },
