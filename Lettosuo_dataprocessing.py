@@ -14,8 +14,8 @@ from pyAPES_utilities.dataprocessing_scripts import save_df_to_csv
 
 def read_WTD_data():
 
-    fpaths = [r"H:\Lettosuo\WTD_paavolta\Lettosuo_WTD_EC.csv",
-               r"H:\Lettosuo\WTD_paavolta\Lettosuo_WTD_trans.csv"]
+    fpaths = [r"O:\Projects\Lettosuo\WTD_paavolta\Lettosuo_WTD_EC.csv",
+               r"O:\Projects\Lettosuo\WTD_paavolta\Lettosuo_WTD_trans.csv"]
 
     index=pd.date_range('01-01-2010','06-01-2019',freq='1H')
     data=pd.DataFrame(index=index, columns=[])
@@ -146,8 +146,8 @@ def process_WTD():
 
 def read_weir_data():
 
-    fpaths = [r"H:\Lettosuo\WTD_paavolta\pato\logger_data.csv",
-               r"H:\Lettosuo\WTD_paavolta\pato\tarkistusmittaukset.csv"]
+    fpaths = [r"O:\Projects\Lettosuo\WTD_paavolta\pato\logger_data.csv",
+               r"O:\Projects\Lettosuo\WTD_paavolta\pato\tarkistusmittaukset.csv"]
 
     index=pd.date_range('01-01-2012','06-01-2019',freq='1H')
     data=pd.DataFrame(index=index, columns=[])
@@ -256,20 +256,20 @@ def EC_data():
     starttime = '01-01-2010'
     endtime = '01-01-2019'
 
-    fpaths = [r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_energy.csv",  # period start/end??
-              r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_CO2.csv",
-              r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_energy.csv",  # period start/end??
-              r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_CO2.csv",
-              r"H:\Lettosuo\Forcing_data\Annalea2\Letto1_EC.csv",
-              r"H:\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]  # period start
+    fpaths = [r"O:\Projects\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_energy.csv",  # period start/end??
+              r"O:\Projects\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_CO2.csv",
+              r"O:\Projects\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_energy.csv",  # period start/end??
+              r"O:\Projects\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_CO2.csv",
+              r"O:\Projects\Lettosuo\Forcing_data\Annalea2\Letto1_EC.csv",
+              r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]  # period start
 
-    fp_yearfirst = [r"H:\Forcing_data\datat\lettosuo_28.2.2019\osittaishakkuu_CO2.csv",
-                    r"H:\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
+    fp_yearfirst = [r"O:\Projects\Forcing_data\datat\lettosuo_28.2.2019\osittaishakkuu_CO2.csv",
+                    r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
 
-    fp_hourly = [r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_energy.csv",
-                r"H:\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_energy.csv"]
+    fp_hourly = [r"O:\Projects\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\osittaishakkuu_energy.csv",
+                r"O:\Projects\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_energy.csv"]
 
-    fp_periodstart = [r"H:\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
+    fp_periodstart = [r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
 
     index = pd.date_range(starttime, endtime, freq='0.5H')
     data = pd.DataFrame(index=index, columns=[])
@@ -416,11 +416,11 @@ def EC_data():
 def Tsoil_wsoil_data(starttime='01-01-2010',endtime='01-01-2019'):
 
     # filepaths
-    forc_fp = ["H:/Lettosuo/Forcing_data/Annalea1/Letto1_metsanpohja.csv",
-               "H:/Lettosuo/Forcing_data/Annalea1/Letto2_metsanpohja.csv",
-               "H:/Lettosuo/Forcing_data/MikaK/metsanpohja_concat.csv",
-               "H:/Lettosuo/Forcing_data/datat/kontrolli_meteo/concat.csv",
-               "H:/Lettosuo/Forcing_data/datat/Avohakkuu_meteo.csv"]
+    forc_fp = ["O:/Projects/Lettosuo/Forcing_data/Annalea1/Letto1_metsanpohja.csv",
+               "O:/Projects/Lettosuo/Forcing_data/Annalea1/Letto2_metsanpohja.csv",
+               "O:/Projects/Lettosuo/Forcing_data/MikaK/metsanpohja_concat.csv",
+               "O:/Projects/Lettosuo/Forcing_data/datat/kontrolli_meteo/concat.csv",
+               "O:/Projects/Lettosuo/Forcing_data/datat/Avohakkuu_meteo.csv"]
 
     index=pd.date_range(starttime, endtime, freq='0.5H')
     lettosuo_data=pd.DataFrame(index=index, columns=[])

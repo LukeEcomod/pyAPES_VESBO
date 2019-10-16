@@ -1,14 +1,8 @@
 Readme for Lettosuo_meteo_2010_2018.csv
 
-Kersti Haahti, Luke 2019-05-02
+Kersti Haahti, Luke 2019-10-16
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
-Prec_ref2: Somero gapfilled precipitaion [mm/30min]
-  flag 0 (48.47%): somero_meteo: Precipitation amount
-  flag 1 (22.21%): jokioinen_prec1: Prec [mm h-1]
-  flag 2 (0.04%): jokioinen_meteo: Precipitation amount
-  flag 3 (28.83%): jokioinen_prec2: Prec [mm h-1]
-  flag 4 (0.45%): filled with Prec_ref2 = 0.0
 Prec_ref: Jokioinen gapfilled precipitaion [mm/30min]
   flag 0 (63.52%): jokioinen_prec1: Prec [mm h-1]
   flag 1 (7.10%): jokioinen_meteo: Precipitation amount
@@ -17,18 +11,18 @@ Prec_ref: Jokioinen gapfilled precipitaion [mm/30min]
   flag 4 (0.45%): filled with Prec_ref = 0.0
 Prec_old: Lettosuo gapfilled precipitaion [mm/30min]
   flag 0 (34.74%): Letto1_metsanpohja: avg(Rain (mm)) !sections removed!
-  flag 1 (32.27%): somero_meteo: Precipitation amount
-  flag 2 (13.01%): jokioinen_prec1: Prec [mm h-1]
-  flag 3 (0.03%): jokioinen_meteo: Precipitation amount
-  flag 4 (19.65%): jokioinen_prec2: Prec [mm h-1]
-  flag 5 (0.30%): filled with Prec_old = 0.0
+  flag 1 (32.24%): somero_meteo: Precipitation amount
+  flag 2 (33.01%): jokioinen_prec: Prec
+  flag 3 (0.00%): filled with Prec_old = 0.0
 Prec: Lettosuo gapfilled precipitaion [mm/30min]
   flag 0 (34.98%): Letto1_metsanpohja: avg(Rain (mm)) !sections removed!
-  flag 1 (32.27%): somero_meteo: Precipitation amount
-  flag 2 (13.01%): jokioinen_prec1: Prec [mm h-1]
-  flag 3 (0.03%): jokioinen_meteo: Precipitation amount
-  flag 4 (19.42%): jokioinen_prec2: Prec [mm h-1]
-  flag 5 (0.30%): filled with Prec = 0.0
+  flag 1 (32.24%): somero_meteo: Precipitation amount
+  flag 2 (32.78%): jokioinen_prec: Prec
+  flag 3 (0.00%): filled with Prec = 0.0
+Prec_ref2: Somero gapfilled precipitaion [mm/30min]
+  flag 0 (48.47%): somero_meteo: Precipitation amount
+  flag 1 (51.53%): jokioinen_prec: Prec
+  flag 2 (0.00%): filled with Prec_ref2 = 0.0
 Tair: Air temperature [degC]
   flag 0 (91.44%): Letto1_meteo: avg(Temp (C))
   flag 1 (5.04%): somero_meteo: Air temperature
