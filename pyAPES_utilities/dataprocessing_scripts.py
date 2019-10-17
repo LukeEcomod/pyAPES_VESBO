@@ -376,9 +376,17 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False,starttime='09-01-2009',end
 
     # problematic sections
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
-            (lettosuo_data.index > '01-01-2016') & (lettosuo_data.index < '07-17-2016')]=np.nan
+            (lettosuo_data.index >= '01-01-2016') & (lettosuo_data.index < '07-17-2016')]=np.nan
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
-            (lettosuo_data.index > '01-01-2018') & (lettosuo_data.index < '07-10-2018')]=np.nan
+            (lettosuo_data.index >= '01-01-2018') & (lettosuo_data.index < '07-10-2018')]=np.nan
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index >= '06-04-2013') & (lettosuo_data.index < '06-07-2013')]=np.nan
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index >= '07-07-2015 12:00') & (lettosuo_data.index < '07-08-2015')]=np.nan
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index >= '06-20-2015') & (lettosuo_data.index < '06-28-2015')]=np.nan
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index >= '07-04-2017') & (lettosuo_data.index < '07-21-2017')]=np.nan
 
     df, info = fill_gaps(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!',
                                         'somero_meteo: Precipitation amount',

@@ -10,9 +10,9 @@ Prec_ref: Jokioinen gapfilled precipitaion [mm/30min]
   flag 3 (0.08%): somero_meteo: Precipitation amount
   flag 4 (0.45%): filled with Prec_ref = 0.0
 Prec: Lettosuo gapfilled precipitaion [mm/30min]
-  flag 0 (46.60%): Letto1_metsanpohja: avg(Rain (mm)) !sections removed!
-  flag 1 (26.43%): somero_meteo: Precipitation amount
-  flag 2 (26.97%): jokioinen_prec: Prec
+  flag 0 (45.77%): Letto1_metsanpohja: avg(Rain (mm)) !sections removed!
+  flag 1 (27.18%): somero_meteo: Precipitation amount
+  flag 2 (27.06%): jokioinen_prec: Prec
   flag 3 (0.00%): filled with Prec = 0.0
 Prec_old: Lettosuo gapfilled precipitaion [mm/30min]
   flag 0 (34.98%): Letto1_metsanpohja: avg(Rain (mm)) !sections removed!
