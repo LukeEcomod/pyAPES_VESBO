@@ -373,6 +373,8 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False,starttime='09-01-2009',end
     # clearly no rain event at lettosuo (wtd data)
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
             (lettosuo_data.index > '07-03-2011') & (lettosuo_data.index < '07-11-2011')]=0.0
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index > '08-26-2014 12:00') & (lettosuo_data.index < '08-27-2014')]=0.0
 
     # problematic sections
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
@@ -387,6 +389,8 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False,starttime='09-01-2009',end
             (lettosuo_data.index >= '06-20-2015') & (lettosuo_data.index < '06-28-2015')]=np.nan
     lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
             (lettosuo_data.index >= '07-04-2017') & (lettosuo_data.index < '07-21-2017')]=np.nan
+    lettosuo_data['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!'][
+            (lettosuo_data.index >= '07-21-2011') & (lettosuo_data.index < '07-22-2011')]=np.nan
 
     df, info = fill_gaps(lettosuo_data[['Letto1_metsanpohja: avg(Rain (mm)) !sections removed!',
                                         'somero_meteo: Precipitation amount',

@@ -142,7 +142,7 @@ def plot_lad(biomass_function='marklund_mod'):
     plt.tight_layout()
 #    plt.savefig('figures/case_Lettosuo/lad_profiles.png',dpi=300, transparent=False)
 
-def plot_wtd(results):
+def plot_wtd(results, fig=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_timeseries_xr
@@ -150,7 +150,8 @@ def plot_wtd(results):
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
 
-    plt.figure()
+    if fig:
+        plt.figure()
     plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
                      facecolor='k', alpha=0.3)
     plt.plot(WTD.index, WTD['control'].values,':k', linewidth=1.0)
@@ -202,13 +203,13 @@ def plot_snow_runoff(results, sim_idx=0):
     results['runoff'] = (results['soil_drainage'].copy() + results['soil_surface_runoff'].values) * 1e3 * 3600
 
     plt.figure()
-    ax=plt.subplot(3,1,1)
-    plot_timeseries_xr(results.sel(simulation=sim_idx), 'forcing_air_temperature', xticks=False)
-    plt.subplot(3,1,3,sharex=ax)
+    ax=plt.subplot(3,1,2)
     plot_timeseries_xr(results.sel(simulation=sim_idx), 'runoff', colors=['r'])
-    plot_timeseries_df(Data, 'Runoff mm/h', colors='k', linestyle=':')
+    plot_timeseries_df(Data, 'Runoff mm/h', colors='k', linestyle=':', xticks=False)
     plt.ylabel('[mm/h]')
-    plt.subplot(3,1,2,sharex=ax)
+    plt.subplot(3,1,3,sharex=ax)
+    plot_wtd(results.sel(simulation=sim_idx), fig=False)
+    plt.subplot(3,1,1,sharex=ax)
     plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
     plot_timeseries_xr(results.sel(simulation=sim_idx), 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3}, xticks=False)
 
