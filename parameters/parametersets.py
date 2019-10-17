@@ -169,16 +169,16 @@ def get_parameters(scenario):
         return lettosuo_parameters
     elif scenario.upper() == 'ALL2':
         lettosuo_parameters = {
-            'count': 1,
+            'count': 3,
             'general':{
                         'start_time' : "2009-10-01",
-                        'end_time' : "2015-01-01"
+                        'end_time' : "2019-01-01"
                         },
             'canopy': {
-                    'ctr': { # speed up!
-                            'WMA': True,  # well-mixed assumption
-                            'Ebal': False,  # no energy balance
-                            },
+#                    'ctr': { # speed up!
+#                            'WMA': True,  # well-mixed assumption
+#                            'Ebal': False,  # no energy balance
+#                            },
                     'loc': {
                             'lat': 60.63,
                             'lon': 23.95
