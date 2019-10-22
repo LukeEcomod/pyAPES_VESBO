@@ -219,6 +219,8 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
 
+    results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
+
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
@@ -231,16 +233,16 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
     if treatment=='control':
         Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
         plot_fluxes(results, Data, norain=norain,
-                res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE'],
-                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
+                res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE','ground_heat_flux'],
+                Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
     elif treatment=='partial':
-        results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
+
         Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE','ground_heat_flux'],
                 Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
     else:
-        results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
+
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation', 'canopy_SH','canopy_LE','ground_heat_flux'],
                 Data_var=['NRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
@@ -306,13 +308,13 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
         for var in Data_var:
             Data[var][
                 (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
-    results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=4).copy()
+    results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
     res_var=['canopy_net_radiation', 'canopy_LE', 'canopy_SH', 'ground_heat_flux', 'canopy_GPP','canopy_respiration']
 
-    if treatment == 'control':
-        Data_var.remove('GHF')
-        res_var.remove('ground_heat_flux')
-        pal.remove(pal[3])
+#    if treatment == 'control':
+#        Data_var.remove('GHF')
+#        res_var.remove('ground_heat_flux')
+#        pal.remove(pal[3])
 
     res_var.append('forcing_precipitation')
 
@@ -582,4 +584,95 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%m-%Y'))
     plt.ylabel('Water table level [m]')
 
+    plt.tight_layout()
+
+def plot_daily(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_timeseries_df
+
+    variables=['NRAD','LE','SH','GHF']
+    res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux']
+
+    results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
+
+    Data = read_forcing("Lettosuo_EC_2010_2018_gapped.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    if treatment == 'partial':
+        Data['LE'][
+            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+    # period end
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+
+
+    df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
+    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+
+    Data_daily=Data.resample('D',how=lambda x: x.values.mean())
+
+    for i in range(len(variables)):
+        Data_daily[variables[i] + '_filtered'] = np.where(
+            Data_daily[variables[i]+'gap'] > lim, np.nan, Data_daily[variables[i]])
+        Data_daily[variables[i] + '_err'] = Data_daily[variables[i] + '_filtered'] - Data_daily[res_var[i]]
+
+    plt.figure()
+    for i in range(len(variables)):
+        if i==0:
+            ax=plt.subplot(len(variables),1,i+1)
+        else:
+            plt.subplot(len(variables),1,i+1,sharex=ax)
+        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
+
+    months = Data_daily.index.month
+
+    ix = np.where((months >= fmonth) & (months <= lmonth))[0]
+
+    plt.figure(figsize=(8.5, 2.5))
+    for i in range(len(variables)):
+        plt.subplot(1,len(variables),i+1)
+        plot_xy(Data_daily[variables[i] +'_filtered'][ix], Data_daily[res_var[i]][ix], color=pal[i], alpha=0.3, l1=l1)
+        plt.title(variables[i])
+    plt.tight_layout()
+
+    year = Data_daily.index.year
+
+    fyear = min(year)
+    lyear = max(year)
+    years = range(fyear, lyear+1)
+    N = len(years)
+    M = len(variables)
+
+    plt.figure(figsize=(N*2 + 0.5,M*2 + 0.5))
+    for j in range(M):
+        for i in range(N):
+            ix = np.where((year == years[i]) & (months >= fmonth) & (months <= lmonth))[0]
+            if i == 0:
+                ax=plt.subplot(M, N, j*N+i+1)
+                labels = {'x': 'Measured ' + variables[j], 'y': 'Modelled ' + variables[j]}
+            else:
+                labels = {'x': 'Measured ' + variables[j], 'y': ''}
+                plt.subplot(M, N, j*N+i+1,sharex=ax, sharey=ax)
+                plt.setp(plt.gca().axes.get_yticklabels(), visible=False)
+            if len(ix) > 0:
+                plot_xy(Data_daily[variables[j] +'_filtered'][ix], Data_daily[res_var[j]][ix], color=pal[j], axislabels=labels, alpha=0.6, l1=l1)
+            if j == 0:
+                plt.title(str(years[i]))
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
+
+    plt.figure(figsize=(10,4*1.7 + 0.5))
+    for i in range(len(variables)):
+        if i==0:
+            ax=plt.subplot(len(variables),1,i+1)
+        else:
+            plt.subplot(len(variables),1,i+1,sharex=ax)
+        plt.plot(Data_daily.index.dayofyear, Data_daily[variables[i] +'_err'],linestyle='',marker='o', color=pal[i], alpha=0.2)
+        plt.plot([0, 365], [0, 0], 'k--', linewidth=1)
+        plt.title('Measured ' + variables[i] + ' - Modelled ' + variables[i])
+        if i+1 < len(variables):
+            plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+        else:
+            plt.xlabel('Day of year')
+    plt.xlim([fmonth*30.5, (lmonth + 1)*30.5])
     plt.tight_layout()
