@@ -434,14 +434,17 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=
 #    plt.annotate("y = %.2fx + %.2f\nR$^2$ = %.2f\nMAE = %.1f" % (p[0], p[1], R2, MAE), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
     plt.annotate("y = %.2fx + %.2f\nR$^2$ = %.2f" % (p[0], p[1], R2), (0.45, 0.85), xycoords='axes fraction', ha='center', va='center', fontsize=9)
 
-    lim = [min(min(y[np.isfinite(y)]),
-               min(x[np.isfinite(x)]))-1000,
-           max(max(y[np.isfinite(y)]),
-               max(x[np.isfinite(x)]))+1000]
-    lim2 = [min(min(y[np.isfinite(y)]),
-               min(x[np.isfinite(x)])),
-           max(max(y[np.isfinite(y)]),
-               max(x[np.isfinite(x)]))]
+    lim = [min(min(y[idx]),
+               min(x[idx]))-1000,
+           max(max(y[idx]),
+               max(x[idx]))+1000]
+    lim2 = [min(min(y[idx]),
+               min(x[idx])),
+           max(max(y[idx]),
+               max(x[idx]))]
+    add = (lim2[1] - lim2[0]) * 0.1
+    lim2[0] = lim2[0] - add
+    lim2[1] = lim2[1] + add
     plt.plot(lim, [p[0]*lim[0] + p[1], p[0]*lim[1] + p[1]], 'r', linewidth=1)
     plt.plot(lim, lim, 'k--', linewidth=1)
     plt.ylim(lim2)

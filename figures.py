@@ -8,6 +8,7 @@ Created on Wed Feb 20 15:26:24 2019
 # %% Plot vegetation inventory
 import numpy as np
 import pandas as pd
+import matplotlib.dates
 
 vege=['khaki','lightgreen', 'limegreen', 'forestgreen']
 ff=['seagreen','peru','saddlebrown','khaki','lightgreen', 'limegreen', 'forestgreen']
@@ -586,13 +587,17 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
 
     plt.tight_layout()
 
-def plot_daily(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False):
+def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False):
 
     from tools.iotools import read_forcing
-    from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_timeseries_df
+    from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_diurnal
 
-    variables=['NRAD','LE','SH','GHF']
-    res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux']
+    if treatment == 'control':
+        variables=['NRAD','NLWRAD','NSWRAD']
+        res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet']
+    else:
+        variables=['NRAD','LE','SH','GHF']
+        res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux']
 
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
 
@@ -606,7 +611,6 @@ def plot_daily(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0, lim=0.6
     # period end
     Data.index = Data.index - pd.Timedelta(hours=0.5)
 
-
     df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
 
@@ -617,29 +621,18 @@ def plot_daily(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0, lim=0.6
             Data_daily[variables[i]+'gap'] > lim, np.nan, Data_daily[variables[i]])
         Data_daily[variables[i] + '_err'] = Data_daily[variables[i] + '_filtered'] - Data_daily[res_var[i]]
 
-    plt.figure()
-    for i in range(len(variables)):
-        if i==0:
-            ax=plt.subplot(len(variables),1,i+1)
-        else:
-            plt.subplot(len(variables),1,i+1,sharex=ax)
-        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
+#    plt.figure()
+#    for i in range(len(variables)):
+#        if i==0:
+#            ax=plt.subplot(len(variables),1,i+1)
+#        else:
+#            plt.subplot(len(variables),1,i+1,sharex=ax)
+#        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
 
     months = Data_daily.index.month
 
-    ix = np.where((months >= fmonth) & (months <= lmonth))[0]
-
-    plt.figure(figsize=(8.5, 2.5))
-    for i in range(len(variables)):
-        plt.subplot(1,len(variables),i+1)
-        plot_xy(Data_daily[variables[i] +'_filtered'][ix], Data_daily[res_var[i]][ix], color=pal[i], alpha=0.3, l1=l1)
-        plt.title(variables[i])
-    plt.tight_layout()
-
     year = Data_daily.index.year
 
-    fyear = min(year)
-    lyear = max(year)
     years = range(fyear, lyear+1)
     N = len(years)
     M = len(variables)
@@ -661,18 +654,62 @@ def plot_daily(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0, lim=0.6
                 plt.title(str(years[i]))
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
 
-    plt.figure(figsize=(10,4*1.7 + 0.5))
-    for i in range(len(variables)):
-        if i==0:
-            ax=plt.subplot(len(variables),1,i+1)
+#    plt.figure(figsize=(10,4*1.7 + 0.5))
+#    for i in range(len(variables)):
+#        if i==0:
+#            ax=plt.subplot(len(variables),1,i+1)
+#        else:
+#            plt.subplot(len(variables),1,i+1,sharex=ax)
+#        plt.plot(Data_daily.index.dayofyear, Data_daily[variables[i] +'_err'],linestyle='',marker='o', color=pal[i], alpha=0.2)
+#        plt.plot([0, 365], [0, 0], 'k--', linewidth=1)
+#        plt.title('Measured ' + variables[i] + ' - Modelled ' + variables[i])
+#        if i+1 < len(variables):
+#            plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+#        else:
+#            plt.xlabel('Day of year')
+#    plt.xlim([(fmonth-1)*30.5, lmonth*30.5])
+#    plt.tight_layout()
+
+    for i in range(len(res_var)):
+        Data_daily[res_var[i] +'_filtered'] = np.where(np.isfinite(Data_daily[variables[i] +'_filtered']),
+                                                       Data_daily[res_var[i]],np.nan)
+
+    Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).median()
+    Data_seasonal.index=pd.date_range('1/1/2000', periods=366, freq='D')
+    Data_seasonal=Data_seasonal.resample('7D').mean()
+
+    ix = np.where((months >= fmonth) & (months <= lmonth))[0]
+    labels = {'x': '', 'y': 'Modelled'}
+    N = len(res_var)
+    plt.figure(figsize=(10,N*1.7 + 0.5))
+    for i in range(N):
+        plt.subplot(N, 4, i*4+1)
+        if i + 1 == N:
+            labels = {'x': 'Measured', 'y': 'Modelled'}
+        plot_xy(Data_daily[variables[i] +'_filtered'][ix], Data_daily[res_var[i]][ix], color=pal[i], alpha=0.3, axislabels=labels,l1=l1)
+
+        if i == 0:
+            ax1 = plt.subplot(N,4,(i*4+2,i*4+3))
         else:
-            plt.subplot(len(variables),1,i+1,sharex=ax)
-        plt.plot(Data_daily.index.dayofyear, Data_daily[variables[i] +'_err'],linestyle='',marker='o', color=pal[i], alpha=0.2)
-        plt.plot([0, 365], [0, 0], 'k--', linewidth=1)
-        plt.title('Measured ' + variables[i] + ' - Modelled ' + variables[i])
-        if i+1 < len(variables):
+            plt.subplot(N,4,(i*4+2,i*4+3), sharex=ax1)
+        plt.plot(Data_seasonal.index, Data_seasonal[variables[i] +'_filtered'],'o-', markersize=3, color='k', label='Measured')
+        plt.plot(Data_seasonal.index, Data_seasonal[res_var[i] +'_filtered'],'o-', markersize=3, color=pal[i], label='Modelled')
+        if i + 1 < N:
             plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
         else:
-            plt.xlabel('Day of year')
-    plt.xlim([fmonth*30.5, (lmonth + 1)*30.5])
-    plt.tight_layout()
+            ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%b'))
+            plt.xlim(['3.1.2000','10.31.2000'])
+        plt.title(variables[i], fontsize=10)
+        plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
+        # RAIN?!?!
+        ixx = np.where((Data.index.month >= fmonth) & (Data.index.month <= lmonth) & (Data[variables[i]+'gap']==0))[0]
+        if i == 0:
+            ax2 = plt.subplot(N,4,i*4+4)
+        else:
+            plt.subplot(N,4,i*4+4, sharex=ax2)
+        plot_diurnal(Data[variables[i]][ixx], color='k', legend=False)
+        plot_diurnal(Data[res_var[i]][ixx], color=pal[i], legend=False)
+        if i + 1 < N:
+            plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
+            plt.xlabel('')
+    plt.tight_layout(rect=(0, 0, 0.87, 1), pad=0.4, w_pad=0.05, h_pad=0.6)

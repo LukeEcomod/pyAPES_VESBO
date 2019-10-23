@@ -626,10 +626,10 @@ def EC_data_ungapped():
         data[variables[i] + ', not gapfilled'] = np.where(
                 data[flags[i]] == 0, data[variables[i]], np.nan)
 
-    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] < data['Letto1_meteo: avg(Glob (W/m2))'],
-                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
-    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] > 0.0,
-                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
+#    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] < data['Letto1_meteo: avg(Glob (W/m2))'],
+#                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
+#    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] > 0.0,
+#                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
     data['control_NSWRAD'] = data['Letto1_meteo: avg(Glob (W/m2))'] - data['Letto1_meteo: avg(GlobRefl (W/m2))']
 
     lettosuo_EC = data[[
@@ -725,7 +725,10 @@ def EC_data_gapped():
     endtime = '01-01-2019'
 
     fpaths = [r"O:\Projects\Lettosuo\Forcing_data\Efluxes\osittaishakkuu_energy.csv",
-              r"O:\Projects\Lettosuo\Forcing_data\Efluxes\avohakkuu_energy.csv"]
+              r"O:\Projects\Lettosuo\Forcing_data\Efluxes\avohakkuu_energy.csv",
+              r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
+
+    fp_periodstart = [r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
 
     index = pd.date_range(starttime, endtime, freq='0.5H')
     data = pd.DataFrame(index=index, columns=[])
@@ -735,6 +738,8 @@ def EC_data_gapped():
         dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
         dat.index=dat.index.map(lambda x: x.replace(second=0))
         dat.ix[:,0]=dat.index
+        if fp in fp_periodstart:  # period start to period end
+            dat.index = dat.index + pd.Timedelta(hours=0.5)
         dat = dat.drop_duplicates(subset=dat.columns[0])
         dat = dat.drop([dat.columns[0]], axis=1)
         dat.columns = fp.split("\\")[-1].split(".")[0] + ': ' + dat.columns
@@ -744,7 +749,43 @@ def EC_data_gapped():
             raise ValueError("Error")
         data=data.merge(dat, how='outer', left_index=True, right_index=True)
 
+    data[['Letto1_meteo: avg(GlobRefl (W/m2))','Letto1_meteo: avg(Glob (W/m2))']].plot()
+
+#    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] < data['Letto1_meteo: avg(Glob (W/m2))'],
+#                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
+#    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] > 0.0,
+#                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
+    data['control_NSWRAD'] = data['Letto1_meteo: avg(Glob (W/m2))'] - data['Letto1_meteo: avg(GlobRefl (W/m2))']
+    data['control_NRAD'] = data['Letto1_meteo: avg(NetRad (W/m2))'].copy()
+    data['control_NLWRAD'] = data['control_NRAD'] - data['control_NSWRAD']
+
+    rad_var=['control_NRAD','control_NSWRAD','control_NLWRAD']
+    for i in range(len(rad_var)):
+        data[rad_var[i] + 'gap'] = np.where(np.isfinite(data[rad_var[i]]),0,1)
+
+#    data[rad_var] = data[rad_var].interpolate()
+
+    data['partial_NSWRAD'] = data['control_NSWRAD'].copy()
+    data['partial_NLWRAD'] = data['control_NLWRAD'].copy()
+    data['partial_NSWRADgap'] = data['control_NSWRADgap'].copy()
+    data['partial_NLWRADgap'] = data['control_NLWRADgap'].copy()
+    data[['control_NRAD',
+                 'control_NLWRAD',
+                 'control_NSWRAD',
+                 'control_NRADgap',
+                 'control_NLWRADgap',
+                 'control_NSWRADgap']].plot(subplots=True)
     lettosuo_EC = data[[
+                 'control_NRAD',
+                 'control_NLWRAD',
+                 'control_NSWRAD',
+                 'control_NRADgap',
+                 'control_NLWRADgap',
+                 'control_NSWRADgap',
+                 'partial_NLWRAD',
+                 'partial_NSWRAD',
+                 'partial_NLWRADgap',
+                 'partial_NSWRADgap',
                  'osittaishakkuu_energy: LE [W m-2]',
                  'osittaishakkuu_energy: SH [W m-2]',
                  'osittaishakkuu_energy: G [W m-2]',
