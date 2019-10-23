@@ -1,6 +1,6 @@
 Readme for Lettosuo_meteo_2010_2018.csv
 
-Kersti Haahti, Luke 2019-10-17
+Kersti Haahti, Luke 2019-10-23
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 2.0]
 Prec_ref: Jokioinen gapfilled precipitaion [mm/30min]
@@ -67,3 +67,9 @@ Snow_depth2: Somero snow depth [cm]
 Snow_depth3: Salo-kiikala snow depth [cm]
   flag 0 (52.52%): salo_kiikala_meteo: Snow depth
   flag 1 (47.48%): filled with Snow_depth3 = nan
+Snow_depth3: Salo-kiikala snow depth [cm]
+  flag 0 (52.52%): salo_kiikala_meteo: Snow depth
+  flag 1 (47.48%): filled with Snow_depth3 = nan
+LWin: Downwelling longwave radiation from Tervalammen suo [W m-2] - has gaps!!
+  flag 0 (36.87%): TervisLW_2013-2018: LW sky (W m-2)
+  flag 1 (63.13%): filled with LWin = nan

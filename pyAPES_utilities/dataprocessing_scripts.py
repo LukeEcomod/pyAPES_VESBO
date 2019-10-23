@@ -129,8 +129,12 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0)
                                                       dat['H2O'].values * dat['P'].values,
                                                       dat['Tair'].values)
 
-    if 'LWin' not in dat:
-        print('Longwave radiation estimated')
+    if 'LWin' not in dat or dat['LWin'].isnull().any():
+        if 'LWin' not in dat:
+            dat['LWin']=np.nan
+            print('Longwave radiation estimated')
+        else:
+            print('Longwave radiation partly estimated')
         # Downwelling longwve radiation
         # solar constant at top of atm.
         So = 1367
@@ -161,9 +165,11 @@ def create_forcingfile(meteo_file, output_file, lat, lon, P_unit, timezone=+2.0)
 
         # estimated long wave budget
         b = 5.6697e-8  # Stefan-Boltzman constant (W m-2 K-4)
-        dat['LWin'] = emi_sky * b *(dat['Tair'] + 273.15)**4 # Wm-2 downwelling LW
+        dat['LWin_estimated'] = emi_sky * b *(dat['Tair'] + 273.15)**4 # Wm-2 downwelling LW
 
-        dat[['LWin','f_cloud']].plot(subplots=True, kind='line')
+        dat[['LWin','LWin_estimated']].plot(kind='line')
+
+        dat['LWin'] = np.where(np.isfinite(dat['LWin']),dat['LWin'],dat['LWin_estimated'])
 
     cols.append('LWin')
     readme += "\nLWin: Downwelling long wave radiation [W/m2]"
@@ -232,7 +238,8 @@ def read_lettosuo_data(starttime='09-01-2009',endtime='01-01-2019'):
                "O:/Projects/Lettosuo/Forcing_data/MikaK/osittaishakkuu_NEE_GPP_RECO.csv",  # period end
                "O:/Projects/Lettosuo/Forcing_data/MikaK/meteo_concat.csv",
                "O:/Projects/Lettosuo/Forcing_data/MikaK/metsanpohja_concat.csv",
-               "O:/Projects/Lettosuo/Forcing_data/FMI/jokioinen_daily_prec.txt"]
+               "O:/Projects/Lettosuo/Forcing_data/FMI/jokioinen_daily_prec.txt",
+               "O:/Projects/Lettosuo/Forcing_data/TervisLW_2013-2018.csv"]
 
     index=pd.date_range(starttime, endtime, freq='0.5H')
     lettosuo_data=pd.DataFrame(index=index, columns=[])
@@ -245,9 +252,12 @@ def read_lettosuo_data(starttime='09-01-2009',endtime='01-01-2019'):
             dat.index = dat.index - pd.Timedelta(hours=0.5)
         else:
             dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
+        if fp=="O:/Projects/Lettosuo/Forcing_data/TervisLW_2013-2018.csv":
+            dat.index = pd.to_datetime(dat.ix[:,0], dayfirst=True)
         if fp=="O:/Projects/Lettosuo/Forcing_data/MikaK/osittaishakkuu_NEE_GPP_RECO.csv":
             # period end
             dat.index = dat.index - pd.Timedelta(hours=0.5)
+
         if fp.split("/")[-2] == 'FMI':
             if fp=="O:/Projects/Lettosuo/Forcing_data/FMI/jokioinen_daily_prec.txt":
                 # Vuorokauden sademäärä (mm) kuvaa vuorokauden aikana (aamun 06 UTC
@@ -542,8 +552,17 @@ def gap_fill_lettosuo_meteo(lettosuo_data, plot=False,starttime='09-01-2009',end
     frames.append(df)
     readme += info
 
+    frames.append(df)
+    readme += info
+    # LW from Tervalammen suo
+    df, info = fill_gaps(lettosuo_data[['TervisLW_2013-2018: LW sky (W m-2)']],
+                         'LWin', 'Downwelling longwave radiation from Tervalammen suo [W m-2] - has gaps!!',
+                         fill_nan=np.nan, plot=plot)
+    frames.append(df)
+    readme += info
+
     letto_data=pd.concat(frames, axis=1)
-    letto_data[['Prec_ref', 'Prec', 'Tair', 'Rg', 'U', 'Ustar', 'RH', 'P','Snow_depth1','Snow_depth2','Snow_depth3']].plot(subplots=True,kind='line')
+    letto_data[['Prec_ref', 'Prec', 'Tair', 'Rg', 'U', 'Ustar', 'RH', 'P','LWin']].plot(subplots=True,kind='line')
 
     cumPrec=letto_data[['Prec_ref', 'Prec_ref2', 'Prec_old', 'Prec']].groupby(df.index.year).cumsum()
     cumPrec.plot()

@@ -58,7 +58,7 @@ dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=timezone)
 b = 5.6697e-8  # Stefan-Boltzman constant (W m-2 K-4)
 
 # Tervalammen suo
-fp = "H:/Lettosuo/Forcing_data/TervisLW_2013-2018.csv"
+fp = "O:/Projects/Lettosuo/Forcing_data/TervisLW_2013-2018.csv"
 LW_meas = pd.read_csv(fp, sep=',', header='infer', encoding = 'ISO-8859-1')
 LW_meas.index = pd.to_datetime(LW_meas.ix[:,0], dayfirst=True)
 dat=dat.merge(LW_meas, how='outer', left_index=True, right_index=True)
@@ -82,7 +82,7 @@ dat['Qclear'] = np.maximum(0.0,
                     (So * (1.0 + 0.033 * np.cos(2.0 * np.pi * (np.minimum(dat['doy'].values, 365) - 10) / 365)) * np.cos(dat['Zen'].values)))
 
 tau_atm = dat['Rg'].rolling(4,1).sum() / (dat['Qclear'].rolling(4,1).sum() + EPS)
-
+dat['tau_atm']=tau_atm
 # cloud cover fraction
 dat['f_cloud2'] = 1.0 - (tau_atm -0.2) / (0.7 - 0.2)
 dat['f_cloud2'][dat['Qclear'] < 10] = np.nan

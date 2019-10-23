@@ -572,6 +572,8 @@ def EC_data_ungapped():
               r"O:\Projects\Lettosuo\Forcing_data\Efluxes\Letto1_SHF.csv"]  # period start
 
     fp_yearfirst = [r"O:\Projects\Forcing_data\datat\lettosuo_28022019\osittaishakkuu_CO2.csv",
+                    r"O:\Projects\Lettosuo\Forcing_data\Efluxes\osittaishakkuu_energy.csv",
+                    r"O:\Projects\Lettosuo\Forcing_data\Efluxes\avohakkuu_energy.csv",
                     r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
 
     fp_periodstart = [r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv",
