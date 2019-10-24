@@ -263,7 +263,7 @@ def get_parameters(scenario):
                                         'Rd': 1.0,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
-                                        'g1': 4.5,
+                                        'g1': 4.0,
                                         'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
@@ -279,7 +279,7 @@ def get_parameters(scenario):
                                         'Rd': 0.9,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
-                                        'g1': 4.5,
+                                        'g1': 4.0,
                                         'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
