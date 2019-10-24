@@ -675,7 +675,7 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
                                                        Data_daily[res_var[i]],np.nan)
 
     Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).median()
-    Data_seasonal.index=pd.date_range('1/1/2000', periods=366, freq='D')
+    Data_seasonal.index=pd.date_range('1/1/2000', periods=max(Data_seasonal.index), freq='D')
     Data_seasonal=Data_seasonal.resample('7D').mean()
 
     ix = np.where((months >= fmonth) & (months <= lmonth))[0]

@@ -187,8 +187,8 @@ def get_parameters(scenario):
                             'dPdx': 0.0
                             },
                     'radiation':{
-                            'Par_alb': 0.1,
-                            'Nir_alb': 0.43
+                            'Par_alb': 0.12, # 0.11, # 0.1,
+                            'Nir_alb': 0.55, # 0.46, # 0.43
                             },
                     'interception':{
                             'wmax': 0.35e-03,
