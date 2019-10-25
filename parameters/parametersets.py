@@ -194,7 +194,7 @@ def get_parameters(scenario):
                             'wmax': 0.35e-03,
                             'wmaxsnow': 1.4e-03,
                             'c_rain': 1.0, # 1.05,
-                            'c_snow': 1.3
+                            'c_snow': 1.0, # 1.3
                             },
                     'forestfloor': {
                             'bryophytes': {
