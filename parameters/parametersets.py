@@ -19,7 +19,7 @@ control = single_lad_profiles(grid, fdir + 'letto2014.txt', hs, plot=False, biom
 partial = single_lad_profiles(grid, fdir + 'letto2016_partial.txt', hs, plot=False, biomass_function='aleksis_combination')  #, biomass_function='marklund_mod')
 clearcut = single_lad_profiles(grid, fdir + 'letto2016_clearcut.txt', hs, plot=False, biomass_function='aleksis_combination')  #, biomass_function='marklund_mod')
 
-alpha=0.3
+alpha=0.2
 root_depth=0.2
 
 def get_parameters(scenario):
@@ -187,13 +187,13 @@ def get_parameters(scenario):
                             'dPdx': 0.0
                             },
                     'radiation':{
-                            'Par_alb': 0.12, # 0.11, # 0.1,
-                            'Nir_alb': 0.55, # 0.46, # 0.43
+                            'Par_alb': 0.1, #0.12, # 0.11,
+                            'Nir_alb': 0.43, # 0.55, # 0.46,
                             },
                     'interception':{
                             'wmax': 0.35e-03,
                             'wmaxsnow': 1.4e-03,
-                            'c_rain': 1.05,
+                            'c_rain': 1.0, # 1.05,
                             'c_snow': 1.3
                             },
                     'forestfloor': {
@@ -263,8 +263,9 @@ def get_parameters(scenario):
                                         'Rd': 1.0,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
-                                        'g1': 4.0,
+                                        'g1': 4.5,
                                         'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'kn':0.2,
                                         },
                                     },
                             'shrubs': {
@@ -279,7 +280,7 @@ def get_parameters(scenario):
                                         'Rd': 0.9,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
-                                        'g1': 4.0,
+                                        'g1': 4.5,
                                         'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
