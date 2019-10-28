@@ -195,10 +195,10 @@ def plot_snow_runoff(results, sim_idx=0):
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df
 
-    # Read observed WTD
+    # Read observed snowdepth
     snow_depth = read_forcing("Lettosuo_meteo_2010_2018.csv", cols=['Snow_depth1','Snow_depth2','Snow_depth3'])
 
-    # Read observed WTD
+    # Read observed runoff
     Data = read_forcing("lettosuo_weir_data.csv", cols=['Runoff mm/h'])
 
     results['runoff'] = (results['soil_drainage'].copy() + results['soil_surface_runoff'].values) * 1e3 * 3600
@@ -605,7 +605,7 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
-    if treatment == 'partial':
+    if treatment == 'partial':  # ???????????
         Data['LE'][
             (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     # period end
@@ -713,3 +713,206 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
             plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
             plt.xlabel('')
     plt.tight_layout(rect=(0, 0, 0.87, 1), pad=0.4, w_pad=0.05, h_pad=0.6)
+
+def WB_from_data(fmonth=5, lmonth=9):
+
+    from tools.iotools import read_forcing
+    import matplotlib.dates
+    from pyAPES_utilities.plotting import plot_timeseries_df
+    from soil.water import gwl_Wsto
+    from pyAPES_utilities.soiltypes.organic import soil_properties, zh
+    from parameters.soil import grid
+    from soil.soil import form_profile
+
+    start_time='1-1-2010'
+    end_time='1-1-2019'
+
+    index=pd.date_range(start_time, end_time, freq='D')
+    WB=pd.DataFrame(index=index, columns=[])
+
+    """ Precipitation """
+
+    Prec = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='Prec',
+                start_time='5-1-2010', end_time='1-1-2019')
+    Prec = Prec * 1e3 * 1800
+    Prec = Prec.resample('D',how=lambda x: x.values.sum())
+    Prec = Prec.to_frame()
+
+    Prec_gw = Prec[(Prec.index.month >= fmonth) & (Prec.index.month <= lmonth)]
+    Prec_cum = Prec_gw.groupby(Prec_gw.index.year).apply(lambda x: x.cumsum())
+
+    WB = WB.merge(Prec_cum, how='outer', left_index=True, right_index=True)
+
+    """ Change in storage from WTD """
+
+    dz = np.array(grid['dz'])
+    z = dz / 2 - np.cumsum(dz)
+
+    lbc_water = {'type': 'impermeable', 'value': None, 'depth': -2.0}
+
+    profile_properties = form_profile(z, zh, soil_properties, lbc_water)
+
+    wsto_gwl_functions = gwl_Wsto(dz, profile_properties['pF'])
+
+    GwlToWsto = wsto_gwl_functions['to_wsto']
+
+#    plt.figure()
+#    gwl = np.arange(0.0, -2, -1e-3)
+#    plt.plot(GwlToWsto(gwl),gwl)
+
+    # Read observed WTD
+    WTD = read_forcing("Lettosuo_WTD_pred.csv", cols=['control','partial','clearcut'],
+                       start_time='5-1-2010', end_time='1-1-2019')
+
+    WTD = WTD.resample('D',how=lambda x: x.values.mean())
+
+    Wsto = WTD.copy()
+    dWsto = WTD[:-1].copy()
+
+    for col in Wsto.columns:
+        Wsto[col] = GwlToWsto(WTD[col]) * 1e3
+        dWsto[col] = np.diff(Wsto[col])
+
+    dWsto_gw = dWsto[(dWsto.index.month >= fmonth) & (dWsto.index.month <= lmonth)]
+    dWsto_cum = dWsto_gw.groupby(dWsto_gw.index.year).apply(lambda x: x.cumsum())
+    dWsto_cum=dWsto_cum.rename(columns={'control':'control_dS',
+                                        'partial':'partial_dS',
+                                        'clearcut':'clearcut_dS'})
+
+    WB = WB.merge(dWsto_cum, how='outer', left_index=True, right_index=True)
+
+    """ Evapotranspiration """
+    from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O
+
+    ET = read_forcing("Lettosuo_EC_2010_2018_gapped.csv", cols=['partial_LE', 'clearcut_LE'],
+                        start_time='5-1-2016', end_time='1-1-2019')
+    # period end
+    ET.index = ET.index - pd.Timedelta(hours=0.5)
+
+    ET = ET / LATENT_HEAT * MOLAR_MASS_H2O * 1e3
+    ET = ET.fillna(0.0)  # miksi NANeja? Näyttäis olevan yöaikaan..
+    ET = ET.resample('D',how=lambda x: x.values.sum())
+
+    ET_gw = ET[(ET.index.month >= fmonth) & (ET.index.month <= lmonth)]
+    ET_cum = ET_gw.groupby(ET_gw.index.year).apply(lambda x: x.cumsum())
+    ET_cum=ET_cum.rename(columns=#{'control_LE':'control_dS',
+                                  {'partial_LE':'partial_ET',
+                                  'clearcut_LE':'clearcut_ET'})
+
+    WB = WB.merge(ET_cum, how='outer', left_index=True, right_index=True)
+
+    """ Runoff """
+
+    Runoff = read_forcing("lettosuo_weir_data.csv", cols=['Runoff mm/h'],
+                start_time='5-1-2010', end_time='1-1-2019')
+
+    Runoff = Runoff.fillna(0.0)  # ei näyttäis kovin sateisilta jaksoilta
+
+    Runoff = Runoff.resample('D',how=lambda x: x.values.sum())
+
+    Runoff_gw = Runoff[(Runoff.index.month >= fmonth) & (Runoff.index.month <= lmonth)]
+    Runoff_cum = Runoff_gw.groupby(Runoff_gw.index.year).apply(lambda x: x.cumsum())
+    Runoff_cum=Runoff_cum.rename(columns={'Runoff mm/h': 'Runoff'})
+
+    WB = WB.merge(Runoff_cum, how='outer', left_index=True, right_index=True)
+
+    pal2 = ['grey', pal[1], 'r', pal[-2]]
+
+    pos=(-45,135)
+    plt.figure(figsize=(10,5))
+    ax = plt.subplot(2, 5, (1,5))
+    plt.annotate('(a)', pos, xycoords='axes points', fontsize=12, fontweight='bold')
+    plt.plot(WB.index, WB['control_dS']+WB['clearcut_ET']+WB['Runoff'],linewidth=1, color=pal2[2])
+    plt.plot(WB.index, WB['control_dS']+WB['clearcut_ET'],linewidth=1, color=pal2[1])
+    plt.plot(WB.index, WB['control_dS'],linewidth=1, color=pal2[0])
+    plot_timeseries_df(WB, ['control_dS', 'clearcut_ET', 'Runoff'], stack=True,limits=False, colors=pal2,legend=False)
+    plot_timeseries_df(WB, ['Prec'],limits=False,legend=False, colors=pal2[-1:])
+    plt.xlim(['1-1-2010','12-31-2018'])
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.title('Pre-treatment/Control')
+    plt.ylabel('[mm]')
+    for yyyy in range(2010, 2019):
+        y=WB['control_dS'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y-10),
+                     color=pal2[0])
+        y1=WB['clearcut_ET'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y1,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y1+y-70),
+                     color=pal2[1])
+        y2=WB['Runoff'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y2,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y2+y1+y-40),
+                     color=pal2[2])
+        y3=WB['Prec'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y3,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y3-10),
+                     color=pal2[-1])
+    ax1 = plt.subplot(2,5, (6,7), sharey=ax)
+    plt.annotate('(b)', pos, xycoords='axes points', fontsize=12, fontweight='bold')
+    plt.plot(WB.index, WB['partial_dS']+WB['partial_ET']+WB['Runoff'],linewidth=1, color=pal2[2])
+    plt.plot(WB.index, WB['partial_dS']+WB['partial_ET'],linewidth=1, color=pal2[1])
+    plt.plot(WB.index, WB['partial_dS'],linewidth=1, color=pal2[0])
+    plot_timeseries_df(WB, ['partial_dS', 'partial_ET', 'Runoff'], stack=True,limits=False, colors=pal2,legend=False)
+    plot_timeseries_df(WB, ['Prec'],limits=False,legend=False, colors=pal2[-1:])
+    plt.title('Partial')
+    plt.ylabel('[mm]')
+    for yyyy in range(2016, 2019):
+        y=WB['partial_dS'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y-40),
+                     color=pal2[0])
+        y1=WB['partial_ET'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y2,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y1+y-40),
+                     color=pal2[1])
+        y2=WB['Runoff'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y2,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y2+y1+y-40),
+                     color=pal2[2])
+        y3=WB['Prec'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y3,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y3),
+                     color=pal2[-1])
+    ax2 = plt.subplot(2,5, (8,9), sharey=ax, sharex=ax1)
+    plt.annotate('(c)', pos, xycoords='axes points', fontsize=12, fontweight='bold')
+    plt.plot(WB.index, WB['clearcut_dS']+WB['clearcut_ET'],linewidth=1, color=pal2[1])
+    plt.plot(WB.index, WB['clearcut_dS'],linewidth=1, color=pal2[0])
+    plot_timeseries_df(WB, ['clearcut_dS', 'clearcut_ET'], stack=True,limits=False, colors=pal2,legend=False)
+    plot_timeseries_df(WB, ['Prec'],limits=False,legend=False, colors=pal2[-1:])
+    plt.xlim(['1-1-2016','12-31-2018'])
+    ax1.xaxis.set_major_locator(matplotlib.dates.MonthLocator(bymonth=[1]))
+    ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    plt.title('Clearcut')
+    plt.ylabel('[mm]')
+    for yyyy in range(2016, 2019):
+        y=WB['clearcut_dS'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y-40),
+                     color=pal2[0])
+        y1=WB['clearcut_ET'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y2,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y1+y-40),
+                     color=pal2[1])
+        y3=WB['Prec'][WB.index==str(lmonth)+'-30-' + str(yyyy)].values[0]
+        plt.annotate('%.0f' % y3,
+                     xy=(str(lmonth+1)+'-10-' + str(yyyy),y3),
+                     color=pal2[-1])
+    ax3 = plt.subplot(2,5, 10)
+    plot_timeseries_df(WB, ['clearcut_dS', 'clearcut_ET', 'Runoff'], stack=True,limits=False, colors=[pal2[2], pal2[1], pal2[0]])
+    plot_timeseries_df(WB, ['Prec'],limits=False, colors=pal2[-1:])
+    plt.legend(labels=['Precipitation', 'Runoff', 'Evapotranspiration', 'Change in storage'],
+               frameon=False, borderpad=0.0, labelspacing=0.5)
+    plt.xlim(['1-1-2009','12-31-2009'])
+    ax3.axes.get_xaxis().set_visible(False)
+    ax3.axes.get_yaxis().set_visible(False)
+    ax3.spines['top'].set_visible(False)
+    ax3.spines['right'].set_visible(False)
+    ax3.spines['left'].set_visible(False)
+    ax3.spines['bottom'].set_visible(False)
+    plt.tight_layout(w_pad=3)

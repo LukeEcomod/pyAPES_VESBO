@@ -1023,7 +1023,7 @@ def gwl_Wsto(dz, pF):
             'ThetaR' residual water content [m\ :sup:`3` m\ :sup:`-3`\ ]
             'alpha' air entry suction [cm\ :sup:`-1`]
             'n' pore size distribution [-]
-        dz (np.arrays): soil conpartment thichness, node in center [m]
+        dz (np.arrays): soil compartment thichness, node in center [m]
     Returns:
         (dict):
             'to_gwl': interpolated function for gwl(Wsto)
