@@ -187,12 +187,12 @@ def get_parameters(scenario):
                             'dPdx': 0.0
                             },
                     'radiation':{
-                            'Par_alb': 0.1, #0.12, # 0.11,
-                            'Nir_alb': 0.43, # 0.55, # 0.46,
+                            'Par_alb': 0.1,
+                            'Nir_alb': 0.43,
                             },
                     'interception':{
                             'wmax': 0.35e-03,
-                            'wmaxsnow': 1.4e-03,
+                            'wmaxsnow': 0.7e-03,
                             'c_rain': 1.0, # 1.05,
                             'c_snow': 1.0, # 1.3
                             },
@@ -215,7 +215,7 @@ def get_parameters(scenario):
                                     'ground_coverage': (0.0, 0.0, 0.0)
                                     },
                             'snowpack': {
-                                    'kmelt': 0.75*2.31e-8
+                                    'kmelt': 1.73e-8
                                     }
                             },
                     'planttypes': {
@@ -265,7 +265,7 @@ def get_parameters(scenario):
                                         'theta': 0.7,
                                         'g1': 4.5,
                                         'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
-                                        'kn':0.2,
+                                        'kn':0.5,
                                         },
                                     },
                             'shrubs': {
@@ -280,7 +280,7 @@ def get_parameters(scenario):
                                         'Rd': 0.9,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
-                                        'g1': 4.5,
+                                        'g1': 4.0,
                                         'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
