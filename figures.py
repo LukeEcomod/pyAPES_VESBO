@@ -592,12 +592,8 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_diurnal
 
-    if treatment == 'control':
-        variables=['NRAD','NLWRAD','NSWRAD']
-        res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet']
-    else:
-        variables=['NRAD','LE','SH','GHF']
-        res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux']
+    variables=['NRAD','LE','SH','GHF']
+    res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux']
 
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
 
@@ -619,15 +615,14 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
     for i in range(len(variables)):
         Data_daily[variables[i] + '_filtered'] = np.where(
             Data_daily[variables[i]+'gap'] > lim, np.nan, Data_daily[variables[i]])
-        Data_daily[variables[i] + '_err'] = Data_daily[variables[i] + '_filtered'] - Data_daily[res_var[i]]
 
-#    plt.figure()
-#    for i in range(len(variables)):
-#        if i==0:
-#            ax=plt.subplot(len(variables),1,i+1)
-#        else:
-#            plt.subplot(len(variables),1,i+1,sharex=ax)
-#        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
+    plt.figure()
+    for i in range(len(variables)):
+        if i==0:
+            ax=plt.subplot(len(variables),1,i+1)
+        else:
+            plt.subplot(len(variables),1,i+1,sharex=ax)
+        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
 
     months = Data_daily.index.month
 
@@ -653,22 +648,6 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
             if j == 0:
                 plt.title(str(years[i]))
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
-
-#    plt.figure(figsize=(10,4*1.7 + 0.5))
-#    for i in range(len(variables)):
-#        if i==0:
-#            ax=plt.subplot(len(variables),1,i+1)
-#        else:
-#            plt.subplot(len(variables),1,i+1,sharex=ax)
-#        plt.plot(Data_daily.index.dayofyear, Data_daily[variables[i] +'_err'],linestyle='',marker='o', color=pal[i], alpha=0.2)
-#        plt.plot([0, 365], [0, 0], 'k--', linewidth=1)
-#        plt.title('Measured ' + variables[i] + ' - Modelled ' + variables[i])
-#        if i+1 < len(variables):
-#            plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
-#        else:
-#            plt.xlabel('Day of year')
-#    plt.xlim([(fmonth-1)*30.5, lmonth*30.5])
-#    plt.tight_layout()
 
     for i in range(len(res_var)):
         Data_daily[res_var[i] +'_filtered'] = np.where(np.isfinite(Data_daily[variables[i] +'_filtered']),
@@ -784,18 +763,18 @@ def WB_from_data(fmonth=5, lmonth=9):
     """ Evapotranspiration """
     from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O
 
-    ET = read_forcing("Lettosuo_EC_2010_2018_gapped.csv", cols=['partial_LE', 'clearcut_LE'],
-                        start_time=start_time, end_time=end_time)
+    ET = read_forcing("Lettosuo_EC_2010_2018_gapped.csv",
+                      cols=['control_LE', 'partial_LE', 'clearcut_LE'],
+                      start_time=start_time, end_time=end_time)
     # period end
     ET.index = ET.index - pd.Timedelta(hours=0.5)
 
-    ET = ET / LATENT_HEAT * MOLAR_MASS_H2O * 1e3
+    ET = ET / LATENT_HEAT * MOLAR_MASS_H2O * 1800  # W / m2 -> mm/30min
     ET = ET.fillna(0.0)  # miksi NANeja? Näyttäis olevan yöaikaan..
     ET = ET.resample('D',how=lambda x: x.values.sum())
 
     ET_gw = ET[(ET.index.month >= fmonth) & (ET.index.month <= lmonth)]
     ET_cum = ET_gw.groupby(ET_gw.index.year).apply(lambda x: x.cumsum())
-    ET_cum['control_LE'] = 0.0
     ET_cum=ET_cum.rename(columns={'control_LE':'control_ET',
                                   'partial_LE':'partial_ET',
                                   'clearcut_LE':'clearcut_ET'})
@@ -917,3 +896,102 @@ def WB_from_data(fmonth=5, lmonth=9):
     ax3.spines['left'].set_visible(False)
     ax3.spines['bottom'].set_visible(False)
     plt.tight_layout(w_pad=3)
+
+
+def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
+
+    from tools.iotools import read_forcing
+    import matplotlib.dates
+    from pyAPES_utilities.plotting import plot_timeseries_df, plot_xy
+
+    start_time='1-1-2010'
+    end_time='1-1-2019'
+
+
+    """ WTD """
+    # Read observed WTD
+    WTD = read_forcing("Lettosuo_WTD_pred.csv", cols=['control','partial','clearcut'],
+                       start_time=start_time, end_time=end_time)
+
+    WTD = WTD.resample('D',how=lambda x: x.values.mean())
+
+    """ Evapotranspiration """
+    from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O
+
+    ET = read_forcing("Lettosuo_EC_2010_2018_gapped.csv",
+                      cols=['control_LE', 'control_LEgap',
+                            'partial_LE', 'partial_LEgap',
+                            'clearcut_LE', 'clearcut_LEgap'],
+                      start_time=start_time, end_time=end_time)
+
+    # period end
+    ET.index = ET.index - pd.Timedelta(hours=0.5)
+
+    ET_hyde = read_forcing("FIHy_flx_2010-2017.csv",
+                      cols=['ET', 'Qc_ET', 'LE'],
+                      start_time=start_time, end_time=end_time)
+
+    ET_hyde = ET_hyde.rename(columns={'ET':'Hyde_ET','LE':'Hyde_LE', 'Qc_ET': 'Hyde_LEgap'})
+
+    ET = ET.merge(ET_hyde, how='outer', left_index=True, right_index=True)
+
+    ET = ET.resample('D',how=lambda x: x.values.sum())
+
+    variables = ['control_LE', 'partial_LE', 'clearcut_LE','Hyde_LE']
+
+    for i in range(len(variables)):
+        ET[variables[i]] = ET[variables[i]] / LATENT_HEAT * MOLAR_MASS_H2O * 1800
+        ET[variables[i] + '_filtered'] = np.where(
+            ET[variables[i]+'gap'] > lim*48, np.nan, ET[variables[i]])
+
+    ix = np.where((ET.index.month >= fmonth) & (ET.index.month <= lmonth))[0]
+
+    plt.figure()
+    plt.subplot(1,4,1)
+    plot_xy(ET['Hyde_LE'][ix], ET['clearcut_LE_filtered'][ix],axislabels={'x':'Hyde_ET', 'y':'clearcut_ET'},alpha=0.5)
+    plt.subplot(1,4,2)
+    plot_xy(ET['Hyde_LE'][ix], ET['partial_LE_filtered'][ix],axislabels={'x':'Hyde_ET', 'y':'partial_ET'},alpha=0.5)
+    plt.subplot(1,4,3)
+    plot_xy(ET['Hyde_LE'][ix], ET['control_LE_filtered'][ix],axislabels={'x':'Hyde_ET', 'y':'control_ET'},alpha=0.5)
+    plt.subplot(1,4,4)
+    plot_xy(ET['clearcut_LE_filtered'][ix], ET['partial_LE_filtered'][ix],axislabels={'x':'clearcut_ET', 'y':'partial_ET'},alpha=0.5)
+
+    plt.figure()
+    plt.plot(ET.index, ET['control_LE'], '-', color='k', alpha=0.2)
+    plt.plot(ET.index, ET['partial_LE'], '-', color='b', alpha=0.2)
+    plt.plot(ET.index, ET['clearcut_LE'], '-', color='r', alpha=0.2)
+    plt.plot(ET.index, ET['control_LE_filtered'], 'o', color='k', markersize=3)
+    plt.plot(ET.index, ET['partial_LE_filtered'], 'o', color='b', markersize=3)
+    plt.plot(ET.index, ET['clearcut_LE_filtered'], 'o', color='r', markersize=3)
+
+    ET = read_forcing("Lettosuo_EC_2010_2018.csv",
+                      cols='all',
+                      start_time=start_time, end_time=end_time)
+
+    ix = np.where((ET.index.month >= fmonth) & (ET.index.month <= lmonth))[0]
+
+    plt.figure()
+    plt.subplot(1,3,1)
+    plot_xy(ET['Hyde_LE'][ix], ET['clearcut_LE'][ix],axislabels={'x':'Hyde_LE', 'y':'clearcut_LE'})
+    plt.subplot(1,3,2)
+    plot_xy(ET['Hyde_LE'][ix], ET['partial_LE'][ix],axislabels={'x':'Hyde_LE', 'y':'partial_LE'})
+    plt.subplot(1,3,3)
+    plot_xy(ET['Hyde_LE'][ix], ET['control_LE'][ix],axislabels={'x':'Hyde_LE', 'y':'control_LE'})
+
+    plt.figure()
+    plot_xy(ET['partial_LE'][ix], ET['clearcut_LE'][ix],axislabels={'x':'partial ET', 'y':'clearcut ET'})
+    plt.figure()
+    plot_xy(ET['partial_SH'][ix], ET['clearcut_SH'][ix],axislabels={'x':'partial ET', 'y':'clearcut ET'})
+    plt.figure()
+    plot_xy(ET['partial_NRAD'][ix], ET['clearcut_NRAD'][ix],axislabels={'x':'partial ET', 'y':'clearcut ET'})
+
+
+
+
+
+
+
+
+
+
+

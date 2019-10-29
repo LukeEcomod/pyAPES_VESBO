@@ -602,7 +602,7 @@ def get_parameters(scenario):
             'count': 3,
             'general':{
                         'start_time' : "2009-10-01",
-                        'end_time' : "2019-01-01"
+                        'end_time' : "2016-01-01"
                         },
             'canopy': {
 #                    'ctr': { # speed up!
@@ -618,13 +618,13 @@ def get_parameters(scenario):
                             },
                     'radiation':{
                             'Par_alb': 0.1,
-                            'Nir_alb': 0.43
+                            'Nir_alb': 0.43,
                             },
                     'interception':{
                             'wmax': 0.35e-03,
-                            'wmaxsnow': 1.4e-03,
-                            'c_rain': 1.05,
-                            'c_snow': 1.3
+                            'wmaxsnow': 0.7e-03,
+                            'c_rain': 1.0, # 1.05,
+                            'c_snow': 1.0, # 1.3
                             },
                     'forestfloor': {
                             'bryophytes': {
@@ -645,7 +645,7 @@ def get_parameters(scenario):
                                     'ground_coverage': 0.0,
                                     },
                             'snowpack': {
-                                    'kmelt': 0.75*2.31e-8
+                                    'kmelt': 1.73e-8
                                     }
                             },
                     'planttypes': {
@@ -662,7 +662,10 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    'leafp': {
+                                        'lt': (0.02, 0.05, 0.1)
                                         },
                                     },
                             'spruce': {
@@ -678,7 +681,10 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        },
+                                    'leafp': {
+                                        'lt': (0.02, 0.05, 0.1)
                                         },
                                     },
                             'decid': {
@@ -693,24 +699,25 @@ def get_parameters(scenario):
                                         'Rd': 1.0,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
-                                        'g1': 4.0,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g1': 4.5,
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'kn':0.5,
                                         },
                                     },
                             'shrubs': {
-                                    'LAImax': (0.5, 0.8, 1.1),
+                                    'LAImax': 0.8,
                                     'lad': control['lad']['shrubs'],
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
                                     'photop': {
-                                        'Vcmax': 45.,
-                                        'Jmax': 89.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-                                        'Rd': 1.0,  # 0.023*Vcmax
+                                        'Vcmax': 40.,
+                                        'Jmax': 79.,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+                                        'Rd': 0.9,  # 0.023*Vcmax
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': 1.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },

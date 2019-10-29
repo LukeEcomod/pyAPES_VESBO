@@ -569,15 +569,15 @@ def EC_data_ungapped():
               r"O:\Projects\Lettosuo\Forcing_data\datat\lettosuo_28022019\pythonlukee\avohakkuu_CO2.csv",
               r"O:\Projects\Lettosuo\Forcing_data\Annalea2\Letto1_EC.csv",
               r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv",  # period start
-              r"O:\Projects\Lettosuo\Forcing_data\Efluxes\Letto1_SHF.csv"]  # period start
+              r"O:\Projects\Lettosuo\Forcing_data\Efluxes\pretreatment_energy.csv"]
 
     fp_yearfirst = [r"O:\Projects\Forcing_data\datat\lettosuo_28022019\osittaishakkuu_CO2.csv",
                     r"O:\Projects\Lettosuo\Forcing_data\Efluxes\osittaishakkuu_energy.csv",
                     r"O:\Projects\Lettosuo\Forcing_data\Efluxes\avohakkuu_energy.csv",
+                    r"O:\Projects\Lettosuo\Forcing_data\Efluxes\pretreatment_energy.csv",
                     r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
 
-    fp_periodstart = [r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv",
-                      r"O:\Projects\Lettosuo\Forcing_data\Efluxes\Letto1_SHF.csv"]
+    fp_periodstart = [r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
 
     index = pd.date_range(starttime, endtime, freq='0.5H')
     data = pd.DataFrame(index=index, columns=[])
@@ -611,6 +611,10 @@ def EC_data_ungapped():
                  'avohakkuu_energy: G [W m-2]',
                  'avohakkuu_energy: NRAD [W m-2]',
                  'avohakkuu_CO2: NEE [mg CO2 m-2 s-1]',
+                 'pretreatment_energy: LE [W m-2]',
+                 'pretreatment_energy: SH [W m-2]',
+                 'pretreatment_energy: G [W m-2]',
+                 'pretreatment_energy: NRAD [W m-2]',
                  ]
     flags = ['osittaishakkuu_energy: gap_LE',
              'osittaishakkuu_energy: gap_SH',
@@ -621,7 +625,11 @@ def EC_data_ungapped():
              'avohakkuu_energy: gap_SH',
              'avohakkuu_energy: gap_G',
              'avohakkuu_energy: gap_NRAD',
-             'avohakkuu_CO2: Flag_NEE'
+             'avohakkuu_CO2: Flag_NEE',
+             'pretreatment_energy: gap_LE',
+             'pretreatment_energy: gap_SH',
+             'pretreatment_energy: gap_G',
+             'pretreatment_energy: gap_NRAD',
              ]
 
     for i in range(len(variables)):
@@ -649,11 +657,11 @@ def EC_data_ungapped():
            'avohakkuu_CO2: NEE [mg CO2 m-2 s-1], not gapfilled',
            'avohakkuu_CO2: Reco [mg CO2 m-2 s-1]',
            'avohakkuu_CO2: GPP [mg CO2 m-2 s-1]',
-           'Letto1_EC: LE (Wm-2)',
-           'Letto1_EC: SH (W m-2)',
-           'Letto1_meteo: avg(NetRad (W/m2))',
+           'pretreatment_energy: LE [W m-2], not gapfilled',
+           'pretreatment_energy: SH [W m-2], not gapfilled',
+           'pretreatment_energy: G [W m-2], not gapfilled',
+           'pretreatment_energy: NRAD [W m-2], not gapfilled',
            'control_NSWRAD',
-           'Letto1_SHF: avg(HeatFlux 7cm (W/m2))',
            'Letto1_EC: NEE_South',
            'Letto1_EC: NEE_North',
            'Letto1_EC: GPP_S',
@@ -661,12 +669,6 @@ def EC_data_ungapped():
            'Letto1_EC: Reco_S',
            'Letto1_EC: Reco_N'
             ]].copy()
-
-    lettosuo_EC['Letto1_EC: NEE'] = np.where(lettosuo_EC['Letto1_EC: NEE_South'].notnull(),
-               lettosuo_EC['Letto1_EC: NEE_South'], lettosuo_EC['Letto1_EC: NEE_North'])
-
-    lettosuo_EC['Letto1_EC: Reco'] = (310/360*lettosuo_EC['Letto1_EC: Reco_N'] + 50/360*lettosuo_EC['Letto1_EC: Reco_S'])
-    lettosuo_EC['Letto1_EC: GPP'] = lettosuo_EC['Letto1_EC: NEE'] - lettosuo_EC['Letto1_EC: Reco']
 
     lettosuo_EC = lettosuo_EC.rename(columns={
            'osittaishakkuu_energy: LE [W m-2], not gapfilled': 'partial_LE',
@@ -683,16 +685,13 @@ def EC_data_ungapped():
            'avohakkuu_CO2: NEE [mg CO2 m-2 s-1], not gapfilled': 'clearcut_NEE',
            'avohakkuu_CO2: GPP [mg CO2 m-2 s-1]': 'clearcut_GPP',
            'avohakkuu_CO2: Reco [mg CO2 m-2 s-1]': 'clearcut_Reco',
-           'Letto1_EC: LE (Wm-2)': 'control_LE',
-           'Letto1_EC: SH (W m-2)': 'control_SH',
-           'Letto1_meteo: avg(NetRad (W/m2))': 'control_NRAD',
-           'Letto1_SHF: avg(HeatFlux 7cm (W/m2))': 'control_GHF',
-           'Letto1_EC: NEE': 'control_NEE',
-           'Letto1_EC: GPP': 'control_GPP',
-           'Letto1_EC: Reco': 'control_Reco',
-           'Letto1_EC: NEE_North': 'control-N_NEE',
-           'Letto1_EC: GPP_N': 'control-N_GPP',
-           'Letto1_EC: Reco_N': 'control-N_Reco',
+           'pretreatment_energy: LE [W m-2], not gapfilled': 'control_LE',
+           'pretreatment_energy: SH [W m-2], not gapfilled': 'control_SH',
+           'pretreatment_energy: G [W m-2], not gapfilled': 'control_GHF',
+           'pretreatment_energy: NRAD [W m-2], not gapfilled': 'control_NRAD',
+           'Letto1_EC: NEE_North': 'control_NEE',
+           'Letto1_EC: GPP_N': 'control_GPP',
+           'Letto1_EC: Reco_N': 'control_Reco',
            'Letto1_EC: NEE_South': 'control-S_NEE',
            'Letto1_EC: GPP_S': 'control-S_GPP',
            'Letto1_EC: Reco_S': 'control-S_Reco'
@@ -702,7 +701,6 @@ def EC_data_ungapped():
 
     lettosuo_EC['partial_NSWRAD'][lettosuo_EC.index < '01-01-2016'] = np.nan
 
-    lettosuo_EC['control_NRAD'][lettosuo_EC.index >= '01-01-2016'] = np.nan
     lettosuo_EC['control_NSWRAD'][lettosuo_EC.index >= '01-01-2016'] = np.nan
 
     treatments=['control','partial','clearcut']
@@ -728,9 +726,7 @@ def EC_data_gapped():
 
     fpaths = [r"O:\Projects\Lettosuo\Forcing_data\Efluxes\osittaishakkuu_energy.csv",
               r"O:\Projects\Lettosuo\Forcing_data\Efluxes\avohakkuu_energy.csv",
-              r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
-
-    fp_periodstart = [r"O:\Projects\Lettosuo\Forcing_data\Annalea1\Letto1_meteo.csv"]
+              r"O:\Projects\Lettosuo\Forcing_data\Efluxes\pretreatment_energy.csv"]
 
     index = pd.date_range(starttime, endtime, freq='0.5H')
     data = pd.DataFrame(index=index, columns=[])
@@ -740,8 +736,6 @@ def EC_data_gapped():
         dat.index = pd.to_datetime(dat.ix[:,0], yearfirst=True)
         dat.index=dat.index.map(lambda x: x.replace(second=0))
         dat.ix[:,0]=dat.index
-        if fp in fp_periodstart:  # period start to period end
-            dat.index = dat.index + pd.Timedelta(hours=0.5)
         dat = dat.drop_duplicates(subset=dat.columns[0])
         dat = dat.drop([dat.columns[0]], axis=1)
         dat.columns = fp.split("\\")[-1].split(".")[0] + ': ' + dat.columns
@@ -751,43 +745,15 @@ def EC_data_gapped():
             raise ValueError("Error")
         data=data.merge(dat, how='outer', left_index=True, right_index=True)
 
-    data[['Letto1_meteo: avg(GlobRefl (W/m2))','Letto1_meteo: avg(Glob (W/m2))']].plot()
-
-#    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] < data['Letto1_meteo: avg(Glob (W/m2))'],
-#                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
-#    data['Letto1_meteo: avg(GlobRefl (W/m2))'] = np.where(data['Letto1_meteo: avg(GlobRefl (W/m2))'] > 0.0,
-#                            data['Letto1_meteo: avg(GlobRefl (W/m2))'], np.nan)
-    data['control_NSWRAD'] = data['Letto1_meteo: avg(Glob (W/m2))'] - data['Letto1_meteo: avg(GlobRefl (W/m2))']
-    data['control_NRAD'] = data['Letto1_meteo: avg(NetRad (W/m2))'].copy()
-    data['control_NLWRAD'] = data['control_NRAD'] - data['control_NSWRAD']
-
-    rad_var=['control_NRAD','control_NSWRAD','control_NLWRAD']
-    for i in range(len(rad_var)):
-        data[rad_var[i] + 'gap'] = np.where(np.isfinite(data[rad_var[i]]),0,1)
-
-#    data[rad_var] = data[rad_var].interpolate()
-
-    data['partial_NSWRAD'] = data['control_NSWRAD'].copy()
-    data['partial_NLWRAD'] = data['control_NLWRAD'].copy()
-    data['partial_NSWRADgap'] = data['control_NSWRADgap'].copy()
-    data['partial_NLWRADgap'] = data['control_NLWRADgap'].copy()
-    data[['control_NRAD',
-                 'control_NLWRAD',
-                 'control_NSWRAD',
-                 'control_NRADgap',
-                 'control_NLWRADgap',
-                 'control_NSWRADgap']].plot(subplots=True)
     lettosuo_EC = data[[
-                 'control_NRAD',
-                 'control_NLWRAD',
-                 'control_NSWRAD',
-                 'control_NRADgap',
-                 'control_NLWRADgap',
-                 'control_NSWRADgap',
-                 'partial_NLWRAD',
-                 'partial_NSWRAD',
-                 'partial_NLWRADgap',
-                 'partial_NSWRADgap',
+                 'pretreatment_energy: LE [W m-2]',
+                 'pretreatment_energy: SH [W m-2]',
+                 'pretreatment_energy: G [W m-2]',
+                 'pretreatment_energy: NRAD [W m-2]',
+                 'pretreatment_energy: gap_LE',
+                 'pretreatment_energy: gap_SH',
+                 'pretreatment_energy: gap_G',
+                 'pretreatment_energy: gap_NRAD',
                  'osittaishakkuu_energy: LE [W m-2]',
                  'osittaishakkuu_energy: SH [W m-2]',
                  'osittaishakkuu_energy: G [W m-2]',
@@ -807,6 +773,14 @@ def EC_data_gapped():
                  ]].copy()
 
     lettosuo_EC = lettosuo_EC.rename(columns={
+                 'pretreatment_energy: LE [W m-2]': 'control_LE',
+                 'pretreatment_energy: SH [W m-2]': 'control_SH',
+                 'pretreatment_energy: G [W m-2]': 'control_GHF',
+                 'pretreatment_energy: NRAD [W m-2]': 'control_NRAD',
+                 'pretreatment_energy: gap_LE': 'control_LEgap',
+                 'pretreatment_energy: gap_SH': 'control_SHgap',
+                 'pretreatment_energy: gap_G': 'control_GHFgap',
+                 'pretreatment_energy: gap_NRAD': 'control_NRADgap',
                  'osittaishakkuu_energy: LE [W m-2]': 'partial_LE',
                  'osittaishakkuu_energy: SH [W m-2]': 'partial_SH',
                  'osittaishakkuu_energy: G [W m-2]': 'partial_GHF',
