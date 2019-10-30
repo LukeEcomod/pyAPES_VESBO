@@ -590,7 +590,7 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
 def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False):
 
     from tools.iotools import read_forcing
-    from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_diurnal
+    from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_diurnal, plot_timeseries_df
 
     variables=['NRAD','LE','SH','GHF']
     res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux']
@@ -907,7 +907,6 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
     start_time='1-1-2010'
     end_time='1-1-2019'
 
-
     """ WTD """
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols=['control','partial','clearcut'],
@@ -918,80 +917,139 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
     """ Evapotranspiration """
     from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O
 
-    ET = read_forcing("Lettosuo_EC_2010_2018_gapped.csv",
-                      cols=['control_LE', 'control_LEgap',
-                            'partial_LE', 'partial_LEgap',
-                            'clearcut_LE', 'clearcut_LEgap'],
-                      start_time=start_time, end_time=end_time)
-
-    # period end
-    ET.index = ET.index - pd.Timedelta(hours=0.5)
-
-    ET_hyde = read_forcing("FIHy_flx_2010-2017.csv",
-                      cols=['ET', 'Qc_ET', 'LE'],
-                      start_time=start_time, end_time=end_time)
-
-    ET_hyde = ET_hyde.rename(columns={'ET':'Hyde_ET','LE':'Hyde_LE', 'Qc_ET': 'Hyde_LEgap'})
-
-    ET = ET.merge(ET_hyde, how='outer', left_index=True, right_index=True)
-
-    ET = ET.resample('D',how=lambda x: x.values.sum())
-
-    variables = ['control_LE', 'partial_LE', 'clearcut_LE','Hyde_LE']
-
-    for i in range(len(variables)):
-        ET[variables[i]] = ET[variables[i]] / LATENT_HEAT * MOLAR_MASS_H2O * 1800
-        ET[variables[i] + '_filtered'] = np.where(
-            ET[variables[i]+'gap'] > lim*48, np.nan, ET[variables[i]])
-
-    ix = np.where((ET.index.month >= fmonth) & (ET.index.month <= lmonth))[0]
-
-    plt.figure()
-    plt.subplot(1,4,1)
-    plot_xy(ET['Hyde_LE'][ix], ET['clearcut_LE_filtered'][ix],axislabels={'x':'Hyde_ET', 'y':'clearcut_ET'},alpha=0.5)
-    plt.subplot(1,4,2)
-    plot_xy(ET['Hyde_LE'][ix], ET['partial_LE_filtered'][ix],axislabels={'x':'Hyde_ET', 'y':'partial_ET'},alpha=0.5)
-    plt.subplot(1,4,3)
-    plot_xy(ET['Hyde_LE'][ix], ET['control_LE_filtered'][ix],axislabels={'x':'Hyde_ET', 'y':'control_ET'},alpha=0.5)
-    plt.subplot(1,4,4)
-    plot_xy(ET['clearcut_LE_filtered'][ix], ET['partial_LE_filtered'][ix],axislabels={'x':'clearcut_ET', 'y':'partial_ET'},alpha=0.5)
-
-    plt.figure()
-    plt.plot(ET.index, ET['control_LE'], '-', color='k', alpha=0.2)
-    plt.plot(ET.index, ET['partial_LE'], '-', color='b', alpha=0.2)
-    plt.plot(ET.index, ET['clearcut_LE'], '-', color='r', alpha=0.2)
-    plt.plot(ET.index, ET['control_LE_filtered'], 'o', color='k', markersize=3)
-    plt.plot(ET.index, ET['partial_LE_filtered'], 'o', color='b', markersize=3)
-    plt.plot(ET.index, ET['clearcut_LE_filtered'], 'o', color='r', markersize=3)
-
-    ET = read_forcing("Lettosuo_EC_2010_2018.csv",
+    Data = read_forcing("Lettosuo_EC_2010_2018_gapped.csv",
                       cols='all',
                       start_time=start_time, end_time=end_time)
+    # period end
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
 
-    ix = np.where((ET.index.month >= fmonth) & (ET.index.month <= lmonth))[0]
+    # ~ Potential ET
+    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
+                    start_time=start_time, end_time=end_time)
+    # vapor pressure
+    esat = 1e3 * 0.6112 * np.exp((17.67 * Forc.Tair) / (Forc.Tair + 273.16 - 29.66))
+    Forc['VPD'] = (esat - Forc.H2O * Forc.P)  # Pa
+
+    Data = Data.merge(Forc, how='outer', left_index=True, right_index=True)
+
+    Data['Rg'] = Data.diffPar + Data.dirPar + Data.diffNir + Data.dirNir
+
+    Data['control_LE'] = Data['control_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
+    Data['partial_LE'] = Data['partial_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
+    Data['clearcut_LE'] = Data['clearcut_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
+
+    Data_daily = Data.resample('D',how=lambda x: x.values.mean())
+
+    variables = ['control_LE', 'partial_LE', 'clearcut_LE','control_NRAD']
+
+    for i in range(len(variables)):
+        Data_daily[variables[i] + '_filtered'] = np.where(
+            Data_daily[variables[i]+'gap'] > lim, np.nan, Data_daily[variables[i]])
+
+    for i in range(len(variables)):
+        Data[variables[i]] = np.where(
+            Data[variables[i]+'gap'] == 1, np.nan, Data[variables[i]])
+
+    months_daily = Data_daily.index.month
+
+    ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
+    plt.figure()
+    plot_xy(Data_daily['Rg'][ix], Data_daily['control_NRAD'][ix],axislabels={'x':'Rg', 'y':'control_NRAD'},alpha=0.2)
+
+    Data_daily['PET_daily'] = penman_monteith(0.67*Data_daily['Rg']-21,Data_daily['VPD'], Data_daily['Tair'],units='mm', Gs=7e-3)* 3600*24
 
     plt.figure()
-    plt.subplot(1,3,1)
-    plot_xy(ET['Hyde_LE'][ix], ET['clearcut_LE'][ix],axislabels={'x':'Hyde_LE', 'y':'clearcut_LE'})
+    for month in range(4,11):
+        ix = np.where((months_daily == month))[0]
+        if month == 4:
+            ax=plt.subplot(3,7,month - 3)
+        else:
+            plt.subplot(3,7,month - 3,sharex=ax,sharey=ax)
+        plot_xy(Data_daily['PET_daily'][ix], Data_daily['control_LE_filtered'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
+        plt.title(str(month))
+        plt.subplot(3,7,month - 3 + 7,sharex=ax,sharey=ax)
+        plot_xy(Data_daily['PET_daily'][ix], Data_daily['partial_LE_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
+        plt.subplot(3,7,month - 3 + 14,sharex=ax,sharey=ax)
+        plot_xy(Data_daily['PET_daily'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
+
+    ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
+    plt.figure()
+    ax=plt.subplot(1,3,1)
+    plot_xy(Data_daily['PET_daily'][ix], Data_daily['control_LE_filtered'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
     plt.subplot(1,3,2)
-    plot_xy(ET['Hyde_LE'][ix], ET['partial_LE'][ix],axislabels={'x':'Hyde_LE', 'y':'partial_LE'})
+    plot_xy(Data_daily['PET_daily'][ix], Data_daily['partial_LE_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
     plt.subplot(1,3,3)
-    plot_xy(ET['Hyde_LE'][ix], ET['control_LE'][ix],axislabels={'x':'Hyde_LE', 'y':'control_LE'})
+    plot_xy(Data_daily['PET_daily'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
+
+    ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
+    plt.figure()
+    ax=plt.subplot(1,3,1)
+    plot_xy(Data_daily['PET_daily'][ix], Data_daily['control_LE_filtered'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
+    plt.subplot(1,3,2)
+    plot_xy(Data_daily['PET_daily'][ix], Data_daily['partial_LE_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
+    plt.subplot(1,3,3)
+    plot_xy(Data_daily['PET_daily'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
 
     plt.figure()
-    plot_xy(ET['partial_LE'][ix], ET['clearcut_LE'][ix],axislabels={'x':'partial ET', 'y':'clearcut ET'})
+    plt.plot(Data_daily.index, Data_daily['PET_daily'], '-', color='g', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['control_LE'], '-', color='k', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['partial_LE'], '-', color='b', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['clearcut_LE'], '-', color='r', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['control_LE_filtered'], 'o', color='k', markersize=3)
+    plt.plot(Data_daily.index, Data_daily['partial_LE_filtered'], 'o', color='b', markersize=3)
+    plt.plot(Data_daily.index, Data_daily['clearcut_LE_filtered'], 'o', color='r', markersize=3)
+
+    Data_daily['control_fPET'] = Data_daily['control_LE_filtered']/Data_daily['PET_daily']
+    Data_daily['partial_fPET'] = Data_daily['partial_LE_filtered']/Data_daily['PET_daily']
+    Data_daily['clearcut_fPET'] = Data_daily['clearcut_LE_filtered']/Data_daily['PET_daily']
+    Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).median()
+    Data_seasonal.index=pd.date_range('1/1/2000', periods=max(Data_seasonal.index), freq='D')
+    Data_seasonal=Data_seasonal.resample('7D').mean()
+
     plt.figure()
-    plot_xy(ET['partial_SH'][ix], ET['clearcut_SH'][ix],axislabels={'x':'partial ET', 'y':'clearcut ET'})
+    plt.plot(Data_seasonal.index, Data_seasonal['control_LE_filtered'],'o-', markersize=3, color='k', label='control')
+    plt.plot(Data_seasonal.index, Data_seasonal['partial_LE_filtered'],'o-', markersize=3, color='b', label='partial')
+    plt.plot(Data_seasonal.index, Data_seasonal['clearcut_LE_filtered'],'o-', markersize=3, color='r', label='clearcut')
+
     plt.figure()
-    plot_xy(ET['partial_NRAD'][ix], ET['clearcut_NRAD'][ix],axislabels={'x':'partial ET', 'y':'clearcut ET'})
+    plt.plot(Data_seasonal.index, Data_seasonal['control_fPET'],'o-', markersize=3, color='k', label='control')
+    plt.plot(Data_seasonal.index, Data_seasonal['partial_fPET'],'o-', markersize=3, color='b', label='partial')
+    plt.plot(Data_seasonal.index, Data_seasonal['clearcut_fPET'],'o-', markersize=3, color='r', label='clearcut')
 
+def penman_monteith(AE, D, T, Gs, Ga=1./25., P=101300.0, units='W'):
+    """
+    Computes latent heat flux LE (Wm-2) i.e evapotranspiration rate ET (mm/s)
+    from Penman-Monteith equation
+    INPUT:
+       AE - available energy [Wm-2]
+       VPD - vapor pressure deficit [Pa]
+       T - ambient air temperature [degC]
+       Gs - surface conductance [ms-1]
+       Ga - aerodynamic conductance [ms-1]
+       P - ambient pressure [Pa]
+       units - W (Wm-2), mm (mms-1=kg m-2 s-1), mol (mol m-2 s-1)
+    OUTPUT:
+       x - evaporation rate in 'units'
+    """
+    # --- constants
+    from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O
+    cp = 1004.67  # J kg-1 K-1
+    rho = 1.25  # kg m-3
+    Mw = MOLAR_MASS_H2O  # kg mol-1
+    L = LATENT_HEAT/ MOLAR_MASS_H2O
 
+    cp = 1004.67  # J/kg/K
 
+    esa = 1e3 * 0.6112 * np.exp((17.67 * T) / (T + 273.16 - 29.66))  # saturation vapor pressure in Pa
 
+    s = 17.502 * 240.97 * esa / ((240.97 + T) ** 2)  #slope of saturation vapor pressure curve (Pa K-1)
+    g = P * cp / (0.622 * L) #psychrometric constant (Pa K-1)
 
+    x = (s * AE + rho * cp * Ga * D) / (s + g * (1.0 + Ga / Gs))  # Wm-2
 
+    if units is 'mm':
+        x = x / L  # kgm-2s-1 = mms-1
+    if units is 'mol':
+        x = x / L / Mw  # mol m-2 s-1
 
-
-
-
-
+    return x
