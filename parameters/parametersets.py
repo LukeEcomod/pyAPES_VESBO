@@ -652,6 +652,11 @@ def get_parameters(scenario):
                             'pine': {
                                     'LAImax': control['lai']['pine'],
                                     'lad': control['lad']['pine'],
+                                    'phenop': {
+                                        'Tbase': (-4.67, -4.67, -4.0),  # Kolari 2007
+                                        'tau': (8.33, 13.0, 13.0),  # Kolari 2007
+                                        'smax': 15.0  # Kolari 2014
+                                        },
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
@@ -662,12 +667,17 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': (4.0e-3, 1.0e-3, 1.0e-4),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'spruce': {
                                     'LAImax': control['lai']['spruce'],
                                     'lad': control['lad']['spruce'],
+                                    'phenop': {
+                                        'Tbase': (-4.67, -4.67, -4.0),  # Kolari 2007
+                                        'tau': (8.33, 13.0, 13.0),  # Kolari 2007
+                                        'smax': 15.0  # Kolari 2014
+                                        },
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
@@ -678,12 +688,17 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 2.5,
-                                        'g0': (4.0e-3, 1.0e-3, 1.0e-4),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 4.0e-3,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             'decid': {
                                     'LAImax': control['lai']['decid'],
                                     'lad': control['lad']['decid'],
+                                    'phenop': {
+                                        'Tbase': (-4.67, -4.67, -4.0),  # Kolari 2007
+                                        'tau': (8.33, 13.0, 13.0),  # Kolari 2007
+                                        'smax': 15.0  # Kolari 2014
+                                        },
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
@@ -694,13 +709,18 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.5,
-                                        'g0': (1.0e-2, 1.0e-3, 1.0e-4),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         'kn':0.5,
                                         },
                                     },
                             'shrubs': {
                                     'LAImax': 0.8,
                                     'lad': control['lad']['shrubs'],
+                                    'phenop': {
+                                        'Tbase': (-4.67, -4.67, -4.0),  # Kolari 2007
+                                        'tau': (8.33, 13.0, 13.0),  # Kolari 2007
+                                        'smax': 15.0  # Kolari 2014
+                                        },
                                     'rootp': {
                                             'root_depth': root_depth,
                                             },
@@ -711,7 +731,7 @@ def get_parameters(scenario):
                                         'alpha': alpha,
                                         'theta': 0.7,
                                         'g1': 4.0,
-                                        'g0': (1.0e-2, 1.0e-3, 1.0e-4),  # this needs to be small, otherwise tr during dry conditions too high..
+                                        'g0': 1.0e-2,  # this needs to be small, otherwise tr during dry conditions too high..
                                         },
                                     },
                             },

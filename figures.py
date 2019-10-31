@@ -587,13 +587,13 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
 
     plt.tight_layout()
 
-def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False):
+def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False, norain=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_diurnal, plot_timeseries_df
 
     variables=['NRAD','LE','SH','GHF']
-    res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux']
+    res_var=['canopy_net_radiation','canopy_LE','canopy_SH','ground_heat_flux', 'forcing_precipitation']
 
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
 
@@ -609,6 +609,16 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
 
     df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
     Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+
+    dryc = np.ones(len(Data.index))
+    if norain:
+        ix = Data['forcing_precipitation'].rolling(48, 1).sum() * 1e3 * 1800
+        f = np.where(ix > 5.0)[0]  # wet canopy indices
+        dryc[f] = 0.0
+
+    if norain:
+        for i in range(len(variables)):
+            Data[variables[i]] = np.where(dryc == 1, Data[variables[i]], np.nan)
 
     Data_daily=Data.resample('D',how=lambda x: x.values.mean())
 
@@ -649,17 +659,17 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
                 plt.title(str(years[i]))
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
 
-    for i in range(len(res_var)):
+    for i in range(len(variables)):
         Data_daily[res_var[i] +'_filtered'] = np.where(np.isfinite(Data_daily[variables[i] +'_filtered']),
                                                        Data_daily[res_var[i]],np.nan)
 
-    Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).median()
+    Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).mean()
     Data_seasonal.index=pd.date_range('1/1/2000', periods=max(Data_seasonal.index), freq='D')
     Data_seasonal=Data_seasonal.resample('7D').mean()
 
     ix = np.where((months >= fmonth) & (months <= lmonth))[0]
     labels = {'x': '', 'y': 'Modelled'}
-    N = len(res_var)
+    N = len(variables)
     plt.figure(figsize=(10,N*1.7 + 0.5))
     for i in range(N):
         plt.subplot(N, 4, i*4+1)
@@ -681,7 +691,7 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
         plt.title(variables[i], fontsize=10)
         plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
         # RAIN?!?!
-        ixx = np.where((Data.index.month >= fmonth) & (Data.index.month <= lmonth) & (Data[variables[i]+'gap']==0))[0]
+        ixx = np.where((Data.index.month >= fmonth) & (Data.index.month <= lmonth) & (Data[variables[i]+'gap']==0) & np.isfinite(Data[variables[i]]))[0]
         if i == 0:
             ax2 = plt.subplot(N,4,i*4+4)
         else:
@@ -934,13 +944,21 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
 
     Data['Rg'] = Data.diffPar + Data.dirPar + Data.diffNir + Data.dirNir
 
+    gs = np.minimum(1.6*(1.0 + 4 / np.sqrt(Data['VPD']*1e-3)) * 10 / 380 / 42, 0.1)
+
+    Data['PET2'] = penman_monteith(0.67*Data['Rg']-21,Data['VPD'], Data['Tair'],units='mm', Gs=7e-3)* 3600*24
+    Data['PET'] = penman_monteith(0.67*Data['Rg']-21,Data['VPD'], Data['Tair'],units='mm', Gs=gs)* 3600*24
+
     Data['control_LE'] = Data['control_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
     Data['partial_LE'] = Data['partial_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
     Data['clearcut_LE'] = Data['clearcut_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
 
     Data_daily = Data.resample('D',how=lambda x: x.values.mean())
 
-    variables = ['control_LE', 'partial_LE', 'clearcut_LE','control_NRAD']
+    variables = ['control_LE', 'partial_LE', 'clearcut_LE',
+                 'control_NRAD', 'partial_NRAD','clearcut_NRAD',
+                 'control_SH', 'partial_SH', 'clearcut_SH',
+                 'control_GHF', 'partial_GHF', 'clearcut_GHF']
 
     for i in range(len(variables)):
         Data_daily[variables[i] + '_filtered'] = np.where(
@@ -954,9 +972,65 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
 
     ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
     plt.figure()
-    plot_xy(Data_daily['Rg'][ix], Data_daily['control_NRAD'][ix],axislabels={'x':'Rg', 'y':'control_NRAD'},alpha=0.2)
+    plt.subplot(3,3,1)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['control_NRAD_filtered'][ix],axislabels={'x':'Rg', 'y':'NRAD'},color= 'k',alpha=0.2)
+    plt.title('control')
+    plt.subplot(3,3,2)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['partial_NRAD_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.title('partial')
+    plt.subplot(3,3,3)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['clearcut_NRAD_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+    plt.title('clearcut')
+    plt.subplot(3,3,4)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['control_SH_filtered'][ix],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plt.subplot(3,3,5)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['partial_SH_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.subplot(3,3,6)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['clearcut_SH_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+    plt.subplot(3,3,7)
+    plot_xy(Data_daily['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data_daily['control_LE_filtered'][ix],axislabels={'x':'Rg', 'y':'LE'},color= 'k',alpha=0.2)
+    plt.subplot(3,3,8)
+    plot_xy(Data_daily['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data_daily['partial_LE_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.subplot(3,3,9)
+    plot_xy(Data_daily['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+#    plt.subplot(4,3,10)
+#    plot_xy(Data_daily['Rg'][ix], Data_daily['control_GHF_filtered'][ix],axislabels={'x':'Rg', 'y':'GHF'},color= 'k',alpha=0.2)
+#    plt.subplot(4,3,11)
+#    plot_xy(Data_daily['Rg'][ix], Data_daily['partial_GHF_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+#    plt.subplot(4,3,12)
+#    plot_xy(Data_daily['Rg'][ix], Data_daily['clearcut_GHF_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
 
-    Data_daily['PET_daily'] = penman_monteith(0.67*Data_daily['Rg']-21,Data_daily['VPD'], Data_daily['Tair'],units='mm', Gs=7e-3)* 3600*24
+
+    ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
+    plt.figure()
+    plt.subplot(3,3,1)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['control_NRAD'][ix],axislabels={'x':'Rg', 'y':'NRAD'},color= 'k',alpha=0.2)
+    plt.subplot(3,3,2)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['partial_NRAD'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.subplot(3,3,3)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['clearcut_NRAD'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+    plt.subplot(3,3,4)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['control_SH'][ix],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plt.subplot(3,3,5)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['partial_SH'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.subplot(3,3,6)
+    plot_xy(Data_daily['Rg'][ix], Data_daily['clearcut_SH'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+    plt.subplot(3,3,7)
+    plot_xy(Data_daily['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data_daily['control_LE'][ix],axislabels={'x':'Rg', 'y':'LE'},color= 'k',alpha=0.2)
+    plt.subplot(3,3,8)
+    plot_xy(Data_daily['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data_daily['partial_LE'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.subplot(3,3,9)
+    plot_xy(Data_daily['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data_daily['clearcut_LE'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+
+
+    gs = np.minimum(1.6*(1.0 + 4 / np.sqrt(Data_daily['VPD']*1e-3)) * 10 / 380 / 42, 0.1)
+
+    Data_daily['PET_daily2'] = penman_monteith(0.67*Data_daily['Rg']-21,Data_daily['VPD'], Data_daily['Tair'],units='mm', Gs=7e-3)* 3600*24
+    Data_daily['PET_daily'] = penman_monteith(0.67*Data_daily['Rg']-21,Data_daily['VPD'], Data_daily['Tair'],units='mm', Gs=gs)* 3600*24
+
+    ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
+    plt.figure()
+    plot_xy(Data_daily['PET_daily'][ix], Data_daily['PET_daily2'][ix],axislabels={'x':'PET_daily', 'y':'PET_daily2'},alpha=0.2)
 
     plt.figure()
     for month in range(4,11):
@@ -972,14 +1046,20 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
         plt.subplot(3,7,month - 3 + 14,sharex=ax,sharey=ax)
         plot_xy(Data_daily['PET_daily'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
 
-    ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
     plt.figure()
-    ax=plt.subplot(1,3,1)
-    plot_xy(Data_daily['PET_daily'][ix], Data_daily['control_LE_filtered'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
-    plt.subplot(1,3,2)
-    plot_xy(Data_daily['PET_daily'][ix], Data_daily['partial_LE_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
-    plt.subplot(1,3,3)
-    plot_xy(Data_daily['PET_daily'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
+    for month in range(4,11):
+        ix = np.where((months_daily == month))[0]
+        if month == 4:
+            ax=plt.subplot(3,7,month - 3)
+        else:
+            plt.subplot(3,7,month - 3,sharex=ax,sharey=ax)
+        plot_xy(Data_daily['control_NRAD_filtered'][ix], Data_daily['control_SH_filtered'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
+        plt.title(str(month))
+        plt.subplot(3,7,month - 3 + 7,sharex=ax,sharey=ax)
+        plot_xy(Data_daily['partial_NRAD_filtered'][ix], Data_daily['partial_SH_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
+        plt.subplot(3,7,month - 3 + 14,sharex=ax,sharey=ax)
+        plot_xy(Data_daily['clearcut_NRAD_filtered'][ix], Data_daily['clearcut_SH_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
+
 
     ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
     plt.figure()
@@ -989,6 +1069,15 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
     plot_xy(Data_daily['PET_daily'][ix], Data_daily['partial_LE_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
     plt.subplot(1,3,3)
     plot_xy(Data_daily['PET_daily'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
+
+    ix = np.where((months_daily >= 6) & (months_daily <= 9))[0]
+    plt.figure()
+    ax=plt.subplot(1,3,1)
+    plot_xy(Data_daily['PET_daily2'][ix], Data_daily['control_LE_filtered'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
+    plt.subplot(1,3,2)
+    plot_xy(Data_daily['PET_daily2'][ix], Data_daily['partial_LE_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
+    plt.subplot(1,3,3)
+    plot_xy(Data_daily['PET_daily2'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
 
     plt.figure()
     plt.plot(Data_daily.index, Data_daily['PET_daily'], '-', color='g', alpha=0.2)
@@ -999,22 +1088,52 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
     plt.plot(Data_daily.index, Data_daily['partial_LE_filtered'], 'o', color='b', markersize=3)
     plt.plot(Data_daily.index, Data_daily['clearcut_LE_filtered'], 'o', color='r', markersize=3)
 
-    Data_daily['control_fPET'] = Data_daily['control_LE_filtered']/Data_daily['PET_daily']
-    Data_daily['partial_fPET'] = Data_daily['partial_LE_filtered']/Data_daily['PET_daily']
-    Data_daily['clearcut_fPET'] = Data_daily['clearcut_LE_filtered']/Data_daily['PET_daily']
-    Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).median()
-    Data_seasonal.index=pd.date_range('1/1/2000', periods=max(Data_seasonal.index), freq='D')
-    Data_seasonal=Data_seasonal.resample('7D').mean()
-
     plt.figure()
-    plt.plot(Data_seasonal.index, Data_seasonal['control_LE_filtered'],'o-', markersize=3, color='k', label='control')
-    plt.plot(Data_seasonal.index, Data_seasonal['partial_LE_filtered'],'o-', markersize=3, color='b', label='partial')
-    plt.plot(Data_seasonal.index, Data_seasonal['clearcut_LE_filtered'],'o-', markersize=3, color='r', label='clearcut')
+    plt.plot(Data_daily.index, 0.6*Data_daily['Rg']-20, '-', color='k', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['partial_NRAD'], '-', color='b', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['partial_NRAD_filtered'], 'o', color='b', markersize=3)
 
+
+#    Data_daily['control_fPET'] = Data_daily['control_LE']/Data_daily['PET_daily']
+#    Data_daily['partial_fPET'] = Data_daily['partial_LE']/Data_daily['PET_daily']
+#    Data_daily['clearcut_fPET'] = Data_daily['clearcut_LE']/Data_daily['PET_daily']
+#    Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).median()
+#    Data_seasonal.index=pd.date_range('1/1/2000', periods=max(Data_seasonal.index), freq='D')
+#    Data_seasonal=Data_seasonal.resample('7D').mean()
+#
+#    plt.figure()
+#    plt.plot(Data_seasonal.index, Data_seasonal['PET_daily'], color='g', label='PET')
+#    plt.plot(Data_seasonal.index, Data_seasonal['control_LE'],'o-', markersize=3, color='k', label='control')
+#    plt.plot(Data_seasonal.index, Data_seasonal['partial_LE'],'o-', markersize=3, color='b', label='partial')
+#    plt.plot(Data_seasonal.index, Data_seasonal['clearcut_LE'],'o-', markersize=3, color='r', label='clearcut')
+#
+#    plt.figure()
+#    plt.plot(Data_seasonal.index, Data_seasonal['control_fPET'],'o-', markersize=3, color='k', label='control')
+#    plt.plot(Data_seasonal.index, Data_seasonal['partial_fPET'],'o-', markersize=3, color='b', label='partial')
+#    plt.plot(Data_seasonal.index, Data_seasonal['clearcut_fPET'],'o-', markersize=3, color='r', label='clearcut')
+#
+#    ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9))[0]
+#    plt.figure()
+#    ax=plt.subplot(1,3,1)
+#    plot_xy(Data['PET2'][ix], Data['control_LE'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
+#    plt.subplot(1,3,2)
+#    plot_xy(Data['PET2'][ix], Data['partial_LE'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
+#    plt.subplot(1,3,3)
+#    plot_xy(Data['PET2'][ix], Data['clearcut_LE'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
+
+    Data_daily['control_LE_ebal'] = Data_daily['control_NRAD_filtered'] - Data_daily['control_SH_filtered']
+    Data_daily['partial_LE_ebal'] =  Data_daily['partial_NRAD_filtered'] - Data_daily['partial_SH_filtered']
+    Data_daily['clearcut_LE_ebal'] =  Data_daily['clearcut_NRAD_filtered'] - Data_daily['clearcut_SH_filtered']
+
+    ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
     plt.figure()
-    plt.plot(Data_seasonal.index, Data_seasonal['control_fPET'],'o-', markersize=3, color='k', label='control')
-    plt.plot(Data_seasonal.index, Data_seasonal['partial_fPET'],'o-', markersize=3, color='b', label='partial')
-    plt.plot(Data_seasonal.index, Data_seasonal['clearcut_fPET'],'o-', markersize=3, color='r', label='clearcut')
+    ax=plt.subplot(1,3,1)
+    plot_xy(Data_daily['control_LE_ebal'][ix], Data_daily['control_LE_filtered'][ix],axislabels={'x':'PET', 'y':'control_ET'},alpha=0.2)
+    plt.subplot(1,3,2)
+    plot_xy(Data_daily['partial_LE_ebal'][ix], Data_daily['partial_LE_filtered'][ix],axislabels={'x':'PET', 'y':'partial_ET'},alpha=0.2)
+    plt.subplot(1,3,3)
+    plot_xy(Data_daily['clearcut_LE_ebal'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
+
 
 def penman_monteith(AE, D, T, Gs, Ga=1./25., P=101300.0, units='W'):
     """
@@ -1053,3 +1172,30 @@ def penman_monteith(AE, D, T, Gs, Ga=1./25., P=101300.0, units='W'):
         x = x / L / Mw  # mol m-2 s-1
 
     return x
+
+def files_to_REddyProc(treatment='control', start_time='1-1-2010', end_time='1-1-2019'):
+
+    "https://www.bgc-jena.mpg.de/bgi/index.php/Services/REddyProcWebDataFormat"
+
+    from tools.iotools import read_forcing
+
+
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv",
+                      cols='all',
+                      start_time=start_time, end_time=end_time)
+
+    # period end
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+
+    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
+                    start_time=start_time, end_time=end_time)
+
+    # vapor pressure
+    esat = 1e3 * 0.6112 * np.exp((17.67 * Forc.Tair) / (Forc.Tair + 273.16 - 29.66))
+    Forc['VPD'] = (esat - Forc.H2O * Forc.P)  # Pa
+
+    Data = Data.merge(Forc, how='outer', left_index=True, right_index=True)
+
+    Data['Rg'] = Data.diffPar + Data.dirPar + Data.diffNir + Data.dirNir
+
