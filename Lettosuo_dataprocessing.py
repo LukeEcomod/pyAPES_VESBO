@@ -803,3 +803,106 @@ def EC_data_gapped():
 
     return
 
+
+def files_to_REddyProc(treatment='control', start_time='1-1-2010', end_time='1-1-2019'):
+
+    """
+    see: https://www.bgc-jena.mpg.de/bgi/index.php/Services/REddyProcWebDataFormat
+    """
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.dataprocessing_scripts import save_df_to_csv
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv",
+                      cols='all',
+                      start_time=start_time, end_time=end_time)
+
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+
+    # period end
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+
+    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
+                    start_time=start_time, end_time=end_time)
+
+    # vapor pressure
+    esat = 1e3 * 0.6112 * np.exp((17.67 * Forc.Tair) / (Forc.Tair + 273.16 - 29.66))
+    Forc['VPD'] = np.maximum(EPS, 0.01 * (esat - Forc.H2O * Forc.P))  # hPa
+
+    Forc['Rg'] = Forc.diffPar + Forc.dirPar + Forc.diffNir + Forc.dirNir
+
+    Data = Data[['NEE','LE','SH']][Data.index >= start_time].merge(
+            Forc[['VPD','Rg','Tair','Ustar']], how='outer', left_index=True, right_index=True)
+
+    Data['Year'] = Data.index.year
+    Data['DoY'] = Data.index.dayofyear
+    Data['Hour'] = Data.index.hour + Data.index.minute/60.0
+
+    Data = Data.rename(columns={'SH': 'H'})
+
+    Data = Data.reindex(['Year','DoY','Hour','NEE','LE','H','Rg','Tair','VPD','Ustar'], axis=1)
+
+    Data.plot(subplots=True)
+
+    Data.to_csv(path_or_buf="O:\Projects\Lettosuo\ReddyProc\Lettosuo_" + treatment + ".csv", sep=' ', na_rep='-9999', index=False)
+
+#    files_to_REddyProc(treatment='control', start_time='1-1-2010', end_time='1-1-2016')
+#    files_to_REddyProc(treatment='partial', start_time='1-1-2016', end_time='1-1-2019')
+#    files_to_REddyProc(treatment='clearcut', start_time='1-1-2016', end_time='1-1-2019')
+
+def EC_data_gapped_ReddyProc():
+
+    from tools.iotools import read_forcing
+
+    starttime = '01-01-2010'
+    endtime = '01-01-2019'
+
+    fpaths = [r"O:\Projects\Lettosuo\ReddyProc\control.txt",
+              r"O:\Projects\Lettosuo\ReddyProc\partial.txt",
+              r"O:\Projects\Lettosuo\ReddyProc\clearcut.txt"]
+
+    index = pd.date_range(starttime, endtime, freq='0.5H')
+    data = pd.DataFrame(index=index, columns=[])
+
+    for fp in fpaths:
+        dat = pd.read_csv(fp, sep='\t', header='infer', encoding = 'ISO-8859-1',
+                          usecols=['Year','DoY','Hour','LE_f','LE_fqc','H_f','H_fqc'],
+                          skiprows=[1],na_values=-9999)
+        dat.index = pd.to_datetime({'year': dat['Year'],
+                                    'day': 1, 'month': 1,
+                                    'hour': dat['Hour']}) + (dat['DoY']-1)*pd.Timedelta(days=1)
+        # period start to period end
+        dat.index = dat.index + pd.Timedelta(hours=0.5)
+        dat = dat[['LE_f','LE_fqc','H_f','H_fqc']]
+        dat = dat.rename(columns={'LE_f': 'LE', 'LE_fqc': 'LEgap','H_f': 'SH','H_fqc': 'SHgap'})
+        dat['LEgap'] = np.minimum(dat['LEgap'],1)
+        dat['SHgap'] = np.minimum(dat['SHgap'],1)
+        dat.columns = fp.split("\\")[-1].split(".")[0] + '_' + dat.columns
+        dat = dat[(dat.index >= starttime) & (dat.index < endtime)]
+        data=data.merge(dat, how='outer', left_index=True, right_index=True)
+
+    Data = read_forcing("Lettosuo_EC_2010_2018_gapped.csv",
+                  cols=['control_GHF','partial_GHF','clearcut_GHF',
+                        'control_GHFgap','partial_GHFgap','clearcut_GHFgap',
+                        'control_NRAD','partial_NRAD','clearcut_NRAD',
+                        'control_NRADgap','partial_NRADgap','clearcut_NRADgap',],
+                  start_time=starttime, end_time=endtime)
+
+    data=data.merge(Data, how='outer', left_index=True, right_index=True)
+
+    treatments=['control','partial','clearcut']
+    variables=['_LE', '_SH']
+    plt.figure()
+    for i in range(len(variables)):
+        if i == 0:
+            ax1 = plt.subplot(len(variables),1,i+1)
+            data[[treatment + variables[i] for treatment in treatments]].plot(ax=ax1)
+        else:
+            ax = plt.subplot(len(variables),1,i+1,sharex=ax1)
+            data[[treatment + variables[i] for treatment in treatments]].plot(ax=ax)
+
+    save_df_to_csv(data, "Lettosuo_EC_2010_2018_gapped_Reddy", readme="")
+
+    return
+

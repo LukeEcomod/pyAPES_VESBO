@@ -226,9 +226,9 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
-    if treatment == 'partial':
-        Data['LE'][
-            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#    if treatment == 'partial':
+#        Data['LE'][
+#            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
 #     period end (?)
     Data.index = Data.index - pd.Timedelta(hours=0.5)
     if treatment=='control':
@@ -305,10 +305,10 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     Data['GPP'][Data['GPP']<0]=np.nan
 
     Data_var = ['NRAD', 'LE', 'SH', 'GHF','GPP','Reco']
-    if treatment == 'partial':
-        for var in Data_var:
-            Data[var][
-                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#    if treatment == 'partial':
+#        for var in Data_var:
+#            Data[var][
+#                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
     res_var=['canopy_net_radiation', 'canopy_LE', 'canopy_SH', 'ground_heat_flux', 'canopy_GPP','canopy_respiration']
 
@@ -587,7 +587,9 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
 
     plt.tight_layout()
 
-def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False, norain=True):
+def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
+               fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False, norain=True,
+               fn="Lettosuo_EC_2010_2018_gapped.csv"):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_xy, xarray_to_df, plot_diurnal, plot_timeseries_df
@@ -597,13 +599,13 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
 
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
 
-    Data = read_forcing("Lettosuo_EC_2010_2018_gapped.csv", cols='all',
+    Data = read_forcing(fn, cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
-    if treatment == 'partial':  # ???????????
-        Data['LE'][
-            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#    if treatment == 'partial':  # ???????????
+#        Data['LE'][
+#            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     # period end
     Data.index = Data.index - pd.Timedelta(hours=0.5)
 
@@ -703,7 +705,7 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,fmonth=5, lmo
             plt.xlabel('')
     plt.tight_layout(rect=(0, 0, 0.87, 1), pad=0.4, w_pad=0.05, h_pad=0.6)
 
-def WB_from_data(fmonth=5, lmonth=9):
+def WB_from_data(fmonth=5, lmonth=9,fn="Lettosuo_EC_2010_2018_gapped.csv"):
 
     from tools.iotools import read_forcing
     import matplotlib.dates
@@ -773,7 +775,7 @@ def WB_from_data(fmonth=5, lmonth=9):
     """ Evapotranspiration """
     from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O
 
-    ET = read_forcing("Lettosuo_EC_2010_2018_gapped.csv",
+    ET = read_forcing(fn,
                       cols=['control_LE', 'partial_LE', 'clearcut_LE'],
                       start_time=start_time, end_time=end_time)
     # period end
@@ -1173,29 +1175,52 @@ def penman_monteith(AE, D, T, Gs, Ga=1./25., P=101300.0, units='W'):
 
     return x
 
-def files_to_REddyProc(treatment='control', start_time='1-1-2010', end_time='1-1-2019'):
-
-    "https://www.bgc-jena.mpg.de/bgi/index.php/Services/REddyProcWebDataFormat"
-
+def gapfilling_comparison(lim=0.6, fn="Lettosuo_EC_2010_2018_gapped_Reddy.csv"):
     from tools.iotools import read_forcing
+    import matplotlib.dates
+    from pyAPES_utilities.plotting import plot_timeseries_df, plot_xy
 
+    start_time='1-1-2010'
+    end_time='1-1-2019'
 
+    """ Evapotranspiration """
+    from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O
 
-    Data = read_forcing("Lettosuo_EC_2010_2018.csv",
+    Data = read_forcing(fn,
                       cols='all',
                       start_time=start_time, end_time=end_time)
-
     # period end
     Data.index = Data.index - pd.Timedelta(hours=0.5)
 
-    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
-                    start_time=start_time, end_time=end_time)
+    Data['control_LE'] = Data['control_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
+    Data['partial_LE'] = Data['partial_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
+    Data['clearcut_LE'] = Data['clearcut_LE'] / LATENT_HEAT * MOLAR_MASS_H2O * 3600 * 24
 
-    # vapor pressure
-    esat = 1e3 * 0.6112 * np.exp((17.67 * Forc.Tair) / (Forc.Tair + 273.16 - 29.66))
-    Forc['VPD'] = (esat - Forc.H2O * Forc.P)  # Pa
+    Data_daily = Data.resample('D',how=lambda x: x.values.mean())
 
-    Data = Data.merge(Forc, how='outer', left_index=True, right_index=True)
+    variables = ['control_LE', 'partial_LE', 'clearcut_LE',
+                 'control_SH', 'partial_SH', 'clearcut_SH']
 
-    Data['Rg'] = Data.diffPar + Data.dirPar + Data.diffNir + Data.dirNir
+    for i in range(len(variables)):
+        Data_daily[variables[i] + '_filtered'] = np.where(
+            Data_daily[variables[i]+'gap'] > lim, np.nan, Data_daily[variables[i]])
 
+    plt.figure()
+    ax=plt.subplot(2,1,1)
+    plt.title('Latent heat flux (W/m2), dots for days with < 60 % gapfilling')
+    plt.plot(Data_daily.index, Data_daily['control_LE'], '-', color='k', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['partial_LE'], '-', color='b', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['clearcut_LE'], '-', color='r', alpha=0.2)
+    plt.legend(['control','partial','clearcut'])
+    plt.plot(Data_daily.index, Data_daily['control_LE_filtered'], 'o', color='k', markersize=3)
+    plt.plot(Data_daily.index, Data_daily['partial_LE_filtered'], 'o', color='b', markersize=3)
+    plt.plot(Data_daily.index, Data_daily['clearcut_LE_filtered'], 'o', color='r', markersize=3)
+    plt.subplot(2,1,2,sharex=ax)
+    plt.title('Sensible heat flux (W/m2), dots for days with < 60 % gapfilling')
+    plt.plot(Data_daily.index, Data_daily['control_SH'], '-', color='k', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['partial_SH'], '-', color='b', alpha=0.2)
+    plt.plot(Data_daily.index, Data_daily['clearcut_SH'], '-', color='r', alpha=0.2)
+    plt.legend(['control','partial','clearcut'])
+    plt.plot(Data_daily.index, Data_daily['control_SH_filtered'], 'o', color='k', markersize=3)
+    plt.plot(Data_daily.index, Data_daily['partial_SH_filtered'], 'o', color='b', markersize=3)
+    plt.plot(Data_daily.index, Data_daily['clearcut_SH_filtered'], 'o', color='r', markersize=3)
