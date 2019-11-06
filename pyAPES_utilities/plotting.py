@@ -409,7 +409,7 @@ def plot_lad_profiles(filename="letto2016_partial.txt", normed=False, quantiles 
     plt.legend(frameon=False, borderpad=0.0, labelspacing=0.1, loc="upper right",bbox_to_anchor=(1.1,1.1))
     plt.tight_layout()
 
-def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=0.05,l1=False):
+def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},slope=None,alpha=0.05,l1=False):
     """
     Plot x,y scatter with linear regression line, info of relationship and 1:1 line.
     Args:
@@ -426,7 +426,10 @@ def plot_xy(x, y, color=default[0], title='', axislabels={'x':'', 'y':''},alpha=
     if l1:
         p = l1_fit(x[idx], y[idx])
     else:
-        p = np.polyfit(x[idx], y[idx], 1)
+        if slope==None:
+            p = np.polyfit(x[idx], y[idx], 1)
+        else:
+            p = [slope, np.mean(slope * y[idx] - x[idx])]
 
     residuals = y[idx] - (p[0]*x[idx] + p[1])
     R2 = 1 - sum(residuals**2)/sum((y[idx]-np.mean(y[idx]))**2)

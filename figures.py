@@ -5,10 +5,10 @@ Created on Wed Feb 20 15:26:24 2019
 @author: L1656
 """
 
-# %% Plot vegetation inventory
 import numpy as np
 import pandas as pd
 import matplotlib.dates
+import matplotlib.pyplot as plt
 
 vege=['khaki','lightgreen', 'limegreen', 'forestgreen']
 ff=['seagreen','peru','saddlebrown','khaki','lightgreen', 'limegreen', 'forestgreen']
@@ -117,11 +117,10 @@ def plot_vegetation(save=False):
     if save:
         plt.savefig('figures/case_Lettosuo/vege_inventories.png',dpi=300, transparent=False)
 
-# %% Plot lad profile
-from pyAPES_utilities.plotting import plot_lad_profiles
-import matplotlib.pyplot as plt
 
-def plot_lad(biomass_function='marklund_mod'):
+def plot_lad(biomass_function='aleksis_combination'):
+
+    from pyAPES_utilities.plotting import plot_lad_profiles
     pos = (-0.1,1.03)
     plt.figure(figsize=(8,4))
     plot_lad_profiles("letto2009.txt",subplot=1,subplots=3, biomass_function=biomass_function)
@@ -186,10 +185,6 @@ def plot_Tsoil(results, site='Letto1', sim_idx=0,fmonth=5, lmonth=9,l1=True):
                 res_var=['soil_temperature_5cm','soil_temperature_30cm'],
                 Data_var=['T5','T30'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx, dataframe=True,l1=l1)
 
-#plot_Tsoil(results.sel(date=(results['date.year']<2016)), site='Letto1', sim_idx=0)
-#plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Letto1', sim_idx=1)
-#plot_Tsoil(results.sel(date=(results['date.year']>=2016)), site='Clear', sim_idx=2)
-
 def plot_snow_runoff(results, sim_idx=0):
 
     from tools.iotools import read_forcing
@@ -214,12 +209,12 @@ def plot_snow_runoff(results, sim_idx=0):
     plot_timeseries_df(snow_depth, ['Snow_depth1','Snow_depth2','Snow_depth3'], colors=['gray','gray','gray'])
     plot_timeseries_xr(results.sel(simulation=sim_idx), 'ffloor_snow_water_equivalent',unit_conversion={'unit':'mm', 'conversion':1e3}, xticks=False)
 
-
 def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True,l1=True):
 
     from tools.iotools import read_forcing
     from pyAPES_utilities.plotting import plot_fluxes
 
+    # at 7 cm depth??
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
@@ -231,9 +226,7 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
 
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
-#    if treatment == 'partial':
-#        Data['LE'][
-#            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+
 #     period end (?)
     Data.index = Data.index - pd.Timedelta(hours=0.5)
     if treatment=='control':
@@ -242,13 +235,11 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE','ground_heat_flux'],
                 Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
     elif treatment=='partial':
-
         Data['NLWRAD'] = Data['NRAD'] - Data['NSWRAD']
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation','canopy_LWnet','canopy_SWnet', 'canopy_SH','canopy_LE','ground_heat_flux'],
                 Data_var=['NRAD','NLWRAD','NSWRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
     else:
-
         plot_fluxes(results, Data, norain=norain,
                 res_var=['canopy_net_radiation', 'canopy_SH','canopy_LE','ground_heat_flux'],
                 Data_var=['NRAD','SH','LE','GHF'],fmonth=fmonth, lmonth=lmonth, sim_idx=sim_idx,l1=l1)
@@ -288,6 +279,7 @@ def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
     # Huom! anameter heating quickfix..
     Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
     Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
     # period end (?)
@@ -302,10 +294,7 @@ def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
 def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True, l1=True):
 
     from tools.iotools import read_forcing
-    import matplotlib.dates
     from pyAPES_utilities.plotting import xarray_to_df, plot_xy, plot_timeseries_xr
-    import seaborn as sns
-    pal = sns.color_palette("hls", 6)
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
@@ -324,18 +313,8 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
     Data['GPP'][Data['GPP']<0]=np.nan
 
     Data_var = ['NRAD', 'LE', 'SH', 'GHF','GPP','Reco']
-#    if treatment == 'partial':
-#        for var in Data_var:
-#            Data[var][
-#                (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     results['ground_heat_flux'] = results['soil_heat_flux'].isel(soil=6).copy()
     res_var=['canopy_net_radiation', 'canopy_LE', 'canopy_SH', 'ground_heat_flux', 'canopy_GPP','canopy_respiration']
-
-#    if treatment == 'control':
-#        Data_var.remove('GHF')
-#        res_var.remove('ground_heat_flux')
-#        pal.remove(pal[3])
-
     res_var.append('forcing_precipitation')
 
     df = xarray_to_df(results, set(res_var), sim_idx=sim_idx)
@@ -375,41 +354,6 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
             if j == 0:
                 plt.title(str(years[i]))
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
-
-    plt.figure(figsize=(N*2 + 0.5,5))
-
-    ax = plt.subplot(2, N, (1,N))
-    plot_ET(results.sel(date=(results['date.year']>=fyear) & (results['date.year']<=lyear)), sim_idx=sim_idx, fmonth=fmonth, lmonth=lmonth, legend=legend, treatment=treatment)
-
-    # Read observed WTD
-    WTD = read_forcing("Lettosuo_WTD_pred.csv", cols='all')
-    ax = plt.subplot(2, N, (N+1,2*N))
-
-    plt.fill_between(WTD.index, WTD['control_max'].values, WTD['control_min'].values,
-                     facecolor='k', alpha=0.3)
-    plt.plot(WTD.index, WTD['control'].values,':k', linewidth=1.0)
-    if treatment is not 'control':
-        plot_timeseries_xr(results.isel(simulation=0), 'soil_ground_water_level', colors=['k'], xticks=True, legend=False)
-        if treatment is 'partial':
-            plt.fill_between(WTD.index, WTD['partial_max'].values, WTD['partial_min'].values,
-                             facecolor='b', alpha=0.3)
-            plt.plot(WTD.index, WTD['partial'].values,':b', linewidth=1.0)
-
-        if treatment is 'clearcut':
-            plt.fill_between(WTD.index, WTD['clearcut_max'].values, WTD['clearcut_min'].values,
-                             facecolor='r', alpha=0.3)
-            plt.plot(WTD.index, WTD['clearcut'].values,':r', linewidth=1.0)
-
-    colors = {'control':  'k', 'partial': 'b', 'clearcut': 'r'}
-    plot_timeseries_xr(results.isel(simulation=sim_idx), 'soil_ground_water_level', colors=[colors[treatment]], xticks=True, legend=False)
-    plt.ylim([-1.0,0.0])
-    plt.xlim(['01-01-'+str(fyear),'12-31-'+str(lyear)])
-
-    ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator(interval=6))
-    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%m-%Y'))
-    plt.ylabel('Water table level [m]')
-
-    plt.tight_layout()
 
 def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, treatment='control'):
 
@@ -468,112 +412,9 @@ def plot_ET(results, sim_idx=0, fmonth=5, lmonth=9, legend=True, treatment='cont
 #    plt.tight_layout(rect=(0, 0, 0.95, 1))
     return WB
 
-def plot_WUE(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
-
-    from tools.iotools import read_forcing
-    from pyAPES_utilities.plotting import plot_fluxes
-
-    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all')
-
-    # Huom! anameter heating quickfix..
-    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
-    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
-
-    Data.columns = Data.columns.str.split('_', expand=True)
-    Data = Data[treatment]
-    # period end (?)
-    Data.index = Data.index - pd.Timedelta(hours=0.5)
-    Data['NEE'] *= 1.0 / 44.01e-3
-    Data['GPP'] *= -1.0 / 44.01e-3
-    Data['Reco'] *= 1.0 / 44.01e-3
-    Data['GPP2'] = Data['Reco'] - Data['NEE']
-
-    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
-                        start_time=results.date[0].values, end_time=results.date[-1].values)
-
-    plt.figure()
-    plt.plot(Data['GPP2'], Data['LE'],'.r')
-
-def data_analysis(results, fmonth=5, lmonth=9,norain=True):
-
-    from tools.iotools import read_forcing
-    from pyAPES_utilities.plotting import plot_fluxes, xarray_to_df
-    from canopy.micromet import e_sat
-
-    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
-                        start_time="2010-01-01", end_time="2019-01-01")
-
-    # Huom! anameter heating quickfix..
-    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
-    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
-
-    Data['partial_LE'][
-        (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
-#     period end (?)
-    Data.index = Data.index - pd.Timedelta(hours=0.5)
-
-    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
-                    start_time="2010-01-01", end_time="2019-01-01")
-    # vapor pressure
-    esat, s = e_sat(Forc['Tair'].values)
-    Forc['VPD'] = 1e-3 * (esat - Forc['H2O'].values * Forc['P'].values)
-
-    Data = Data.merge(Forc, how='outer', left_index=True, right_index=True)
-
-    dryc = np.ones(len(Data.index))
-#    if norain:
-#        ix = Forc['Prec'].rolling(48, 1).sum()
-#        f = np.where(ix > EPS)[0]  # wet canopy indices
-#        dryc[f] = 0.0
-
-    Data['RH'] = Data['H2O'] * Data['P'].values / esat * 100
-    f = np.where(Data['RH'] > 70)[0]  # wet canopy indices
-    dryc[f] = 0.0
-    f = np.where(Data['diffPar'] + Data['dirPar'] < 100)[0]  # wet canopy indices
-    dryc[f] = 0.0
-
-    months = Data.index.month
-
-    if norain:
-        ix = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
-    else:
-        ix = np.where((months >= fmonth) & (months <= lmonth))[0]
-
-    df = xarray_to_df(results, ['canopy_LE'], sim_idx=1)
-    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['mod_Gs'] = Data['canopy_LE'] / Data['VPD']
-
-    plt.figure()
-    ax=plt.subplot(1,3,1)
-    plt.scatter(Data['VPD'][ix],Data['control_LE'][ix],alpha=0.1)
-    plt.subplot(1,3,2,sharey=ax)
-    plt.scatter(Data['VPD'][ix],Data['partial_LE'][ix],color='r',alpha=0.1)
-    plt.subplot(1,3,3,sharey=ax)
-    plt.scatter(Data['VPD'][ix],Data['clearcut_LE'][ix],color='g',alpha=0.1)
-
-    Data['control_Gs'] = Data['control_LE']/Data['VPD']
-    Data['partial_Gs'] = Data['partial_LE']/Data['VPD']
-    Data['clearcut_Gs'] = Data['clearcut_LE']/Data['VPD']
-    plt.figure()
-    ax=plt.subplot(1,3,1)
-    plt.scatter(Data['VPD'][ix],Data['control_Gs'][ix],alpha=0.1)
-    plt.scatter(Data['VPD'][ix],Data['mod_Gs'][ix],color='k',alpha=0.1)
-    plt.subplot(1,3,2,sharey=ax)
-    plt.scatter(Data['VPD'][ix],Data['partial_Gs'][ix],color='r',alpha=0.1)
-    plt.subplot(1,3,3,sharey=ax)
-    plt.scatter(Data['VPD'][ix],Data['clearcut_Gs'][ix],color='g',alpha=0.1)
-
-    plt.figure()
-    plt.scatter(Data['control_Gs'][ix],Data['mod_Gs'][ix],alpha=0.1)
-
-#    Data_daily=Data.resample('D',how=lambda x: x.values.mean())
-#
-#    Data_daily.plot(subplots=True,kind='line',marker='o',markersize=1)
-
 def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, lmonth=9, sim_idx=0, norain=True, legend=True, l1=True):
 
     from tools.iotools import read_forcing
-    import matplotlib.dates
     from pyAPES_utilities.plotting import xarray_to_df, plot_xy, plot_timeseries_xr
 
     years = range(fyear, lyear+1)
@@ -615,7 +456,7 @@ def plot_ET_WTD(results, fyear=2010, lyear=2015, treatment='control',fmonth=5, l
     plt.tight_layout()
 
 def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
-               fmonth=5, lmonth=9,sim_idx=0, lim=0.6, l1=False, norain=True,
+               fmonth=5, lmonth=9,sim_idx=0, lim=0.5, l1=False, norain=True,
                fn="Lettosuo_EC_2010_2018_gapped.csv"):
 
     from tools.iotools import read_forcing
@@ -635,9 +476,6 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
 
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
-#    if treatment == 'partial':  # ???????????
-#        Data['LE'][
-#            (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
     # period end
     Data.index = Data.index - pd.Timedelta(hours=0.5)
 
@@ -660,16 +498,7 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
         Data_daily[variables[i] + '_filtered'] = np.where(
             Data_daily[variables[i]+'gap'] > lim, np.nan, Data_daily[variables[i]])
 
-#    plt.figure()
-#    for i in range(len(variables)):
-#        if i==0:
-#            ax=plt.subplot(len(variables),1,i+1)
-#        else:
-#            plt.subplot(len(variables),1,i+1,sharex=ax)
-#        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
-
     months = Data_daily.index.month
-
     year = Data_daily.index.year
 
     years = range(fyear, lyear+1)
@@ -698,13 +527,9 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
                                                        Data_daily[res_var[i]],np.nan)
 
     Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).mean()
-#    plt.figure()
-#    plt.plot(Data_daily.index.dayofyear, Data_daily.SH_filtered, '-or')
-#    plt.plot(Data_seasonal.index, Data_seasonal.SH_filtered, 'xk')
     Data_seasonal.index=pd.date_range('1/1/2000', periods=max(Data_seasonal.index), freq='D')
     Data_seasonal=Data_seasonal.resample('7D').mean()
     Data_seasonal.index = Data_seasonal.index - pd.Timedelta(days=3.5)
-#    Data_seasonal=Data_seasonal.rolling(7, 1, center=True).mean()
 
     ix = np.where((months >= fmonth) & (months <= lmonth))[0]
     labels = {'x': '', 'y': 'Modelled'}
@@ -729,7 +554,7 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
             plt.xlim(['3.1.2000','10.31.2000'])
         plt.title(variables[i], fontsize=10)
         plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
-        # RAIN?!?!
+
         ixx = np.where((Data.index.month >= fmonth) & (Data.index.month <= lmonth) & (Data[variables[i]+'gap']==0) & np.isfinite(Data[variables[i]]))[0]
         if i == 0:
             ax2 = plt.subplot(N,4,i*4+4)
@@ -745,7 +570,6 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
 def WB_from_data(fmonth=5, lmonth=9,fn="Lettosuo_EC_2010_2018_gapped.csv"):
 
     from tools.iotools import read_forcing
-    import matplotlib.dates
     from pyAPES_utilities.plotting import plot_timeseries_df
     from soil.water import gwl_Wsto
     from pyAPES_utilities.soiltypes.organic import soil_properties, zh
@@ -783,10 +607,6 @@ def WB_from_data(fmonth=5, lmonth=9,fn="Lettosuo_EC_2010_2018_gapped.csv"):
     wsto_gwl_functions = gwl_Wsto(dz, profile_properties['pF'])
 
     GwlToWsto = wsto_gwl_functions['to_wsto']
-
-#    plt.figure()
-#    gwl = np.arange(0.0, -2, -1e-3)
-#    plt.plot(GwlToWsto(gwl),gwl)
 
     # Read observed WTD
     WTD = read_forcing("Lettosuo_WTD_pred.csv", cols=['control','partial','clearcut'],
@@ -946,8 +766,9 @@ def WB_from_data(fmonth=5, lmonth=9,fn="Lettosuo_EC_2010_2018_gapped.csv"):
     ax3.spines['bottom'].set_visible(False)
     plt.tight_layout(w_pad=3)
 
+# %% Messy stuff
 
-def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
+def WTD_ET_data(fmonth=5, lmonth=9, lim=0.5):
 
     from tools.iotools import read_forcing
     import matplotlib.dates
@@ -1069,15 +890,26 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
     plt.subplot(3,3,9)
     plot_xy(Data['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data['clearcut_LE'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
 
-    ixx = np.where((Data.index.month >= 6) & (Data.index.month <= 9) & (Data.index.year < 2012))[0]
-    ixxx = np.where((Data.index.month >= 6) & (Data.index.month <= 9) & (Data.index.year >= 2012))[0]
+    ixx = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year < 2012))[0]
+    ixxx = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year >= 2012))[0]
 
     plt.figure()
     ax=plt.subplot(1,2,1)
-    plot_xy(Data['Rg'][ixx], Data['control_SH'][ixx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plot_xy(Data['control_NRAD'][ixx], Data['control_SH'][ixx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
     plt.title('2010-2011')
     plt.subplot(1,2,2,sharex=ax,sharey=ax)
-    plot_xy(Data['Rg'][ixxx], Data['control_SH'][ixxx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plot_xy(Data['control_NRAD'][ixxx], Data['control_SH'][ixxx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plt.title('2012-2016')
+
+    ixx = np.where((Data_daily.index.month >= 5) & (Data_daily.index.month <= 9) & (Data_daily.index.year < 2012))[0]
+    ixxx = np.where((Data_daily.index.month >= 5) & (Data_daily.index.month <= 9) & (Data_daily.index.year >= 2012))[0]
+
+    plt.figure()
+    ax=plt.subplot(1,2,1)
+    plot_xy(Data_daily['control_NRAD_filtered'][ixx], Data_daily['control_SH_filtered'][ixx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plt.title('2010-2011')
+    plt.subplot(1,2,2,sharex=ax,sharey=ax)
+    plot_xy(Data_daily['control_NRAD_filtered'][ixxx], Data_daily['control_SH_filtered'][ixxx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
     plt.title('2012-2016')
 
     plt.figure()
@@ -1209,17 +1041,19 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
         else:
             plt.subplot(1,6,yyyy-2009, sharex=ax, sharey=ax)
             labels={'x': 'Rnet - GHF', 'y': ''}
-        plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels)
+        plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels, slope=1)
         plt.title(str(yyyy))
 
     plt.figure()
     labels={'x': 'Rnet - GHF', 'y': 'LE + SH'}
-    ix = np.where((Data.index.month >= 4) & (Data.index.month <= 10) & (Data.index.year < 2012))[0]
+    ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year < 2012))[0]
     ax=plt.subplot(1,2,1)
-    plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels)
-    ix = np.where((Data.index.month >= 4) & (Data.index.month <= 10) & (Data.index.year >= 2012))[0]
+    plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels, slope=1)
+    plt.title('2010-2011')
+    ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year >= 2012))[0]
     plt.subplot(1,2,2, sharex=ax, sharey=ax)
-    plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels)
+    plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels={'x': 'Rnet - GHF', 'y': ''}, slope=1)
+    plt.title('2012-2016')
 
     plt.figure()
     labels={'x': 'Rnet - GHF', 'y': 'LE + SH'}
@@ -1417,7 +1251,7 @@ def penman_monteith(AE, D, T, Gs, Ga=1./25., P=101300.0, units='W'):
 
     return x
 
-def gapfilling_comparison(lim=0.6, fn="Lettosuo_EC_2010_2018_gapped.csv"):
+def gapfilling_comparison(lim=0.5, fn="Lettosuo_EC_2010_2018_gapped.csv"):
     from tools.iotools import read_forcing
     import matplotlib.dates
     from pyAPES_utilities.plotting import plot_timeseries_df, plot_xy
@@ -1473,3 +1307,96 @@ def gapfilling_comparison(lim=0.6, fn="Lettosuo_EC_2010_2018_gapped.csv"):
     plt.plot(Data_daily.index, Data_daily['clearcut_SH_filtered'], 'o', color='r', markersize=3)
 
 
+def plot_WUE(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=True):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all')
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
+    Data.columns = Data.columns.str.split('_', expand=True)
+    Data = Data[treatment]
+    # period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+    Data['NEE'] *= 1.0 / 44.01e-3
+    Data['GPP'] *= -1.0 / 44.01e-3
+    Data['Reco'] *= 1.0 / 44.01e-3
+    Data['GPP2'] = Data['Reco'] - Data['NEE']
+
+    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
+                        start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    plt.figure()
+    plt.plot(Data['GPP2'], Data['LE'],'.r')
+
+def data_analysis(results, fmonth=5, lmonth=9,norain=True):
+
+    from tools.iotools import read_forcing
+    from pyAPES_utilities.plotting import plot_fluxes, xarray_to_df
+    from canopy.micromet import e_sat
+
+    Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
+                        start_time="2010-01-01", end_time="2019-01-01")
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
+    Data['partial_LE'][
+        (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
+#     period end (?)
+    Data.index = Data.index - pd.Timedelta(hours=0.5)
+
+    Forc = read_forcing("Lettosuo_forcing_2010_2018.csv", cols='all',
+                    start_time="2010-01-01", end_time="2019-01-01")
+    # vapor pressure
+    esat, s = e_sat(Forc['Tair'].values)
+    Forc['VPD'] = 1e-3 * (esat - Forc['H2O'].values * Forc['P'].values)
+
+    Data = Data.merge(Forc, how='outer', left_index=True, right_index=True)
+
+    dryc = np.ones(len(Data.index))
+
+    Data['RH'] = Data['H2O'] * Data['P'].values / esat * 100
+    f = np.where(Data['RH'] > 70)[0]  # wet canopy indices
+    dryc[f] = 0.0
+    f = np.where(Data['diffPar'] + Data['dirPar'] < 100)[0]  # wet canopy indices
+    dryc[f] = 0.0
+
+    months = Data.index.month
+
+    if norain:
+        ix = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1))[0]
+    else:
+        ix = np.where((months >= fmonth) & (months <= lmonth))[0]
+
+    df = xarray_to_df(results, ['canopy_LE'], sim_idx=1)
+    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
+    Data['mod_Gs'] = Data['canopy_LE'] / Data['VPD']
+
+    plt.figure()
+    ax=plt.subplot(1,3,1)
+    plt.scatter(Data['VPD'][ix],Data['control_LE'][ix],alpha=0.1)
+    plt.subplot(1,3,2,sharey=ax)
+    plt.scatter(Data['VPD'][ix],Data['partial_LE'][ix],color='r',alpha=0.1)
+    plt.subplot(1,3,3,sharey=ax)
+    plt.scatter(Data['VPD'][ix],Data['clearcut_LE'][ix],color='g',alpha=0.1)
+
+    Data['control_Gs'] = Data['control_LE']/Data['VPD']
+    Data['partial_Gs'] = Data['partial_LE']/Data['VPD']
+    Data['clearcut_Gs'] = Data['clearcut_LE']/Data['VPD']
+    plt.figure()
+    ax=plt.subplot(1,3,1)
+    plt.scatter(Data['VPD'][ix],Data['control_Gs'][ix],alpha=0.1)
+    plt.scatter(Data['VPD'][ix],Data['mod_Gs'][ix],color='k',alpha=0.1)
+    plt.subplot(1,3,2,sharey=ax)
+    plt.scatter(Data['VPD'][ix],Data['partial_Gs'][ix],color='r',alpha=0.1)
+    plt.subplot(1,3,3,sharey=ax)
+    plt.scatter(Data['VPD'][ix],Data['clearcut_Gs'][ix],color='g',alpha=0.1)
+
+    plt.figure()
+    plt.scatter(Data['control_Gs'][ix],Data['mod_Gs'][ix],alpha=0.1)
