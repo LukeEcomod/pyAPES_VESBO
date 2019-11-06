@@ -224,6 +224,11 @@ def plot_energy(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
 #    if treatment == 'partial':
@@ -255,6 +260,11 @@ def plot_fluxes_ebal(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,no
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
     # period end (?)
@@ -274,6 +284,10 @@ def plot_CO2(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
     # period end (?)
@@ -295,6 +309,11 @@ def plot_scatters(results, fyear=2010, lyear=2015, treatment='control',fmonth=5,
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
     # period end (?)
@@ -456,6 +475,10 @@ def plot_WUE(results,treatment='control',fmonth=5, lmonth=9,sim_idx=0,norain=Tru
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all')
 
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
     # period end (?)
@@ -479,6 +502,10 @@ def data_analysis(results, fmonth=5, lmonth=9,norain=True):
 
     Data = read_forcing("Lettosuo_EC_2010_2018.csv", cols='all',
                         start_time="2010-01-01", end_time="2019-01-01")
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
 
     Data['partial_LE'][
         (Data.index > '05-22-2018') & (Data.index < '06-09-2018')]=np.nan
@@ -601,6 +628,11 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
 
     Data = read_forcing(fn, cols='all',
                         start_time=results.date[0].values, end_time=results.date[-1].values)
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     Data.columns = Data.columns.str.split('_', expand=True)
     Data = Data[treatment]
 #    if treatment == 'partial':  # ???????????
@@ -628,13 +660,13 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
         Data_daily[variables[i] + '_filtered'] = np.where(
             Data_daily[variables[i]+'gap'] > lim, np.nan, Data_daily[variables[i]])
 
-    plt.figure()
-    for i in range(len(variables)):
-        if i==0:
-            ax=plt.subplot(len(variables),1,i+1)
-        else:
-            plt.subplot(len(variables),1,i+1,sharex=ax)
-        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
+#    plt.figure()
+#    for i in range(len(variables)):
+#        if i==0:
+#            ax=plt.subplot(len(variables),1,i+1)
+#        else:
+#            plt.subplot(len(variables),1,i+1,sharex=ax)
+#        plot_timeseries_df(Data_daily,[res_var[i],variables[i],variables[i] +'_filtered'], colors=pal)
 
     months = Data_daily.index.month
 
@@ -666,8 +698,13 @@ def plot_daily(results,treatment='control', fyear=2010, lyear=2015,
                                                        Data_daily[res_var[i]],np.nan)
 
     Data_seasonal = Data_daily.groupby(Data_daily.index.dayofyear).mean()
+#    plt.figure()
+#    plt.plot(Data_daily.index.dayofyear, Data_daily.SH_filtered, '-or')
+#    plt.plot(Data_seasonal.index, Data_seasonal.SH_filtered, 'xk')
     Data_seasonal.index=pd.date_range('1/1/2000', periods=max(Data_seasonal.index), freq='D')
     Data_seasonal=Data_seasonal.resample('7D').mean()
+    Data_seasonal.index = Data_seasonal.index - pd.Timedelta(days=3.5)
+#    Data_seasonal=Data_seasonal.rolling(7, 1, center=True).mean()
 
     ix = np.where((months >= fmonth) & (months <= lmonth))[0]
     labels = {'x': '', 'y': 'Modelled'}
@@ -914,7 +951,7 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
 
     from tools.iotools import read_forcing
     import matplotlib.dates
-    from pyAPES_utilities.plotting import plot_timeseries_df, plot_xy
+    from pyAPES_utilities.plotting import plot_timeseries_df, plot_xy, plot_diurnal
 
     start_time='1-1-2010'
     end_time='1-1-2019'
@@ -932,6 +969,11 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
     Data = read_forcing("Lettosuo_EC_2010_2018_gapped.csv",
                       cols='all',
                       start_time=start_time, end_time=end_time)
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     # period end
     Data.index = Data.index - pd.Timedelta(hours=0.5)
 
@@ -1001,6 +1043,207 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
 #    plot_xy(Data_daily['Rg'][ix], Data_daily['partial_GHF_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
 #    plt.subplot(4,3,12)
 #    plot_xy(Data_daily['Rg'][ix], Data_daily['clearcut_GHF_filtered'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+
+
+    ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9))[0]
+    plt.figure()
+    plt.subplot(3,3,1)
+    plot_xy(Data['Rg'][ix], Data['control_NRAD'][ix],axislabels={'x':'Rg', 'y':'NRAD'},color= 'k',alpha=0.2)
+    plt.title('control')
+    plt.subplot(3,3,2)
+    plot_xy(Data['Rg'][ix], Data['partial_NRAD'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.title('partial')
+    plt.subplot(3,3,3)
+    plot_xy(Data['Rg'][ix], Data['clearcut_NRAD'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+    plt.title('clearcut')
+    plt.subplot(3,3,4)
+    plot_xy(Data['Rg'][ix], Data['control_SH'][ix],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plt.subplot(3,3,5)
+    plot_xy(Data['Rg'][ix], Data['partial_SH'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.subplot(3,3,6)
+    plot_xy(Data['Rg'][ix], Data['clearcut_SH'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+    plt.subplot(3,3,7)
+    plot_xy(Data['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data['control_LE'][ix],axislabels={'x':'Rg', 'y':'LE'},color= 'k',alpha=0.2)
+    plt.subplot(3,3,8)
+    plot_xy(Data['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data['partial_LE'][ix],axislabels={'x':'Rg', 'y':''},color= 'b', alpha=0.2)
+    plt.subplot(3,3,9)
+    plot_xy(Data['Rg'][ix], LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)* Data['clearcut_LE'][ix],axislabels={'x':'Rg', 'y':''},color= 'r',alpha=0.2)
+
+    ixx = np.where((Data.index.month >= 6) & (Data.index.month <= 9) & (Data.index.year < 2012))[0]
+    ixxx = np.where((Data.index.month >= 6) & (Data.index.month <= 9) & (Data.index.year >= 2012))[0]
+
+    plt.figure()
+    ax=plt.subplot(1,2,1)
+    plot_xy(Data['Rg'][ixx], Data['control_SH'][ixx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plt.title('2010-2011')
+    plt.subplot(1,2,2,sharex=ax,sharey=ax)
+    plot_xy(Data['Rg'][ixxx], Data['control_SH'][ixxx],axislabels={'x':'Rg', 'y':'SH'},color= 'k',alpha=0.2)
+    plt.title('2012-2016')
+
+    plt.figure()
+    for yyyy in range(2010,2016):
+        for mm in range(1,13):
+            ix = np.where((Data.index.month == mm) & (Data.index.year == yyyy))[0]
+            ax=plt.subplot(6,12,mm + (yyyy - 2010)*12)
+            plot_xy(Data['control_NRAD'][ix], Data['control_SH'][ix],axislabels={'x':'NRAD', 'y':'SH'},color= 'k',alpha=0.2)
+
+    plt.figure()
+    for mm in range(1,13):
+        ix = np.where((Data.index.month == mm) & (Data.index.year < 2012))[0]
+        ax=plt.subplot(2,12,mm)
+        plot_xy(Data['control_NRAD'][ix], Data['control_SH'][ix],axislabels={'x':'NRAD', 'y':'SH'},color= 'k',alpha=0.2)
+        ix = np.where((Data.index.month == mm) & (Data.index.year >= 2012))[0]
+        ax=plt.subplot(2,12,mm +12)
+        plot_xy(Data['control_NRAD'][ix], Data['control_SH'][ix],axislabels={'x':'NRAD', 'y':'SH'},color= 'k',alpha=0.2)
+
+
+
+    plt.figure()
+    ax=plt.subplot(1,5,1)
+    for yyyy in range(2010,2016):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['control_SH']) & np.isfinite(Data['control_LE']) & np.isfinite(Data['control_NRAD']))[0]
+        plot_diurnal(Data['control_SH'][ix], color=pal[yyyy-2010], legend=False)
+    plt.legend(['2010','2011','2012','2013','2014','2015'])
+    plt.title('Sensible heat')
+    plt.subplot(1,5,2,sharey=ax)
+    for yyyy in range(2010,2016):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['control_SH']) & np.isfinite(Data['control_LE']) & np.isfinite(Data['control_NRAD']))[0]
+        plot_diurnal(LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], color=pal[yyyy-2010], legend=False)
+    plt.legend(['2010','2011','2012','2013','2014','2015'])
+    plt.title('Latent heat')
+    plt.subplot(1,5,3,sharey=ax)
+    for yyyy in range(2010,2016):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['control_SH']) & np.isfinite(Data['control_LE']) & np.isfinite(Data['control_NRAD']))[0]
+        plot_diurnal(Data['control_GHF'][ix], color=pal[yyyy-2010], legend=False)
+    plt.legend(['2010','2011','2012','2013','2014','2015'])
+    plt.title('Ground heat flux')
+    plt.subplot(1,5,4,sharey=ax)
+    for yyyy in range(2010,2016):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['control_SH']) & np.isfinite(Data['control_LE']) & np.isfinite(Data['control_NRAD']))[0]
+        plot_diurnal(Data['control_NRAD'][ix], color=pal[yyyy-2010], legend=False)
+    plt.legend(['2010','2011','2012','2013','2014','2015'])
+    plt.title('Net radiation')
+
+    Data['control_EBC'] = Data['control_NRAD'] - Data['control_GHF'] - Data['control_SH'] - LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE']
+    plt.subplot(1,5,5)
+    for yyyy in range(2010,2016):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy))[0]
+        plot_diurnal(Data['control_EBC'][ix], color=pal[yyyy-2010], legend=False)
+    plt.legend(['2010','2011','2012','2013','2014','2015'])
+    plt.title('Energy balance closure (Rnet - LE - SH -GHF)')
+
+    plt.figure()
+    ax=plt.subplot(1,5,1)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['partial_SH']) & np.isfinite(Data['partial_LE']) & np.isfinite(Data['partial_NRAD']))[0]
+        plot_diurnal(Data['partial_SH'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Sensible heat')
+    plt.subplot(1,5,2,sharey=ax)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['partial_SH']) & np.isfinite(Data['partial_LE']) & np.isfinite(Data['partial_NRAD']))[0]
+        plot_diurnal(LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['partial_LE'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Latent heat')
+    plt.subplot(1,5,3,sharey=ax)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['partial_SH']) & np.isfinite(Data['partial_LE']) & np.isfinite(Data['partial_NRAD']))[0]
+        plot_diurnal(Data['partial_GHF'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Ground heat flux')
+    plt.subplot(1,5,4,sharey=ax)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['partial_SH']) & np.isfinite(Data['partial_LE']) & np.isfinite(Data['partial_NRAD']))[0]
+        plot_diurnal(Data['partial_NRAD'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Net radiation')
+
+    Data['partial_EBC'] = Data['partial_NRAD'] - Data['partial_GHF'] - Data['partial_SH'] - LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['partial_LE']
+    plt.subplot(1,5,5)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy))[0]
+        plot_diurnal(Data['partial_EBC'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Energy balance closure (Rnet - LE - SH -GHF)')
+
+    plt.figure()
+    ax=plt.subplot(1,5,1)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['clearcut_SH']) & np.isfinite(Data['clearcut_LE']) & np.isfinite(Data['clearcut_NRAD']))[0]
+        plot_diurnal(Data['clearcut_SH'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Sensible heat')
+    plt.subplot(1,5,2,sharey=ax)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['clearcut_SH']) & np.isfinite(Data['clearcut_LE']) & np.isfinite(Data['clearcut_NRAD']))[0]
+        plot_diurnal(LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['clearcut_LE'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Latent heat')
+    plt.subplot(1,5,3,sharey=ax)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['clearcut_SH']) & np.isfinite(Data['clearcut_LE']) & np.isfinite(Data['clearcut_NRAD']))[0]
+        plot_diurnal(Data['clearcut_GHF'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Ground heat flux')
+    plt.subplot(1,5,4,sharey=ax)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy) & np.isfinite(Data['clearcut_SH']) & np.isfinite(Data['clearcut_LE']) & np.isfinite(Data['clearcut_NRAD']))[0]
+        plot_diurnal(Data['clearcut_NRAD'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Net radiation')
+
+    Data['clearcut_EBC'] = Data['clearcut_NRAD'] - Data['clearcut_GHF'] - Data['clearcut_SH'] - LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['clearcut_LE']
+    plt.subplot(1,5,5)
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy))[0]
+        plot_diurnal(Data['clearcut_EBC'][ix], color=pal[yyyy-2016], legend=False)
+    plt.legend(['2016','2017','2018'])
+    plt.title('Energy balance closure (Rnet - LE - SH -GHF)')
+
+    plt.figure()
+    labels={'x': 'Rnet - GHF', 'y': 'LE + SH'}
+    for yyyy in range(2010,2016):
+        ix = np.where((Data.index.month >= 1) & (Data.index.month <= 12) & (Data.index.year == yyyy))[0]
+        if yyyy == 2010:
+            ax=plt.subplot(1,6,yyyy-2009)
+        else:
+            plt.subplot(1,6,yyyy-2009, sharex=ax, sharey=ax)
+            labels={'x': 'Rnet - GHF', 'y': ''}
+        plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels)
+        plt.title(str(yyyy))
+
+    plt.figure()
+    labels={'x': 'Rnet - GHF', 'y': 'LE + SH'}
+    ix = np.where((Data.index.month >= 4) & (Data.index.month <= 10) & (Data.index.year < 2012))[0]
+    ax=plt.subplot(1,2,1)
+    plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels)
+    ix = np.where((Data.index.month >= 4) & (Data.index.month <= 10) & (Data.index.year >= 2012))[0]
+    plt.subplot(1,2,2, sharex=ax, sharey=ax)
+    plot_xy(Data['control_NRAD'][ix] - Data['control_GHF'][ix], Data['control_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['control_LE'][ix], axislabels=labels)
+
+    plt.figure()
+    labels={'x': 'Rnet - GHF', 'y': 'LE + SH'}
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy))[0]
+        if yyyy == 2016:
+            ax=plt.subplot(1,3,yyyy-2015)
+        else:
+            plt.subplot(1,3,yyyy-2015, sharex=ax, sharey=ax)
+            labels={'x': 'Rnet - GHF', 'y': ''}
+        plot_xy(Data['partial_NRAD'][ix] - Data['partial_GHF'][ix], Data['partial_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['partial_LE'][ix], axislabels=labels)
+        plt.title(str(yyyy))
+
+    plt.figure()
+    labels={'x': 'Rnet - GHF', 'y': 'LE + SH'}
+    for yyyy in range(2016,2019):
+        ix = np.where((Data.index.month >= 5) & (Data.index.month <= 9) & (Data.index.year == yyyy))[0]
+        if yyyy == 2016:
+            ax=plt.subplot(1,3,yyyy-2015)
+        else:
+            plt.subplot(1,3,yyyy-2015, sharex=ax, sharey=ax)
+            labels={'x': 'Rnet - GHF', 'y': ''}
+        plot_xy(Data['clearcut_NRAD'][ix] - Data['clearcut_GHF'][ix], Data['clearcut_SH'][ix] + LATENT_HEAT /(MOLAR_MASS_H2O * 3600 * 24)*Data['clearcut_LE'][ix], axislabels=labels)
+        plt.title(str(yyyy))
 
 
     ix = np.where((months_daily >= 5) & (months_daily <= 9))[0]
@@ -1136,7 +1379,6 @@ def WTD_ET_data(fmonth=5, lmonth=9, lim=0.6):
     plt.subplot(1,3,3)
     plot_xy(Data_daily['clearcut_LE_ebal'][ix], Data_daily['clearcut_LE_filtered'][ix],axislabels={'x':'PET', 'y':'clearcut_ET'},alpha=0.2)
 
-
 def penman_monteith(AE, D, T, Gs, Ga=1./25., P=101300.0, units='W'):
     """
     Computes latent heat flux LE (Wm-2) i.e evapotranspiration rate ET (mm/s)
@@ -1175,7 +1417,7 @@ def penman_monteith(AE, D, T, Gs, Ga=1./25., P=101300.0, units='W'):
 
     return x
 
-def gapfilling_comparison(lim=0.6, fn="Lettosuo_EC_2010_2018_gapped_Reddy.csv"):
+def gapfilling_comparison(lim=0.6, fn="Lettosuo_EC_2010_2018_gapped.csv"):
     from tools.iotools import read_forcing
     import matplotlib.dates
     from pyAPES_utilities.plotting import plot_timeseries_df, plot_xy
@@ -1189,6 +1431,11 @@ def gapfilling_comparison(lim=0.6, fn="Lettosuo_EC_2010_2018_gapped_Reddy.csv"):
     Data = read_forcing(fn,
                       cols='all',
                       start_time=start_time, end_time=end_time)
+
+    # Huom! anameter heating quickfix..
+    Data['control_SH'] = np.where(Data.index > '1.10.2012', Data['control_SH'] - 33, Data['control_SH'])
+    Data['partial_SH'] = np.where(Data.index > '1.10.2012', Data['partial_SH'] - 33, Data['partial_SH'])
+
     # period end
     Data.index = Data.index - pd.Timedelta(hours=0.5)
 
@@ -1224,3 +1471,5 @@ def gapfilling_comparison(lim=0.6, fn="Lettosuo_EC_2010_2018_gapped_Reddy.csv"):
     plt.plot(Data_daily.index, Data_daily['control_SH_filtered'], 'o', color='k', markersize=3)
     plt.plot(Data_daily.index, Data_daily['partial_SH_filtered'], 'o', color='b', markersize=3)
     plt.plot(Data_daily.index, Data_daily['clearcut_SH_filtered'], 'o', color='r', markersize=3)
+
+
