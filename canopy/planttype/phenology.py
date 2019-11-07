@@ -45,7 +45,7 @@ class Photo_cycle(object):
         self.X = p['Xo']  # initial delayed temperature (degC)
         self.f = 1.0  # relative photocapacity
 
-    def run(self, T, Tsoil=None, out=False):
+    def run(self, T, out=False):
         r""" Computes new stage of temperature acclimation and phenology modifier.
 
         Args:
@@ -59,14 +59,6 @@ class Photo_cycle(object):
         S = np.maximum(self.X - self.Tbase, 0.0)
         self.f = np.maximum(self.fmin,
                             np.minimum(S / (self.Smax - self.Tbase), 1.0))
-
-        if Tsoil != None:
-            # FEMMA docu
-            if Tsoil > 0.0:
-                self.f = np.minimum(0.176 + 0.077 * Tsoil - 0.0018 * Tsoil**2,
-                                    1.0)
-            else:
-                self.f = self.fmin
 
         if out:
             return self.f

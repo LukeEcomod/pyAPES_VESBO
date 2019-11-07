@@ -4,12 +4,11 @@ GENERAL PARAMETERS
 """
 
 gpara = {
-        'pyAPES_path': '/Users/ajkieloaho/Repositories/pyAPES/',
         'dt' : 1800.0,  # timestep in forcing data file [s]
-        'start_time' : "2009-10-01",  #"2009-10-01",  # start time of simulation [yyyy-mm-dd]
-        'end_time' : "2019-01-01",  #"2019-01-01",  # end time of simulation [yyyy-mm-dd]
-        'forc_filename' : "Lettosuo_forcing_2010_2018.csv",  # forcing data file*
-        'results_directory':'results/case_Lettosuo/',
+        'start_time' : "2005-05-01",  # start time of simulation [yyyy-mm-dd]
+        'end_time' : "2005-11-01",  # end time of simulation [yyyy-mm-dd]
+        'forc_filename' : "Hyde_forcing_1997_2016.csv",  # forcing data file*
+        'results_directory':'results/pyAPES/',
         'variables': [['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
                       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
                       ['forcing_pressure', 'ambient pressure [Pa]', ('date', 'simulation')],
@@ -205,6 +204,3 @@ parallel_logging_configuration = {
                 'handlers': ['console', 'parallelAPES_file']
         }
     }
-
-#  output_folder: "results"
-#  output_format: "netcdf"

@@ -340,19 +340,6 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     Conv_crit = 1.0e-12  # for soil moisture
     Conv_crit2 = 1.0e-10  # for pressure head, decreased to 1.0e-8 when profile saturated
 
-# TESTI, 70% sateesta suoraan pohjaveden pinnan kerrokseen
-    f_macro = 0.7
-    sid = np.where(h_ini <= 0)[0]
-    if len(sid) > 0 and Prec > 0.5 * 1e-3 / 3600:
-        cell_airvol = (poros - W)*dz
-        id_cell = sid[-1] + 1
-        bypass = np.zeros(N)
-        while sum(bypass) < (f_macro * Prec) * t_final and id_cell > 0:
-            bypass[id_cell] = min((f_macro * Prec) * t_final - sum(bypass), cell_airvol[id_cell])
-            id_cell -= 1
-        S = S - bypass / t_final / dz
-        Prec = Prec - sum(bypass) / t_final
-
 # TESTI, DURING DRY CONDITIONS INFILTRATION FORCED TO FIRST 5 LAYERS
     # hydraulic condictivity based on previous time step
     KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
