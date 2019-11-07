@@ -26,7 +26,6 @@ Soil model with separate bryophyte layer. Ecological modelling, 312, pp.385-405.
 
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
 from .constants import MOLAR_MASS_H2O, EPS
 
 from .radiation import Radiation
@@ -109,7 +108,9 @@ class CanopyModel(object):
 
         # --- Plant types (with phenoligical models) ---
         ptypes = []
-        for pt in cpara['planttypes']:
+        ptnames = list(cpara['planttypes'].keys())
+        ptnames.sort()
+        for pt in ptnames:
             ptypes.append(PlantType(self.z, cpara['planttypes'][pt], dz_soil, ctr=cpara['ctr'], loc=cpara['loc']))
         self.planttypes = ptypes
 
@@ -133,6 +134,8 @@ class CanopyModel(object):
         self.rad = rad[self.ix_roots]
         # total root area index [m2 m-2]
         self.RAI = sum([pt.Roots.RAI for pt in self.planttypes])
+        # distribution of roots [-]
+        self.root_distr = self.rad * dz_soil[self.ix_roots] / (self.RAI + EPS)
 
         # canopy height [m]
         if len(np.where(self.lad > 0)[0]) > 0:
@@ -150,7 +153,7 @@ class CanopyModel(object):
 
         self.forestfloor = ForestFloor(cpara['forestfloor'])
 
-    def run_daily(self, doy, Ta, Rew=1.0):
+    def run_daily(self, doy, Ta, Tsoil=None, Rew=1.0):
         r""" Computatations at daily timestep.
         Updates planttypes and total canopy leaf area index and phenological state.
         Recomputes normalize flow statistics with new leaf area density profile.
@@ -165,7 +168,7 @@ class CanopyModel(object):
         for pt in self.planttypes:
             if pt.LAImax > 0.0:
                 PsiL = (pt.Roots.h_root - self.z) / 100.0  # MPa
-                pt.update_daily(doy, Ta, PsiL=PsiL, Rew=Rew)  # updates pt properties
+                pt.update_daily(doy, Ta, Tsoil=Tsoil, PsiL=PsiL, Rew=Rew)  # updates pt properties
         # total leaf area index [m2 m-2]
         self.LAI = sum([pt.LAI for pt in self.planttypes])
         # total leaf area density [m2 m-3]
@@ -444,6 +447,7 @@ class CanopyModel(object):
                 'soil_hydraulic_conductivity': parameters['soil_hydraulic_conductivity'][0],  # comes in for whle rooting depth
                 'soil_thermal_conductivity': parameters['soil_thermal_conductivity'],
                 'iteration': iter_no,
+                'root_distribution': self.root_distr
             }
 
             ff_forcing = {
@@ -457,7 +461,7 @@ class CanopyModel(object):
                 'wind_speed': U[1],
                 'friction_velocity': ustar[1],
                 'soil_temperature': forcing['soil_temperature'],
-                'soil_water_potential': forcing['soil_water_potential'][0],  # comes in for whle rooting depth
+                'soil_water_potential': forcing['soil_water_potential'][0],  # comes in for whole rooting depth
                 'soil_volumetric_water': forcing['soil_volumetric_water'],
                 'soil_volumetric_air': forcing['soil_volumetric_water'],
                 'soil_pond_storage': forcing['soil_pond_storage']
@@ -586,13 +590,14 @@ class CanopyModel(object):
                 'LAI': self.LAI,
                 'lad': self.lad,
                 'sunlit_fraction': f_sl,
-                'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.planttypes])/self.LAI,
+                'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.planttypes])/(self.LAI + EPS),
                 'IterWMA': iter_no
                 }
 
         fluxes_canopy = {
                 'wind_speed': U,
                 'friction_velocity': ustar,
+                'corrected_precipitation': wetleaf_fluxes['corrected_precipitation'],
                 'throughfall': wetleaf_fluxes['throughfall'],
                 'interception': wetleaf_fluxes['interception'],
                 'evaporation': wetleaf_fluxes['evaporation'],
@@ -656,6 +661,7 @@ class CanopyModel(object):
                     'energy_closure': energy_closure,
                     'SWnet': SWnet,
                     'LWnet': LWnet,
+                    'net_radiation': SWnet + LWnet,
                     'fr_source': sum(sources['fr'] * self.dz)})
 
         return fluxes_canopy, state_canopy, fluxes_ffloor, states_ffloor

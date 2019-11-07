@@ -12,15 +12,15 @@ loc = {'lat': 61.51,  # latitude
        }
 
 # grid
-grid = {'zmax': 30.0,  # heigth of grid from ground surface [m]
-        'Nlayers': 100  # number of layers in grid [-]
+grid = {'zmax': 25.0,  # heigth of grid from ground surface [m]
+        'Nlayers': 101  # number of layers in grid [-]
         }
 
 # --- control flags (True/False) ---
 ctr = {'Eflow': True,  # ensemble flow
-       'WMA': False, # well-mixed assumption
-       'Ebal': True,  # computes leaf temperature by solving energy balance
-       'WaterStress': 'PsiL',  # Rew or PsiL or None
+       'WMA': False,  #True,  #  well-mixed assumption
+       'Ebal': True,  #False,  #  computes leaf temperature by solving energy balance
+       'WaterStress': 'PsiL',  #'PsiL',  # Rew or PsiL or None
        'seasonal_LAI': True,  # account for seasonal LAI dynamics
        'pheno_cycle': True  # account for phenological cycle
        }
@@ -44,11 +44,13 @@ radiation = {'clump': 0.7,  # clumping index [-]
 
 # --- interception ---  SADANNAN KORJAUSKERTOIMET?
 interception = {'wmax': 0.2e-03,  # maximum interception storage capacity for rain [m per unit of LAI]  - Watanabe & Mizunani coniferous trees
-                'wmaxsnow': 1.6e-03,  # maximum interception storage capacity for snow [m per unit of LAI]
+                'wmaxsnow': 0.8e-03,  # maximum interception storage capacity for snow [m per unit of LAI] - about 4 * wmax (Koivusalo & Kokkonen 2002)
                 'w_ini': 0.0,  # initial canopy storage [m]
                 'Tmin': 0.0,  # temperature below which all is snow [degC]
-                'Tmax': 1.0,  # temperature above which all is water [degC]
-                'leaf_orientation': 0.5 # leaf orientation factor for randomdly oriented leaves
+                'Tmax': 2.0,  # temperature above which all is water [degC]- Koivusalo & Kokkonen 2002
+                'leaf_orientation': 0.5, # leaf orientation factor for randomdly oriented leaves
+                'c_rain': 1.0,  # correction for precipitation [-] 1.05 according to Førland et al. (1996)
+                'c_snow': 1.0,  # correction for precipitation [-] 1.3 according to Førland et al. (1996)
                 }
 
 cpara = {'loc': loc,

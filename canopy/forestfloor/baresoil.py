@@ -188,7 +188,7 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
         iterNo += 1
         Told = surface_temperature
         if controls['energy_balance']:
-            # solve leaf temperature [degC]
+            # solve surface temperature [degC]
             surface_temperature = (
                 (SW_gr + LWn + SPECIFIC_HEAT_AIR*gr*T_ave
                  + SPECIFIC_HEAT_AIR*gb_h*T - LE + LATENT_HEAT*s*gb_v*Told

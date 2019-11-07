@@ -70,14 +70,28 @@ def driver(create_ncf=False,
     else:
         Nsim = parametersets['count']
 
+    default_params = {
+            'general': gpara,
+            'canopy': cpara,
+            'soil': spara
+            }
+
+    param_space = [iterate_parameters(parametersets, copy(default_params), count) for count in range(Nsim)]
+
+    logger = logging.getLogger(__name__)
+
+    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
+
     # --- FORCING ---
     # Read forcing
-    forcing = read_forcing(gpara['forc_filename'],
-                           gpara['start_time'],
-                           gpara['end_time'],
-                           dt=gpara['dt'])
+    forcing = read_forcing(
+        param_space[0]['general']['forc_filename'],
+        param_space[0]['general']['start_time'],
+        param_space[0]['general']['end_time'],
+        dt=param_space[0]['general']['dt']
+    )
 
-# SINGLE SOIL LAYER
+    # SINGLE SOIL LAYER
 #    # read soil moisture and temperature
 #    df = read_forcing(gpara['forc_filename'],
 #                      gpara['start_time'],
@@ -90,22 +104,11 @@ def driver(create_ncf=False,
 #    spara['heat_model']['initial_condition']['temperature'] = forcing['Tsoil'].iloc[0]
 #    spara['water_model']['initial_condition']['volumetric_water_content'] = forcing['Wliq'].iloc[0]
 
-    default_params = {
-            'canopy': cpara,
-            'soil': spara
-            }
-
-    param_space = [iterate_parameters(parametersets, copy(default_params), count) for count in range(Nsim)]
-
-    logger = logging.getLogger(__name__)
-
-    logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
-
 
     tasks = []
 
     for k in range(Nsim):
-        tasks.append(Model(gpara, param_space[k]['canopy'], param_space[k]['soil'], forcing, nsim=k))
+        tasks.append(Model(param_space[k]['general'], param_space[k]['canopy'], param_space[k]['soil'], forcing, nsim=k))
 
     if create_ncf:
         timestr = time.strftime('%Y%m%d%H%M')
@@ -194,6 +197,7 @@ class Model(object):
 
         logger = logging.getLogger(__name__)
         logger.info('Running simulation {}'.format(self.Nsim))
+        time0 = time.time()
 
         #print('RUNNING')
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
@@ -206,16 +210,23 @@ class Model(object):
             """ Canopy, moss and Snow """
             # run daily loop (phenology and seasonal LAI)
             if self.forcing['doy'].iloc[k] != self.forcing['doy'].iloc[k-1] or k == 0:
+                if self.soil.solve_heat:
+#                    Tsoil = None
+# TESTING
+                    Tsoil = self.soil.heat.T[9]
+                else:
+                    Tsoil = None
                 self.canopy_model.run_daily(
                         self.forcing['doy'].iloc[k],
-                        self.forcing['Tdaily'].iloc[k])
+                        self.forcing['Tdaily'].iloc[k],
+                        Tsoil=Tsoil)
             # properties of first soil node
 
             canopy_forcing = {
-                'soil_temperature': self.soil.heat.T[0],
+                'soil_temperature': self.soil.heat.T[self.canopy_model.ix_roots],
                 'soil_water_potential': self.soil.water.h[self.canopy_model.ix_roots],
-                'soil_volumetric_water': self.soil.heat.Wliq[0],
-                'soil_volumetric_air': self.soil.heat.Wair[0],
+                'soil_volumetric_water': self.soil.heat.Wliq[self.canopy_model.ix_roots],
+                'soil_volumetric_air': self.soil.heat.Wair[self.canopy_model.ix_roots],
                 'soil_pond_storage': self.soil.water.h_pond,
                 'wind_speed': self.forcing['U'].iloc[k],
                 'air_temperature': self.forcing['Tair'].iloc[k],
@@ -297,9 +308,14 @@ class Model(object):
             self.results = _append_results('soil', k, soil_state, self.results)
 
         print('100%')
-        self.results = _append_results('canopy', None, {'z': self.canopy_model.z}, self.results)
+        ptnames = [pt.name for pt in self.canopy_model.planttypes]
+        ptnames.sort()
+        self.results = _append_results('canopy', None, {'z': self.canopy_model.z,
+                                                        'planttypes': np.array(ptnames)}, self.results)
 
         self.results = _append_results('soil', None, {'z': self.soil.grid['z']}, self.results)
+
+        logger.info('Finished simulation %.0f, running time %.2f seconds' % (self.Nsim, time.time() - time0))
 
         return self.results
 
@@ -357,7 +373,7 @@ def _append_results(group, step, step_results, results):
 #        print(variable)
 
         if variable in results_keys:
-            if variable == 'z':
+            if key == 'z' or key == 'planttypes':
                 results[variable] = step_results[key]
             else:
 #                print(type(step_results[key]))
@@ -365,11 +381,9 @@ def _append_results(group, step, step_results, results):
 
     return results
 
-#if __name__ == 'main':
-#    import logging
-#    from parameters.general import logging_configuration
-#    from logging.config import dictConfig
-#    dictConfig(logging_configuration)
+if __name__ == '__main__':
 
-#    driver(create_ncf=True, dbhfile='letto2014.txt')
+    from parameters.parametersets import lettosuo_parameters
+    outputfile=driver(create_ncf=True, parametersets=lettosuo_parameters)
 
+    print(outputfile)

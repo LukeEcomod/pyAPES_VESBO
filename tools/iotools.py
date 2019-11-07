@@ -37,7 +37,7 @@ def write_ncf(nsim=None, results=None, ncf=None):
 
             if length > 1:
                 ncf[key][:, nsim, :] = results[key]
-            elif key == 'soil_z' or key == 'canopy_z':
+            elif key == 'soil_z' or key == 'canopy_z' or key == 'canopy_planttypes':
                 if nsim == 0:
                     ncf[key][:] = results[key]
             else:
@@ -107,8 +107,12 @@ def initialize_netcdf(variables,
         var_unit = var[1]
         var_dim = var[2]
 
-        variable = ncf.createVariable(
-                var_name, 'f4', var_dim)
+        if var_name == 'canopy_planttypes':
+            variable = ncf.createVariable(
+                var_name, 'S10', var_dim)
+        else:
+            variable = ncf.createVariable(
+                    var_name, 'f4', var_dim)
 
         variable.units = var_unit
 

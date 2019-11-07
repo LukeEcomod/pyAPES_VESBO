@@ -122,7 +122,7 @@ class heat_and_water:
         # Crosses 1 at appr. when water content/dry mass is 8.8
         relative_conductance = min(1.0,
                                    (0.1285 * y[1]
-                                    / self.properties['dry_mass'] - 0.1285))
+                                    / self.properties['dry_mass'] - 0.1285)) * 0.5  ## TESTING!
 
         # [mol m-2 s-1]
         conductance_to_air_h2o = (
@@ -241,12 +241,16 @@ class heat_and_water:
         # [W m-2 K-1]
         moss_thermal_conductivity = thermal_conduction(volumetric_water)
 
-        # geometric mean
-        # thermal conductivity x depth. depth = soildepth + 0.5 x moss height
+#        # geometric mean
+#        # thermal conductivity x depth. depth = soildepth + 0.5 x moss height
+#        thermal_cond_to_soil = np.power(moss_thermal_conductivity
+#              * self.states['soil_thermal_conductivity'], 0.5)
+
+        # Kersti: two conductors in series
         thermal_cond_to_soil = (
-                np.power(moss_thermal_conductivity
-                         * self.states['soil_thermal_conductivity'], 0.5)
-                / (abs(self.states['soil_depth']) + 0.5 * self.properties['height']))
+              (0.5 * self.properties['height'] + abs(self.states['soil_depth']))
+              / (0.5 * self.properties['height'] / moss_thermal_conductivity + abs(self.states['soil_depth']) / self.states['soil_thermal_conductivity'])
+              )
 
 #        # two resistors in series
 #        moss_resistance = moss_thermal_conductivity / (0.5 * self.properties['height'])
@@ -261,7 +265,7 @@ class heat_and_water:
         # [J m-2 s-1] or [W m-2]
         heat_conduction = (
                 thermal_cond_to_soil
-                * (y[0] - self.states['soil_temperature']))
+                * (y[0] - self.states['soil_temperature']) / (abs(self.states['soil_depth']) + 0.5 * self.properties['height']))
 
         # internal heat lost or gained with water removing/entering
 
@@ -1269,7 +1273,7 @@ def surface_atm_conductance(wind_speed, height, friction_velocity=None, dT=0.0, 
     if friction_velocity == None:
         friction_velocity = wind_speed * kv / np.log((height - d) / zom)
 
-    delta = MOLECULAR_DIFFUSIVITY_H2O / (kv*friction_velocity)
+    delta = MOLECULAR_DIFFUSIVITY_H2O / (kv*friction_velocity + EPS)
 
     gb_h = (kv*friction_velocity) / (Pr - np.log(delta / height))
     gb_v = (kv*friction_velocity) / (Sc_v - np.log(delta / height))

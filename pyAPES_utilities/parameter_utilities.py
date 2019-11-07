@@ -118,8 +118,16 @@ def peat_hydrol_properties(x, unit='g/cm3', var='bd', ptype='A', fig=False, labe
     return pF_para, Ksat
 
 """ Functions for computing lad profiles """
+def single_lad_profiles(grid, dbhfile, hs, plot=False, biomass_function='marklund'):
+    quantiles = [1.0]
+    stand_data = lad_profiles(grid, dbhfile, quantiles, hs, plot=plot, biomass_function=biomass_function)
+    for key in stand_data['lai'].keys():
+        stand_data['lai'][key] = stand_data['lai'][key][0]
+    for key in stand_data['lad'].keys():
+        stand_data['lad'][key] = (stand_data['lad'][key]).flatten()
+    return stand_data
 
-def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
+def lad_profiles(grid, dbhfile, quantiles, hs, plot=False, biomass_function='marklund'):
     """
     Leaf area density (lad) profiles for tree species and understory shrubs
     Args:
@@ -136,20 +144,29 @@ def lad_profiles(grid, dbhfile, quantiles, hs, plot=False):
     # grid [m]
     z = np.linspace(0, grid['zmax'], grid['Nlayers'])
     # tress species lad profiles
-    lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(z, quantiles, normed=True, dbhfile=dbhfile, plot=plot)
+    lad_p, lad_s, lad_d, _, _, _, lai_p, lai_s, lai_d = model_trees(
+            z, quantiles, normed=True, dbhfile=dbhfile, plot=plot, biomass_function=biomass_function)
     # understory shrubs
     lad_g = np.zeros([len(z), 1])
-    lad_g[z < hs] = 1.0
+    lad_g[z <= hs] = 1.0
     lad_g[0] = 0.0
     if sum(lad_g) < 1.0:
         lad_g[1] = 1.0
     lad_g = lad_g / np.maximum(sum(lad_g * z[1]), eps)
 
-    return lad_p, lad_s, lad_d, lad_g, lai_p, lai_s, lai_d
+    return {'lad': {'pine': lad_p,
+                    'spruce': lad_s,
+                    'decid': lad_d,
+                    'shrubs': lad_g},
+            'lai': {'pine': lai_p,
+                    'spruce': lai_s,
+                    'decid': lai_d}
+            }
 
 def model_trees(z, quantiles, normed=False,
                 dbhfile='c:\\projects\\MLM_Hyde\\Data\\hyde_runkolukusarjat.txt',
-                plot=False):
+                plot=False,
+                biomass_function='marklund'):
     """
     reads runkolukusarjat from Hyde and creates lad-profiles for pine, spruce and decid.
     Args:
@@ -170,7 +187,7 @@ def model_trees(z, quantiles, normed=False,
     decid = dat[:, [0, 3]]
 
     # pines
-    h, hb, mleaf, L, a = profiles_hyde(pine, 'pine', z)
+    h, hb, mleaf, L, a = profiles_hyde(pine, 'pine', z, biomass_function=biomass_function)
     n = pine[:, 1]
     c = np.cumsum(n) / np.maximum(sum(n), eps)  # relative frequency
     m = 0.0
@@ -187,7 +204,7 @@ def model_trees(z, quantiles, normed=False,
             lad_p[:, k] = lad_p[:, k] / np.maximum(np.sum(lad_p[:, k] * dz), eps)
 
     # spruces
-    h, hb, mleaf, L, a = profiles_hyde(spruce, 'spruce', z)
+    h, hb, mleaf, L, a = profiles_hyde(spruce, 'spruce', z, biomass_function=biomass_function)
     n = spruce[:, 1]
     c = np.cumsum(n) / np.maximum(sum(n), eps)  # relative frequency
     m = 0.0
@@ -204,7 +221,7 @@ def model_trees(z, quantiles, normed=False,
             lad_s[:, k] = lad_s[:, k] / np.maximum(np.sum(lad_s[:, k] * dz), eps)
 
     # decid
-    h, hb, mleaf, L, a = profiles_hyde(decid, 'birch', z)
+    h, hb, mleaf, L, a = profiles_hyde(decid, 'birch', z, biomass_function=biomass_function)
     n = decid[:, 1]
     c = np.cumsum(n) / np.maximum(sum(n), eps)  # relative frequency
     m = 0.0
@@ -238,37 +255,70 @@ def model_trees(z, quantiles, normed=False,
 
     return lad_p, lad_s, lad_d, n_p, n_s, n_d, lai_p, lai_s, lai_d
 
-def profiles_hyde(data, species, z):
-    # height h model based on Näslund equation parameterized using Hyytiälä stand inventory from 2008
-    # trunk base ht model based on Tahvanainen & Forss, 2008 For. Ecol. Manag. Fig 4:
+def profiles_hyde(data, species, z, biomass_function='marklund'):
+    # height h model based on Näslund equation
+
     d = data[:,0]  # dbh, cm
     N = data[:,1]  # trees ha-1
 
     # compute
     if species == 'pine':
-        h = 1.3 + d**2.0 / (1.108 + 0.197*d)**2.0
-        ht = -3.0 + 0.76*h
+#        h = 1.3 + d**2.0 / (1.108 + 0.197*d)**2.0  # fitted to hyytiälä 2008
+        h = 1.3 + d**2.0 / (0.982 + 0.192*d)**2.0  # fitted to lettosuo 2009
+#        ht = -3.0 + 0.76*h  # Tahvanainen & Forss, 2008 For. Ecol. Manag. Fig 4
+        ht = 0.637*h  # fitted to lettosuo 2009
         ht = np.maximum(0.0, ht)
 
-        y, L = marklund(d, species)
+        if biomass_function=='marklund':
+            y, L = marklund(d, species)
+        elif biomass_function=='marklund_mod':
+            y, L = marklund_mod(d, h, species)
+        elif biomass_function=='repola':
+            y, L = repola(d, h, species)
+        elif biomass_function=='aleksis_combination':
+            y, L = aleksis_combination(d, h, ht, species)
+        else:
+            raise ValueError("Unknown biomass_function")
         mleaf = y[3]*N  # kg/ha
         L = L*1e-4*N  # leaf area m2/m2
 
     if species == 'birch':
-        h = 1.3 + d**2.0 / (0.674 + 0.201*d)**2.0
-        ht = -2.34 + 0.58*h
+#        h = 1.3 + d**2.0 / (0.674 + 0.201*d)**2.0  # fitted to hyytiälä 2008
+        h = 1.3 + d**2.0 / (1.048 + 0.191*d)**2.0  # fitted to lettosuo 2009
+#        ht = -2.34 + 0.58*h  # Tahvanainen & Forss, 2008 For. Ecol. Manag. Fig 4
+        ht = 0.468*h  # fitted to lettosuo 2009
         ht = np.maximum(0.0, ht)
 
-        y, L = marklund(d, species)
+        if biomass_function=='marklund':
+            y, L = marklund(d, species)
+        elif biomass_function=='marklund_mod':
+            y, L = marklund_mod(d, h, species)
+        elif biomass_function=='repola':
+            y, L = repola(d, h, species)
+        elif biomass_function=='aleksis_combination':
+            y, L = aleksis_combination(d, h, ht, species)
+        else:
+            raise ValueError("Unknown biomass_function")
         mleaf = y[3]*N  # kg/ha
         L = L*1e-4*N  # leaf area m2/m2
 
     if species == 'spruce':
-        h = 1.3 + d**3.0 / (1.826 + 0.303*d)**3.0
-        ht = -2.34 + 0.58*h
+#        h = 1.3 + d**3.0 / (1.826 + 0.303*d)**3.0  # fitted to hyytiälä 2008
+        h = 1.3 + d**3.0 / (1.500 + 0.342*d)**3.0  # fitted to lettosuo 2016
+#        ht = -2.34 + 0.58*h    # Tahvanainen & Forss, 2008 For. Ecol. Manag. Fig 4 - SAMA KOIVULLE ONKOHAN OIKEIN?
+        ht = 0.249*h  # fitted to lettosuo 2016
         ht = np.maximum(0.0, ht)
 
-        y, L = marklund(d, species)
+        if biomass_function=='marklund':
+            y, L = marklund(d, species)
+        elif biomass_function=='marklund_mod':
+            y, L = marklund_mod(d, h, species)
+        elif biomass_function=='repola':
+            y, L = repola(d, h, species)
+        elif biomass_function=='aleksis_combination':
+            y, L = aleksis_combination(d, h, ht, species)
+        else:
+            raise ValueError("Unknown biomass_function")
         mleaf = y[3]*N  # kg/ha
         L = L*1e-4*N  # leaf area m2/m2
 
@@ -355,6 +405,182 @@ def marklund(d, species):
 
     else:
         print('Vegetation.marklund: asked species (pine, spruce, birch) not found')
+        return None
+
+
+def marklund_mod(d, h, species):
+    """
+    marklund(d, species):
+    Computes tree biomasses for Scots pine, Norway spruce or birch based on Marklund et al. 1988.
+    Returns biomasses of each tree compartment (in kg), based on diameter at breast height (d, in cm)\
+    INPUT:
+        d - DBH, diameter at breast height (cm)
+        species - 'pine', 'spruce', 'birch'.
+    OUTPUT:
+        array y:
+        y[0] - stem wood (kg)
+        y[1] - stem bark
+        y[2] - living branches incl. needles / leaves
+        y[3] - needles /leaves
+        y[4] - dead branches
+        y[5] - stumps
+        y[6] - roots, >=5cm
+        y[7] - roots, <5cm
+        L - one-sided leaf area (m2)\n
+    SOURCE:
+        Marklund L.G.(1988): Biomassafunktioner for tall, gran och björk i Sverige. SLU Rapport 45, 73p
+        Kärkkäinen L., 2005 Appendix 4.
+        Kellomäki et al. (2001). Atm. Env.\n
+    AUTHOR:
+        Samuli Launiainen, 25.4.2014
+    """
+    SLA = {'pine': 6.8, 'spruce': 4.7, 'decid': 14.0}  # Härkönen et al. 2015 BER 20, 181-195
+    #d=np.array(float(d))
+
+    if species.lower()=='pine':
+        y1=np.exp(11.4219*(d/(d+14))-2.2184)    #stem wood
+        y2=np.exp(8.8489*(d/(d+16))-2.9748)     #stem bark
+        y3=np.exp(9.1015*(d/(d+10))-2.8604)     #living branches incl. needles
+        y4=np.exp(-3.4781 + 12.1095*(d/(d+ 7)) + 0.0413 * h - 1.5650*(np.log(h)))      #needles
+        y5=np.exp(9.5938*(d/(d+10))-5.3338)     #dead branches
+        y6=np.exp(11.0481*(d/(d+15))-3.9657)    #stumps
+        y7=np.exp(13.2902*(d/(d+9))-6.3413)     #roots, >=5cm
+        y8=np.exp(8.8795*(d/(d+10))-3.8375)     #roots, <5cm
+
+        y=[y1, y2, y3, y4, y5, y6, y7, y8] # array of biomasses (kg)
+        L=y4*SLA['pine'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='spruce':
+        y1=np.exp(11.4873*(d/(d+14))-2.2471)   #stem wood
+        y2=np.exp(9.8364*(d/(d+15))-3.3912)    #stem bark
+        y3=np.exp(8.5242*(d/(d+13))-1.2804)    #living branches incl. needles
+        y4=np.exp(-1.8551 + 9.7809*(d/(d+12)) - 0.4873*(np.log(h)))    #needles
+        y5=np.exp(9.9550*(d/(d+18))-4.3308)    #dead branches
+        y6=np.exp(10.6686*(d/(d+17))-3.3645)   # stumps
+        y7=np.exp(13.3703*(d/(d+8))-6.3851)    #roots, >=5cm
+        y8=np.exp(7.6283*(d/(d+12))-2.5706)    #roots, <5cm
+
+        y=[y1, y2, y3, y4, y5, y6, y7, y8] # array of biomasses (kg)
+        L=y4*SLA['spruce'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='birch':
+        # repola
+        d_ski = 2 + 1.25 * d
+        y1=np.exp(-5.001 + 9.284*d_ski/(d_ski+12) + 1.143*np.log(h))    #stem wood
+        y2=np.exp(-5.449 + 9.967*d_ski/(d_ski+12) + 2.894*h/(h+20))     #stem bark
+        y3=np.exp(-4.279 + 14.731*d_ski/(d_ski+16) - 3.139*h/(h+10))     #living branches incl. needles
+
+        y5=np.exp(-7.742 + 11.362*d_ski/(d_ski+16))     #dead branches
+
+        # foliage: repola, jakobsson 1999
+        y4=np.where(d > 11.0, np.exp(-29.566 + 33.372*d_ski/(d_ski+2)),      # repola
+                    0.0009*(d*10)**1.47663)      # jakobsson, Pubescent birch
+
+        y=[y1, y2, y3, y4, y5] # array of biomasses (kg)
+
+        L=y4*SLA['decid'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    else:
+        print('Vegetation.marklund: asked species (pine, spruce, birch) not found')
+        return None
+
+def repola(d, h, species):
+    """
+    Computes tree biomasses for Scots pine, Norway spruce or birch based on repola 2007, check repola 2008,2009
+
+    """
+    SLA = {'pine': 6.8, 'spruce': 4.7, 'decid': 14.0}  # Härkönen et al. 2015 BER 20, 181-195
+    #d=np.array(float(d))
+
+    d_ski = 2 + 1.25 * d
+
+    if species.lower()=='pine':
+        y1=np.exp(-3.778 +8.294*d_ski/(d_ski+14) +4.949*h/(h+12))    #stem wood
+        y2=np.exp(-4.756 +8.616*d_ski/(d_ski+12) +0.277*np.log(h))     #stem bark
+        y3=np.exp(-6.024 + 15.289*d_ski/(d_ski+12) - 3.202*h/(h+12))     #living branches incl. needles
+        y4=np.exp(-6.303 +14.472*d_ski/(d_ski+6) -3.976*h/(h+1))      #needles
+        y5=np.exp(-5.334 + 10.789*d_ski/(d_ski+16))     #dead branches
+
+        y=[y1, y2, y3, y4, y5] # array of biomasses (kg)
+        L=y4*SLA['pine'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='spruce':
+        y1=np.exp(-3.655 +7.942*d_ski/(d_ski+14) +0.907*np.log(h) +0.018*h)    #stem wood
+        y2=np.exp(-4.349 +9.879*d_ski/(d_ski+18) +0.274*np.log(h))     #stem bark
+        y3=np.exp(-3.914 +15.220*d_ski/(d_ski+13) -4.350*h/(h+5))     #living branches incl. needles
+        y4=np.exp(-2.994 +12.251*d_ski/(d_ski+10) -3.415*h/(h+1))      #needles
+        y5=np.exp(-5.467 + 6.252*d_ski/(d_ski+18) + 1.068*np.log(h))     #dead branches
+
+        y=[y1, y2, y3, y4, y5] # array of biomasses (kg)
+        L=y4*SLA['spruce'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='birch':
+        y1=np.exp(-5.001 + 9.284*d_ski/(d_ski+12) + 1.143*np.log(h))    #stem wood
+        y2=np.exp(-5.449 + 9.967*d_ski/(d_ski+12) + 2.894*h/(h+20))     #stem bark
+        y3=np.exp(-4.279 + 14.731*d_ski/(d_ski+16) - 3.139*h/(h+10))     #living branches incl. needles
+        y4=np.exp(-29.566 + 33.372*d_ski/(d_ski+2))      #foliage
+        y5=np.exp(-7.742 + 11.362*d_ski/(d_ski+16))     #dead branches
+
+        y=[y1, y2, y3, y4, y5] # array of biomasses (kg)
+
+        L=y4*SLA['decid'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    else:
+        print('Vegetation.repola: asked species (pine, spruce, birch) not found')
+        return None
+
+def aleksis_combination(d, h, ch, species):
+    """
+    Computes needle biomasses for Scots pine, Norway spruce or birch
+
+    """
+    SLA = {'pine': 6.8, 'spruce': 4.7, 'decid': 14.0}  # Härkönen et al. 2015 BER 20, 181-195
+    #d=np.array(float(d))
+
+    d_ski = 2 + 1.25 * d
+
+    if species.lower()=='pine':
+        # Repola et al. 2009
+        y4=np.exp(-1.748+14.824*d_ski/(d_ski+4)-12.684*h/(h+1)+1.209*np.log(h - ch)+(0.032+0.093)/2)
+
+        y=[0, 0, 0, y4, 0] # array of biomasses (kg)
+        L=y4*SLA['pine'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='spruce':
+        # Marklund 1988
+        y4=np.exp(-1.5732 + 8.4127*(d/(d+12))-1.5628*np.log(h)+1.4032*np.log(h - ch))
+
+        y=[0, 0, 0, y4, 0] # array of biomasses (kg)
+        L=y4*SLA['spruce'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    elif species.lower()=='birch':
+        # Tupek et al 2015
+        y4=np.exp(-7.832+10.043*(d_ski/(d_ski+8.37))+2.875*((h-ch)/h)+(0.004182519*0.004182519)/2)
+
+        y=[0, 0, 0, y4, 0] # array of biomasses (kg)
+
+        L=y4*SLA['decid'] # leaf area (m2) based on specific foliage area (SLA)
+
+        return y, L
+
+    else:
+        print('Vegetation.repola: asked species (pine, spruce, birch) not found')
         return None
 
 def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
@@ -548,3 +774,44 @@ def lad_constant(z, LAI, h, hb=0.0):
     a = a / sum(a*dz)
     LAD = LAI * a
     return LAD
+
+def plot_biomassfunktions():
+    # height h model based on Näslund equation
+
+    d = np.linspace(1,30,30)
+
+    species='pine'
+    h = 1.3 + d**2.0 / (0.982 + 0.192*d)**2.0  # fitted to lettosuo 2009
+    plt.figure()
+    plt.subplot(1,3,1)
+    plt.title(species)
+    y, L = marklund(d, species)
+    plt.plot(d, y[3], label='marklund_dbh')
+    y, L = marklund_mod(d, h, species)
+    plt.plot(d, y[3],  label='marklund_dbh_h_repola/jakobson')
+    y, L = repola(d, h, species)
+    plt.plot(d, y[3],  label='repola')
+
+    species='spruce'
+    h = 1.3 + d**3.0 / (1.500 + 0.342*d)**3.0  # fitted to lettosuo 2016
+    plt.subplot(1,3,2)
+    plt.title(species)
+    y, L = marklund(d, species)
+    plt.plot(d, y[3], label='marklund_dbh')
+    y, L = marklund_mod(d, h, species)
+    plt.plot(d, y[3],  label='marklund_dbh_h_repola/jakobson')
+    y, L = repola(d, h, species)
+    plt.plot(d, y[3],  label='repola')
+
+    species = 'birch'
+    h = 1.3 + d**2.0 / (1.048 + 0.191*d)**2.0  # fitted to lettosuo 2009
+    plt.subplot(1,3,3)
+    plt.title(species)
+    y, L = marklund(d, species)
+    plt.plot(d, y[3], label='marklund_dbh')
+    y, L = marklund_mod(d, h, species)
+    plt.plot(d, y[3],  label='marklund_dbh_h_repola/jakobson')
+    y, L = repola(d, h, species)
+    plt.plot(d, y[3],  label='repola')
+
+    plt.legend()

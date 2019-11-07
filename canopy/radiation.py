@@ -304,7 +304,7 @@ def kdiffuse(LAI, x=1.0):
     YY = np.exp(-Kb*LAI)*np.sin(ang)*np.cos(ang)
 
     Taud = 2.0*np.trapz(YY*dang)
-    Kd = -np.log(Taud) / LAI  # extinction coefficient for diffuse radiation
+    Kd = -np.log(Taud) / (LAI + EPS)  # extinction coefficient for diffuse radiation
 
     return Kd
 
@@ -730,7 +730,7 @@ def canopy_sw_Spitters(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbedo
 
     return SWb, SWd, Q_sl, Q_sh, q_sl, q_sh, q_soil, f_sl, alb
 
-def compute_clouds_rad(doy, zen, Rg, H2O):
+def compute_clouds_rad(doy, zen, Rg, H2O, Tair):
     """
     Estimates atmospheric transmissivity (tau_atm [-]), cloud cover fraction
     (f_cloud (0-1), [-]) and fraction of diffuse to total SW radiation (f_diff, [-])
@@ -757,9 +757,9 @@ def compute_clouds_rad(doy, zen, Rg, H2O):
     # solar constant at top of atm.
     So = 1367
     # clear sky Global radiation at surface
-    Qclear = (So * (1.0 + 0.033 * np.cos(2.0 * np.pi * (np.minimum(doy, 365) - 10) / 365)) * np.cos(zen))
-    tau_atm = Rg / Qclear
-    tau_atm[tau_atm < 0.0] = 0.0
+    Qclear = np.maximum(0.0,
+                        (So * (1.0 + 0.033 * np.cos(2.0 * np.pi * (np.minimum(doy, 365) - 10) / 365)) * np.cos(zen)))
+    tau_atm = Rg / (Qclear + EPS)
 
     # cloud cover fraction
     f_cloud = np.maximum(0, 1.0 - tau_atm / 0.7)
@@ -773,10 +773,12 @@ def compute_clouds_rad(doy, zen, Rg, H2O):
 
     # clear-sky atmospheric emissivity
     ea = H2O / 100  # near-surface vapor pressure (hPa)
-    emi0 = np.where(ea >= 2.0, 0.72 + 0.009 * (ea - 2.0), 0.72 -0.076 * (ea - 2.0))
+#    emi0 = np.where(ea >= 2.0, 0.72 + 0.009 * (ea - 2.0), 0.72 -0.076 * (ea - 2.0))
+    emi0 = 1.24 * (ea/(Tair + 273.15))**(1./7.) # Song et al 2009
 
     # all-sky emissivity (cloud-corrections)
-    emi_sky = (1.0 + 0.22 * f_cloud**2.75) * emi0  # Maykut & Church (1973)
+#    emi_sky = (1.0 + 0.22 * f_cloud**2.75) * emi0  # Maykut & Church (1973)
+    emi_sky = (1 - 0.84 * f_cloud) * emi0 + 0.84 * f_cloud  # Song et al 2009 / (Unsworth & Monteith, 1975)
 
 #    other emissivity formulas tested
 #    emi_sky=(1 + 0.2*f_cloud)*emi0;
@@ -784,9 +786,13 @@ def compute_clouds_rad(doy, zen, Rg, H2O):
 #    emi_sky=(1 + (1./emi0 -1)*0.87.*f_cloud^3.49).*emi0; % Niemelä et al. 2001 eq. 15 assuming Ts = Ta and surface emissivity = 1
 #    emi_sky=(1-0.84*f_cloud)*emi0 + 0.84*f_cloud; % atmospheric emissivity (Unsworth & Monteith, 1975)
 
-    f_cloud[Rg < 100] = np.nan
-    f_diff[Rg < 100] = np.nan
-    emi_sky[Rg < 100] = np.nan
+#    f_cloud[Rg < 100] = np.nan
+#    f_diff[Rg < 100] = np.nan
+#    emi_sky[Rg < 100] = np.nan
+
+    f_cloud[Qclear < 10] = np.nan
+    f_diff[Qclear < 10] = np.nan
+    emi_sky[Qclear < 10] = np.nan
 
     df = pd.DataFrame({'f_cloud': f_cloud, 'f_diff': f_diff, 'emi_sky': emi_sky})
     df = df.interpolate()
@@ -1135,10 +1141,10 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     IbSky = 100.0
     IdSky = 100.0
 
-    if LAIz == None:
-        LAIz = np.ones(102)*float(LAI) / 100.0
-        LAIz[0] = 0.
-        LAIz[-1] = 0.
+#    if LAIz == None:
+#        LAIz = np.ones(102)*float(LAI) / 100.0
+#        LAIz[0] = 0.
+#        LAIz[-1] = 0.
     N = len(LAIz)
 
     # for LW calculations
@@ -1168,4 +1174,4 @@ def test_radiation_functions(LAI, Clump, ZEN, x=1.0, method="canopy_sw_ZhaoQuall
     if method == "canopy_lw_ZhaoQualls":
         print("------TestRun of radiation.canopy_lw_ZhaoQualls with given LAI and CLUMP -----------")
         LWnet, LWdn, LWup, gr = canopy_lw_ZhaoQualls(LAIz, Clump, x, T, LWdn0, LWup0, leaf_emi=leaf_emi, soil_emi=soil_emi, PlotFigs=True)
-        print(sum(LWnet*LAIz), LWdn[-1]-LWup[-1] - (LWdn[0]- LWup[0]))
+        print(LWdn[-1],LWdn[-1]-LWup[-1])

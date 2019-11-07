@@ -30,7 +30,7 @@ def yearly_cumulative(results, variables):
         ix = np.where(years > t)
         for i in range(0, len(variables)):
             yearly_cum[i,ix] = yearly_cum[i,ix] - yearly_cum[i,ix[0][0]]
-    
+
     for i in range(len(years)-1):
         if years[i] != years[i+1]:
             yearly_cum[:,i] = np.nan
@@ -53,10 +53,10 @@ def diurnal_cycle(data, ap='hour'):
         Nodata == np.NaN are omited when statistics are computed.
     Samuli Launiainen, Luke Jan 7th, 2018
     """
-    
+
     if isinstance(data, pd.Series):
         data = data.to_frame()
-    
+
     if isinstance(data, pd.DataFrame):
         r, c = np.shape(data)  # rows, cols
         hr = data.index.hour
@@ -64,7 +64,7 @@ def diurnal_cycle(data, ap='hour'):
         hour = np.unique(hr)
         minu = np.unique(mn)
         cols = data.columns
-        
+
 
     else:
         print('diurnal_cycle: data must be pd.DataFrame or pd.Series')
@@ -73,18 +73,18 @@ def diurnal_cycle(data, ap='hour'):
     res = {}
     for k in range(c):
         if ap.lower() == 'hour':
-            N = len(hour)             
+            N = len(hour)
             x = np.ones((N, 11))*np.NaN
             x[:, 0] = hour
             x[:, 1] = 0.0
-            
+
             n = 0
             for t in hour:
                 y = data.iloc[:, k]  # column k
                 f = np.where((hr == t) & (np.isfinite(y)))[0]
-                
+
                 x[n, 2] = len(f)  # no of observations
-                x[n, 3] = np.mean(y[f]) 
+                x[n, 3] = np.mean(y[f])
                 x[n, 4] = np.std(y[f])
                 x[n, 5] = x[n, 3] / x[n, 2]  # s.e.
                 x[n, 6:] = np.percentile(y[f], [50.0, 5.0, 25.0, 75.0, 95.0])

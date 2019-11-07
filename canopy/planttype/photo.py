@@ -586,6 +586,7 @@ def photo_c3_bwb(photop, Qp, T, RH, ca, gb_c, gb_v, P=101300.0):
     theta = photop['theta']
     g1 = photop['g1']  # slope parameter
     g0 = photop['g0']
+    beta = photop['beta']
 
     # --- CO2 compensation point -------
     Tau_c = 42.75 * np.exp(37830*(Tk - TN) / (TN * GAS_CONSTANT * Tk))
@@ -1016,8 +1017,8 @@ def test_photo_temperature_response(species='pine'):
                 'Jmax': 105.0,
                 'Rd': 1.3,
                 'tresp': {
-                    'Vcmax': [78.0, 200.0, 650.0],
-                    'Jmax': [56.0, 200.0, 647.0],
+                    'Vcmax': [78.3, 200.0, 650.1],
+                    'Jmax': [56.0, 200.0, 647.9],
                     'Rd': [33.0]
                     }
                 }
@@ -1057,34 +1058,34 @@ def test_photo_temperature_response(species='pine'):
 
     if species.upper() == 'PINE2':
         photop= {
-                'Vcmax': 67.33,
-                'Jmax': 70.77,
+                'Vcmax': 55.0,
+                'Jmax': 105.0,
                 'Rd': 1.3,
                 'tresp': {
-                    'Vcmax': [69.8, 200.0, 659.9],
-                    'Jmax': [100.3, 147.9, 511.0],
+                    'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                    'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                     'Rd': [33.0]
                     }
                 }
     if species.upper() == 'SPRUCE2':
         photop = {
-                'Vcmax': 69.7,
-                'Jmax': 130.2,
+                'Vcmax': 60.0,
+                'Jmax': 114.0,
                 'Rd': 1.5,
                 'tresp': {
-                    'Vcmax': [53.2, 200.0, 640.0],  # Tarvainen et al. 2013 Oecologia
-                    'Jmax': [38.4, 200.0, 655.5],
+                    'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                    'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                     'Rd': [33.0]
                     }
                 }
     if species.upper() == 'DECID2':
         photop = {
-                'Vcmax': 101.9,
-                'Jmax': 111.89,
+                'Vcmax': 50.0,
+                'Jmax': 95.0,
                 'Rd': 1.3,
                 'tresp': {
-                    'Vcmax': [63.8, 200.0, 655.0],  # Medlyn et al 2002.
-                    'Jmax': [108.5, 156.8, 543.2],
+                    'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
+                    'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                     'Rd': [33.0]
                     }
                 }
