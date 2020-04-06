@@ -1,0 +1,98 @@
+%FIHy_forcing_1997-2017.dat columns for 
+
+Hyytiala SMEAR II / Samuli Launiainen 04.03.2019
+
+1 year
+2 month
+3 day
+4 hour
+5 min
+6 doy, day of year
+
+7 U, mean horizontal wind speed (m/s)
+8 ust, friction velocity (m/s)
+9 Ta, air temperature (degC)
+10 RH, air relative humidity (%)
+11 CO2, air CO2 mixing ratio (ppm)
+12 H2O, air H2O mixing ratio (ppth)
+13 O3, air ozone  (ppb); NOT INCLUDES
+14 Prec, precipitation rate (mm/30min)
+15 P, air pressure (kPa)
+16 dirPAR, direct PAR radiation (Wm-2)
+17 diffPAR, diffuse PAR radiation (Wm-2)
+18 dirNIR, direct NIR radiation (Wm-2)
+19 diffNIR, diffuse NIR radiation (Wm-2)
+20 Rnet, net radiation (Wm-2)
+21 LWin, incoming thermal radiation (Wm-2), not existing for all years
+22 LWout, outgoing thermal radiation (Wm-2), not existing for all years
+23 LWnet, net thermal radiation (Wm-2), derived from measured Rnet - Glob + ReflGlob
+24 Tsh (degC), soil temperature in humus layer
+25 Tsa (degC), -"- A-horizon (5-10cm)
+26 Tsc (degC), -"- C-horizon (30cm
+27 Wh (m3/m3), soil moisture in humus
+28 emiatm (-), atm. emissivity, estimated
+29 cloudfact (-), cloud fraction, estimated
+30 Rew (-), relative plant extractable water in root zone
+31 Psi_s (MPa), approximative soil water potential in A-horizon
+32 Zen (rad), solar zenith angle
+33 Azim (rad), solar azimuth angle
+34 Daylength (hours), period when ZEN >0
+35 Ws (m3/m3), soil moisture in A-horizon
+36 Tdaily (degC), daily mean temperature
+37 X (degC), phenology model parameter
+38 DDsum (degC), degree-day sum (T0 = +5.0 degC)
+
+****
+Meteorological values refer to above canopy
+
+Gap-filling using linear interpolation and MDV.
+PAR and NIR extracted from Global radiation assuming PAR = 0.45*Rg and rest is NIR.
+direct and diffuse components separated as in Launiainen et al. 2015 Ecol. Mod.
+For computing emiatm and cloudfact, see Launiainen et al. 2015 Ecol. Mod.
+Zen, Azim and daylength computed from NOAA solar equations for lat=61.52, lon=24.0, timezone=utc+2
+
+Rew computed from Wa as:
+
+Rew = minumum(1, (Wa - wp) /(fc - wp), 
+where	
+fc = 0.30 % field capacity
+wp = 0.03 % wilting point
+
+Psi_s is computed from SWC using vanGenuchten-Mualem wrc-model with following parameters:
+
+pF = {'ThetaS': 0.50, 'ThetaR': 0.03, 'alpha': 0.06, 'n': 1.35}  # A-horizon pF curve
+
+
+****
+FIHy_flx_1997-2017.dat columns
+Ecosystem - atmosphere fluxes from SMEAR II
+
+1 year
+2 month
+3 day
+4 hour
+5 minute
+6 doy
+
+7 NEE (umolm-2s-1) net ecosystem exchange  = CO2 balance, <=0 sink, >0 source to atmosphere
+8 GPP (umolm-2s-1) gross primary productivity = photosynthetic CO2 uptake, >=0
+9 Reco (umolm-2s-1) ecosystem respiration == CO2 release, >=0
+10 H (Wm-2), sensible heat flux, f(Tcanopy - Tair), positive upwards
+11 Gflux (Wm-2), ground heat flux, f(Tsurface - Tsoil), positive upwards
+12 Rnet (Wm-2), net radiation balance
+13 Qc_NEE (-), quality flag for NEE, GPP, Reco: 0 =observation, >0 =gap-filled
+14 Qc_H (-), quality flag for H: 0 =observation, >0 =gap-filled
+15 LE (Wm-2), latent heat flux, >0 upwards
+16 ET (mmolm-2s-1), evapotranspiration, >0 upwards; LE and ET are ~same in different units
+
+**** following are as NEE, GPP and Reco but gap-filled and partitioned with different methods
+17 NEE_1
+18 GPP_1
+19 GPP_2
+20 GPP_3
+21 GPP_4
+22 Reco_1
+23 Reco_2
+24 Reco_3
+25 Reco_4
+26 Qc_NEE_1 (-), quality flag for NEE_1 --> 0 = observation
