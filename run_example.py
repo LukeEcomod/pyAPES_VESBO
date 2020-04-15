@@ -4,6 +4,12 @@ Created on Tue Oct 09 16:31:25 2018
 
 @author: Samuli Launiainen
 """
+
+# to show figures in qt (pop-up's!)
+# write in console: 
+# import matplotlib.pyplot
+# %matplotlib qt
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -265,16 +271,88 @@ G = results['soil_heat_flux'][:, sim, ixs]
 plt.plot(t, G, 'r-');
 plt.ylabel(results['soil_heat_flux'].attrs['units'])
 
-#%% -- ecosystem fluxes are integrated exchange rates from ground to canopy top. Example for daytime NEE
+#%% -- ecosystem fluxes are integrated exchange rates from ground to canopy top.
+# Example for daytime NEE and H, LE and leaf-air temperature difference
 
-plt.figure('canopy co2 flux')
+plt.figure('canopy flux profiles daytime', figsize=(8,8))
 
-plt.subplot(2,2,1)
-x = results['canopy_co2_flux'][:, sim, :]
+var = ['canopy_co2_flux', 'canopy_sensible_heat_flux', 'canopy_latent_heat_flux']
+
+n = 1
+for v in var:
+    plt.subplot(2,2,n)
+    x = results[v][:, sim, :]
+    xmd = np.mean(x.loc[par > 200, :], axis=0) # day
+    plt.plot(xmd, zc, '-', label=x.attrs['units'])
+    plt.xlabel(x.attrs['units']); plt.ylabel(zc.attrs['units'])
+    #plt.legend()
+    n += 1
+
+# leaf-air temperature difference, average at canopy layers
+plt.subplot(2,2,n)
+x = results['canopy_Tleaf'][:, sim, :] - results['canopy_temperature'][:, sim, :]
 xmd = np.mean(x.loc[par > 200, :], axis=0) # day
-plt.plot(xmd, zc, '-', label=x.attrs['units'])
-plt.xlabel(x.attrs['units']); plt.ylabel(zc.attrs['units'])
+plt.plot(xmd, zc, '-', label='T_l - T_a [degC]')
+plt.xlabel('T_{leaf} - T_{air} [degC]'); plt.ylabel(zc.attrs['units'])
+
+#%% -- leaf gas-exchange and leaf energy balance is computed in canopy.planttype -submodel
+# let's look how sunlit and shaded leaves differ in pines; let's plot ensemble profiles and look timeseries
+# of photosynthesis, heat fluxes and leaf temperature
+print(results['canopy_planttypes'])
+ptype = np.where(results['canopy_planttypes'] == 'pine')[0][0] # at index 1 we have pine
+
+plt.figure('planttype sunlit / shaded leaf fluxes', figsize=(8,12))
+
+vsl = ['pt_net_co2_sunlit', 'pt_latent_heat_sunlit', 'pt_sensible_heat_sunlit',
+       'pt_stomatal_conductance_h2o_sunlit', 'pt_leaf_temperature_sunlit', 'pt_boundary_conductance_h2o_sunlit']
+vsh = ['pt_net_co2_shaded', 'pt_latent_heat_shaded', 'pt_sensible_heat_shaded', 'pt_stomatal_conductance_h2o_shaded',
+       'pt_leaf_temperature_shaded', 'pt_boundary_conductance_h2o_shaded']
+
+for k in range(6):
+    plt.subplot(3,2,k+1)
+    
+    xsl = np.mean(results[vsl[k]][:, sim, ptype, :].loc[par > 200, :], axis=0) # day
+    plt.plot(xsl, zc, '-', label='sunlit')
+    xsh = np.mean(results[vsh[k]][:, sim, ptype, :].loc[par > 200, :], axis=0) # day
+    plt.plot(xsh, zc, '--', label='shaded')    
+    plt.xlabel(results[vsl[k]].attrs['units']); plt.ylabel(zc.attrs['units'])
 plt.legend()
 
-# ... to be continued ...
+# timeseries
 
+plt.figure('sunlit leaves timeseries at all heights', figsize=(12,8))
+
+for k in range(6):
+    plt.subplot(3,2,k+1)
+    
+    plt.plot(t, results[vsl[k]][:, sim, ptype, :], '-', label='sunlit') 
+    plt.ylabel(results[vsl[k]].attrs['units'])
+
+#%% --- canopy.forestfloor -submodel handles moss and litter layer CO2, water and energy exchange
+
+var = ['ffloor_net_radiation', 'ffloor_sensible_heat', 'ffloor_latent_heat',
+       'ffloor_ground_heat', 'ffloor_photosynthesis', 'ffloor_water_storage']
+
+plt.figure('forestfloor fluxes', figsize=(12,8))
+
+for k in range(6):
+    plt.subplot(3,2,k+1)
+    
+    plt.plot(t, results[var[k]][:, sim], '-', label='sunlit') 
+    plt.ylabel(results[var[k]].attrs['units'])
+    
+#%% --- and forestfloor could consist of different groundtypes...
+
+# ...
+    
+#%% --- soil - submodule computes soil moisture and temperature
+
+var = ['soil_temperature', 'soil_volumetric_water_content']
+lyrs = [0, 1, 2, 3, 4] # five top layers 
+plt.figure('soil')
+k = 1
+for v in var:
+    plt.subplot(2,1,k)
+    plt.plot(t, results[v][:,sim,lyrs])
+    plt.ylabel(results[v].attrs['units'])
+    k += 1

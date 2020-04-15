@@ -19,7 +19,7 @@ from tools.utilities import lad_weibul, lad_constant
 
 
 gpara = {'dt' : 1800.0,  # timestep in forcing data file [s]
-           'start_time' : "2005-06-05",  # start time of simulation [yyyy-mm-dd]
+           'start_time' : "2005-06-01",  # start time of simulation [yyyy-mm-dd]
            'end_time' : "2005-06-10",  # end time of simulation [yyyy-mm-dd]
            'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat",  # forcing data file*
            'results_directory':'results/Hyytiala/'
@@ -131,7 +131,7 @@ pt1 = { 'name': 'pine',
 
 pt2 = { 'name': 'spruce',
         'LAImax': 1.0, # maximum annual LAI m2m-2
-        'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=0.0, species='spruce'),  # leaf-area density m2m-3
+        'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=0.5, species='spruce'),  # leaf-area density m2m-3
         # cycle of photosynthetic activity
         'phenop': {
             'Xo': 0.0,
@@ -184,7 +184,7 @@ pt2 = { 'name': 'spruce',
         
 pt3 = { 'name': 'decid',
         'LAImax': 1.2, # maximum annual LAI m2m-2
-        'lad': lad_weibul(z, LAI=1.0, h=6.0, hb=0.0, species='birch'),  # leaf-area density m2m-3
+        'lad': lad_weibul(z, LAI=1.0, h=10.0, hb=0.5, species='birch'),  # leaf-area density m2m-3
         # cycle of photosynthetic activity
         'phenop': {
             'Xo': 0.0,
