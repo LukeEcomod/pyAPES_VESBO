@@ -58,15 +58,15 @@ def driver(parameters,
         create_ncf (bool): results saved to netCDF4 file
         result_file (str): name of result file
     """
-    
-    # --- CONFIGURATION PARAMETERS of LOGGING and NetCDF -outputs read 
+
+    # --- CONFIGURATION PARAMETERS of LOGGING and NetCDF -outputs read
     from parameters.outputs import output_variables, logging_configuration
     from logging.config import dictConfig
-    
+
     # --- LOGGING ---
     dictConfig(logging_configuration)
     logger = logging.getLogger(__name__)
-    
+
     # --- CHECK PARAMETERS ---
 
     if isinstance(parameters, dict):
@@ -80,9 +80,9 @@ def driver(parameters,
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
     # --- SIMULATIOS AND OUTPUTS ---
-    
+
     tasks = []
-    
+
     for k in range(Nsim):
         tasks.append(
             Model(
@@ -94,7 +94,7 @@ def driver(parameters,
                 nsim=k
             )
         )
-    
+
     if create_ncf: # outputs to NetCDF-file, returns filename
         gpara = parameters[0]['general'] # same for all tasks
         timestr = time.strftime('%Y%m%d%H%M')
@@ -105,9 +105,9 @@ def driver(parameters,
 
         #freq = '{}S'.format(gpara['dt'])
         #time_index = date_range(gpara['start_time'], gpara['end_time'], freq=freq, closed='left')
-        
+
         time_index = parameters[0]['forcing'].index
-        
+
         ncf, _ = initialize_netcdf(
                 output_variables['variables'],
                 Nsim,
@@ -131,9 +131,9 @@ def driver(parameters,
 
         output_file = gpara['results_directory'] + filename
         logger.info('Ready! Results are in: ' + output_file)
-        
+
         ncf.close()
-        
+
         return output_file, tasks[0]
 
     else: # returns dictionary of outputs
@@ -181,7 +181,6 @@ class Model(object):
         if canopy_para['ctr']['seasonal_LAI'] and 'DDsum' in forcing:
             for pt in list(canopy_para['planttypes'].keys()):
                 canopy_para['planttypes'][pt]['laip'].update({'DDsum0': forcing['DDsum'].iloc[0]})
-
 
         self.canopy_model = CanopyModel(canopy_para, self.soil.grid['dz'])
 
@@ -254,11 +253,11 @@ class Model(object):
                 'zenith_angle': self.forcing['Zen'].iloc[k],        # [rad]
 
                 # from soil model
-                'soil_temperature': self.soil.heat.T[self.canopy_model.ix_roots],       # [deg C]
-                'soil_water_potential': self.soil.water.h[self.canopy_model.ix_roots],  # [m] ?
+                'soil_temperature': self.soil.heat.T[self.canopy_model.ix_roots],         # [deg C]
+                'soil_water_potential': self.soil.water.h[self.canopy_model.ix_roots],    # [m]
                 'soil_volumetric_water': self.soil.heat.Wliq[self.canopy_model.ix_roots], # [m3 m-3]
                 'soil_volumetric_air': self.soil.heat.Wair[self.canopy_model.ix_roots],   # [m3 m-3]
-                'soil_pond_storage': self.soil.water.h_pond * WATER_DENSITY,    # [kg m-2]
+                'soil_pond_storage': self.soil.water.h_pond * WATER_DENSITY,              # [kg m-2]
             }
 
             canopy_parameters = {
@@ -309,7 +308,6 @@ class Model(object):
                     'nir':  self.forcing['dirNir'].iloc[k] + self.forcing['diffNir'].iloc[k],
                     'lw_in': self.forcing['LWin'].iloc[k]
                     }
-
 
             soil_state.update(soil_flux)
 
