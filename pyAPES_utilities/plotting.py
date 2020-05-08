@@ -97,8 +97,6 @@ def plot_fluxes(results, Data,
     if save_to_path:
         plt.savefig(save_to_path)
 
-    return fig
-
 def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conversion':1.0},
                        colors=default, xticks=True, stack=False, cum=False, labels=None, limits=True, legend=True):
     """
