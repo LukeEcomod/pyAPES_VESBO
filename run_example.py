@@ -15,11 +15,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from pyAPES import driver
-#from parameters.parameter_tools import get_parameter_list
+from parameters.parameter_tools import get_parameter_list
 from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
-#from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df, plot_fluxes
-
 
 # Get parameters and forcing for SMEAR II -site
 
@@ -39,6 +37,9 @@ params = {
     'soil': spara,
     'forcing': forcing
 }
+
+# to run multiple simulation with some variable varying
+# params = get_parameter_list(params, 'test')
 
 outputfile, Model = driver(parameters=params, create_ncf=True)
 
