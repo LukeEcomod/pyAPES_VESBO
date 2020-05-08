@@ -59,11 +59,11 @@ radiation = {'clump': 0.7,  # clumping index [-]
              'leaf_angle': 1.0,  # leaf-angle distribution [-]
              'Par_alb': 0.12,  # shoot Par-albedo [-]
              'Nir_alb': 0.55,  # shoot NIR-albedo [-]
-             'leaf_emi': 0.98  # leaf emissivity [-] 
+             'leaf_emi': 0.98  # leaf emissivity [-]
              }
 
 # --- interception ---
-interception = {'wmax': 0.2,  # maximum interception storage capacity for rain [kg m-2 per unit of LAI] 
+interception = {'wmax': 0.2,  # maximum interception storage capacity for rain [kg m-2 per unit of LAI]
                 'wmaxsnow': 0.8,  # maximum interception storage capacity for snow [kg m-2 per unit of LAI]
                 'w_ini': 0.0,  # initial canopy storage [kg m-2]
                 'Tmin': 0.0,  # temperature below which all is snow [degC]
@@ -181,7 +181,7 @@ pt2 = { 'name': 'spruce',
             'root_cond': 5.0e8, # [s]
             }
         }
-        
+
 pt3 = { 'name': 'decid',
         'LAImax': 1.2, # maximum annual LAI m2m-2
         'lad': lad_weibul(z, LAI=1.0, h=10.0, hb=0.5, species='birch'),  # leaf-area density m2m-3
@@ -287,7 +287,7 @@ pt4 = { 'name': 'shrubs',
             'root_cond': 5.0e8, # [s]
             }
         }
-        
+
 """ --- forestfloor --- """
 
 snowpack = {
@@ -309,6 +309,10 @@ soil_respiration = {
         'moisture_coeff': [3.83, 4.43, 1.25, 0.854]  # Skopp moisture function param [a ,b, d, g]}
         }
 
+# Note: renewed bryophyte parameters
+
+# Based on literature review Pleurozium schreberi and Hylocomium splendens does not differ from each other
+# median and range [min, max]
 Forest_moss = {
     'name': 'forest mosses',  # Hylocomium splendens and Pleurozium schreberi
     'layer_type': 'bryophyte',
@@ -352,10 +356,91 @@ Forest_moss = {
 
 }
 
+# this is general Sphagnum parametrisation based on literature review
+Sphagnum = {
+    'name': 'Sphagnum sp.',
+    'layer_type': 'bryophyte',
+    'coverage': 0.0,
+    'height': 0.06, #0.06,  # range: [0.044, 0.076]
+    'roughness_height': 0.02,
+    # 'dry_mass': 1.49,  # range: [0.592, 2.43]
+    'bulk_density': 35.1,  # range: [9.28, 46.7]
+    'max_water_content': 17.8,  # range: [15.6, 24.4]
+    'water_content_ratio': 0.43,  # max_symplast_water_content:max_water_content -ratio
+    #'max_symplast_water_content': 7.64,  # based on fitted value of Sphagnum
+    'min_water_content': 0.1,
+    'porosity': 0.98,
+
+    'photosynthesis': { # farquhar-parameters
+        'Vcmax': 45.0, 'Jmax': 85.5, 'Rd': 1.35, # umolm-2s-1
+        'alpha': 0.3, 'theta': 0.8, 'beta': 0.9, # quantum yield, curvature, co-limitation
+        'gmax': 0.04, 'wopt': 7.0, 'a0': 0.7, 'a1': -0.263, 'CAP_desic': [0.58, 10.0],
+        'tresp': {
+            'Vcmax': [69.83, 200.0, 27.56],
+            'Jmax': [100.28, 147.92, 19.8],
+            'Rd': [33.0]
+        }
+    },
+    'optical_properties': { # moisture responses are hard-coded
+        'emissivity': 0.98,
+        'albedo': {'PAR': 0.10, 'NIR': 0.27} # albedos when fully hydrated [-]
+    },
+    'water_retention': {
+        # 'theta_s': 0.679,  # based on fitted value
+        # 'theta_r': 0.176,  # based on fitted value
+        'alpha': 0.381,  # based on fitted value
+        'n': 1.781,  # based on fitted value
+        'saturated_conductivity': 3.4e-4,  # [m s-1], based on fitted value
+        'pore_connectivity': -2.11  # based on fitted value
+    },
+    'initial_conditions': {
+        'temperature': 10.0,
+        'water_content': 20.0
+    }
+}
+
+Litter = {
+    'name': 'Litter',
+    'layer_type': 'litter',
+    'coverage': 0.0,  # [-]
+    'height': 0.03,  # [m]
+    'roughness_height': 0.01,  # [m]
+    'bulk_density': 45.0,  # [kg m\ :sup:`-3`]
+    'max_water_content': 4.0, # 4.0,  # [g g\ :sup:`-1`\ ]
+    'water_content_ratio': 0.25,  # max_symplast_water_content:max_water_content -ratio
+    #'max_symplast_water_content': 1.0, # [g g\ :sup:`-1`\ ]
+    'min_water_content': 0.1,
+    'porosity': 0.95,  # [m\ :sup:`3` m\ :sup:`-3`\ ]
+    'respiration': {# Taken from baresoil!! per what?
+        'q10': 1.6,  # base heterotrophic respiration rate [umolm-2s-1]
+        'r10': 2.0,  # temperature sensitivity [-]
+        #'moisture_coeff': [add here]
+    },
+    'optical_properties': {  # [0.1102, 0.2909, 0.98]
+        'emissivity': 0.98,  # [-]
+        'albedo': {'PAR': 0.11, 'NIR': 0.29} # albedos when fully hydrated [-]
+    },
+    'water_retention': {#'theta_s': 0.95,  # max_water_content / WATER_DENSITY * bulk_density
+                        #'theta_r': 0.01,  # min_water_content /WATER_DENSITY * bulk_density
+        'alpha': 0.13,
+        'n': 2.17,
+        'saturated_conductivity': 1.16e-8,  # [m s-1]
+        'pore_connectivity': -2.37,
+    },
+    'initial_conditions': {
+        'temperature': 10.0,
+        'water_content': 4.0
+    }
+}
+
 # --- compile forestfloor parameter dictionary
 
 forestfloor = {
-    'bottom_layer_types': {'forest_moss': Forest_moss},
+    'bottom_layer_types': {
+        'litter': Litter,
+        'forest_moss': Forest_moss,
+        'sphagnum': Sphagnum,
+    },
     'snowpack': snowpack,
     'soil_respiration': soil_respiration
 }
