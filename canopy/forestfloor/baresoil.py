@@ -90,7 +90,7 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
         parameters (dict):
             'soil_hydraulic_conductivity': [m s-1]
             'soil_thermal_conductivity': []
-            'height': [m] height to the first canopy calculation node
+            'reference_height': [m] height to the first canopy calculation node
             'soil_depth': [m] depth to the first soil calculation node
         controls (dict):
             'energy_balance': boolean
@@ -154,7 +154,7 @@ def heat_balance(forcing, parameters, controls, properties, temperature):
 #    )  # OK to assume dt = 0.0?
 
     atm_conductance = surface_atm_conductance(wind_speed=forcing['wind_speed'],
-                                              height=parameters['height'],
+                                              height=parameters['reference_height'],
                                               friction_velocity=forcing['friction_velocity'],
                                               dT=0.0)
     gb_v = atm_conductance['h2o']

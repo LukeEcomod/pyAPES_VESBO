@@ -14,368 +14,253 @@ Note:
 
 import numpy as np
 from canopy.constants import EPS
+from canopy.forestfloor.bryophoto import photo_farquhar, relative_capacity, conductance
 
-
-def soil_respiration(properties, Ts, Wliq, Wair):
-    """ Soil respiration beneath forestfloor
-
-    Heterotrophic and autotrophic respiration rate (CO2-flux) based on
-    Pumpanen et al. (2003) Soil.Sci.Soc.Am
-
-    Restricts respiration by soil moisuture as in
-    Skopp et al. (1990), Soil.Sci.Soc.Am
-
-    Args:
-        properties (dict):
-            'R10'
-            'Q10'
-            'poros'
-            'limitpara'
-        Ts - soil temperature [degC]
-        Wliq - soil vol. moisture content [m3 m-3]
-    Returns:
-        rsoil - soil respiration rate [umol m-2 s-1]
-        fm - relative modifier (Skopp et al.)
+class BryophyteFarquhar(object):
+    r"""Bryophyte photosynthesis and respiration using community-level Farquhar-model
+        Gives fluxes per unit ground area.
     """
-    # Skopp limitparam [a,b,d,g] for two soil types
-    # sp = {'Yolo':[3.83, 4.43, 1.25, 0.854],
-    #       'Valentine': [1.65,6.15,0.385,1.03]}
+    def __init__(self, para, carbon_pool=0):
+        self.photopara = para
+        self.carbon_pool = carbon_pool
 
-    limitpara = properties['limitpara']
-    r10 = properties['R10']
-    q10 = properties['Q10']
+    def co2_exchange(self, Qp, Ca, T, w, wstar=None):
+        """
+        computes net CO2 exchange of moss community
+        Args:
+            Qp - incident PAR [umol m-2 s-1]
+            Ca - ambient CO2 [ppm]
+            T - moss temperature (degC)
+            w - moss water content (g/g)
+            wstar - delayed water content (g/g) for desiccation recovery
+        Returns:
+            An - net CO2 exchange An = -A + Rd, <0 is uptake [umol m-2 s-1]
+            A - photosynthesis rate [umol m-2 s-1]
+            Rd - dark respiration rate [umol m-2 s-1]
+            Cc - internal CO2 (ppm)
+            g - total conductance for CO2 [umol m-2 s-1]
+        Note:
+            units of An, A, Rd and g depend on whether Vcmax etc. are given
+            per ground area, per dry mass or something else...
+        """
+        p = self.photopara.copy()
+        cap, rcap = relative_capacity(p, w, wstar)
+        p['Vcmax'] *= cap
+        p['Jmax'] *= cap
+        p['alpha'] *= cap
+        p['Rd'] *= rcap
 
-    # unrestricted respiration rate
-    base_respiration = r10 * np.power(q10, (Ts - 10.0) / 10.0)
+        # conductance (mol m-2 s-1)
+        g = conductance(p, w)
 
-    # moisture response (substrate diffusion, oxygen limitation)
-    modifier = np.minimum(limitpara[0] * Wliq**limitpara[2],
-                          limitpara[1] * Wair**limitpara[3])  # ]0...1]
-    modifier = np.minimum(modifier, 1.0)
+        # solve Anet and Cc iteratively until Cc converges
+        err = 10^9
+        Cc = 0.8*Ca
 
-    respiration = base_respiration * modifier
+        while err > 1e-3:
+            Cco = Cc
+            An, Rd, _, _ = photo_farquhar(p, Qp, Cc, T)
 
-    return respiration
+            Cc = Ca - An / g  # new Cc
+            Cc = 0.5*(Cco + Cc)
+            err = np.nanmax(abs(Cc - Cco))
 
+        return {'net_co2': -An,
+                'photosynthesis': An + Rd,
+                'respiration': Rd,
+                'internal_co2': Cc,
+                'conductance_co2': g
+                }
 
-def carbon_exchange(properties,
-                    water_content,
-                    temperature,
-                    incident_par,
-                    water_content_coeff=None,
-                    temperature_coeff=None):
-    r""" Estimates photosynthesis and respiration rates of bryophyte layer.
+class BryophyteCarbon(object):
+    r"""Bryophyte community photosynthesis and respiration using simple
+    light-response with empirical temperature and moisture functions.
 
-    Photosynthesis is restricted by both tissue water content
-    (dry conditions) and excess water film on leaves (diffusion limitation)
-    as in Williams and Flanagan (1996). Water content
-    coefficients are 3rd order polynomial fitted to the data represented by
-    Williams and Flanagan (1996) and used to calculate effect of water
-    content on photosynthesis.
-
-    Empirical modifier of photosynthesis due to water content assumes that
-    both light-limited and Rubisco-limited assimilation of carbon are
-    affected similarly. This seems to apply for Pleurozium and Sphagnum
-    when normalized water content is used as scaling. Assumes that
-    there is always 5 percents left in photosynthetic capacity.Empirical
-    modifier of photosynthesis due to temperature is based on
-    late growing season presented in Fig. 2 in Frolking et al. (1996).
-
-    .. plot::
-        import matplotlib.pyplot as plt
-        import numpy as np
-        water_content_coeff = [6.4355, -14.0605, 9.1867, -0.8720]
-        x1 = np.linspace(0, 1, 100)
-        y1 = [max(0.05, (water_content_coeff[3]
-            + water_content_coeff[2] * i
-            + water_content_coeff[1] * i ** 2
-            + water_content_coeff[0] * i ** 3)) for i in x1]
-        temperature_coeff = [-4.3e-5, -8.3e-4, 0.08, 0.1]
-        x2 = np.linspace(0, 30, 100)
-        y2  = [max(0.01, (temperature_coeff[3]
-            + temperature_coeff[2] * i
-            + temperature_coeff[1] * i ** 2
-            + temperature_coeff[0] * i ** 3)) for i in x2]
-        fig, ax1 = plt.subplots()
-        ax2 = ax1.twiny()
-        fig.subplots_adjust(bottom=0.2)
-        ax2.set_frame_on(True)
-        ax2.patch.set_visible(False)
-        ax2.xaxis.set_ticks_position('bottom')
-        ax2.xaxis.set_label_position('bottom')
-        ax2.spines['bottom'].set_position(('outward', 40))
-        ax1.plot(x1, y1, 'b-', label='relative water content')
-        ax2.plot(x2, y2, 'r-', label='temperature')
-        ax1.set_xlabel('Relative water content')
-        ax2.set_xlabel('Temperature')
-        ax1.set_ylabel('Relative effect on photosynthesis')
-        hand1, label1 = ax1.get_legend_handles_labels()
-        hand2, label2 = ax2.get_legend_handles_labels()
-        plt.legend(hand1+hand2,label1+label2, frameon=False)
-        plt.show()
-
-    References:
-        Frolking et al. (1996)
-            Global Change Biology 2:343-366
-        Williams and Flanagan (1996)
-            Oecologia 108:38-46
-
-    Args:
-        incident_par (float): [W m\ :sup:`-2`]
-            total photosynthetically active radiation (PAR) at ground level
-        water_content_coeff (optional): list of fitting parameters
-        temperature_coeff (optional): list of fitting parameters
-
-    Returns:
-        dictionary:
-            * 'photosynthesis_rate':
-              [\ :math:`\mu`\ mol m\ :sup:`-2`:sub:`ground` s\ :sup:`-1`\ ]
-            * 'respiration_rate':
-              [\ :math:`\mu`\ mol m\ :sup:`-2`:sub:`ground` s\ :sup:`-1`\ ]
+    Gives fluxes per unit ground area.
     """
-    # check inputs
-    # [umol/(m2 s)]
-    incident_par = np.maximum(EPS, 4.56 * incident_par)
+    def __init__(self, para, carbon_pool=0):
+        self.amax = para['photosynthesis']['amax']
+        self.b = para['photosynthesis']['b']
+        self.moisture_coeff = para['photosynthesis']['moisture_coeff']
+        self.temperature_coeff = para['photosynthesis']['temperature_coeff']
 
-    # [-, fraction]
-    normalized_water_content = (
-        water_content / properties['max_water_content'])
+        self.r10 = para['respiration']['r10']
+        self.q10 = para['respiration']['q10']
 
-    # photosynthetic light response parameters
-    amax = properties['photosynthesis']['Amax']
-    b = properties['photosynthesis']['b']
+        self.max_water_content = para['max_water_content'] # g g-1
+        self.carbon_pool = carbon_pool
 
-    # respiration parameters
-    q10 = properties['respiration']['Q10']
-    r10 = properties['respiration']['Rd10']
-
-    if water_content_coeff is None:
-        water_content_coeff = [6.4355, -14.0605, 9.1867, -0.8720]
-
-    if temperature_coeff is None:
-        temperature_coeff = [-4.3e-5, -8.3e-4, 0.08, 0.1]
-
-    # SL 12.9.2018: LET'S USE COMMUNITY-LEVEL LIGHT-RESPONSE
-    # hyperbolic light response [umolm-2(leaf) s-1]
-    light_response = amax * incident_par / (b + incident_par )
-
-    # moisture and temperature responses [-]
-    water_modifier = (water_content_coeff[3]
-                      + water_content_coeff[2] * normalized_water_content
-                      + water_content_coeff[1] * normalized_water_content ** 2.0
-                      + water_content_coeff[0] * normalized_water_content ** 3.0)
-
-    water_modifier = np.maximum(0.05, water_modifier)
-
-    temperature_modifier = (temperature_coeff[3]
-                            + temperature_coeff[2] * temperature
-                            + temperature_coeff[1] * temperature ** 2.0
-                            + temperature_coeff[0] * temperature ** 3.0)
-
-    temperature_modifier = np.maximum(0.01, temperature_modifier)
-
-    temperature_modifier = np.minimum(1.0, temperature_modifier)
-
-    # [umol m-2 (leaf) s-1]
-    community_photosynthetic_rate = light_response * water_modifier * temperature_modifier
-
-    # upscale to field scale [umol/(m2 ground s)]
-    photosynthetic_rate = community_photosynthetic_rate * properties['ground_coverage']
-
-    # respiration rate [umol m-2 (ground) s-1]
-    if water_content < 7.0:
-        water_modifier_respiration = (
-            -0.45 + 0.4 * water_content
-            - 0.0273 * water_content ** 2)
-    else:
-        water_modifier_respiration = (
-            -0.04 * water_content + 1.38)
-
-    # effect of water content is in the range 0.01 to 1.0
-    water_modifier_respiration = np.maximum(0.01, np.minimum(1.0, water_modifier_respiration))
-
-    # r = r10 * Q10^((T-10) / 10) [umol/(m2 s)]
-    respiration_rate = (
-        r10 * q10**((temperature - 10.0) / 10.0) * water_modifier_respiration
-        )
-
-    # [umol/(m2 ground s)]
-    respiration_rate = (
-        respiration_rate * properties['ground_coverage'])
-
-    return {
-        "photosynthesis_rate": photosynthetic_rate,
-        "respiration_rate": respiration_rate
-        }
-
-
-def carbon_exchange_old(properties,
-                        water_content,
+    def carbon_exchange(self,
                         temperature,
-                        incident_par,
-                        attenuation_coefficient=0.8,
-                        water_content_coeff=None,
-                        temperature_coeff=None):
-    r""" Estimates photosynthesis and respiration rates of bryophyte layer.
+                        water_content,
+                        incident_par):
+        r""" Estimates photosynthesis and respiration rates of bryophyte layer.
 
-    Photosynthesis is restricted by both tissue water content
-    (dry conditions) and excess water film on leaves (diffusion limitation)
-    as in Williams and Flanagan (1996). Water content
-    coefficients are 3rd order polynomial fitted to the data represented by
-    Williams and Flanagan (1996) and used to calculate effect of water
-    content on photosynthesis.
+        Photosynthesis is restricted by both tissue water content
+        (dry conditions) and excess water film on leaves (diffusion limitation)
+        as in Williams and Flanagan (1996). Water content
+        coefficients are 3rd order polynomial fitted to the data represented by
+        Williams and Flanagan (1996) and used to calculate effect of water
+        content on photosynthesis.
 
-    Empirical modifier of photosynthesis due to water content assumes that
-    both light-limited and Rubisco-limited assimilation of carbon are
-    affected similarly. This seems to apply for Pleurozium and Sphagnum
-    when normalized water content is used as scaling. Assumes that
-    there is always 5 percents left in photosynthetic capacity.Empirical
-    modifier of photosynthesis due to temperature is based on
-    late growing season presented in Fig. 2 in Frolking et al. (1996).
+        Empirical modifier of photosynthesis due to water content assumes that
+        both light-limited and Rubisco-limited assimilation of carbon are
+        affected similarly. This seems to apply for Pleurozium and Sphagnum
+        when normalized water content is used as scaling. Assumes that
+        there is always 5 percents left in photosynthetic capacity.Empirical
+        modifier of photosynthesis due to temperature is based on
+        late growing season presented in Fig. 2 in Frolking et al. (1996).
 
-    .. plot::
+        References:
+            Frolking et al. (1996)
+                Global Change Biology 2:343-366
+            Williams and Flanagan (1996)
+                Oecologia 108:38-46
 
-        import matplotlib.pyplot as plt
-        import numpy as np
+        Args:
+            water_content (float): [g g-1]
+            temperature (float): [degC]
+            incident_par (float): [W m\ :sup:`-2`]
 
-        water_content_coeff = [6.4355, -14.0605, 9.1867, -0.8720]
-        x1 = np.linspace(0, 1, 100)
-        y1 = [max(0.05, (water_content_coeff[3]
-            + water_content_coeff[2] * i
-            + water_content_coeff[1] * i ** 2
-            + water_content_coeff[0] * i ** 3)) for i in x1]
+        Returns:
+            dictionary:
+                * 'photosynthesis_rate':
+                  [\ :math:`\mu`\ mol m\ :sup:`-2`:sub:`ground` s\ :sup:`-1`\ ]
+                * 'respiration_rate':
+                  [\ :math:`\mu`\ mol m\ :sup:`-2`:sub:`ground` s\ :sup:`-1`\ ]
+                 * 'co_flux': net co2 exchange, <0 uptake
+                  [\ :math:`\mu`\ mol m\ :sup:`-2`:sub:`ground` s\ :sup:`-1`\ ]
+        """
+        # check inputs
+        # [umol/(m2 s)]
+        incident_par = np.maximum(EPS, 4.56 * incident_par)
 
-        temperature_coeff = [-4.3e-5, -8.3e-4, 0.08, 0.1]
-        x2 = np.linspace(0, 30, 100)
-        y2  = [max(0.01, (temperature_coeff[3]
-            + temperature_coeff[2] * i
-            + temperature_coeff[1] * i ** 2
-            + temperature_coeff[0] * i ** 3)) for i in x2]
+        normalized_water_content = water_content / self.max_water_content
 
-        fig, ax1 = plt.subplots()
-        ax2 = ax1.twiny()
 
-        fig.subplots_adjust(bottom=0.2)
+        # hyperbolic light response at community level [umolm-2(ground) s-1]
+        light_response = self.amax * incident_par / (self.b + incident_par )
 
-        ax2.set_frame_on(True)
-        ax2.patch.set_visible(False)
-        ax2.xaxis.set_ticks_position('bottom')
-        ax2.xaxis.set_label_position('bottom')
-        ax2.spines['bottom'].set_position(('outward', 40))
+        # moisture and temperature responses [-]
+        water_modifier = (self.moisture_coeff[3]
+                          + self.moisture_coeff[2] * normalized_water_content
+                          + self.moisture_coeff[1] * normalized_water_content ** 2.0
+                          + self.moisture_coeff[0] * normalized_water_content ** 3.0)
 
-        ax1.plot(x1, y1, 'b-', label='relative water content')
-        ax2.plot(x2, y2, 'r-', label='temperature')
+        water_modifier = np.maximum(0.05, water_modifier)
 
-        ax1.set_xlabel('Relative water content')
-        ax2.set_xlabel('Temperature')
-        ax1.set_ylabel('Relative effect on photosynthesis')
+        temperature_modifier = (self.temperature_coeff[3]
+                                + self.temperature_coeff[2] * temperature
+                                + self.temperature_coeff[1] * temperature ** 2.0
+                                + self.temperature_coeff[0] * temperature ** 3.0)
 
-        hand1, label1 = ax1.get_legend_handles_labels()
-        hand2, label2 = ax2.get_legend_handles_labels()
+        temperature_modifier = np.maximum(0.01, temperature_modifier)
 
-        plt.legend(hand1+hand2,label1+label2, frameon=False)
-        plt.show()
+        temperature_modifier = np.minimum(1.0, temperature_modifier)
 
-    References:
-        Frolking et al. (1996)
-            Global Change Biology 2:343-366
-        Williams and Flanagan (1996)
-            Oecologia 108:38-46
+        # [umol m-2 (leaf) s-1]
+        photosynthetic_rate = light_response * water_modifier * temperature_modifier
 
-    Args:
-        incident_par (float): [W m\ :sup:`-2`]
-            total photosynthetically active radiation (PAR) at ground level
-        attenuation_coefficient: [-]
-            assumed diffuse radiation
-        water_content_coeff (optional): list of fitting parameters
-        temperature_coeff (optional): list of fitting parameters
+        # --- respiration rate [umol m-2 (ground) s-1]
 
-    Returns:
-        dictionary:
-            * 'photosynthesis_rate':
-              [\ :math:`\mu`\ mol m\ :sup:`-2`:sub:`ground` s\ :sup:`-1`\ ]
-            * 'respiration_rate':
-              [\ :math:`\mu`\ mol m\ :sup:`-2`:sub:`ground` s\ :sup:`-1`\ ]
+        """ replace with smooth function and move as parameter """
+        if water_content < 7.0:
+            water_modifier_respiration = (
+                -0.45 + 0.4 * water_content
+                - 0.0273 * water_content ** 2)
+        else:
+            water_modifier_respiration = (
+                -0.04 * water_content + 1.38)
+
+        # effect of water content is in the range 0.01 to 1.0
+        water_modifier_respiration = np.maximum(0.01, np.minimum(1.0, water_modifier_respiration))
+
+        # r = r10 * Q10^((T-10) / 10) [umol m-2 s-1]
+        respiration_rate = (
+            self.r10 * self.q10**((temperature - 10.0) / 10.0) * water_modifier_respiration
+            )
+
+        # umol m-2 (ground) s-1
+        return {
+            'photosynthesis': photosynthetic_rate,
+            'respiration': respiration_rate,
+            'net_co2': -photosynthetic_rate + respiration_rate
+            }
+
+class OrganicRespiration():
     """
-    # check inputs
-    # [umol/(m2 s)]
-    incident_par = max(EPS, 4.56 * incident_par)
+    Litter layer respiration. Values per unit ground area
+    """
+    def __init__(self, para, carbon_pool=0.0):
+        self.r10 = para['r10']
+        self.q10 = para['q10']
+        #self.moisture_coeff = para['respiration']['moisture_coeff']
+        self.carbon_pool = 0.0
 
-    # [-, fraction]
-    normalized_water_content = (
-        water_content / properties['max_water_content'])
+    def respiration(self, temperature, volumetric_water):
+        """
+        respiration rate [umol m-2 (ground) s-1]
+        """
+        r = self.r10 * np.power(self.q10, (temperature - 10.0) / 10.0)
 
-    # photosynthetic light response parameters
-    amax = properties['photosynthesis'][0]
-    b = amax / (2.0 * properties['photosynthesis'][1])
+        # add moisture response
+        fW = 1.0
+        r = r * fW
+        return {'photosynthesis': 0.0,
+                'respiration': r,
+                'net_co2': r
+               }
 
-    # respiration parameters
-    r10 = properties['respiration']['Rd10']
-    q10 = properties['respiration']['Q10']
 
-    if water_content_coeff is None:
-        water_content_coeff = [6.4355, -14.0605, 9.1867, -0.8720]
+class SoilRespiration():
+    """
+    Soil respiration
+    """
+    def __init__(self, para, weights=1):
+        # base rate [umol m-2 s-1] and temperature sensitivity [-]
+        self.r10 = para['r10']
+        self.q10 = para['q10']
 
-    if temperature_coeff is None:
-        temperature_coeff = [-4.3e-5, -8.3e-4, 0.08, 0.1]
+        # moisture response of Skopp et al. 1990
+        self.moisture_coeff = para['moisture_coeff']
 
-    # divide canopy into 10 equall layers from top and compute par at each layer
-    # effective_lai --> attenuation of light within the moss
-    effective_lai = (properties['leaf_area_index'] / properties['ground_coverage'])
-    cumulative_lai = np.linspace(effective_lai / 10.0, effective_lai, 10)
+        if weights is not None:
+            # soil respiration computed in layers and weighted
+            self.weights = weights
+            self.Nlayers = len(weights)
 
-    # par at each layer
-    par = incident_par * np.exp(-attenuation_coefficient * cumulative_lai)
+    def respiration(self, soil_temperature, volumetric_water, volumetric_air):
+        """ Soil respiration beneath forestfloor
 
-    # hyperbolic light response [umolm-2(leaf) s-1]
-    light_response = amax * par / (b * (par + EPS))
+        Heterotrophic and autotrophic respiration rate (CO2-flux) based on
+        Pumpanen et al. (2003) Soil.Sci.Soc.Am
 
-    # moisture and temperature responses [-]
-    water_modifier = (water_content_coeff[3]
-                      + water_content_coeff[2] * normalized_water_content
-                      + water_content_coeff[1] * normalized_water_content ** 2.0
-                      + water_content_coeff[0] * normalized_water_content ** 3.0)
+        Restricts respiration by soil moisuture as in
+        Skopp et al. (1990), Soil.Sci.Soc.Am
 
-    water_modifier = max(0.05, water_modifier)
+        Args:
 
-    temperature_modifier = (temperature_coeff[3]
-                            + temperature_coeff[2] * temperature
-                            + temperature_coeff[1] * temperature ** 2.0
-                            + temperature_coeff[0] * temperature ** 3.0)
+            Ts - soil temperature [degC]
+            Wliq - soil vol. moisture content [m3 m-3]
+        Returns:
+            soil respiration rate [umol m-2 s-1]
 
-    temperature_modifier = max(0.01, temperature_modifier)
+        """
+        # Skopp limitparam [a,b,d,g] for two soil types
+        # sp = {'Yolo':[3.83, 4.43, 1.25, 0.854],
+        #       'Valentine': [1.65,6.15,0.385,1.03]}
 
-    temperature_modifier = min(1.0, temperature_modifier)
+        # unrestricted respiration rate
+        x = self.r10 * np.power(self.q10, (soil_temperature - 10.0) / 10.0)
 
-    # [umol m-2 (leaf) s-1]
-    leaf_photosynthetic_rate = light_response * water_modifier * temperature_modifier
+        # moisture response (substrate diffusion, oxygen limitation)
+        f = np.minimum(self.moisture_coeff[0] * volumetric_water**self.moisture_coeff[2],
+                       self.moisture_coeff[1] * volumetric_air**self.moisture_coeff[3])
+        f = np.minimum(f, 1.0)
 
-    # upscale to field scale [umol/(m2 ground s)]
-    photosynthetic_rate = ((effective_lai / 10.0) * sum(leaf_photosynthetic_rate)
-                           * properties['ground_coverage'])
+        respiration = x * f
 
-    # respiration rate [umol m-2 (ground) s-1]
-    if water_content < 7.0:
-        water_modifier_respiration = (
-            -0.45 + 0.4 * water_content
-            - 0.0273 * water_content ** 2)
-    else:
-        water_modifier_respiration = (
-            -0.04 * water_content + 1.38)
+        if hasattr(self, 'weights'):
+            respiration = sum(self.weights * respiration[0:self.Nlayers])
 
-    # effect of water content is in the range 0.01 to 1.0
-    water_modifier_respiration = max(0.01, min(1.0, water_modifier_respiration))
-
-    # r = r10 * Q10^((T-10) / 10) [umol/(m2 s)]
-    respiration_rate = (
-        r10 * q10**((temperature - 10.0) / 10.0) * water_modifier_respiration
-        )
-
-    # [umol/(m2 ground s)]
-    respiration_rate = (
-        respiration_rate * properties['ground_coverage'])
-
-    return {
-        "photosynthesis_rate": photosynthetic_rate,
-        "respiration_rate": respiration_rate
-        }
+        return respiration

@@ -1,28 +1,13 @@
 # README
-Branch for cleaned model codes for pyAPES development
+Skeleton of pyAPES -multi-layer soil-plant-atmosphere model.
+Original version used for simplified model: pyAPES_kersti master (v. 12.11.2019).
 
-## Introducing clear and consistent interfaces throughout the model code
-Lower-levels provides an interface through run-function, e.g. Forestfloor is a facade/adapter of forestfloor submodels (barasoil, litter, bryophyte, snowpack) and gathers usage logic and interactions of these submodels. A facade/adapter provides an interface through run-function. 
+Samuli Launiainen 20.01.2020:
 
-run function arguments:
-* forcing: forcing data 
-* parameters: previously calculated states
-* controls: control flags, needed parameters etc.
+* new canopy.forestfloor and more outputs to ncf
+* changes in canopy.canopy, canopy.interception (units)
+* canopy.canopy forcing['precipitation'] now in [kg m-2 s-1] as are water flux outputs
 
-run function returns a dict containing states and fluxes of encapsulated submodels to be used in upper-level.
-
-### Worries:
-- leaky interface (how to handle in consistent manner control parameters in lower level)
-- how to prevent dependencies across the interface, especially to down-stream: How awere lower levels should be about upper level logic? Accomadete or provide services  
-
-## Migration to Python3
-https://docs.python.org/3.0/whatsnew/3.0.html
-Code is mainly written so that it works in both python 2.7 and 3.6 (should run versions >3.5)
-* main things:
-  - in python3, print is a function; brackets are needed
-  - iterating a list: if a index is needed use enumarate() then list(range(len(foo))) is not needed. e.g. 'for index, item in foo:' instead of 'for index in list(range(len(foo))):'
-  - iterating a dict: if you are iterating through dict.items(), dict.keys(), and dict.values() AND adding/deleting item from dict wrap it inside a list(). e.g. 'for key in list(dict.keys()): del dict[key]'.   
-  - absolute import vs. relative import: from .foo import spam if you want to import from same package.
 
 ### SoilProfile
 Water flow:
@@ -48,14 +33,14 @@ Multilayer canopy description
 * Momentum, H2O, CO2 and T within canopy: 1st-order closure model (sources/sinks: evaporation, transpiration, photosynthesis, respiration, sensible heat etc.)
 
 Forest floor and snowpack:
-* Moss cover (present during snow free periods): Interceps rainfall and evaporates interception storage, CO2 exchange (respiration and photo?)
+* Moss cover (present during snow free periods): Interceps rainfall and evaporates interception storage, CO2 exchange differs if 'byophyte' or 'litter'
 ! capillary flux not included
 * Bare soil surface energy balance
--> solves soil surface temperature 
+-> solves soil surface temperature: NOT IMPLEMENTED
 * Soil respiration
-! simplified?
+! improve and check units
 * Snow model: Temperature-based snow accumulation and melt
-In future two layer energy balance snow scheme + soil freezing thawing (FEMMA)?
+In future two layer energy balance snow scheme
 		
 ### Forcing
 Lettosuo (2010-2018)

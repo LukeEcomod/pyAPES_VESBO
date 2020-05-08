@@ -164,7 +164,8 @@ class Soil(object):
                                           water_sink=water_sink,
                                           lower_boundary=lbc_water)
             fluxes.update(water_fluxes)
-
+        
+        # if self.solve_water == False, update state if given as input
         elif 'state_water' in forcing:
             self.water.update_state(forcing['state_water'])
 
@@ -182,6 +183,8 @@ class Soil(object):
                                         lower_boundary=lbc_heat)
 
             fluxes.update(heat_fluxes)
+        
+        # if self.solve_heat == False, update state if given as input
         else:
             if'state_heat' in forcing:
                 self.heat.update_state(state=forcing['state_heat'],

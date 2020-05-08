@@ -34,10 +34,12 @@ def write_ncf(nsim=None, results=None, ncf=None):
 
         if key in variables and key != 'time':
             length = np.asarray(results[key]).ndim
-
+            # if key == 'canopy_planttypes':
+            #     print(key, length, type(results[key]), results[key], np.shape(ncf[key]))
             if length > 1:
                 ncf[key][:, nsim, :] = results[key]
-            elif key == 'soil_z' or key == 'canopy_z' or key == 'canopy_planttypes':
+            elif key == 'soil_z' or key == 'canopy_z' or \
+                 key == 'canopy_planttypes' or key == 'ffloor_groundtypes':
                 if nsim == 0:
                     ncf[key][:] = results[key]
             else:
@@ -48,8 +50,9 @@ def initialize_netcdf(variables,
                       sim,
                       soil_nodes,
                       canopy_nodes,
-                      plant_nodes,
-                      forcing,
+                      planttypes,
+                      groundtypes,
+                      time_index,
                       filepath='results/',
                       filename='climoss.nc',
                       description='Simulation results'):
@@ -60,19 +63,12 @@ def initialize_netcdf(variables,
         sim (int): number of simulations
         soil_nodes (int): number of soil calculation nodes
         canopy_nodes (int): number of canopy calculation nodes
-        forcing: forcing data (pd.dataframe)
+        time_index: time_index of default forcing data (pd.DataSeries)
         filepath: path for saving results
         filename: filename
     """
     from netCDF4 import Dataset, date2num
     from datetime import datetime
-
-    # dimensions
-    date_dimension = None
-    simulation_dimension = sim
-    soil_dimension = soil_nodes
-    canopy_dimension = canopy_nodes
-    ptypes_dimension = plant_nodes
 
     pyAPES_folder = os.getcwd()
     filepath = os.path.join(pyAPES_folder, filepath)
@@ -88,17 +84,18 @@ def initialize_netcdf(variables,
     ncf.history = 'created ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     ncf.source = 'pyAPES_beta2018'
 
-    ncf.createDimension('date', date_dimension)
-    ncf.createDimension('simulation', simulation_dimension)
-    ncf.createDimension('soil', soil_dimension)
-    ncf.createDimension('canopy', canopy_dimension)
-    ncf.createDimension('planttype', ptypes_dimension)
-
+    ncf.createDimension('date', None)
+    ncf.createDimension('simulation', sim)
+    ncf.createDimension('soil', soil_nodes)
+    ncf.createDimension('canopy', canopy_nodes)
+    ncf.createDimension('planttype', planttypes)
+    ncf.createDimension('groundtype', groundtypes)
+    
     time = ncf.createVariable('date', 'f8', ('date',))
     time.units = 'days since 0001-01-01 00:00:00.0'
     time.calendar = 'standard'
 #    tvec = [k.to_datetime() for k in forcing.index] is depricated
-    tvec = [pd.to_datetime(k) for k in forcing.index]
+    tvec = [pd.to_datetime(k) for k in time_index]
     time[:] = date2num(tvec, units=time.units, calendar=time.calendar)
 
     for var in variables:
@@ -107,7 +104,7 @@ def initialize_netcdf(variables,
         var_unit = var[1]
         var_dim = var[2]
 
-        if var_name == 'canopy_planttypes':
+        if var_name == 'canopy_planttypes' or var_name == 'ffloor_groundtypes':
             variable = ncf.createVariable(
                 var_name, 'S10', var_dim)
         else:
@@ -120,11 +117,11 @@ def initialize_netcdf(variables,
 
 
 def read_forcing(forc_filename, start_time=None, end_time=None,
-                 cols=None, dt=None, na_values='NaN'):
+                 cols=None, dt=1800.0, na_values='NaN', sep=';'):
     """
     Reads forcing or other data from csv file to dataframe
     Args:
-        forc_filename (str): forcing file name with comma separator
+        forc_filename (str): forcing file name
         start_time (str): starting time [yyyy-mm-dd], if None first date in
             file used
         end_time (str): ending time [yyyy-mm-dd], if None last date
@@ -134,27 +131,32 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
         dt (float): time step [s], if given checks
             that dt in file is equal to this
         na_values (str/float): nan value representation in file
+        sep (str): field separator
     Returns:
         Forc (dataframe): dataframe with datetime as index and cols read from file
     """
 
     # filepath
     forc_fp = "forcing/" + forc_filename
-    dat = pd.read_csv(forc_fp, sep=',', header='infer', na_values=na_values)
+    dat = pd.read_csv(forc_fp, header='infer', na_values=na_values, sep=sep)
 
     # set to dataframe index
-    dat.index = pd.to_datetime({'year': dat['yyyy'],
-                                'month': dat['mo'],
-                                'day': dat['dd'],
-                                'hour': dat['hh'],
-                                'minute': dat['mm']})
+    tvec = pd.to_datetime(dat[['year', 'month', 'day', 'hour', 'minute']])
+    tvec = pd.DatetimeIndex(tvec)
+    dat.index = tvec
 
+    # select time period    
     if start_time == None:
         start_time = dat.index[0]
     if end_time == None:
         end_time = dat.index[-1]
-    dat = dat[(dat.index >= start_time) & (dat.index < end_time)]
+    
+    dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
 
+    # convert: H2O mmol / mol --> mol / mol; Prec kg m-2 in dt --> kg m-2 s-1
+    dat['H2O'] = 1e-3 * dat['H2O']
+    dat['Prec'] = dat['Prec'] / dt
+    
     # if cols is not defined; return these
     if cols is None:
         cols = ['doy',
@@ -182,7 +184,7 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
         cols = [col for col in dat]
     # Forc dataframe from specified columns
     Forc = dat[cols].copy()
-
+    
     # Check time step if specified
     if dt is not None:
         if len(set(Forc.index[1:]-Forc.index[:-1])) > 1:
@@ -191,6 +193,23 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
             sys.exit("Forcing file time step differs from dt given in general parameters")
 
     return Forc
+
+def read_data(ffile, start_time=None, end_time=None, na_values='NaN', sep=';'):
+    dat = pd.read_csv(ffile, header='infer', na_values=na_values, sep=sep)
+    # set to dataframe index
+    tvec = pd.to_datetime(dat[['year', 'month', 'day', 'hour', 'minute']])
+    tvec = pd.DatetimeIndex(tvec)
+    dat.index = tvec
+
+    # select time period    
+    if start_time == None:
+        start_time = dat.index[0]
+    if end_time == None:
+        end_time = dat.index[-1]
+    
+    dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
+
+    return dat
 
 def read_results(outputfiles):
     """

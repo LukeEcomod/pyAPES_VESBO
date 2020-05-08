@@ -5,7 +5,7 @@
     :synopsis: APES-model component
 .. moduleauthor:: Kersti Haahti
 
-Constants used in soilprofile module.
+Constants used in soil module.
 
 Note:
     migrated to python3

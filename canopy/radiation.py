@@ -755,7 +755,7 @@ def compute_clouds_rad(doy, zen, Rg, H2O, Tair):
     """
 
     # solar constant at top of atm.
-    So = 1367
+    So = 1367.0
     # clear sky Global radiation at surface
     Qclear = np.maximum(0.0,
                         (So * (1.0 + 0.033 * np.cos(2.0 * np.pi * (np.minimum(doy, 365) - 10) / 365)) * np.cos(zen)))

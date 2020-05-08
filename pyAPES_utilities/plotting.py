@@ -13,16 +13,17 @@ Note:
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy.optimize import minimize
+
 from pyAPES_utilities.timeseries_tools import diurnal_cycle, yearly_cumulative
 from tools.iotools import read_forcing
 from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O, MOLAR_MASS_CO2, PAR_TO_UMOL
 
-import seaborn as sns
-pal = sns.color_palette("hls", 6)
 EPS = np.finfo(float).eps
 
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default = prop_cycle.by_key()['color']
+pal=default
 
 def plot_results(results):
 
@@ -66,9 +67,11 @@ def plot_results(results):
     plt.tight_layout(rect=(0, 0, 0.8, 1))
 
 def plot_fluxes(results, Data,
-                res_var=['canopy_net_radiation','canopy_SH','canopy_LE'],
+                res_var=['canopy_Rnet','canopy_SH','canopy_LE'],
                 Data_var=['NRAD','SH','LE'],
-                sim_idx=0, fmonth=4, lmonth=9, norain=True, dataframe=False, l1=False):
+                sim_idx=0, fmonth=4, lmonth=9, norain=True, dataframe=False, l1=False,
+                save_to_path=None
+               ):
 
     N=len(Data_var)
 
@@ -95,7 +98,7 @@ def plot_fluxes(results, Data,
 
     labels = {'x': '', 'y': 'Modelled'}
 
-    plt.figure(figsize=(10,N*1.7 + 0.5))
+    fig = plt.figure(figsize=(10,N*1.7 + 0.5))
     for i in range(N):
         if norain:
             ix = np.where((months >= fmonth) & (months <= lmonth) & (dryc == 1) & np.isfinite(Data[Data_var[i]]))[0]
@@ -114,10 +117,10 @@ def plot_fluxes(results, Data,
             plot_timeseries_df(Data, [res_var[i],Data_var[i]], colors=[pal[i],'k'], xticks=True,
                        labels=['Modelled', 'Measured'], marker=[None, '.'])
             plt.xlim([res_dates[0], res_dates[-1]])
-        if dataframe:
-            plt.title(res_var[i], fontsize=10)
-        else:
+        try:
             plt.title(results[res_var[i]].units, fontsize=10)
+        except:
+            plt.title(res_var[i], fontsize=10)
         plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
         if i + 1 < N:
             plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
@@ -133,6 +136,11 @@ def plot_fluxes(results, Data,
             plt.xlabel('')
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
+    
+    if save_to_path:
+        plt.savefig(save_to_path)
+    
+    return fig
 
 def plot_pt_results(results, variable):
     if variable == 'canopy_pt_transpiration':
@@ -567,17 +575,15 @@ def plot_efficiencies(results, treatment='control-N', sim_idx=0):
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
 
-
 def xarray_to_df(results, variables, sim_idx=0):
     series = []
     for var in variables:
         series.append(results[var].isel(simulation=sim_idx).to_pandas())
     df = pd.concat(series, axis=1)
     df.columns = variables
-    return df
+    df.index = df.index.round('30T')
 
-import numpy as np
-import scipy.optimize
+    return df
 
 def l1_fit(U, v):
     """
@@ -588,8 +594,7 @@ def l1_fit(U, v):
     source:
     https://github.com/flatironinstitute/least_absolute_regression/blob/master/lae_regression/lae_regression/least_abs_err_regression.py
     """
-    from scipy.optimize import minimize
-
+    
     def fit(x, params):
         y = params[0] * x + params[1]
         return y

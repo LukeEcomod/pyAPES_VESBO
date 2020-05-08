@@ -10,22 +10,25 @@ from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 eps = np.finfo(float).eps  # machine epsilon
 
-import seaborn as sns
 
-def fit_pF(head, watcont, fig=False, labels=None, percentage=False, kPa=False):
+def fit_pF(head, watcont, fig=False, labels=None, percentage=False, kPa=False, neg_heads=None, bounds=None):
     """
 
     """
 
     if fig:
         plt.figure()
-        colors = sns.color_palette("hls", len(watcont))
-        c = 0
     head = np.array(head)
     if kPa:
         head = head * 10  # kPa -> cm
+    if neg_heads:
+        head = -1.0 * head
+    
     vg_ini = (0.88, 0.09, 0.03, 1.3)
-    bounds = ((eps, eps, eps, 1.0), (1.0, 1.0, 5.0, 5.0))
+    if not bounds:
+        
+        bounds = ((eps, eps, eps, 1.0), (1.0, 1.0, 5.0, 5.0))
+    
     van_g = lambda h, *p:   p[1] + (p[0] - p[1]) / (1. + (p[2] * h) **p[3]) **(1. - 1. / p[3])
     vgen_all = []
 
@@ -39,6 +42,7 @@ def fit_pF(head, watcont, fig=False, labels=None, percentage=False, kPa=False):
         else:
             label = labels[k] + ': '
         try:
+            #print(head, Wcont)
             vgen, _ = curve_fit(van_g, head[ix], Wcont[ix], p0=vg_ini, bounds=bounds)
             label+='Ts=%5.3f, Tr=%5.3f, alfa=%5.3f, n=%5.3f' % tuple(vgen)
         except RuntimeError:
@@ -48,11 +52,11 @@ def fit_pF(head, watcont, fig=False, labels=None, percentage=False, kPa=False):
 
         if fig:
 
-            plt.semilogy(Wcont[ix], head[ix], '.',color = colors[c])
+            plt.semilogy(Wcont[ix], head[ix], '.')
             xx = np.logspace(-1, 5.0, 100)
-            plt.semilogy(van_g(xx, *vgen), xx, '-',color = colors[c],
+            plt.semilogy(van_g(xx, *vgen), xx, '-',
                          label=label)
-            c += 1
+            #c += 1
 
     if fig:
         plt.xlabel(r'$\theta$  $(m^3m^{-3})$', fontsize=14)

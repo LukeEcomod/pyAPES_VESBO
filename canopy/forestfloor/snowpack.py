@@ -3,10 +3,6 @@
 """
 Created on Thu Oct  4 08:54:17 2018
 
-Note:
-    migrated to python3
-    - no changes
-
 @author: ajkieloaho
 """
 
@@ -14,18 +10,32 @@ import numpy as np
 
 EPS = np.finfo(float).eps  # machine epsilon
 
-class Snowpack(object):
+class DegreeDaySnow(object):
     """ Represents snow cover-soil-atmosphere interactions with simple
      zero-dimensional degree-day model
     """
 
-    def __init__(self, properties, initital_conditions):
+    def __init__(self, properties):
         """
+        snowpack = {
+        'kmelt': 2.31e-8,  # Melting coefficient [m degC-1 s-1] (=2.0 mm/C/d)
+        'kfreeze': 5.79e-9,  # Freezing  coefficient [m degC-1 s-1] (=0.5 mm/C/d)
+        'retention': 0.2,  # max fraction of liquid water in snow [-]
+        'Tmelt': 0.0,  # temperature when melting starts [degC]
+        'swe_ini': 0.0,  # initial snow water equivalent [m],
+        'optical_properties': {
+                'albedo': {'PAR': 0.8, 'NIR': 0.8}
+                'emissivity': 0.97,
+                'albedo_PAR': 0.8,
+                'albedo_NIR': 0.8,
+                }
+        }
+
         """
 
-        self.properties = properties
+        #self.properties = properties
 
-        # melting and freezing coefficients [m/s]
+        # melting and freezing coefficients [kg m-2 s-1]
         self.kmelt = properties['kmelt']
         self.kfreeze = properties['kfreeze']
 
@@ -33,37 +43,24 @@ class Snowpack(object):
         self.retention = properties['retention']
         self.Tmelt = properties['Tmelt']
 
+        self.optical_properties = properties['optical_properties']
+
         # state variables:
-        self.ice = properties['swe_ini']  # water equivalent of ice in snowpack [m]
-        self.liq = 0.0  # liquid water storage in snowpack [m]
-        self.swe = self.liq + self.ice  # snow water equivalent [m]
+        self.temperature = properties['initial_conditions']['temperature']
+        self.swe = properties['initial_conditions']['snow_water_equivalent']  # [kg m-2]
+        self.ice = properties['initial_conditions']['snow_water_equivalent'] # ice content
+        self.liq = 0.0  # liquid water storage in snowpack [kg m-2]
 
-        self.old_ice = self.ice
-        self.old_liq = self.liq
-        self.old_swe = self.swe
-
-    def snowcover(self):
-        """ Returns true if there is snow cover else false
-        """
-        return self.swe > 0.0
-
+        # temporary storage of iteration results
+        self.iteration_state = None
 
     def update(self):
         """ Updates new states to the snowpack.
         """
-
-        self.old_ice = self.ice
-        self.old_liq = self.liq
-        self.old_swe = self.swe
-
-    def restore(self):
-        """ Restores new states back to states before iteration.
-        """
-
-        self.ice = self.old_ice
-        self.liq = self.old_liq
-        self.swe = self.old_swe
-
+        self.temperature = self.iteration_state['temperature']
+        self.ice = self.iteration_state['ice']
+        self.liq = self.iteration_state['liq']
+        self.swe = self.iteration_state['swe']
 
     def run(self, dt, forcing):
         """ Calculates one timestep and updates states of SnowpackModel instance
@@ -72,59 +69,63 @@ class Snowpack(object):
             dt: timestep [s]
             forcing (dict):
                 'air_temperature': [degC]
-                'throughfall_rain': [m s-1]
-                'throughfall_snow': [m s-1]
+                'precipitation_rain': [kg m-2 s-1]
+                'precipitation_snow': [kg m-2 s-1]
 
         Returns:
             fluxes (dict):
-                'potential_infiltration': [m s-1]
-                'water_closure': [m s-1]
+                'throughfall': [kg m-2 s-1]
+                'water_closure': [kg m-2 s-1]
             states (dict):
-                'snow_water_equivalent': [m]
+                'snow_water_equivalent': [kg m-2 s-1]
         """
 
         """ --- initial conditions for calculating mass balance error --"""
-        self.swe = self.old_swe  # initial state m
+
 
         """ --- melting and freezing in snopack --- """
         if forcing['air_temperature'] >= self.Tmelt:
             # [m]
-            melt = np.minimum(self.old_ice,
+            melt = np.minimum(self.ice,
                               self.kmelt * dt * (forcing['air_temperature'] - self.Tmelt))
             freeze = 0.0
 
         else:
-            # [m]
             melt = 0.0
-            freeze = np.minimum(self.old_liq,
-                                self.kfreeze * dt * (self.Tmelt - forcing['air_temperature']))  # m
+            freeze = np.minimum(self.liq,
+                                self.kfreeze * dt * (self.Tmelt - forcing['air_temperature']))
 
         """ --- update state of snowpack and compute potential infiltration --- """
         ice = np.maximum(0.0,
-                             self.old_ice + forcing['throughfall_snow'] * dt + freeze - melt)
+                         self.ice + forcing['precipitation_snow'] * dt + freeze - melt)
 
         liq = np.maximum(0.0,
-                             self.old_liq + forcing['throughfall_rain'] * dt - freeze + melt)
+                         self.liq + forcing['precipitation_rain'] * dt - freeze + melt)
 
-        # potential infiltration [m]
-        pot_inf = np.maximum(0.0,
-                            liq - ice * self.retention)
+        pot_inf = np.maximum(0.0, liq - ice * self.retention)
 
         # liquid water and ice in snow, and snow water equivalent [m]
-        self.liq = np.maximum(0.0,
-                                  liq - pot_inf)
-        self.ice = ice
-        self.swe = self.liq + self.ice
+        liq = np.maximum(0.0, liq - pot_inf)
+        ice = ice
+        swe = liq + ice
 
-        # mass-balance error [m]
-        water_closure = ((self.swe - self.old_swe)
-                         - (forcing['throughfall_rain'] * dt + forcing['throughfall_snow'] * dt - pot_inf))
+        # mass-balance error [kg m-2]
+        water_closure = ((swe - self.swe)
+                         - (forcing['precipitation_rain'] * dt + forcing['precipitation_snow'] * dt - pot_inf))
 
+        # store iteration state
+        self.iteration_state =  {'temperature': forcing['air_temperature'],
+                                 'swe': swe,
+                                 'ice': ice,
+                                 'liq': liq}
 
         fluxes = {'potential_infiltration': pot_inf / dt,
-                  'water_closure': water_closure / dt}
+                  'water_closure': water_closure / dt
+                 }
 
-        states = {'snow_water_equivalent': self.swe}
+        states = {'snow_water_equivalent': swe,
+                  'temperature': forcing['air_temperature']
+                 }
 
         return fluxes, states
 

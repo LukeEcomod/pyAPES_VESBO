@@ -340,7 +340,7 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
     Conv_crit = 1.0e-12  # for soil moisture
     Conv_crit2 = 1.0e-10  # for pressure head, decreased to 1.0e-8 when profile saturated
 
-# TESTI, DURING DRY CONDITIONS INFILTRATION FORCED TO FIRST 5 LAYERS
+# TEST: DURING DRY CONDITIONS INFILTRATION FORCED TO FIRST 5 LAYERS
     # hydraulic condictivity based on previous time step
     KLh = hydraulic_conductivity(pF, x=h, Ksat=Ksat)
     # get KLh at i-1/2, note len(KLh) = N + 1
@@ -1001,7 +1001,7 @@ def hydraulic_conductivity(pF, x, Ksat=1):
     return Kh
 
 def gwl_Wsto(dz, pF):
-    r""" Forms interpolated function for soil column ground water dpeth, < 0 [m], as a
+    r""" Forms interpolated function for soil column ground water depth, < 0 [m], as a
     function of water storage [m] and vice versa
 
     Args:

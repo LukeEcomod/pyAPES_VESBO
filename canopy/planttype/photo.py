@@ -66,8 +66,10 @@ def leaf_interface(photop,
                 'Vcmax' (list): [Ha, Hd, dS]; activation energy [kJmol-1], deactivation energy [kJmol-1], entropy factor [J mol-1]
                 'Jmax' (list): [Ha, Hd, dS];
                 'Rd' (list): [Ha]; activation energy [kJmol-1)]
+        
         leafp (dict): leaf properties
             'lt': leaf lengthscale [m]
+        
         forcing (dict):
             'h2o': water vapor mixing ratio (mol/mol)
             'co2': carbon dioxide mixing ratio (ppm)
@@ -107,7 +109,7 @@ def leaf_interface(photop,
     NOTE: Vectorized code can be used in multi-layer sense where inputs are vectors of equal length
 
     Samuli Launiainen LUKE 3/2011 - 5/2017
-    Last edit 16.5.2017
+    Last edit 15.11.2019 / SL
     """
 
     # -- parameters -----
@@ -153,8 +155,6 @@ def leaf_interface(photop,
     # vapor pressure
     esat, s = e_sat(Tl)
     s = s / P  # slope of esat, mol/mol / degC
-#    s[esat / P < H2O] = EPS
-#    Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
     Dleaf = esat / P - H2O
 
     Lv = latent_heat(T) * MOLAR_MASS_H2O
@@ -162,6 +162,7 @@ def leaf_interface(photop,
     itermax = 20
     err = 999.0
     iter_no = 0
+
     while err > 0.01 and iter_no < itermax:
         iter_no += 1
         # boundary layer conductance
@@ -171,9 +172,11 @@ def leaf_interface(photop,
 
         if model.upper() == 'MEDLYN_FARQUHAR':
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_medlyn_farquhar(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v, P=P)
+
         if model.upper() == 'BWB':
             rh  = (1 - Dleaf*P / esat)  # rh at leaf (-)
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_bwb(photop, Qp, Tl, rh, CO2, gb_c, gb_v, P=P)
+
         # --- analytical co-limitation model Vico et al. 2013
         if model.upper() == 'CO_OPTI':
             An, Rd, fe, gs_opt, Ci, Cs = photo_c3_analytical(photop, Qp, Tl, Dleaf, CO2, gb_c, gb_v)
@@ -204,8 +207,8 @@ def leaf_interface(photop,
             # vapor pressure
             esat, s = e_sat(Tl)
             s = s / P  # slope of esat, mol/mol / degC
-#            s[esat / P < H2O] = EPS
-#            Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
+            # s[esat / P < H2O] = EPS
+            # Dleaf = np.maximum(EPS, esat / P - H2O)  # mol/mol
             Dleaf = esat / P - H2O
         else:
             err = 0.0
@@ -224,7 +227,7 @@ def leaf_interface(photop,
              'sensible_heat': H,
              'latent_heat': LE,
              'fr': Fr,
-             'Tl': Tl,
+             'leaf_temperature': Tl,
              'stomatal_conductance': np.minimum(gsv, 1.0), # gsv gets high when VPD->0
              'boundary_conductance': gb_v,
              'leaf_internal_co2': Ci,
@@ -232,6 +235,7 @@ def leaf_interface(photop,
         return x
     else:  # return 11 arrays
         return An, Rd, E, H, Fr, Tl, Ci, Cs, gsv, gs_opt, gb_v
+
 
 """ ---- photosynthesis models ----- """
 
