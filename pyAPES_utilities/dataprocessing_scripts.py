@@ -12,9 +12,6 @@ Note:
 
 import numpy as np
 import pandas as pd
-from os import listdir
-
-from pyAPES_utilities.timeseries_tools import fill_gaps
 import datetime
 
 #: machine epsilon
@@ -24,8 +21,9 @@ def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezo
     """
     Create forcing file from meteo.
     Args:
-        meteo_file (str): name of file with meteo (.csv not included)
+        meteo_fp (str): file path to meteofile
         output_file (str): name of output file (.csv not included)
+        dir_save (str): output directory
         lat (float): latitude
         lon (float): longitude
         P_unit (float): unit conversion needed to get to [Pa]
