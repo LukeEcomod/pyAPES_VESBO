@@ -22,7 +22,7 @@ gpara = {'dt' : 1800.0,  # timestep in forcing data file [s]
            'start_time' : "2005-06-01",  # start time of simulation [yyyy-mm-dd]
            'end_time' : "2005-06-10",  # end time of simulation [yyyy-mm-dd]
            'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat",  # forcing data file*
-           'results_directory':'results/Hyytiala/'
+           'results_directory':'results/Svartberget/'
          }
 
 # --- control flags (True/False) ---

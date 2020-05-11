@@ -40,9 +40,9 @@ def get_parameters(scenario):
                 'count': 1,
                 'scenario': 'krycklan',
                 'general':{
-                    'start_time' : "2005-06-01",
-                    'end_time' : "2005-06-10",
-                    'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat"
+                    'start_time' : "2016-05-01",
+                    'end_time' : "2016-10-01",
+                    'forc_filename' : "Svartberget/Svartberget_forcing_2014_2016.csv"
                 },
                 'canopy': {
                         'loc': {
@@ -51,7 +51,7 @@ def get_parameters(scenario):
                                 },
                         'radiation':{
                                 'Par_alb': 0.1,
-                                'Nir_alb': 0.43,
+                                'Nir_alb': 0.39,
                                 },
                         'interception': {
                                 'wmax': 0.35
