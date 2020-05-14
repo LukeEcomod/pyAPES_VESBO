@@ -40,9 +40,9 @@ def get_parameters(scenario):
                 'count': 1,
                 'scenario': 'krycklan',
                 'general':{
-                    'start_time' : "2016-05-01",
-                    'end_time' : "2016-10-01",
-                    'forc_filename' : "Svartberget/Svartberget_forcing_2014_2016.csv"
+                    'start_time' : "2019-01-01",
+                    'end_time' : "2019-11-01",
+                    'forc_filename' : "Svartberget/Svartberget_forcing_2019.csv" # "Svartberget/Svartberget_forcing_2014_2016.csv"
                 },
                 'canopy': {
                         'loc': {
@@ -54,7 +54,8 @@ def get_parameters(scenario):
                                 'Nir_alb': 0.39,
                                 },
                         'interception': {
-                                'wmax': 0.35
+                                'wmax': 0.35,
+                                'wmaxsnow': 0.7
                                 },
                         'planttypes': {
                                 'pine': {
@@ -73,6 +74,13 @@ def get_parameters(scenario):
                                         'LAImax': 0.6,
                                         'lad': stand['lad']['shrubs']
                                         }
+                                },
+                        'forestfloor': {
+                                'snowpack': {
+                                    'initial_conditions': {
+                                        'snow_water_equivalent':20.0
+                                        }
+                                    }
                                 }
                 }
             }

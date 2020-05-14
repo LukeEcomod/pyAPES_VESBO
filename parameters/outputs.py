@@ -7,7 +7,7 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
 
       # copy of forcing variables
       ['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
-      ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
+      ['forcing_precipitation', 'precipitation [kg m-2 s-1]', ('date', 'simulation')],
       ['forcing_pressure', 'ambient pressure [Pa]', ('date', 'simulation')],
       ['forcing_h2o','H2O concentration [mol mol-1]', ('date', 'simulation')],
       ['forcing_co2','CO2 concentration [ppm]', ('date', 'simulation')],
@@ -34,9 +34,9 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
       ['canopy_friction_velocity','canopy friction velocity [m s-1]', ('date', 'simulation', 'canopy')],
       ['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-#      ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-#      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-#      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+      ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
 
       # radiation
 #      ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
@@ -65,7 +65,7 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_condensation', 'condensation to canopy interception storage [kg m-2 s-1]', ('date', 'simulation')],
       ['canopy_condensation_drip', 'condensation to canopy that drips [kg m-2 s-1]', ('date', 'simulation')],
       ['canopy_throughfall', 'throughfall to moss or snow [kg m-2 s-1]', ('date', 'simulation')],
-#      ['canopy_evaporation_ml', 'evaporation from interception storage, profile (condensation incl.) [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
+      ['canopy_evaporation_ml', 'evaporation from interception storage, profile (condensation incl.) [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
 #      ['canopy_throughfall_ml', 'throughfall within canopy, profile [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
 #      ['canopy_condensation_drip_ml', 'condensation drip within canopy, profile [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
       ['canopy_water_closure', 'interception model mass balance error [kg m-2 s-1]', ('date', 'simulation')],
@@ -87,9 +87,9 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       #['canopy_root_sink', 'root water uptake profile [m s-1]', ('date', 'simulation', 'soil')],
 
       # planttype -specific outputs: lists of length 'planttype'
-#      ['pt_total_gpp', 'gross-primary productivity [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
+      ['pt_total_gpp', 'gross-primary productivity [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
 #      ['pt_total_dark_respiration', 'dark (or leaf + wood?) respiration [umol m-2 s-1]', ('date', 'simulation', 'planttype')],
-#      ['pt_total_transpiration', 'transpiration [kg m-2 s-1]', ('date', 'simulation', 'planttype')],
+      ['pt_total_transpiration', 'transpiration [kg m-2 s-1]', ('date', 'simulation', 'planttype')],
 #      ['pt_total_stomatal_conductance_h2o', 'stomatal conductance for H2O [mol m-2 s-1]', ('date', 'simulation', 'planttype')],
 #      ['pt_total_boundary_conductance_h2o', 'leaf boundary layer conductance for H2O [mol m-2 s-1]', ('date', 'simulation', 'planttype')],
 #      ['pt_root_water_potential', 'root water potential [m?]', ('date', 'simulation', 'planttype')], # CHECK UNITS!!!

@@ -66,10 +66,10 @@ def leaf_interface(photop,
                 'Vcmax' (list): [Ha, Hd, dS]; activation energy [kJmol-1], deactivation energy [kJmol-1], entropy factor [J mol-1]
                 'Jmax' (list): [Ha, Hd, dS];
                 'Rd' (list): [Ha]; activation energy [kJmol-1)]
-        
+
         leafp (dict): leaf properties
             'lt': leaf lengthscale [m]
-        
+
         forcing (dict):
             'h2o': water vapor mixing ratio (mol/mol)
             'co2': carbon dioxide mixing ratio (ppm)
@@ -857,7 +857,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 'theta': 0.7,
                 'La': 1600.0,
                 'g1': gfact * 2.3,
-                'g0': 1.0e-3,
+                'g0': 5.0e-3, #-1.0e-2,
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
@@ -965,12 +965,13 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     # env. conditions
     N=50
     P = 101300.0
-    Qp = 1000. * np.ones(N)  # np.linspace(1.,1800.,50)#
+    Qp = 500. * np.ones(N)  #np.linspace(1.,1800.,50)#
     CO2 = 400. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = np.linspace(1.,39.,50) # 10. * np.ones(N) #
+    T = 25. * np.ones(N) #np.linspace(1.,50.,50) #
     esat, s = e_sat(T)
-    H2O = (85.0 / 100.0) * esat / P
+    H2O = (np.linspace(15.,100.,50) / 100.0) * esat / P
+    VPD = 1e-3 * (esat - H2O * P)
     SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL
     LWnet = -30.0 * np.ones(N)
 
@@ -992,7 +993,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
 
     x = leaf_interface(photop, leafp, forcing, controls)
 #    print(x)
-    Y=T
+    Y=VPD
     plt.figure(5)
     plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
     plt.title('net_co2')

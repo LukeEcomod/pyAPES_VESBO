@@ -331,10 +331,10 @@ class ForestFloor(object):
 #                / abs(parameters['soil_depth'])
 #                * (min(forcing['air_temperature'],0.0) - forcing['soil_temperature'][0])
 #            )
-#
-#            state['snow_water_equivalent'] = states_snow['snow_water_equivalent']
-#            state['temperature'] = states_snow['temperature']
-#            state['surface_temperature'] = states_snow['temperature']
+
+        state['snow_water_equivalent'] = states_snow['snow_water_equivalent']
+        state['temperature'] = states_snow['temperature']
+        state['surface_temperature'] = states_snow['temperature']
 
         # bottomlayer_type specific results (fluxes & state): convert list of dicts to dict of lists
         blt_outputs = {}

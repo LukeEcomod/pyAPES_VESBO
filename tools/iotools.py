@@ -90,7 +90,7 @@ def initialize_netcdf(variables,
     ncf.createDimension('canopy', canopy_nodes)
     ncf.createDimension('planttype', planttypes)
     ncf.createDimension('groundtype', groundtypes)
-    
+
     time = ncf.createVariable('date', 'f8', ('date',))
     time.units = 'days since 0001-01-01 00:00:00.0'
     time.calendar = 'standard'
@@ -116,18 +116,16 @@ def initialize_netcdf(variables,
     return ncf, ff
 
 
-def read_forcing(forc_filename, start_time=None, end_time=None,
-                 cols=None, dt=1800.0, na_values='NaN', sep=';'):
+def read_forcing(forc_filename, start_time, end_time,
+                 dt=1800.0, na_values='NaN', sep=';'):
     """
-    Reads forcing or other data from csv file to dataframe
+    Reads forcing data from to dataframe
     Args:
         forc_filename (str): forcing file name
         start_time (str): starting time [yyyy-mm-dd], if None first date in
             file used
         end_time (str): ending time [yyyy-mm-dd], if None last date
             in file used
-        cols (list): header names to read from file, if None reads
-            variables need as input data
         dt (float): time step [s], if given checks
             that dt in file is equal to this
         na_values (str/float): nan value representation in file
@@ -145,68 +143,45 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
     tvec = pd.DatetimeIndex(tvec)
     dat.index = tvec
 
-    # select time period    
-    if start_time == None:
-        start_time = dat.index[0]
-    if end_time == None:
-        end_time = dat.index[-1]
-    
     dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
 
     # convert: H2O mmol / mol --> mol / mol; Prec kg m-2 in dt --> kg m-2 s-1
     dat['H2O'] = 1e-3 * dat['H2O']
     dat['Prec'] = dat['Prec'] / dt
-    
-    # if cols is not defined; return these
-    if cols is None:
-        cols = ['doy',
-                'Prec',
-                'P',
-                'Tair',
-                'Tdaily',
-                'U',
-                'Ustar',
-                'H2O',
-                'CO2',
-                'Zen',
-                'LWin',
-                'diffPar',
-                'dirPar',
-                'diffNir',
-                'dirNir']
-        # these for phenology model initialization
-        if 'X' in dat:
-            cols.append('X')
-        if 'DDsum' in dat:
-            cols.append('DDsum')
-    # or return all columns
-    elif cols == 'all':
-        cols = [col for col in dat]
+
+    cols = ['doy', 'Prec', 'P', 'Tair', 'Tdaily', 'U', 'Ustar', 'H2O', 'CO2', 'Zen',
+            'LWin', 'diffPar', 'dirPar', 'diffNir', 'dirNir']
+    # these for phenology model initialization
+    if 'X' in dat:
+        cols.append('X')
+    if 'DDsum' in dat:
+        cols.append('DDsum')
+
     # Forc dataframe from specified columns
     Forc = dat[cols].copy()
-    
+
     # Check time step if specified
-    if dt is not None:
-        if len(set(Forc.index[1:]-Forc.index[:-1])) > 1:
-            sys.exit("Forcing file does not have constant time step")
-        if (Forc.index[1] - Forc.index[0]).total_seconds() != dt:
-            sys.exit("Forcing file time step differs from dt given in general parameters")
+    if len(set(Forc.index[1:]-Forc.index[:-1])) > 1:
+        sys.exit("Forcing file does not have constant time step")
+    if (Forc.index[1] - Forc.index[0]).total_seconds() != dt:
+        sys.exit("Forcing file time step differs from dt given in general parameters")
 
     return Forc
 
 def read_data(ffile, start_time=None, end_time=None, na_values='NaN', sep=';'):
+
     dat = pd.read_csv(ffile, header='infer', na_values=na_values, sep=sep)
     # set to dataframe index
     tvec = pd.to_datetime(dat[['year', 'month', 'day', 'hour', 'minute']])
     tvec = pd.DatetimeIndex(tvec)
     dat.index = tvec
 
-    # select time period    
+    # select time period
     if start_time == None:
         start_time = dat.index[0]
     if end_time == None:
         end_time = dat.index[-1]
-    
+
     dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
 
     return dat

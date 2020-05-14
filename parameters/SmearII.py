@@ -40,7 +40,7 @@ loc = {'lat': 61.51,  # latitude
        }
 
 # grid
-grid = {'zmax': 25.0,  # heigth of grid from ground surface [m]
+grid = {'zmax': 32.0,  # heigth of grid from ground surface [m]
         'Nlayers': 101  # number of layers in grid [-]
         }
 

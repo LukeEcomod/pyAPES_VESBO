@@ -17,7 +17,7 @@ import datetime
 #: machine epsilon
 EPS = np.finfo(float).eps
 
-def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezone=+2.0):
+def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezone=+2.0, fpar=0.45):
     """
     Create forcing file from meteo.
     Args:
@@ -32,16 +32,14 @@ def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezo
     from canopy.radiation import solar_angles, compute_clouds_rad
     from canopy.micromet import e_sat
 
-    fpar = 0.45
-
-    dat = pd.read_csv(meteo_fp, sep=',', header='infer', encoding = 'ISO-8859-1')
+    dat = pd.read_csv(meteo_fp, sep=';', header='infer', encoding = 'ISO-8859-1')
 
     # set to dataframe index
-    dat.index = pd.to_datetime({'year': dat['yyyy'],
-                                'month': dat['mo'],
-                                'day': dat['dd'],
-                                'hour': dat['hh'],
-                                'minute': dat['mm']})
+    dat.index = pd.to_datetime({'year': dat['year'],
+                                'month': dat['month'],
+                                'day': dat['day'],
+                                'hour': dat['hour'],
+                                'minute': dat['minute']})
 
     readme = ''
     cols = []
