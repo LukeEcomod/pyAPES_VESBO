@@ -965,12 +965,12 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     # env. conditions
     N=50
     P = 101300.0
-    Qp = 500. * np.ones(N)  #np.linspace(1.,1800.,50)#
+    Qp = np.linspace(1.,1800.,50)#500. * np.ones(N)  #np.linspace(1.,1800.,50)#
     CO2 = 400. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
     T = 25. * np.ones(N) #np.linspace(1.,50.,50) #
     esat, s = e_sat(T)
-    H2O = (np.linspace(15.,100.,50) / 100.0) * esat / P
+    H2O = (55 / 100.0) * esat / P # (np.linspace(15.,100.,50) / 100.0) * esat / P
     VPD = 1e-3 * (esat - H2O * P)
     SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL
     LWnet = -30.0 * np.ones(N)
@@ -993,7 +993,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
 
     x = leaf_interface(photop, leafp, forcing, controls)
 #    print(x)
-    Y=VPD
+    Y=Qp
     plt.figure(5)
     plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
     plt.title('net_co2')

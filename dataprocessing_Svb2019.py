@@ -54,6 +54,17 @@ for i in range(5):
     dat[['VWC_%' + str(i+1)]].plot(ax=ax[i],color='grey')
     plt.title(titles[i])
 
+# ground heat flux
+plt.figure()
+dat['G_med']=dat[['G_1_1_1','G_2_1_1','G_3_1_1','G_4_1_1']].median(axis=1)
+dat[['G_1_1_1','G_2_1_1','G_3_1_1','G_4_1_1','G_med']].plot()
+for i in range(1,5):
+    dat['G_' +str(i)+'_1_1_qc']=np.where(dat['G_' +str(i)+'_1_1']>dat['G_med']+10.0, np.nan, dat['G_' +str(i)+'_1_1'])
+plt.figure()
+dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']] = dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']].interpolate()
+dat['G_avg']=dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']].mean(axis=1)
+dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc','G_avg']].plot()
+
 dat2 = pd.read_csv(r'O:\Projects\Antoine_SLU\EddyCovarianceData_30min_FinalAnalysis_201901_201912_decouplfil.csv',
                  sep=';', header='infer')
 
@@ -64,7 +75,7 @@ dat2.index = pd.to_datetime({'year': dat2['year'],
                             'minute': dat2['minute']})
 dat2.index = dat2.index.round('30T')
 
-dat = dat[['SWC_avg_1_1','TS_avg_1_1']].merge(dat2, how='outer', left_index=True, right_index=True)
+dat = dat[['SWC_avg_1_1','TS_avg_1_1','G_avg']].merge(dat2, how='outer', left_index=True, right_index=True)
 
 dat3 = pd.read_csv(r'O:\Projects\Antoine_SLU\ICOS_Carbon_portal\Svb_meteo2019.csv',
                  sep=';', header='infer')
@@ -258,6 +269,13 @@ frames.append(df)
 readme += info
 df, info = fill_gaps(dat[['LE_f_Wm-2']],
                     'LE_gapfilled', 'Latent heat flux [W m-2], gapfilled', fill_nan=np.nan,
+                    plot=plot)
+frames.append(df)
+readme += info
+
+# G
+df, info = fill_gaps(dat[['G_avg']],
+                    'G', 'Ground heat flux [W m-2]', fill_nan=np.nan,
                     plot=plot)
 frames.append(df)
 readme += info

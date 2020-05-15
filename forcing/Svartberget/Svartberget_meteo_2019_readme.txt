@@ -1,6 +1,6 @@
 Readme for Svartberget_meteo_2019.csv
 
-Kersti Haahti, Luke 2020-05-14
+Kersti Haahti, Luke 2020-05-15
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 1.0]
 Tsoil: Soil temperature at 5cm [degC]

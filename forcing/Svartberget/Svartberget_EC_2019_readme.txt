@@ -1,6 +1,6 @@
 Readme for Svartberget_EC_2019.csv
 
-Kersti Haahti, Luke 2020-05-14
+Kersti Haahti, Luke 2020-05-15
 
 yyyy, mo, dd, hh, mm: datetime [UTC + 1.0]
 LWnet: Net longwave radiation [W m-2]
@@ -24,6 +24,9 @@ LE: Latent heat flux [W m-2]
 LE_gapfilled: Latent heat flux [W m-2], gapfilled
   flag 0 (99.99%): LE_f_Wm-2
   flag 1 (0.01%): filled with LE_gapfilled = nan
+G: Ground heat flux [W m-2]
+  flag 0 (99.99%): G_avg
+  flag 1 (0.01%): filled with G = nan
 NEE: Net ecosystem exchange [umol m-2 s-1]
   flag 0 (52.05%): NEE_orig_umolm-2s-1
   flag 1 (47.95%): filled with NEE = nan

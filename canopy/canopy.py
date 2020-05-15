@@ -401,6 +401,7 @@ class CanopyModel(object):
                 'wind_speed': U,
                 'par': radiation_profiles['par'],
                 'average_leaf_temperature': Tleaf_prev, # sl changed 25.11.
+                'wet_leaf_temperature': self.interception.Tl_wet # kh for wet leaf rd
             }
 
             if self.Switch_Ebal:
