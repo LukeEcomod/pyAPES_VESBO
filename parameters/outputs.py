@@ -20,6 +20,7 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       # canopy state and model control statistics
       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
       ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
+      ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
       ['canopy_z', 'canopy model grid node elevations [m]', ('canopy')],
       ['canopy_planttypes', 'canopy planttype names', ('planttype')],
       ['canopy_WMA_assumption','WMA assumed (1=True, 0=False)', ('date', 'simulation')],
@@ -35,8 +36,8 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_friction_velocity','canopy friction velocity [m s-1]', ('date', 'simulation', 'canopy')],
       ['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
       ['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+#      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+#      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
 
       # radiation
 #      ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
@@ -96,8 +97,8 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
 
       # vertical profiles: lists of length 'planttype'; layers where lad == 0 are set to np.NaN
 #      ['pt_leaf_temperature', 'leaf temperature mean [degC]', ('date', 'simulation', 'planttype', 'canopy')],
-#      ['pt_leaf_temperature_sunlit', 'leaf temperature, sunlit leaves [degC]', ('date', 'simulation', 'planttype', 'canopy')],
-#      ['pt_leaf_temperature_shaded', 'leaf temperature, shaded leaves [degC]', ('date', 'simulation', 'planttype', 'canopy')],
+      ['pt_leaf_temperature_sunlit', 'leaf temperature, sunlit leaves [degC]', ('date', 'simulation', 'planttype', 'canopy')],
+      ['pt_leaf_temperature_shaded', 'leaf temperature, shaded leaves [degC]', ('date', 'simulation', 'planttype', 'canopy')],
 #      ['pt_net_co2_sunlit', 'net co2 uptake, sunlit leaves [umol m-2 (leaf) s-1]', ('date', 'simulation', 'planttype', 'canopy')],
 #      ['pt_net_co2_shaded', 'net co2 uptake, shaded leaves [umol m-2 (leaf) s-1]', ('date', 'simulation', 'planttype', 'canopy')],
 #      ['pt_dark_respiration_sunlit', 'dark respiration, sunlit leaves [umol m-2 (leaf) s-1]', ('date', 'simulation', 'planttype', 'canopy')],

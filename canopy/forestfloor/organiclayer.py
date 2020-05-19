@@ -115,7 +115,7 @@ class OrganicLayer(object):
 
         self.max_water_content = properties['max_water_content']
         self.max_symplast_water = self.max_water_content * properties['water_content_ratio']
-        
+
         #self.max_symplast_water = properties['max_symplast_water_content']
         self.min_water_content = properties['min_water_content']
 
@@ -239,7 +239,12 @@ class OrganicLayer(object):
 
         #-- solve c02 exchange
         if self.layer_type == 'bryophyte':
-            cflx = self.Carbon.co2_exchange(forcing['par'],
+            if forcing['snow_water_equivalent'] > 0.0:
+                cflx = {'net_co2': 0.0,
+                        'photosynthesis': 0.0,
+                        'respiration': 0.0}
+            else:
+                cflx = self.Carbon.co2_exchange(forcing['par'],
                                             forcing['co2'],
                                             states['temperature'],
                                             states['water_content']
@@ -340,17 +345,23 @@ class OrganicLayer(object):
         u[0] = self.temperature # [degC]
         u[1] = self.water_storage # [kg m-2]
 
-        # -- time loop
-        t = 0.0
-        while t < dt:
-            # compute derivatives
-            dudt, surface_temperature = self.water_heat_tendencies(u, sub_dt, forcing, parameters)
-            # integrate in time
-            u = u + dudt * sub_dt
+# TEST calculate only if no snow
+        if forcing['snow_water_equivalent'] > 0.0:
+            surface_temperature = forcing['air_temperature']
+            u[0] = forcing['air_temperature']
+        else:
 
-            # advance in time
-            t = t + sub_dt
-            #sub_dt = min(t-dt, sub_dt)
+            # -- time loop
+            t = 0.0
+            while t < dt:
+                # compute derivatives
+                dudt, surface_temperature = self.water_heat_tendencies(u, sub_dt, forcing, parameters)
+                # integrate in time
+                u = u + dudt * sub_dt
+
+                # advance in time
+                t = t + sub_dt
+                #sub_dt = min(t-dt, sub_dt)
 
         # unpack variables
         # [deg C]

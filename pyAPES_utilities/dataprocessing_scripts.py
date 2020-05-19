@@ -17,7 +17,7 @@ import datetime
 #: machine epsilon
 EPS = np.finfo(float).eps
 
-def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezone=+2.0, fpar=0.45):
+def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezone=+2.0, fpar=0.45, CO2_constant=False):
     """
     Create forcing file from meteo.
     Args:
@@ -85,7 +85,7 @@ def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezo
 
     # ambient CO2 [ppm]
     readme += "\nCO2: Ambient CO2 [ppm]"
-    if 'CO2' not in dat:
+    if 'CO2' not in dat or CO2_constant:
         dat['CO2'] = 400.0
         readme += " - set constant!"
     cols.append('CO2')

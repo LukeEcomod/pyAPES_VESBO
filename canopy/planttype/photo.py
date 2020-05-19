@@ -528,6 +528,7 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         # stomatal conductance
         gs_opt = g0 + (1.0 + g1 / (VPD**0.5)) * An1 / cs
         gs_opt = np.maximum(g0, gs_opt)  # gcut is the lower limit
+
         #print gs_opt
         # CO2 supply
         cs = np.maximum(ca - An1 / gb_c, 0.5*ca)  # through boundary layer
@@ -546,6 +547,7 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         ci[ix] = ca[ix]
         cs[ix] = ca[ix]
     gs_opt[ix] = g0
+
     gs_v = H2O_CO2_RATIO*gs_opt
 
     geff = (gb_v*gs_v) / (gb_v + gs_v)  # molm-2s-1
@@ -837,27 +839,19 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     gfact = 1.0
     if species.upper() == 'PINE':
         photop= {
-#                'Vcmax': 55.0,
-#                'Jmax': 105.0,
-#                'Rd': 1.3,
-#                'tresp': {
-#                    'Vcmax': [78.0, 200.0, 650.0],
-#                    'Jmax': [56.0, 200.0, 647.0],
-#                    'Rd': [33.0]
-#                    },
-                'Vcmax': 94.0,  # Tarvainen et al. 2018 Physiol. Plant.
-                'Jmax': 143.0,
-                'Rd': 1.3,
-                'tresp': {
-                    'Vcmax': [78.3, 200.0, 650.1],
-                    'Jmax': [56.0, 200.0, 647.9],
+                'Vcmax': 50.,
+                'Jmax': 98.,
+                'Rd': 1.2,
+                'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
+                    'Vcmax': [72., 200., 666.],
+                    'Jmax': [50., 200., 666.],
                     'Rd': [33.0]
                     },
                 'alpha': gamma * 0.2,
                 'theta': 0.7,
                 'La': 1600.0,
-                'g1': gfact * 2.3,
-                'g0': 5.0e-3, #-1.0e-2,
+                'g1': gfact * 2.8,
+                'g0': 1.0e-3, #-1.0e-2,
                 'kn': 0.6,
                 'beta': 0.95,
                 'drp': 0.7,
@@ -871,14 +865,6 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 }
     if species.upper() == 'SPRUCE':
         photop = {
-#                'Vcmax': 60.0,
-#                'Jmax': 114.0,
-#                'Rd': 1.5,
-#                'tresp': {
-#                    'Vcmax': [53.2, 202.0, 640.3],  # Tarvainen et al. 2013 Oecologia
-#                    'Jmax': [38.4, 202.0, 655.8],
-#                    'Rd': [33.0]
-#                    },
                 'Vcmax': 69.7,  # Tarvainen et al. 2013 Oecologia
                 'Jmax': 130.2,
                 'Rd': 1.3,
@@ -905,14 +891,6 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
                 }
     if species.upper() == 'DECID':
         photop = {
-#                'Vcmax': 50.0,
-#                'Jmax': 95.0,
-#                'Rd': 1.3,
-#                'tresp': {
-#                    'Vcmax': [77.0, 200.0, 636.7],  # Medlyn et al 2002.
-#                    'Jmax': [42.8, 200.0, 637.0],
-#                    'Rd': [33.0]
-#                    },
                 'Vcmax': 69.1,  # Medlyn et al 2002.
                 'Jmax': 116.3,
                 'Rd': 1.3,
@@ -965,12 +943,12 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     # env. conditions
     N=50
     P = 101300.0
-    Qp = np.linspace(1.,1800.,50)#500. * np.ones(N)  #np.linspace(1.,1800.,50)#
-    CO2 = 400. * np.ones(N)
+    Qp = 500. * np.ones(N)  #np.linspace(1.,1800.,50)#
+    CO2 = 420. * np.ones(N)
     U = 1.0  # np.array([10.0, 1.0, 0.1, 0.01])
-    T = 25. * np.ones(N) #np.linspace(1.,50.,50) #
+    T = np.linspace(1.,50.,50) #25. * np.ones(N) #
     esat, s = e_sat(T)
-    H2O = (55 / 100.0) * esat / P # (np.linspace(15.,100.,50) / 100.0) * esat / P
+    H2O = (esat - 1000.0) / P #(55 / 100.0) * esat / P #(np.linspace(15.,100.,50) / 100.0) * esat / P  #
     VPD = 1e-3 * (esat - H2O * P)
     SWabs = 0.5 * (1-leafp['par_alb']) * Qp / PAR_TO_UMOL + 0.5 * (1-leafp['nir_alb']) * Qp / PAR_TO_UMOL
     LWnet = -30.0 * np.ones(N)
@@ -993,7 +971,7 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
 
     x = leaf_interface(photop, leafp, forcing, controls)
 #    print(x)
-    Y=Qp
+    Y=T
     plt.figure(5)
     plt.subplot(421); plt.plot(Y, x['net_co2'], 'o')
     plt.title('net_co2')
@@ -1009,8 +987,8 @@ def test_leafscale(method='MEDLYN_FARQUHAR', species='pine', Ebal=False):
     plt.title('boundary_conductance')
     plt.subplot(427); plt.plot(Y, x['leaf_internal_co2'], 'o')
     plt.title('leaf_internal_co2')
-    plt.subplot(428); plt.plot(Y, x['leaf_surface_co2'], 'o')
-    plt.title('leaf_surface_co2')
+    plt.subplot(428); plt.plot(Y, x['leaf_temperature'], 'o')
+    plt.title('leaf_temperature')
     plt.tight_layout()
 
 def test_photo_temperature_response(species='pine'):
@@ -1022,8 +1000,8 @@ def test_photo_temperature_response(species='pine'):
                 'Jmax': 105.0,
                 'Rd': 1.3,
                 'tresp': {
-                    'Vcmax': [78.3, 200.0, 650.1],
-                    'Jmax': [56.0, 200.0, 647.9],
+                    'Vcmax': [72., 200., 649.],
+                    'Jmax': [50., 200., 646.],
                     'Rd': [33.0]
                     }
                 }
@@ -1057,40 +1035,6 @@ def test_photo_temperature_response(species='pine'):
                 'tresp': {
                     'Vcmax': [77.0, 200.0, 636.7],
                     'Jmax': [42.8, 200.0, 637.0],
-                    'Rd': [33.0]
-                    }
-                }
-
-    if species.upper() == 'PINE2':
-        photop= {
-                'Vcmax': 55.0,
-                'Jmax': 105.0,
-                'Rd': 1.3,
-                'tresp': {
-                    'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                    'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                    'Rd': [33.0]
-                    }
-                }
-    if species.upper() == 'SPRUCE2':
-        photop = {
-                'Vcmax': 60.0,
-                'Jmax': 114.0,
-                'Rd': 1.5,
-                'tresp': {
-                    'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                    'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
-                    'Rd': [33.0]
-                    }
-                }
-    if species.upper() == 'DECID2':
-        photop = {
-                'Vcmax': 50.0,
-                'Jmax': 95.0,
-                'Rd': 1.3,
-                'tresp': {
-                    'Vcmax': [72., 200., 649.],  # (Kattge and Knorr, 2007)
-                    'Jmax': [50., 200., 646.],  # (Kattge and Knorr, 2007)
                     'Rd': [33.0]
                     }
                 }

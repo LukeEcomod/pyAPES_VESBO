@@ -25,8 +25,8 @@ LE_gapfilled: Latent heat flux [W m-2], gapfilled
   flag 0 (99.99%): LE_f_Wm-2
   flag 1 (0.01%): filled with LE_gapfilled = nan
 G: Ground heat flux [W m-2]
-  flag 0 (99.99%): G_avg
-  flag 1 (0.01%): filled with G = nan
+  flag 0 (83.37%): G_avg
+  flag 1 (16.63%): filled with G = nan
 NEE: Net ecosystem exchange [umol m-2 s-1]
   flag 0 (52.05%): NEE_orig_umolm-2s-1
   flag 1 (47.95%): filled with NEE = nan

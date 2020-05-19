@@ -300,7 +300,8 @@ def profiles_hyde(data, species, z, biomass_function='marklund'):
 
     if species == 'spruce':
 #        h = 1.3 + d**3.0 / (1.826 + 0.303*d)**3.0  # fitted to hyytiälä 2008
-        h = 1.3 + d**3.0 / (1.500 + 0.342*d)**3.0  # fitted to lettosuo 2016
+        # h = 1.3 + d**3.0 / (1.500 + 0.342*d)**3.0  # fitted to lettosuo 2016
+        h = 1.3 + d**3.0 / (2.13 + 0.28*d)**3.0  # fitted to svartberget
 #        ht = -2.34 + 0.58*h    # Tahvanainen & Forss, 2008 For. Ecol. Manag. Fig 4 - SAMA KOIVULLE ONKOHAN OIKEIN?
         ht = 0.249*h  # fitted to lettosuo 2016
         ht = np.maximum(0.0, ht)

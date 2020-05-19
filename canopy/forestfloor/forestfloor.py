@@ -331,6 +331,12 @@ class ForestFloor(object):
 #                / abs(parameters['soil_depth'])
 #                * (min(forcing['air_temperature'],0.0) - forcing['soil_temperature'][0])
 #            )
+# TEST
+        if states_snow['snow_water_equivalent'] > 0.0:
+            fluxes['ground_heat'] += (
+                0.01 * parameters['soil_thermal_conductivity'] / abs(parameters['soil_depth'])
+                * (min(forcing['air_temperature'],0.0) - forcing['soil_temperature'][0])
+            )
 
         state['snow_water_equivalent'] = states_snow['snow_water_equivalent']
         state['temperature'] = states_snow['temperature']

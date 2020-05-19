@@ -55,13 +55,11 @@ for i in range(5):
     plt.title(titles[i])
 
 # ground heat flux
-plt.figure()
 dat['G_med']=dat[['G_1_1_1','G_2_1_1','G_3_1_1','G_4_1_1']].median(axis=1)
 dat[['G_1_1_1','G_2_1_1','G_3_1_1','G_4_1_1','G_med']].plot()
 for i in range(1,5):
     dat['G_' +str(i)+'_1_1_qc']=np.where(dat['G_' +str(i)+'_1_1']>dat['G_med']+10.0, np.nan, dat['G_' +str(i)+'_1_1'])
-plt.figure()
-dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']] = dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']].interpolate()
+# dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']] = dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']].interpolate()
 dat['G_avg']=dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc']].mean(axis=1)
 dat[['G_1_1_1_qc','G_2_1_1_qc','G_3_1_1_qc','G_4_1_1_qc','G_avg']].plot()
 
@@ -87,23 +85,50 @@ dat3.index = pd.to_datetime({'year': dat3['year'],
                             'minute': dat3['minute']})
 dat3.index = dat3.index.round('30T')
 
-dat = dat.merge(dat3, how='outer', left_index=True, right_index=True)
+dat = dat.merge(dat3[['NetRad_1_2_1','Lwnet_1_2_1','Swnet_1_2_1']], how='outer', left_index=True, right_index=True)
+
+dat4 = pd.read_csv(r'O:\Projects\Antoine_SLU\SE-Svb_meteo_201901_201912_CP_flag_filled.csv',
+                 sep=';', header='infer')
+
+dat4.index = pd.to_datetime({'year': dat4['year'],
+                            'month': dat4['month'],
+                            'day': dat4['day'],
+                            'hour': dat4['hour'],
+                            'minute': dat4['minute']})
+dat4.index = dat4.index.round('30T')
+
+dat = dat.merge(dat4, how='outer', left_index=True, right_index=True)
 
 # dat.columns
 
-dat['PPFD_IN_1_2_2'] = dat['PPFD_IN_1_2_1'] / 4.56
-dat['Pa_1_1_1'] = np.where(dat['Pa_1_1_1']<200.0, np.nan, dat['Pa_1_1_1'])
+dat['PPFD_IN_1_2_2_f'] = np.maximum(dat['PPFD_IN_1_2_1_f'] / 4.56, 0.0)
+# dat['Pa_1_1_1'] = np.where(dat['Pa_1_1_1']<200.0, np.nan, dat['Pa_1_1_1'])
 
-# plot_columns(dat[['Swin_1_1_1','Swin_1_2_1','PPFD_IN_1_2_1']])
-# -> fraction of PAR is 0.49
+# plot_columns(dat[['Rglobal_f','PPFD_IN_1_2_2_f','PPFD_DIR_1_1_1_f']])
+# -> fraction of PAR is 0.45
 
 # meteo
-dat[['Pa_1_1_1','Ta_1_1_1','RH_1_1_1','P_1_1_1']].plot(subplots=True)
-dat[['wndspd_f_ms-1', 'wndspd_ms-1']].plot()
-dat[['Swin_1_1_1','Swin_1_2_1','PPFD_IN_1_2_2']].plot()
-dat[['Lwin_1_2_1','Lwout_1_2_1']].plot()
-dat[['CO2_MixingRatio_umolmol-1']].plot()
-dat[['H2O_MixingRatio_mmolmol-1']].plot()  # unit?!?!
+dat[['Pa_1_1_1_f','Ta_1_1_1_f','RH_1_1_1_f','P_1_1_1_f','wndspd_f_ms-1','Lwin_1_2_1_f','CO2_MixingRatio_umolmol-1']].plot(subplots=True)
+dat[['Rglobal_f','PPFD_IN_1_2_2_f']].plot()
+dat[['PPFD_DIR_1_1_1_f', 'PPFD_DIFF_1_1_1_f']].plot()
+
+dat['Rglobal_f'] = np.maximum(dat['Rglobal_f'], 0.0)
+
+dat['RH_1_1_1_f'] = np.minimum(dat['RH_1_1_1_f'], 100.0)
+
+dat['dif_frac']=np.maximum(dat['PPFD_DIFF_1_1_1_f'],1e-6)/np.maximum(dat['PPFD_DIR_1_1_1_f'],np.maximum(dat['PPFD_DIFF_1_1_1_f'],1e-6))
+dat[['dif_frac']].plot()
+
+dat['Par']=np.minimum(dat['PPFD_IN_1_2_2_f'],0.5*dat['Rglobal_f'])
+dat['diffPar']=dat['dif_frac']*dat['Par']
+dat['dirPar']=(1-dat['dif_frac'])*dat['Par']
+dat['Nir']=dat['Rglobal_f']-dat['Par']
+dat['diffNir']=dat['dif_frac']*dat['Nir']
+dat['dirNir']=(1-dat['dif_frac'])*dat['Nir']
+
+dat[['Par','diffPar']].plot()
+dat[['Nir','diffNir']].plot()
+dat[['Nir','Par']].plot()
 
 #%% meteo file & forcing
 
@@ -127,35 +152,57 @@ frames.append(df)
 readme += info
 
 # Air temperature
-df, info = fill_gaps(dat[['Ta_1_1_1']],
+df, info = fill_gaps(dat[['Ta_1_1_1_f']],
                      'Tair', 'Air temperature [degC]', fill_nan='linear',
                      plot=plot)
 frames.append(df)
 readme += info
 
 # Relative humidity
-df, info = fill_gaps(dat[['RH_1_1_1']],
+df, info = fill_gaps(dat[['RH_1_1_1_f']],
                      'RH', 'Relative humidity [%]', fill_nan='linear',
                      plot=plot)
 frames.append(df)
 readme += info
 
 # Pressure
-df, info = fill_gaps(dat[['Pa_1_1_1']],
+df, info = fill_gaps(dat[['Pa_1_1_1_f']],
                      'P', 'Ambient pressure [hPa]', fill_nan='linear',
                      plot=plot)
 frames.append(df)
 readme += info
 
 # Incoming shortwave radiation
-df, info = fill_gaps(dat[['Swin_1_1_1','Swin_1_2_1']],
+df, info = fill_gaps(dat[['Rglobal_f']],
                      'Rg', 'Global radiation i.e. incoming shortwave radiation [W/m2]', fill_nan='linear',
                      plot=plot)
 frames.append(df)
 readme += info
 
+# radiation components
+df, info = fill_gaps(dat[['dirPar']],
+                     'dirPar', 'Direct PAR [W/m2]', fill_nan='linear',
+                     plot=plot)
+frames.append(df)
+readme += info
+df, info = fill_gaps(dat[['diffPar']],
+                     'diffPar', 'Diffuse PAR [W/m2]', fill_nan='linear',
+                     plot=plot)
+frames.append(df)
+readme += info
+df, info = fill_gaps(dat[['dirNir']],
+                     'dirNir', 'Direct NIR [W/m2]', fill_nan='linear',
+                     plot=plot)
+frames.append(df)
+readme += info
+df, info = fill_gaps(dat[['diffNir']],
+                     'diffNir', 'Diffuse NIR [W/m2]', fill_nan='linear',
+                     plot=plot)
+frames.append(df)
+readme += info
+
 # Downwelling longwave radiation
-df, info = fill_gaps(dat[['Lwin_1_2_1']],
+df, info = fill_gaps(dat[['Lwin_1_2_1_f']],
                      'LWin', 'Downwelling long wave radiation [W/m2]', fill_nan='linear',
                      plot=plot)
 frames.append(df)
@@ -179,7 +226,7 @@ frames.append(df)
 readme += info
 
 # Precipitation
-df, info = fill_gaps(dat[['P_1_1_1']],
+df, info = fill_gaps(dat[['P_1_1_1_f']],
                     'Prec', 'Precipitation [mm/30min]', fill_nan=0.0,
                      plot=plot)
 frames.append(df)
@@ -214,7 +261,10 @@ save_df_to_csv(Svb_final, 'Svartberget_meteo_2019', readme=readme,
                 fp='forcing/Svartberget/', timezone=+1)
 
 create_forcingfile('forcing/Svartberget/Svartberget_meteo_2019.csv', 'Svartberget_forcing_2019',
-                    'forcing/Svartberget/', lat=64.26, lon=19.77, P_unit=1e2,timezone=+1.0, fpar=0.49) # [hPa]
+                    'forcing/Svartberget/', lat=64.26, lon=19.77, P_unit=1e2, timezone=+1.0) # [hPa]
+
+create_forcingfile('forcing/Svartberget/Svartberget_meteo_2019.csv', 'Svartberget_forcing_2019_CO2_400',
+                    'forcing/Svartberget/', lat=64.26, lon=19.77, P_unit=1e2, timezone=+1.0, CO2_constant=True) # [hPa]
 
 # %% flux data
 

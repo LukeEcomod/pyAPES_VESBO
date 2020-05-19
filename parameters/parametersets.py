@@ -40,9 +40,132 @@ def get_parameters(scenario):
                 'count': 1,
                 'scenario': 'krycklan',
                 'general':{
-                    'start_time' : "2019-07-01",
-                    'end_time' : "2019-07-30",
+                    'start_time' : "2019-01-01",
+                    'end_time' : "2019-12-31",
                     'forc_filename' : "Svartberget/Svartberget_forcing_2019.csv" # "Svartberget/Svartberget_forcing_2014_2016.csv"
+                },
+                'canopy': {
+                        'forestfloor': {
+                                'snowpack': {
+                                    'initial_conditions': {
+                                        'snow_water_equivalent':20.0
+                                        }
+                                    }
+                                },
+                        'loc': {
+                                'lat': 64.26,
+                                'lon': 19.77
+                                },
+                        'radiation':{
+                                'Par_alb': 0.1,
+                                'Nir_alb': 0.39,
+                                },
+                        'interception': {
+                                'wmax': 0.35,
+                                'wmaxsnow': 0.7
+                                },
+                        'planttypes': {
+                                'pine': {
+                                        'LAImax': 0.31 * 4.8,
+                                        'lad': stand['lad']['pine'],
+                                        'phenop': {
+                                            'Tbase': -4.67,
+                                            'tau': 8.33,
+                                            'smax': 15.0,
+                                            },
+                                        'photop': {
+                                            'Vcmax': 50.,
+                                            'Jmax': 98.,
+                                            'Rd': 1.2,
+                                            'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
+                                                'Vcmax': [72., 200., 649.],
+                                                'Jmax': [50., 200., 646.],
+                                                },
+                                            'g1': (2.5,2.8),
+                                            'g0': (4.0e-3,1.0e-3),
+                                            },
+                                        },
+                                'spruce': {
+                                        'LAImax': 0.64 * 4.8,
+                                        'lad': stand['lad']['spruce'],
+                                        'phenop': {
+                                            'Tbase': -4.67,
+                                            'tau': 8.33,
+                                            'smax': 15.0
+                                            },
+                                        'photop': {
+                                            'Vcmax': 60.,
+                                            'Jmax': 113.,
+                                            'Rd': 1.4,
+                                            'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
+                                                'Vcmax': [72., 200., 649.],
+                                                'Jmax': [50., 200., 646.],
+                                                },
+                                            'g1': (2.5,2.8),
+                                            'g0': (4.0e-3,1.0e-3),
+                                            },
+                                        },
+                                'decid': {
+                                        'LAImax': 0.05 * 4.8,
+                                        'lad': stand['lad']['decid'],
+                                        'phenop': {
+                                            'Tbase': -4.67,
+                                            'tau': 8.33,
+                                            'smax': 15.0,
+                                            'fmin': 0.01
+                                            },
+                                        'photop': {
+                                            'Vcmax': 45.,
+                                            'Jmax': 89.,
+                                            'Rd': 1.0,
+                                            'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
+                                                'Vcmax': [72., 200., 649.],
+                                                'Jmax': [50., 200., 646.],
+                                                },
+                                            'g1': (4.5,5.0),
+                                            'g0': (1.0e-2,5.0e-3),
+                                            },
+                                        },
+                                'shrubs': {
+                                        'LAImax': 0.6,
+                                        'lad': stand['lad']['shrubs'],
+                                        'phenop': {
+                                            'Tbase': -4.67,
+                                            'tau': 8.33,
+                                            'smax': 15.0,
+                                            'fmin': 0.01
+                                            },
+                                        'photop': {
+                                            'Vcmax': 40.,
+                                            'Jmax': 79.,
+                                            'Rd': 0.9,
+                                            'kn': 0.0,
+                                            'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
+                                                'Vcmax': [72., 200., 649.],
+                                                'Jmax': [50., 200., 646.],
+                                                },
+                                            'g1': (4.5,5.0,),
+                                            'g0': (1.0e-2,5.0e-3),
+                                            },
+                                        }
+                                },
+                }
+            }
+    elif scenario.upper() == 'KRYCKLAN_2016':
+        from pyAPES_utilities.parameter_utilities import single_lad_profiles
+        from parameters.SmearII import grid
+        # normed leaf area density profiles
+        fdir = 'pyAPES_utilities/runkolukusarjat/'
+        hs = 0.5  # height of understory shrubs [m]
+        stand = single_lad_profiles(grid, fdir + 'Krycklan_c2.txt', hs, plot=False, biomass_function='marklund')
+
+        parameters = {
+                'count': 2,
+                'scenario': 'krycklan',
+                'general':{
+                    'start_time' : "2015-10-01",
+                    'end_time' : "2016-11-01",
+                    'forc_filename' : "Svartberget/Svartberget_forcing_2014_2016.csv"
                 },
                 'canopy': {
                         'loc': {
@@ -72,8 +195,8 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': 2.5,
-                                            'g0': 4.0e-3, #(-4.0e-3,1.0e-5,4.0e-3),
+                                            'g1': (2.5,2.8),
+                                            'g0': (4.0e-3,1.0e-3),
                                             },
                                         },
                                 'spruce': {
@@ -90,15 +213,16 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': 2.5,
-                                            'g0': 4.0e-3, #(-4.0e-3,1.0e-5,4.0e-3),
+                                            'g1': (2.5,2.8),
+                                            'g0': (4.0e-3,1.0e-3),
                                             },
                                         },
                                 'decid': {
                                         'LAImax': 0.05 * 4.8,
                                         'lad': stand['lad']['decid'],
                                         'phenop': {
-                                            'smax': 15.0  # Kolari 2014
+                                            'smax': 15.0,  # Kolari 2014
+                                            'fmin': 0.01
                                             },
                                         'photop': {
                                             'Vcmax': 45.,
@@ -108,15 +232,16 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': 4.5,
-                                            'g0': 1.0e-2, #(-4.0e-3,1.0e-5,1.0e-2),
+                                            'g1': (4.5,5.0),
+                                            'g0': (1.0e-2,5.0e-3),
                                             },
                                         },
                                 'shrubs': {
                                         'LAImax': 0.6,
                                         'lad': stand['lad']['shrubs'],
                                         'phenop': {
-                                            'smax': 15.0  # Kolari 2014
+                                            'smax': 15.0,  # Kolari 2014
+                                            'fmin': 0.01
                                             },
                                         'photop': {
                                             'Vcmax': 40.,
@@ -127,17 +252,10 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': 4.5,
-                                            'g0': 1.0e-2, #(-4.0e-3,1.0e-5,1.0e-2),
+                                            'g1': (4.5,5.0),
+                                            'g0': (1.0e-2,5.0e-3),
                                             },
                                         }
-                                },
-                        'forestfloor': {
-                                'snowpack': {
-                                    'initial_conditions': {
-                                        'snow_water_equivalent':20.0
-                                        }
-                                    }
                                 }
                 }
             }
