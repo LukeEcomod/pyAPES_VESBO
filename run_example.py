@@ -43,14 +43,36 @@ params = {
 
 outputfile, Model = driver(parameters=params, create_ncf=True)
 
-#%% from now on, we just play with results and SMEAR II -data; this is all external to the model
-
 # read results from NetCDF-file to xarray-dataset: xarray documentation here:
-#http://xarray.pydata.org/en/stable/index.html
+# http://xarray.pydata.org/en/stable/index.html
 
 results = read_results(outputfile)
 
-# import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:
+#%% sinks/sources for tree box model
+
+plt.figure()
+ax=plt.subplot(1,2,1)
+results['pt_transpiration'][24,0,1,:].plot.line(y='canopy')
+results['pt_transpiration'][48,0,1,:].plot.line(y='canopy')
+plt.subplot(1,2,2,sharey=ax)
+results['pt_net_co2'][24,0,1,:].plot.line(y='canopy')
+results['pt_net_co2'][48,0,1,:].plot.line(y='canopy')
+plt.ylim([0,20])
+plt.legend(['noon','midnight'])
+
+results['pt_total_net_co2']=results['pt_total_gpp']+results['pt_total_dark_respiration']
+
+np.sum(results['pt_transpiration'][24,0,1,:])
+
+plt.figure()
+ax=plt.subplot(2,1,1)
+results['pt_total_transpiration'][:,:,1].plot.line(x='date')
+plt.subplot(2,1,2,sharex=ax)
+results['pt_total_gpp'][:,:,1].plot.line(x='date')
+results['pt_total_net_co2'][:,:,1].plot.line(x='date')
+plt.legend(['gpp','net_co2'])
+
+# %% import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:
 # https://pandas.pydata.org/pandas-docs/stable/index.html
 
 flxdata = read_data("forcing/Hyytiala/FIHy_flx_2005-2010.dat", sep=';',

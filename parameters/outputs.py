@@ -4,7 +4,7 @@ GENERAL PARAMETERS FOR RUNNING pyAPES
 """
 
 output_variables = {'variables': [# variable name, description [units], (dimensions)
-        
+
       # copy of forcing variables
       ['forcing_air_temperature', 'above canopy air temperature [degC]', ('date', 'simulation')],
       ['forcing_precipitation', 'precipitation [m s-1]', ('date', 'simulation')],
@@ -116,6 +116,9 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['pt_leaf_internal_co2_shaded', 'leaf internal CO2 mixing ratio, shaded leaves [ppm]', ('date', 'simulation', 'planttype', 'canopy')],
       ['pt_leaf_surface_co2_sunlit', 'leaf surface CO2 mixing ratio, shaded leaves [ppm]', ('date', 'simulation', 'planttype', 'canopy')],
       ['pt_leaf_surface_co2_shaded', 'leaf surface CO2 mixing ratio, shaded leaves [ppm]', ('date', 'simulation', 'planttype', 'canopy')],
+
+      ['pt_transpiration', 'transpiration [mol m-3 s-1]', ('date', 'simulation', 'planttype', 'canopy')],
+      ['pt_net_co2', 'net co2 uptake [umol m-3 s-1]', ('date', 'simulation', 'planttype', 'canopy')],
 
       # soil model state and fluxes
       ['soil_z', 'soil model grid node elevations [m]', ('soil')],
