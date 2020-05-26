@@ -52,7 +52,7 @@ results = read_results(outputfile)
 
 plt.figure()
 ax=plt.subplot(1,2,1)
-results['pt_transpiration'][24,0,1,:].plot.line(y='canopy')
+results['pt_transpiration'][24,0,1,1:61].plot.line(y='canopy')
 results['pt_transpiration'][48,0,1,:].plot.line(y='canopy')
 plt.subplot(1,2,2,sharey=ax)
 results['pt_net_co2'][24,0,1,:].plot.line(y='canopy')
@@ -60,17 +60,18 @@ results['pt_net_co2'][48,0,1,:].plot.line(y='canopy')
 plt.ylim([0,20])
 plt.legend(['noon','midnight'])
 
-results['pt_total_net_co2']=results['pt_total_gpp']+results['pt_total_dark_respiration']
-
-np.sum(results['pt_transpiration'][24,0,1,:])
+np.sum(0.25*results['pt_net_co2'][24,0,1,:])
+results['pt_total_net_co2']=results['pt_total_gpp']-results['pt_total_dark_respiration']
 
 plt.figure()
-ax=plt.subplot(2,1,1)
+ax=plt.subplot(3,1,1)
 results['pt_total_transpiration'][:,:,1].plot.line(x='date')
-plt.subplot(2,1,2,sharex=ax)
-results['pt_total_gpp'][:,:,1].plot.line(x='date')
+plt.subplot(3,1,2,sharex=ax)
 results['pt_total_net_co2'][:,:,1].plot.line(x='date')
-plt.legend(['gpp','net_co2'])
+results['pt_total_gpp'][:,:,1].plot.line(x='date')
+plt.legend(['net_co2','gpp'])
+plt.subplot(3,1,3,sharex=ax)
+results['soil_water_potential'][:,0,:5].plot.line(x='date')
 
 # %% import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:
 # https://pandas.pydata.org/pandas-docs/stable/index.html
