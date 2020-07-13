@@ -472,7 +472,7 @@ def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
     N=np.size(z) #nodes
 
     #hrel= np.maximum(0,(z - hbase)/(htop-hbase)) #relative height within crown
-    hrel=(z - hbase)/(htop-hbase)
+    hrel=(z - hbase)/(htop-hbase + eps)
     hrel[hrel>1]=1
     hrel[hrel<0]=0
 
@@ -506,7 +506,7 @@ def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
     #eliminate kink at crown base
     ind = (Ldens > 0.0).nonzero()[0][0]
     Ldens[ind]=np.mean(Ldens[ind-1:ind])
-    Ldens=Ldens/sum(Ldens*dz) #normalize integral to unity
+    Ldens=Ldens/sum(Ldens*dz + eps) #normalize integral to unity
 
     del ind, beta
 
@@ -526,7 +526,7 @@ def crown_biomass_distr(species,z,htop=1,hbase=0,PlotFigs="False"):
     #eliminate kink at crown base
     ind = (Cdens > 0.0).nonzero()[0][0]
     Cdens[ind]=np.mean(Ldens[ind-1:ind])
-    Cdens=Cdens/sum(Cdens*dz) #normalize integral to unity
+    Cdens=Cdens/sum(Cdens*dz + eps) #normalize integral to unity
     #print sum(Cdens*dz)
 
     del ind, beta

@@ -6,6 +6,8 @@ Created on Fri Oct 19 12:39:09 2018
 @author: ajkieloaho
 """
 
+import numpy as np
+
 # Modifications to some parameters
 
 def get_parameters(scenario):
@@ -29,15 +31,13 @@ def get_parameters(scenario):
         }
 
     elif scenario.upper() == 'KRYCKLAN':
-        from pyAPES_utilities.parameter_utilities import single_lad_profiles
-        from parameters.SmearII import grid
-        # normed leaf area density profiles
-        fdir = 'pyAPES_utilities/runkolukusarjat/'
-        hs = 0.5  # height of understory shrubs [m]
-        stand = single_lad_profiles(grid, fdir + 'Krycklan_c2.txt', hs, plot=False, biomass_function='marklund')
-
+        from processing_stand_data import data_gr
+        # understory shrubs
+        z = np.linspace(0, 32, 101)
+        lad_g = np.zeros(len(z))
+        lad_g[1] = 1.0 / z[1]
         parameters = {
-                'count': 1,
+                'count': 10,
                 'scenario': 'krycklan',
                 'general':{
                     'start_time' : "2019-01-01",
@@ -48,7 +48,7 @@ def get_parameters(scenario):
                         'forestfloor': {
                                 'snowpack': {
                                     'initial_conditions': {
-                                        'snow_water_equivalent':20.0
+                                        'snow_water_equivalent': 20.0 #!!!!!!!!!!!!!!!
                                         }
                                     }
                                 },
@@ -66,8 +66,8 @@ def get_parameters(scenario):
                                 },
                         'planttypes': {
                                 'pine': {
-                                        'LAImax': 0.31 * 4.8,
-                                        'lad': stand['lad']['pine'],
+                                        'LAImax': tuple(data_gr.loc['pine','LAI'].values),
+                                        'lad': tuple(data_gr.loc['pine','lad'].values),
                                         'phenop': {
                                             'Tbase': -4.67,
                                             'tau': 8.33,
@@ -81,13 +81,13 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': (2.5,2.8),
-                                            'g0': (4.0e-3,1.0e-3),
+                                            'g1': 2.5,
+                                            'g0': 4.0e-3,
                                             },
                                         },
                                 'spruce': {
-                                        'LAImax': 0.64 * 4.8,
-                                        'lad': stand['lad']['spruce'],
+                                        'LAImax': tuple(data_gr.loc['spruce','LAI'].values),
+                                        'lad': tuple(data_gr.loc['spruce','lad'].values),
                                         'phenop': {
                                             'Tbase': -4.67,
                                             'tau': 8.33,
@@ -101,13 +101,13 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': (2.5,2.8),
-                                            'g0': (4.0e-3,1.0e-3),
+                                            'g1': 2.5,
+                                            'g0': 4.0e-3,
                                             },
                                         },
                                 'decid': {
-                                        'LAImax': 0.05 * 4.8,
-                                        'lad': stand['lad']['decid'],
+                                        'LAImax': tuple(data_gr.loc['birch','LAI'].values),
+                                        'lad': tuple(data_gr.loc['birch','lad'].values),
                                         'phenop': {
                                             'Tbase': -4.67,
                                             'tau': 8.33,
@@ -122,13 +122,13 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': (4.5,5.0),
-                                            'g0': (1.0e-2,5.0e-3),
+                                            'g1': 4.5,
+                                            'g0': 1.0e-2,
                                             },
                                         },
                                 'shrubs': {
                                         'LAImax': 0.6,
-                                        'lad': stand['lad']['shrubs'],
+                                        'lad': lad_g,
                                         'phenop': {
                                             'Tbase': -4.67,
                                             'tau': 8.33,
@@ -144,8 +144,8 @@ def get_parameters(scenario):
                                                 'Vcmax': [72., 200., 649.],
                                                 'Jmax': [50., 200., 646.],
                                                 },
-                                            'g1': (4.5,5.0,),
-                                            'g0': (1.0e-2,5.0e-3),
+                                            'g1': 4.5,
+                                            'g0': 1.0e-2,
                                             },
                                         }
                                 },
