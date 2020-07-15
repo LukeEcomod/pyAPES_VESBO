@@ -584,11 +584,12 @@ class OrganicLayer(object):
 
         # -- solve surface temperature Ts iteratively
         err = 999.0
+        itermax = 50
         iter_no = 0
         wo = 0.8 # weight of old Ts
         Ts = Ta
 
-        while err > 0.01:
+        while err > 0.01 and iter_no < itermax:
 
             # evaporation demand and supply --> latent heat flux
             es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
@@ -618,6 +619,17 @@ class OrganicLayer(object):
             Ts =  wo * Told + (1 - wo) * Ts
 
             iter_no += 1
+
+# KERSTI
+            if iter_no == itermax:
+                print('Maximum number of iterations reached', Ts, err)
+                Ts = Ta
+                es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
+                LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
+                if LEdemand > 0:
+                    LE = min(LEdemand, LATENT_HEAT * max_evaporation_rate)
+                else: # condensation
+                    LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
 
         # -- energy fluxes  [J m-2 s-1] or [W m-2]
 

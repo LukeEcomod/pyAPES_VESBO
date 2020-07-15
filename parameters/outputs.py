@@ -93,7 +93,7 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['pt_total_transpiration', 'transpiration [kg m-2 s-1]', ('date', 'simulation', 'planttype')],
 #      ['pt_total_stomatal_conductance_h2o', 'stomatal conductance for H2O [mol m-2 s-1]', ('date', 'simulation', 'planttype')],
 #      ['pt_total_boundary_conductance_h2o', 'leaf boundary layer conductance for H2O [mol m-2 s-1]', ('date', 'simulation', 'planttype')],
-#      ['pt_root_water_potential', 'root water potential [m?]', ('date', 'simulation', 'planttype')], # CHECK UNITS!!!
+      ['pt_root_water_potential', 'root water potential [m?]', ('date', 'simulation', 'planttype')], # CHECK UNITS!!!
 
       # vertical profiles: lists of length 'planttype'; layers where lad == 0 are set to np.NaN
 #      ['pt_leaf_temperature', 'leaf temperature mean [degC]', ('date', 'simulation', 'planttype', 'canopy')],

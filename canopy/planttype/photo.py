@@ -546,7 +546,10 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
     else:
         ci[ix] = ca[ix]
         cs[ix] = ca[ix]
-    gs_opt[ix] = g0
+    if type(g0) is float:
+        gs_opt[ix] = g0
+    else:
+        gs_opt[ix] = g0[ix]
 
     gs_v = H2O_CO2_RATIO*gs_opt
 

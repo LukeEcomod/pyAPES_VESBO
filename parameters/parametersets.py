@@ -37,18 +37,21 @@ def get_parameters(scenario):
         lad_g = np.zeros(len(z))
         lad_g[1] = 1.0 / z[1]
         parameters = {
-                'count': 10,
+                'count': 5,
                 'scenario': 'krycklan',
                 'general':{
-                    'start_time' : "2019-01-01",
-                    'end_time' : "2019-12-31",
+                    'start_time' : "2019-05-01",
+                    'end_time' : "2019-10-31",
                     'forc_filename' : "Svartberget/Svartberget_forcing_2019.csv" # "Svartberget/Svartberget_forcing_2014_2016.csv"
                 },
                 'canopy': {
+                        'ctr': {
+                            'WaterStress': 'PsiL'
+                                },
                         'forestfloor': {
                                 'snowpack': {
                                     'initial_conditions': {
-                                        'snow_water_equivalent': 20.0 #!!!!!!!!!!!!!!!
+                                        'snow_water_equivalent': 0.0,  # 20.0 #!!!!!!!!!!!!!!!
                                         }
                                     }
                                 },
@@ -67,7 +70,7 @@ def get_parameters(scenario):
                         'planttypes': {
                                 'pine': {
                                         'LAImax': tuple(data_gr.loc['pine','LAI'].values),
-                                        'lad': tuple(data_gr.loc['pine','lad'].values),
+                                        'lad': tuple(data_gr.loc['pine','lad_normed'].values),
                                         'phenop': {
                                             'Tbase': -4.67,
                                             'tau': 8.33,
@@ -83,11 +86,12 @@ def get_parameters(scenario):
                                                 },
                                             'g1': 2.5,
                                             'g0': 4.0e-3,
+                                            'drp': 0.7
                                             },
                                         },
                                 'spruce': {
                                         'LAImax': tuple(data_gr.loc['spruce','LAI'].values),
-                                        'lad': tuple(data_gr.loc['spruce','lad'].values),
+                                        'lad': tuple(data_gr.loc['spruce','lad_normed'].values),
                                         'phenop': {
                                             'Tbase': -4.67,
                                             'tau': 8.33,
@@ -103,11 +107,12 @@ def get_parameters(scenario):
                                                 },
                                             'g1': 2.5,
                                             'g0': 4.0e-3,
+                                            'drp': 0.7
                                             },
                                         },
                                 'decid': {
                                         'LAImax': tuple(data_gr.loc['birch','LAI'].values),
-                                        'lad': tuple(data_gr.loc['birch','lad'].values),
+                                        'lad': tuple(data_gr.loc['birch','lad_normed'].values),
                                         'phenop': {
                                             'Tbase': -4.67,
                                             'tau': 8.33,
@@ -124,6 +129,7 @@ def get_parameters(scenario):
                                                 },
                                             'g1': 4.5,
                                             'g0': 1.0e-2,
+                                            'drp': 0.7
                                             },
                                         },
                                 'shrubs': {
@@ -146,10 +152,20 @@ def get_parameters(scenario):
                                                 },
                                             'g1': 4.5,
                                             'g0': 1.0e-2,
+                                            'drp': 0.7
                                             },
                                         }
                                 },
-                }
+                },
+                # 'soil': {
+                #     'water_model': {
+                #             # 'type': 'Equilibrium',
+                #             #  'solve': False,
+                #             'initial_condition':{
+                #                     'ground_water_level': -1.0
+                #                     }
+                #             }
+                #     }
             }
     elif scenario.upper() == 'KRYCKLAN_2016':
         from pyAPES_utilities.parameter_utilities import single_lad_profiles

@@ -88,3 +88,60 @@ def plot_daily(results, sim_idx=0):
                 'evapotranspiration','overstory_transpiration','Tr_pine','Tr_spruce','Tr_birch']].sum())
 
     return Data[['canopy_GPP','gpp_pine','gpp_spruce','gpp_birch','Tr_pine','Tr_spruce','Tr_birch']]
+
+def plot_daily2(results):
+
+    results['overstory_evaporation'] = results['canopy_evaporation_ml'][:,:,2:].sum(dim='canopy')
+    results['understory_transpiration'] = results['pt_total_transpiration'][:,:,2]
+    results['understory_evaporation'] = results['canopy_evaporation_ml'][:,:,:2].sum(dim='canopy')
+    results['Tr_pine'] = results['pt_total_transpiration'][:,:,1]
+    results['Tr_spruce'] = results['pt_total_transpiration'][:,:,3]
+    results['Tr_birch'] = results['pt_total_transpiration'][:,:,0]
+    results['gpp_pine'] = results['pt_total_gpp'][:,:,1]
+    results['gpp_spruce'] = results['pt_total_gpp'][:,:,3]
+    results['gpp_birch'] = results['pt_total_gpp'][:,:,0]
+    results['gpp_understory'] = results['pt_total_gpp'][:,:,2]
+    results['overstory_transpiration'] = results['Tr_pine'] + results['Tr_spruce'] + results['Tr_birch']
+    results['overstory_gpp'] = results['gpp_pine'] + results['gpp_spruce'] + results['gpp_birch']
+
+    results['evapotranspiration'] = (results['overstory_transpiration'] +
+                                     results['understory_transpiration'] +
+                                     results['overstory_evaporation'] +
+                                     results['understory_evaporation'] +
+                                     results['ffloor_evaporation'])
+
+    variables = ['evapotranspiration','canopy_transpiration', 'overstory_transpiration','canopy_evaporation','ffloor_evaporation',
+                 'canopy_GPP','overstory_gpp','Tr_pine','Tr_spruce','Tr_birch','gpp_pine','gpp_spruce','gpp_birch','gpp_understory', 'ffloor_photosynthesis']
+
+    for var in ['canopy_GPP','overstory_gpp','gpp_pine','gpp_spruce','gpp_birch','gpp_understory','ffloor_photosynthesis']:
+        results[var] *= 1e-6* 12.01e-3 * 1e3 * 3600 * 24  # umol m-2 s-1 - > gC m-2 d-1
+
+    for var in ['evapotranspiration','ffloor_evaporation','canopy_evaporation','canopy_transpiration', 'overstory_transpiration','Tr_pine','Tr_spruce','Tr_birch']:
+        results[var] *= 3600 * 24  # mm/s --> mm/d or kg m-2 d-1
+
+    results['canopy_transpiration'] *= 1000.0
+
+    variables = ['evapotranspiration',#,'ffloor_evaporation'],
+                 'overstory_transpiration',
+                 'overstory_gpp']
+                 # ['iWUE_pine','iWUE_spruce','iWUE_birch'],
+                 # ['gs_pine','gs_spruce','gs_birch']]
+
+    label=['mm d-1', 'mm d-1', 'gC m-2 d-1','','']
+    plots=['Plot_244', 'Plot_1021', 'Plot_1022', 'Plot_1023', 'Plot_1028', 'Plot_1029', 'Plot_1034', 'Plot_1035', 'Plot_1036', 'Plot_1042']
+
+    plt.figure(figsize=(9,8))
+    n=len(variables)
+    for i in range(n):
+        if i == 0:
+            ax=plt.subplot(n,1,i+1)
+        else:
+            plt.subplot(n,1,i+1,sharex=ax)
+        results[variables[i]].groupby('date.dayofyear').mean().plot.line(x='dayofyear')
+        plt.title(variables[i])
+        plt.ylabel(label[i])
+        plt.legend(plots,bbox_to_anchor=(1.02,0.5), loc="center left", frameon=False, borderpad=0.0)
+
+    plt.tight_layout()
+
+    return

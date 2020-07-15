@@ -239,6 +239,9 @@ class PlantType(object):
             # medlyn g1-model, decrease with decreasing Psi
             self.photop['g1'] = self.photop0['g1'] * np.maximum(0.05, np.exp(b*PsiL))
 
+# KERSTI
+            self.photop['g0'] = self.photop0['g0'] * np.maximum(0.05, np.exp(b*PsiL))
+
             # Vmax and Jmax responses to leaf water potential. Kellomäki & Wang, 1996.
             # (Note! mistake in paper eq's, these correspond to their figure)
             fv = 1.0 / (1.0 + (PsiL / - 2.04)**2.78)  # vcmax

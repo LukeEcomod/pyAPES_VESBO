@@ -80,7 +80,7 @@ data_gr['lad'] = len(data_gr['LAI'])*[np.ones(101)]
 
 plt.figure(figsize=(20,12))
 i=1
-for plot in set(data['StandId']):
+for plot in [244, 1021, 1022, 1023, 1028, 1029, 1034, 1035, 1036, 1042]:
     if i == 1:
         ax=plt.subplot(2,5,i)
     else:
