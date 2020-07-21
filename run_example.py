@@ -18,6 +18,7 @@ from pyAPES import driver
 from parameters.parameter_tools import get_parameter_list
 from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
+from pyAPES_utilities.plotting import plot_fluxes
 
 # Get parameters and forcing for SMEAR II -site
 
@@ -55,6 +56,12 @@ flxdata = read_data("forcing/Hyytiala/FIHy_flx_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
 metdata = read_data("forcing/Hyytiala/FIHy_met_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
+
+plot_fluxes(results, flxdata, norain=True,
+            res_var=['canopy_Rnet','canopy_SH','canopy_LE',
+                      'canopy_NEE','canopy_GPP','canopy_Reco'],
+            Data_var=['Rnet','H','LE','NEE','GPP','Reco'],
+            fmonth=5, lmonth=9, sim_idx=0)
 
 #%%
 # --- prints content of results -dataset

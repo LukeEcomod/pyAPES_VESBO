@@ -17,7 +17,7 @@ import datetime
 #: machine epsilon
 EPS = np.finfo(float).eps
 
-def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezone=+2.0):
+def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezone=+2.0, fpar=0.45, CO2_constant=False):
     """
     Create forcing file from meteo.
     Args:
@@ -32,16 +32,14 @@ def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezo
     from canopy.radiation import solar_angles, compute_clouds_rad
     from canopy.micromet import e_sat
 
-    fpar = 0.45
-
-    dat = pd.read_csv(meteo_fp, sep=',', header='infer', encoding = 'ISO-8859-1')
+    dat = pd.read_csv(meteo_fp, sep=';', header='infer', encoding = 'ISO-8859-1')
 
     # set to dataframe index
-    dat.index = pd.to_datetime({'year': dat['yyyy'],
-                                'month': dat['mo'],
-                                'day': dat['dd'],
-                                'hour': dat['hh'],
-                                'minute': dat['mm']})
+    dat.index = pd.to_datetime({'year': dat['year'],
+                                'month': dat['month'],
+                                'day': dat['day'],
+                                'hour': dat['hour'],
+                                'minute': dat['minute']})
 
     readme = ''
     cols = []
@@ -53,9 +51,9 @@ def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezo
 
     # precipitaion unit from [mm/dt] to [m/s]
     dt = (dat.index[1] - dat.index[0]).total_seconds()
-    dat['Prec'] = dat['Prec'] * 1e-3 / dt
+    # dat['Prec'] = dat['Prec'] * 1e-3 / dt
     cols.append('Prec')
-    readme += "\nPrec: Precipitation [m/s]"
+    readme += "\nPrec: Precipitation [mm/30min]"
 
     # atm. pressure unit from [XPa] to [Pa]
     dat['P'] = dat['P'] * P_unit
@@ -79,23 +77,26 @@ def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezo
     cols.append('Ustar')
     readme += "\nUstar: Friction velocity [m/s]"
 
-    # ambient H2O [mol/mol] from RH
+    # ambient H2O [mmol/mol] from RH
     esat, _ = e_sat(dat['Tair'])
-    dat['H2O'] = (dat['RH'] / 100.0) * esat / dat['P']
+    dat['H2O'] = 1e3 * (dat['RH'] / 100.0) * esat / dat['P']
     cols.append('H2O')
-    readme += "\nH2O: Ambient H2O [mol/mol]"
+    readme += "\nH2O: Ambient H2O [mmol/mol]"
 
     # ambient CO2 [ppm]
     readme += "\nCO2: Ambient CO2 [ppm]"
-    if 'CO2' not in dat:
+    if 'CO2' not in dat or CO2_constant:
         dat['CO2'] = 400.0
         readme += " - set constant!"
     cols.append('CO2')
 
     # zenith angle
-    jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0
+    # jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0
 # TEST (PERIOD START)
-    jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0 + dt / 2.0 / 86400.0
+    # jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0 + dt / 2.0 / 86400.0
+# TEST (PERIOD END)
+    jday = dat.index.dayofyear + dat.index.hour / 24.0 + dat.index.minute / 1440.0 - dt / 2.0 / 86400.0
+
     dat['Zen'], _, _, _, _, _ = solar_angles(lat, lon, jday, timezone=timezone)
     cols.append('Zen')
     readme += "\nZen: Zenith angle [rad], (lat = %.2f, lon = %.2f)" % (lat, lon)
@@ -190,15 +191,22 @@ def create_forcingfile(meteo_fp, output_file, dir_save, lat, lon, P_unit, timezo
     cols.append('DDsum')
     readme += "\nDDsum: degreedays [days]"
 
+# Checking timestamp validity
+    # clear sky Global radiation at surface
+    So = 1367
+    dat['Qclear'] = np.maximum(0.0,
+            (So * (1.0 + 0.033 * np.cos(2.0 * np.pi * (np.minimum(dat['doy'].values, 365) - 10) / 365)) * np.cos(dat['Zen'].values)))
+    dat[['Qclear','Rg']].plot(kind='line')
+
     dat = dat[cols]
-    dat[cols].plot(subplots=True, kind='line')
+    dat.plot(subplots=True, kind='line')
 
     print("NaN values in forcing data:")
     print(dat.isnull().any())
 
-    save_df_to_csv(dat, output_file, readme=readme,fp=dir_save)
+    save_df_to_csv(dat, output_file, readme=readme, fp=dir_save, timezone=timezone, sep=';')
 
-def save_df_to_csv(df, fn, readme='', fp="forcing/", timezone = +2):
+def save_df_to_csv(df, fn, readme='', fp="forcing/", timezone=+2, sep=';'):
     """
     Save dataframe with datetime index to csv file with corresponding readme.txt.
     Args:
@@ -210,13 +218,13 @@ def save_df_to_csv(df, fn, readme='', fp="forcing/", timezone = +2):
     """
 
     # add datetime as columns
-    df.insert(0, 'yyyy', df.index.year.values)
-    df.insert(1, 'mo', df.index.month.values)
-    df.insert(2, 'dd', df.index.day.values)
-    df.insert(3, 'hh', df.index.hour.values)
-    df.insert(4, 'mm', df.index.minute.values)
+    df.insert(0, 'year', df.index.year.values)
+    df.insert(1, 'month', df.index.month.values)
+    df.insert(2, 'day', df.index.day.values)
+    df.insert(3, 'hour', df.index.hour.values)
+    df.insert(4, 'minute', df.index.minute.values)
 
-    df.to_csv(path_or_buf=fp + fn + ".csv", sep=',', na_rep='NaN', index=False)
+    df.to_csv(path_or_buf=fp + fn + ".csv", sep=sep, na_rep='NaN', index=False)
     Readme = "Readme for " + fn + ".csv"
     Readme += "\n\nKersti Haahti, Luke " + str(datetime.datetime.now().date())
     Readme += "\n\nyyyy, mo, dd, hh, mm: datetime [UTC + %.1f]" % timezone

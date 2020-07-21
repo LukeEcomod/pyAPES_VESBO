@@ -401,6 +401,7 @@ class CanopyModel(object):
                 'wind_speed': U,
                 'par': radiation_profiles['par'],
                 'average_leaf_temperature': Tleaf_prev, # sl changed 25.11.
+                'wet_leaf_temperature': self.interception.Tl_wet # kh for wet leaf rd
             }
 
             if self.Switch_Ebal:
@@ -612,6 +613,7 @@ class CanopyModel(object):
                 'lad': self.lad, # m2 m-3
                 'IterWMA': iter_no,
                 'WMA_assumption': 1.0*Switch_WMA,
+                'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.planttypes])/(self.LAI + EPS),
 
                 # micromet profiles
                 'wind_speed': U,    # [m s-1]

@@ -115,7 +115,7 @@ class OrganicLayer(object):
 
         self.max_water_content = properties['max_water_content']
         self.max_symplast_water = self.max_water_content * properties['water_content_ratio']
-        
+
         #self.max_symplast_water = properties['max_symplast_water_content']
         self.min_water_content = properties['min_water_content']
 
@@ -573,40 +573,45 @@ class OrganicLayer(object):
 
         # -- solve surface temperature Ts iteratively
         err = 999.0
+        itermax = 50
         iter_no = 0
         wo = 0.8 # weight of old Ts
         Ts = Ta
 
-        while err > 0.01:
+        while err > 0.01 and iter_no < itermax:
 
             # evaporation demand and supply --> latent heat flux
             es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
-
             LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
-
             if LEdemand > 0:
                 LE = min(LEdemand, LATENT_HEAT * max_evaporation_rate)
                 if iter_no > 100:
                     LE = 0.1 * LATENT_HEAT * max_evaporation_rate
             else: # condensation
                 LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
-
             Told = np.copy(Ts)
-
             # --- find Ts: Long-wave term is linearized as in Campbell & Norman 1998 Ch 12.
             Te = 0.5 * (Ta + Ts)
             gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Te + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
             a = Rni - LE
             b = SPECIFIC_HEAT_AIR * (ga + gr)
-
             Ts = (a + b * Ta + gms * y[0]) / (b + gms)
-
             err = abs(Ts - Told)
-
             # new guess
             Ts =  wo * Told + (1 - wo) * Ts
 
             iter_no += 1
+
+# KERSTI
+            if iter_no == itermax:
+                print('Maximum number of iterations reached', Ts, err)
+                Ts = Ta
+                es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
+                LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
+                if LEdemand > 0:
+                    LE = min(LEdemand, LATENT_HEAT * max_evaporation_rate)
+                else: # condensation
+                    LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
 
         # -- energy fluxes  [J m-2 s-1] or [W m-2]
 
