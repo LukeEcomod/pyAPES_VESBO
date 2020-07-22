@@ -209,7 +209,10 @@ class Water(object):
             else:
                 self.h = self.gwl - self.grid['z']  # steady state
             if 'volumetric_water_content' in state:
-                self.Wtot = state['volumetric_water_content']
+                if isinstance(state['volumetric_water_content'], float):
+                    self.Wtot = self.zeros + state['volumetric_water_content']
+                else:
+                    self.Wtot = np.array(state['volumetric_water_content'])
             else:
                 self.Wtot = h_to_cellmoist(self.pF, self.h, self.grid['dz'])
         elif 'volumetric_water_content' in state:
