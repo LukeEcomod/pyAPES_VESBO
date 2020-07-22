@@ -49,7 +49,7 @@ outputfile, Model = driver(parameters=params, create_ncf=True)
 
 results = read_results(outputfile)
 
-# %% import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:
+# import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:
 # https://pandas.pydata.org/pandas-docs/stable/index.html
 
 flxdata = read_data("forcing/Hyytiala/FIHy_flx_2005-2010.dat", sep=';',
