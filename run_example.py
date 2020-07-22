@@ -41,6 +41,7 @@ params = {
 
 # to run multiple simulation with some variable varying
 # params = get_parameter_list(params, 'test')
+params = get_parameter_list(params, 'bypass_soil')
 
 outputfile, Model = driver(parameters=params, create_ncf=True)
 
@@ -62,6 +63,12 @@ plot_fluxes(results, flxdata, norain=True,
                       'canopy_NEE','canopy_GPP','canopy_Reco'],
             Data_var=['Rnet','H','LE','NEE','GPP','Reco'],
             fmonth=5, lmonth=9, sim_idx=0)
+
+plt.figure()
+results['soil_temperature'].isel(soil=0).plot.line(x='date')
+
+plt.figure()
+results['soil_volumetric_water_content'].isel(soil=0).plot.line(x='date')
 
 #%%
 # --- prints content of results -dataset
