@@ -105,3 +105,13 @@ plt.tight_layout()
 data_gr['lad_normed'] = data_gr['lad'] / (data_gr['LAI'] + eps)
 
 data_gr = data_gr.unstack(level=0)
+
+# Measured LAI with LAI-2200C Plant Canopy Analyzer 2018 (Lina Selin)
+d = {'StandId': [244, 1021, 1022, 1023, 1028, 1029, 1034, 1035, 1036, 1042],
+     'LAI': [5.11765713, 4.087163592, 2.88001926, 2.72413962, 4.29883398, 2.4654658, 3.7429665, 4.71427, 4.743982548, 4.750786]}
+LAI_measured = pd.DataFrame(data=d)
+LAI_measured['LAI_correction factor'] = LAI_measured['LAI'].values/data_gr['LAI'].sum().values
+
+data_gr.loc['pine','LAI']=data_gr.loc['pine','LAI'].values*LAI_measured['LAI_correction factor'].values
+data_gr.loc['spruce','LAI']=data_gr.loc['spruce','LAI'].values*LAI_measured['LAI_correction factor'].values
+data_gr.loc['birch','LAI']=data_gr.loc['birch','LAI'].values*LAI_measured['LAI_correction factor'].values

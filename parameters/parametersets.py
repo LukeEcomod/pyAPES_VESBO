@@ -40,8 +40,8 @@ def get_parameters(scenario):
                 'count': 5,
                 'scenario': 'krycklan',
                 'general':{
-                    'start_time' : "2019-05-01",
-                    'end_time' : "2019-10-31",
+                    'start_time' : "2019-01-01",
+                    'end_time' : "2019-12-31",
                     'forc_filename' : "Svartberget/Svartberget_forcing_2019.csv" # "Svartberget/Svartberget_forcing_2014_2016.csv"
                 },
                 'canopy': {
@@ -51,7 +51,7 @@ def get_parameters(scenario):
                         'forestfloor': {
                                 'snowpack': {
                                     'initial_conditions': {
-                                        'snow_water_equivalent': 0.0,  # 20.0 #!!!!!!!!!!!!!!!
+                                        'snow_water_equivalent': 20.0 #!!!!!!!!!!!!!!!
                                         }
                                     }
                                 },
