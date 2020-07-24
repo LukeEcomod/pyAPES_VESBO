@@ -255,13 +255,13 @@ parallel_logging_configuration = {
                         'formatter': 'model',
                         'level': 'INFO'  # CRITICAL, ERROR, WARNING, INFO, DEBUG
                 },
-                'pyAPES_file': {
-                        'class': 'logging.FileHandler',
-                        'level': 'WARNING',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
-                        'formatter': 'model',
-                        'filename': 'pyAPES.log',
-                        'mode': 'w',  # a == append, w == overwrite
-                },
+#                 'pyAPES_file': {
+#                         'class': 'logging.FileHandler',
+#                         'level': 'WARNING',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
+#                         'formatter': 'model',
+#                         'filename': 'pyAPES.log',
+#                         'mode': 'w',  # a == append, w == overwrite
+#                 },
                 'parallelAPES_file': {
                         'class': 'logging.FileHandler',
                         'level': 'INFO',  # CRITICAL, ERROR, WARNING, INFO, DEBUG
