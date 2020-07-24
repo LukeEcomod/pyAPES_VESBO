@@ -170,7 +170,7 @@ def driver(ncf_params,
     # --- USER INFO ---
 
     logger = logging.getLogger()
-    logger.info('Number of worker processes is {}, number of simulations: {}'.format(N_workers, Nsim))
+    logger.info('Number of worker processes is {}, number of simulations: {}'.format(N_workers, ncf_params['Nsim']))
 
     # --- CLOSE ---
 
