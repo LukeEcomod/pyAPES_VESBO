@@ -37,7 +37,7 @@ def get_parameters(scenario):
         lad_g = np.zeros(len(z))
         lad_g[1] = 1.0 / z[1]
         parameters = {
-                'count': 5,
+                'count': 10,
                 'scenario': 'krycklan',
                 'general':{
                     'start_time' : "2019-01-01",
