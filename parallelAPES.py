@@ -18,7 +18,6 @@ from multiprocessing import Process, Queue, Pool  # , cpu_count
 from copy import deepcopy
 
 from tools.iotools import initialize_netcdf, write_ncf
-from tools.iotools import jsonify
 from pyAPES import Model
 
 import time
@@ -31,9 +30,11 @@ import logging.config
 def _result_writer(ncf):
     """
     Args:
-        queue (Queue): results queue
-        ncf_param: parameters to initialize NetCDF4 file
+        ncf: NetCDF4 file handle
     """
+
+    logger = logging.getLogger()
+    logger.info("Writer is ready!")
 
     while True:
         # results is tuple (Nsim, data)
@@ -41,13 +42,13 @@ def _result_writer(ncf):
 
         if results is None:
             ncf.close()
-            print('results done')
+            logger.info("NetCDF4 file is closed. and Writer closes.")
             break
 
+        logger.info("Writing results of simulation {}".format(results[0]))
         write_ncf(nsim=results[0], results=results[1], ncf=ncf)
 # logging to a single file from multiple processes
 # https://docs.python.org/dev/howto/logging-cookbook.html#logging-to-a-single-file-from-multiple-processes
-
 
 def _logger_listener():
     """
@@ -74,8 +75,6 @@ def _worker():
         logging_queue (Queue): queue for model loggers
     """
 
-#    from pyAPES_utilities.spinup import soil_spinup
-
     # --- LOGGING ---
     qh = logging.handlers.QueueHandler(logging_queue)
     root = logging.getLogger()
@@ -90,23 +89,12 @@ def _worker():
         task = task_queue.get()
 
         if task is None:
-            print('worker done')
+            root.info('Worker done')
             break
 
         root.info("Creating simulation {}".format(task['nsim']))
 
         try:
-#            soil_temperature = soil_spinup(
-#                task['general'],
-#                task['canopy'],
-#                task['soil'],
-#                task['forcing'],
-#                moss_type,
-#                0.01
-#            )
-#
-#            task['soil']['heat_model']['initial_condition']['temperature'] = soil_temperature
-
             model = Model(
                 task['general'],
                 task['canopy'],
@@ -145,18 +133,11 @@ def driver(ncf_params,
         workers.append(
             Process(
                 target=_worker,
-        #       args=(
-        #           task_queue,
-        #           writing_queue,
-        #           logging_queue,
-        #        )
             )
         )
 
         task_queue.put(None)
         workers[k].start()
-    #pool = Pool(N_workers, _worker,)
-    #_ = pool.apply_async(_worker, ())
 
     # --- NETCDF4 ---
     ncf, _ = initialize_netcdf(
@@ -164,14 +145,15 @@ def driver(ncf_params,
         sim=ncf_params['Nsim'],
         soil_nodes=ncf_params['Nsoil_nodes'],
         canopy_nodes=ncf_params['Ncanopy_nodes'],
-        plant_nodes=ncf_params['Nplant_types'],
-        forcing=ncf_params['forcing'],
-        filename=ncf_params['file_name'])
+        planttypes=ncf_params['Nplant_types'],
+        groundtypes=ncf_params['Nground_types'],
+        time_index=ncf_params['time_index'],
+        filepath=ncf_params['filepath'],
+        filename=ncf_params['filename'])
 
     writing_thread = Thread(
         target=_result_writer,
         args=(ncf,)
-        #args=(writing_queue, ncf,)
     )
 
     writing_thread.start()
@@ -181,7 +163,6 @@ def driver(ncf_params,
 
     logging_thread = Thread(
         target=_logger_listener,
-        #args=(logging_queue,)
     )
 
     logging_thread.start()
@@ -195,9 +176,9 @@ def driver(ncf_params,
 
     # join worker processes
     for w in workers:
-        print("working")
         w.join()
 
+    logger.info('Worker processes have joined.')
     logger.info('Running time %.2f seconds' % (time.time() - running_time))
 
     # end logging queue and join
@@ -208,105 +189,20 @@ def driver(ncf_params,
     writing_queue.put_nowait(None)
     writing_thread.join()
 
-    logger.info('Results are in path: ' + ncf_params['output_path'])
+    logger.info('Results are in path: ' + ncf_params['filepath'])
 
-    return ncf_params['output_path']
-
-
-def get_tasks(scenario='all'):
-    """ Creates parameters space for tasks
-    """
-#    from parameters.ebal import sensitivity_sampling
-#    from parameters.parametersets import parameters, iterate_parameters
-    from parameters.parametersets import get_parameters, iterate_parameters
-    from copy import deepcopy as copy
-    parametersets = get_parameters(scenario)
-
-    from parameters.general import gpara
-    from parameters.canopy import cpara
-    from parameters.soil import spara
-
-    from tools.iotools import read_forcing
-#
-#    if predefined is None:
-#        save_samples = True
-#    else:
-#        save_samples = False
-
-    default_params = {
-            'general': gpara,
-            'canopy': cpara,
-            'soil': spara
-            }
-
-    Nsim = parametersets['count']
-    para_space = [iterate_parameters(parametersets, copy(default_params), count) for count in range(Nsim)]
-
-#    para_space, filename = sensitivity_sampling(
-#        moss_type=moss_type,
-#        soil_type=soil_type,
-#        optimal_trajectories=optimal_trajectories,
-#        num_levels=num_levels,
-#        save_samples=save_samples,
-#        use_predefined=predefined
-#    )
-
-    forcing = read_forcing(
-        para_space[0]['general']['forc_filename'],
-        para_space[0]['general']['start_time'],
-        para_space[0]['general']['end_time'],
-        dt=para_space[0]['general']['dt']
-    )
-
-    # save parameters into json file
-    #jsonify(para_space, file_name='results/'+timestr+'_pyAPES_parameters.json')
-
-    task_list = []
-    for k, para in enumerate(para_space):
-        para.update({
-            'nsim': k,
-            'forcing': forcing
-        })
-
-        task_list.append(deepcopy(para))
-
-    filename = time.strftime('%Y%m%d%H%M') + '_pyAPES_results.nc'
-
-    pyAPES_folder = os.getcwd()
-    filepath = os.path.join(pyAPES_folder, "results", filename)
-
-    ncf = {
-        'variables': gpara['variables'],
-        'Nsim': len(task_list),
-        'Nsoil_nodes': len(spara['grid']['dz']),
-        'Ncanopy_nodes': cpara['grid']['Nlayers'],
-        'Nplant_types': len(cpara['planttypes']),
-        'forcing': forcing,
-        'file_name': filename,
-        'output_path': filepath,
-    }
-
-    return task_list, ncf
-
+    return ncf_params['filepath']
 
 if __name__ == '__main__':
     import argparse
-    from parameters.general import parallel_logging_configuration
-#    from parameters.parametersets import parameters
-    #mp.set_start_method('spawn')
+    from parameters.outputs import parallel_logging_configuration, output_variables
+    from parameters.SmearII import gpara, cpara, spara
+    from parameters.parameter_tools import get_parameter_list
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--cpu', help='number of cpus to be used', type=int)
-    parser.add_argument('--scenario', help='scenario name (all, control, partial, clearcut)', type=str)
-#    parser.add_argument('--moss_type', help='hylocomium or sphagnum', type=str)
-#    parser.add_argument('--soil_type', help='organic or mineral', type=str)
-#    parser.add_argument('--trajectories', help='number of optimal trajectories to be used', type=int)
-#    parser.add_argument('--levels', help='number of levels to be used', type=int)
-#    parser.add_argument('--samples', help='predefined sample space', type=str)
-#
+    parser.add_argument('--scenario', help='scenario name', type=str)
     args = parser.parse_args()
-#
-#    timestr = time.strftime('%Y%m%d%H%M')
 
     # --- Queues ---
     manager = mp.Manager()
@@ -315,15 +211,29 @@ if __name__ == '__main__':
     task_queue = Queue()
 
     # --- TASKS ---
-#    moss_type = args.moss_type
-#    soil_type = args.soil_type
-#    optimal_trajectories = args.trajectories
-#    num_levels = args.levels
-#    predefined = args.samples
+    scen = args.scenario
 
-    tasks, ncf_params = get_tasks(args.scenario)
+    # list of parameters
+    parameters = {
+        'general': gpara,
+        'canopy': cpara,
+        'soil': spara
+        }
 
-    Nsim = len(tasks)
+    tasks = get_parameter_list(parameters, scen)
+
+    # ncf parameters
+    ncf_params = {
+        'variables': output_variables['variables'],
+        'Nsim': len(tasks),
+        'Nsoil_nodes': len(tasks[0]['soil']['grid']['dz']),
+        'Ncanopy_nodes': tasks[0]['canopy']['grid']['Nlayers'],
+        'Nplant_types': len(tasks[0]['canopy']['planttypes']),
+        'Nground_types': 1,  # Tämä hankala jos vaihtelee simulaatioiden välillä!!!!!
+        'time_index': tasks[0]['forcing'].index,
+        'filename': time.strftime('%Y%m%d%H%M_') + scen + '_pyAPES_results.nc',
+        'filepath': tasks[0]['general']['results_directory'],
+    }
 
     for para in tasks:
         task_queue.put(deepcopy(para))
@@ -331,25 +241,14 @@ if __name__ == '__main__':
     # --- Number of workers ---
     Ncpu = args.cpu
 
-
-    if Ncpu is None:
-        #Ncpu = cpu_count(logical=False)
-        Ncpu = 1
-
-#   if Nsim > (Ncpu - 1):
-#       N_workers = Ncpu - 1
-#   else:
     N_workers = Ncpu - 1
 
-#    parallel_logging_configuration['handlers']['parallelAPES_file']['filename'] = 'sensitivity_'+moss_type+'_'+soil_type+'.log'
+    parallel_logging_configuration['handlers']['parallelAPES_file']['filename'] = time.strftime('%Y%m%d%H%M_') + scen + '.log'
 
     # --- DRIVER CALL ---
     outputfile = driver(
         ncf_params=ncf_params,
         logging_configuration=parallel_logging_configuration,
-#        task_queue=task_queue,
-#        logging_queue=logging_queue,
-#        writing_queue=writing_queue,
         N_workers=N_workers)
 
     print(outputfile)
