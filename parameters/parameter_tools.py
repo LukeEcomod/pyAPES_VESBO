@@ -70,6 +70,7 @@ def get_parameter_list(default_params, modifications):
         )
 
         param_list[i]['forcing'] = forcing
+        param_list[i]['nsim'] = i
 
     return param_list
 
