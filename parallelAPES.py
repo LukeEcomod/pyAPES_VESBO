@@ -60,7 +60,7 @@ def _logger_listener():
         record = logging_queue.get()
 
         if record is None:
-            print('logger done')
+            # print('logger done')
             break
 
         logger = logging.getLogger(record.name)
@@ -96,11 +96,12 @@ def _worker():
 
         try:
             model = Model(
-                task['general'],
-                task['canopy'],
-                task['soil'],
-                task['forcing'],
-                task['nsim']
+                dt=task['general']['dt'],
+                canopy_para=task['canopy'],
+                soil_para=task['soil'],
+                forcing=task['forcing'],
+                outputs=output_variables['variables'],
+                nsim=task['nsim'],
             )
 
             result = model.run()
@@ -119,9 +120,6 @@ def driver(ncf_params,
     Args:
         ncf_params (dict): netCDF4 parameters
         logging_configuration (dict): parallel logging configuration
-        task_queue (queue): simulation parameter queue
-        logging_queue (queue): queue for logging events
-        writing_queue (queue): queue for writing netcdf results
         N_workers (int): number of worker processes
     """
 
