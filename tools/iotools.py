@@ -157,6 +157,12 @@ def read_forcing(forc_filename, start_time, end_time,
     if 'DDsum' in dat:
         cols.append('DDsum')
 
+    # for case for bypassing soil computations
+    if 'Tsh' in dat:
+        cols.append('Tsh')
+    if 'Wh' in dat:
+        cols.append('Wh')
+
     # Forc dataframe from specified columns
     Forc = dat[cols].copy()
 
