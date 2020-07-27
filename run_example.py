@@ -39,8 +39,8 @@ params = {
     'forcing': forcing
 }
 
-# to run multiple simulation with some variable varying
-# params = get_parameter_list(params, 'test')
+# to run multiple simulation with some variable parameters
+params = get_parameter_list(params, 'test')
 
 outputfile, Model = driver(parameters=params, create_ncf=True)
 
