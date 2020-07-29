@@ -428,7 +428,7 @@ class CanopyModel(object):
 
             for pt in self.planttypes:
 
-                # --- sunlit and shaded leaves gas-exchange and optional energy balance
+                # sunlit and shaded leaves gas-exchange and optional energy balance
                 pt_stats_i, layer_stats_i = pt.run(
                     forcing=forcing_pt,
                     parameters=parameters_pt,

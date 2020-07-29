@@ -170,14 +170,14 @@ class Model(object):
         self.Nsoil_nodes = len(soil_para['grid']['dz'])
         self.Ncanopy_nodes = canopy_para['grid']['Nlayers']
 
-        if 'Wh' in forcing and soil_para['water_model']['solve'] is False:
+        if 'Wa' in forcing and soil_para['water_model']['solve'] is False:
             print("Soil moisture from forcing file")
             soil_para['water_model']['initial_condition']['volumetric_water_content'] = (
-                forcing['Wh'].iloc[0])
-        if 'Tsh' in forcing and soil_para['heat_model']['solve'] is False:
+                forcing['Wa'].iloc[0])
+        if 'Tsa' in forcing and soil_para['heat_model']['solve'] is False:
             print("Soil temperature from forcing file")
             soil_para['heat_model']['initial_condition']['temperature'] = (
-                forcing['Tsh'].iloc[0])
+                forcing['Tsa'].iloc[0])
 
         # create soil model instance
         self.soil = Soil(soil_para)
@@ -298,12 +298,12 @@ class Model(object):
                 'ground_heat_flux': -out_ffloor['ground_heat'],
                 'date': self.forcing.index[k]}
 
-            if 'Wh' in self.forcing and self.soil.solve_water is False:
+            if 'Wa' in self.forcing and self.soil.solve_water is False:
                 soil_forcing.update({
-                    'state_water':{'volumetric_water_content': self.forcing['Wh'].iloc[k]}})
-            if 'Tsh' in self.forcing and self.soil.solve_heat is False:
+                    'state_water':{'volumetric_water_content': self.forcing['Wa'].iloc[k]}})
+            if 'Tsa' in self.forcing and self.soil.solve_heat is False:
                 soil_forcing.update({
-                    'state_heat':{'temperature': self.forcing['Tsh'].iloc[k]}})
+                    'state_heat':{'temperature': self.forcing['Tsa'].iloc[k]}})
 
             # call self.soil to solve below-ground water and heat flow
             soil_flux, soil_state = self.soil.run(

@@ -20,7 +20,7 @@ from tools.utilities import lad_weibul, lad_constant
 
 gpara = {'dt' : 1800.0,  # timestep in forcing data file [s]
            'start_time' : "2005-06-01",  # start time of simulation [yyyy-mm-dd]
-           'end_time' : "2005-06-02",  # end time of simulation [yyyy-mm-dd]
+           'end_time' : "2005-08-31",  # end time of simulation [yyyy-mm-dd]
            'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat",  # forcing data file*
            'results_directory':'results/Hyytiala/'
          }
@@ -51,14 +51,14 @@ micromet = {'zos': 0.01,  # forest floor roughness length [m]  -- not used?
             'Cd': 0.15,  # drag coefficient
             'Utop': 5.0,  # ensemble U/ustar
             'Ubot': 0.01,  # lower boundary
-            'Sc': {'T': 2.0, 'H2O': 2.0, 'CO2': 2.0}  # Schmidt numbers
+            'Sc': {'T': 1.5, 'H2O': 1.5, 'CO2': 1.5}  # Schmidt numbers
             }
 
 # --- radiation ---
 radiation = {'clump': 0.7,  # clumping index [-]
              'leaf_angle': 1.0,  # leaf-angle distribution [-]
-             'Par_alb': 0.12,  # shoot Par-albedo [-]
-             'Nir_alb': 0.55,  # shoot NIR-albedo [-]
+             'Par_alb': 0.08,  # shoot Par-albedo [-]
+             'Nir_alb': 0.45,  # shoot NIR-albedo [-]
              'leaf_emi': 0.98  # leaf emissivity [-]
              }
 
@@ -76,14 +76,14 @@ interception = {'wmax': 0.2,  # maximum interception storage capacity for rain [
 z = np.linspace(0, grid['zmax'], grid['Nlayers'])  # grid [m] above ground
 
 pt1 = { 'name': 'pine',
-        'LAImax': 2.1, # maximum annual LAI m2m-2
+        'LAImax': 1.9, # maximum annual LAI m2m-2
         'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=3.0, species='pine'),  # leaf-area density m2m-3
         # cycle of photosynthetic activity
         'phenop': {
             'Xo': 0.0,
             'fmin': 0.1,
             'Tbase': -4.67,  # Kolari 2007
-            'tau': 8.33,  # Kolari 2007
+            'tau': 8.33,  # Kolari 2007ik
             'smax': 18.0  # Kolari 2014
             },
         # cycle of LAI
@@ -110,7 +110,7 @@ pt1 = { 'name': 'pine',
             'alpha': 0.2,   # quantum efficiency parameter -
             'theta': 0.7,   # curvature parameter
             'g1': 2.3,      # stomatal slope kPa^(0.5)
-            'g0': 5.0e-3,   # residual conductance mol m-2 s-1
+            'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
             'beta': 0.95,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
@@ -130,7 +130,7 @@ pt1 = { 'name': 'pine',
 
 
 pt2 = { 'name': 'spruce',
-        'LAImax': 1.0, # maximum annual LAI m2m-2
+        'LAImax': 0.9, # maximum annual LAI m2m-2
         'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=0.5, species='spruce'),  # leaf-area density m2m-3
         # cycle of photosynthetic activity
         'phenop': {
@@ -153,8 +153,8 @@ pt2 = { 'name': 'spruce',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 60.0,
-            'Jmax': 114.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Vcmax': 65.0,
+            'Jmax': 128.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
             'Rd': 1.5,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
                 'Vcmax': [53., 202., 640.],
@@ -163,8 +163,8 @@ pt2 = { 'name': 'spruce',
                 },
             'alpha': 0.2,   # quantum efficiency parameter -
             'theta': 0.7,   # curvature parameter
-            'g1': 2.3,      # stomatal slope kPa^(0.5)
-            'g0': 5.0e-3,   # residual conductance mol m-2 s-1
+            'g1': 2.1,      # stomatal slope kPa^(0.5)
+            'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
             'beta': 0.95,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
@@ -183,7 +183,7 @@ pt2 = { 'name': 'spruce',
         }
 
 pt3 = { 'name': 'decid',
-        'LAImax': 1.2, # maximum annual LAI m2m-2
+        'LAImax': 0.9, # maximum annual LAI m2m-2
         'lad': lad_weibul(z, LAI=1.0, h=10.0, hb=0.5, species='birch'),  # leaf-area density m2m-3
         # cycle of photosynthetic activity
         'phenop': {
@@ -216,8 +216,8 @@ pt3 = { 'name': 'decid',
                 },
             'alpha': 0.2,   # quantum efficiency parameter -
             'theta': 0.7,   # curvature parameter
-            'g1': 4.5,      # stomatal slope kPa^(0.5)
-            'g0': 5.0e-3,   # residual conductance mol m-2 s-1
+            'g1': 4.0,      # stomatal slope kPa^(0.5)
+            'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
             'beta': 0.95,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
@@ -269,14 +269,14 @@ pt4 = { 'name': 'shrubs',
                 },
             'alpha': 0.2,   # quantum efficiency parameter -
             'theta': 0.7,   # curvature parameter
-            'g1': 4.5,      # stomatal slope kPa^(0.5)
-            'g0': 5.0e-3,   # residual conductance mol m-2 s-1
+            'g1': 4.0,      # stomatal slope kPa^(0.5)
+            'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
             'beta': 0.95,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
-            'lt': 0.05,     # leaf length scale m
+            'lt': 0.02,     # leaf length scale m
             },
         # root zone
         'rootp': {
@@ -457,35 +457,32 @@ cpara = {'loc': loc,
          'forestfloor': forestfloor
          }
 
-""" --- Soil submodel parameters --- """
-
-# grid and soil properties: pF and conductivity from Launiainen et al. 2015 Hyytiala
+    
+""" --- Soil submodel parameters for 1-layer soil where state is updated from
+forcing file in pyAPES.driver """
 
 soil_grid = {#thickness of computational layers [m]
-            'dz': [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
-                   0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02,
-                   0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
-                   0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+            'dz': [0.10],
             # bottom depth of layers with different characteristics [m]
-            'zh': [-0.05, -0.11, -0.35, -10.0]
+            'zh': [-0.10]
             }
 
 soil_properties = {'pF': {  # vanGenuchten water retention parameters
-                        'ThetaS': [0.80, 0.50, 0.50, 0.41],
-                        'ThetaR': [0.01, 0.08, 0.08, 0.03],
-                        'alpha': [0.70, 0.06, 0.06, 0.05],
-                        'n': [1.25, 1.35, 1.35, 1.21]
+                        'ThetaS': [0.50],
+                        'ThetaR': [0.08],
+                        'alpha': [0.06],
+                        'n': [1.35]
                         },
-                  'saturated_conductivity_vertical': [2.42E-05, 2.08e-06, 3.06e-06, 4.17e-06],  # saturated vertical hydraulic conductivity [m s-1]
-                  'saturated_conductivity_horizontal': [2.42E-05, 2.08e-06, 3.06e-06, 4.17e-06],  # saturated horizontal hydraulic conductivity [m s-1]
+                  'saturated_conductivity_vertical': [2.1E-06],  # saturated vertical hydraulic conductivity [m s-1]
+                  'saturated_conductivity_horizontal': [2.1E-06],  # saturated horizontal hydraulic conductivity [m s-1]
                   'solid_heat_capacity': None,  # [J m-3 (solid) K-1] - if None, estimated from organic/mineral composition
                   'solid_composition': {
-                         'organic': [0.1611, 0.0714, 0.1091, 0.028],
-                         'sand': [0.4743, 0.525, 0.5037, 0.5495],
-                         'silt': [0.3429, 0.3796, 0.3641, 0.3973],
-                         'clay': [0.0217, 0.0241, 0.0231, 0.0252]
-                         },
-                  'freezing_curve': [0.2, 0.5, 0.5, 0.5],  # freezing curve parameter
+                          'organic': [0.1611],
+                          'sand': [0.4743],
+                          'silt': [0.3429],
+                          'clay': [0.0217]
+                          },
+                  'freezing_curve': [0.2],  # freezing curve parameter
                   'bedrock': {
                               'solid_heat_capacity': 2.16e6,  # [J m-3 (solid) K-1]
                               'thermal_conductivity': 3.0  # thermal conductivity of non-porous bedrock [W m-1 K-1]
@@ -493,31 +490,32 @@ soil_properties = {'pF': {  # vanGenuchten water retention parameters
                   }
 
 # --- water model specs
-water_model = {'solve': True,
+water_model = {'solve': False,
                'type': 'Richards',  #'Equilibrium', # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
-               'pond_storage_max': 0.05,  #  maximum pond depth [m]
-               'initial_condition': {  # (dict) initial conditions
-                       'ground_water_level': -2.0,  # groundwater depth [m]
-                       'pond_storage': 0.  # initial pond depth at surface [m]
-                       },
-               'lower_boundary': {  # lower boundary condition (type, value, depth)
-                       'type': 'head_oneway',
-                       'value': -0.0,
+               'pond_storage_max': 0.0,  #  maximum pond depth [m]
+                'initial_condition': {  # (dict) initial conditions
+                        'volumetric_water_content': 0.5, #[m3m-3]
+                        'ground_water_level': -2.0,  # groundwater depth [m]
+                        'pond_storage': 0.  # initial pond depth at surface [m]
+                        },
+                'lower_boundary': {  # lower boundary condition (type, value, depth)
+                        'type': 'head_oneway',
+                        'value': -0.0,
 #                       'type': 'impermeable',
 #                       'value': None,
 #                       'depth': -2.0
-                       },
-               'drainage_equation': {  # drainage equation and drainage parameters
-                       'type': None,  #
+                        },
+                'drainage_equation': {  # drainage equation and drainage parameters
+                        'type': None,  #
 #                       'type': 'Hooghoudt',  #
 #                       'depth': 1.0,  # drain depth [m]
 #                       'spacing': 45.0,  # drain spacing [m]
 #                       'width': 1.0,  # drain width [m]
-                       }
+                        }
                 }
 
 # --- heat model specs
-heat_model = {'solve': True,
+heat_model = {'solve': False,
               'initial_condition': {
                       'temperature': 4.0,  # initial soil temperature [degC]
                       },
@@ -529,6 +527,42 @@ heat_model = {'solve': True,
 
 # --- soil model parameter dictionary
 spara = {'grid': soil_grid,
-         'soil_properties': soil_properties,
-         'water_model': water_model,
-         'heat_model': heat_model}
+          'soil_properties': soil_properties,
+          'water_model': water_model,
+          'heat_model': heat_model}
+
+
+# # """ --- Soil submodel parameters: these profiles resemble SMEAR II --- """
+
+# # # grid and soil properties: pF and conductivity from Launiainen et al. 2015 Hyytiala
+
+# soil_grid = {#thickness of computational layers [m]
+#             'dz': [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+#                     0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02,
+#                     0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
+#                     0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+#             # bottom depth of layers with different characteristics [m]
+#             'zh': [-0.05, -0.11, -0.35, -10.0]
+#             }
+
+# soil_properties = {'pF': {  # vanGenuchten water retention parameters
+#                         'ThetaS': [0.80, 0.50, 0.50, 0.41],
+#                         'ThetaR': [0.01, 0.08, 0.08, 0.03],
+#                         'alpha': [0.70, 0.06, 0.06, 0.05],
+#                         'n': [1.25, 1.35, 1.35, 1.21]
+#                         },
+#                   'saturated_conductivity_vertical': [2.42E-05, 2.08e-06, 3.06e-06, 4.17e-06],  # saturated vertical hydraulic conductivity [m s-1]
+#                   'saturated_conductivity_horizontal': [2.42E-05, 2.08e-06, 3.06e-06, 4.17e-06],  # saturated horizontal hydraulic conductivity [m s-1]
+#                   'solid_heat_capacity': None,  # [J m-3 (solid) K-1] - if None, estimated from organic/mineral composition
+#                   'solid_composition': {
+#                           'organic': [0.1611, 0.0714, 0.1091, 0.028],
+#                           'sand': [0.4743, 0.525, 0.5037, 0.5495],
+#                           'silt': [0.3429, 0.3796, 0.3641, 0.3973],
+#                           'clay': [0.0217, 0.0241, 0.0231, 0.0252]
+#                           },
+#                   'freezing_curve': [0.2, 0.5, 0.5, 0.5],  # freezing curve parameter
+#                   'bedrock': {
+#                               'solid_heat_capacity': 2.16e6,  # [J m-3 (solid) K-1]
+#                               'thermal_conductivity': 3.0  # thermal conductivity of non-porous bedrock [W m-1 K-1]
+#                               }
+#                   }

@@ -40,10 +40,10 @@ params = {
 }
 
 # to run multiple simulation with some parameters varying
-# params = get_parameter_list(params, 'test')
-params = get_parameter_list(params, 'bypass_soil')
+#params = get_parameter_list(params, 'test')
+# params = get_parameter_list(params, 'bypass_soil')
 
-outputfile, Model = driver(parameters=params, create_ncf=True)
+outputfile, Model = driver(parameters=params, create_ncf=True, result_file='Hyde_test.nc')
 
 # read results from NetCDF-file to xarray-dataset: xarray documentation here:
 # http://xarray.pydata.org/en/stable/index.html
@@ -58,6 +58,7 @@ flxdata = read_data("forcing/Hyytiala/FIHy_flx_2005-2010.dat", sep=';',
 metdata = read_data("forcing/Hyytiala/FIHy_met_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
 
+#%%
 plot_fluxes(results, flxdata, norain=True,
             res_var=['canopy_Rnet','canopy_SH','canopy_LE',
                       'canopy_NEE','canopy_GPP','canopy_Reco'],
@@ -302,7 +303,7 @@ for v in var:
 # leaf-air temperature difference, average at canopy layers
 plt.subplot(2,2,n)
 x = results['canopy_Tleaf'][:, sim, :] - results['canopy_temperature'][:, sim, :]
-xmd = np.mean(x.loc[par > 200, :], axis=0) # day
+xmd = np.mean(x.loc[par > 1000, :], axis=0) # day
 plt.plot(xmd, zc, '-', label='T_l - T_a [degC]')
 plt.xlabel('T_{leaf} - T_{air} [degC]'); plt.ylabel(zc.attrs['units'])
 
@@ -339,22 +340,22 @@ for k in range(6):
     plt.plot(t, results[vsl[k]][:, sim, ptype, :], '-', label='sunlit')
     plt.ylabel(results[vsl[k]].attrs['units'])
 
+plt.subplot(3,2,5)
+plt.plot(t, results['forcing_air_temperature'], 'k-')
 #%% --- canopy.forestfloor -submodel handles moss and litter layer CO2, water and energy exchange
 
 var = ['ffloor_net_radiation', 'ffloor_sensible_heat', 'ffloor_latent_heat',
-       'ffloor_ground_heat', 'ffloor_photosynthesis', 'ffloor_water_storage']
+       'ffloor_ground_heat', 'ffloor_photosynthesis', 'ffloor_water_storage', 'ffloor_surface_temperature']
 
 plt.figure('forestfloor fluxes', figsize=(12,8))
 
-for k in range(6):
-    plt.subplot(3,2,k+1)
+for k in range(7):
+    plt.subplot(3,3,k+1)
 
     plt.plot(t, results[var[k]][:, sim], '-', label='sunlit')
     plt.ylabel(results[var[k]].attrs['units'])
 
-#%% --- and forestfloor could consist of different groundtypes...
 
-# ...
 
 #%% --- soil - submodule computes soil moisture and temperature
 

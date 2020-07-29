@@ -15,8 +15,8 @@ def get_parameters(scenario):
             'count': 2,
             'scenario': 'test',
             'general':{
-                'start_time' : "2005-06-01",
-                'end_time' : "2005-06-10",
+                'start_time' : "2005-05-01",
+                'end_time' : "2005-09-30",
                 'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat"
             },
             'canopy': {
@@ -34,7 +34,7 @@ def get_parameters(scenario):
             'scenario': 'bypass_soil',
             'general':{
                 'start_time' : "2005-06-01",
-                'end_time' : "2005-06-10",
+                'end_time' : "2005-06-05",
                 'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat"
             },
             'soil':{  # one layer of 10 cm

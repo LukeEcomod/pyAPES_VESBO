@@ -167,13 +167,13 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['ffloor_groundtypes', 'forestfloor groundtype names', ('groundtype')],
 
       # ground-type specific outputs
-       ['gt_net_radiation', 'net radiation [W m-2]', ('date', 'simulation', 'groundtype')],
+      ['gt_net_radiation', 'net radiation [W m-2]', ('date', 'simulation', 'groundtype')],
       ['gt_sensible_heat', 'sensible heat flux [W m-2]', ('date', 'simulation', 'groundtype')],
-       ['gt_latent_heat', 'latent heat flux [W m-2]', ('date', 'simulation', 'groundtype')],
+      ['gt_latent_heat', 'latent heat flux [W m-2]', ('date', 'simulation', 'groundtype')],
       ['gt_ground_heat', 'ground heat flux  [W m-2]', ('date', 'simulation', 'groundtype')],
-       ['gt_conducted_heat', 'conducted heat flux to moss [W m-2]', ('date', 'simulation', 'groundtype')],
-       ['gt_heat_advection', 'advected heat  [W m-2]', ('date', 'simulation', 'groundtype')],
-       ['gt_energy_closure', "energy balance error [W m-2]", ('date', 'simulation', 'groundtype')],
+      ['gt_conducted_heat', 'conducted heat flux to moss [W m-2]', ('date', 'simulation', 'groundtype')],
+      ['gt_heat_advection', 'advected heat  [W m-2]', ('date', 'simulation', 'groundtype')],
+      ['gt_energy_closure', "energy balance error [W m-2]", ('date', 'simulation', 'groundtype')],
 
       ['gt_evaporation', 'evaporation [kg m-2 s-1]', ('date', 'simulation', 'groundtype')],
       ['gt_interception', 'interception rate [kg m-2 s-1]', ('date', 'simulation', 'groundtype')],

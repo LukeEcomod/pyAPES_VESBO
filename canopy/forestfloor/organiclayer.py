@@ -576,8 +576,11 @@ class OrganicLayer(object):
         itermax = 50
         iter_no = 0
         wo = 0.8 # weight of old Ts
-        Ts = Ta
-
+        
+        # SL 28.7.20
+        Ts = 0.5 * (Ta + self.temperature)
+        #Ts = Ta
+        
         while err > 0.01 and iter_no < itermax:
 
             # evaporation demand and supply --> latent heat flux
@@ -591,7 +594,8 @@ class OrganicLayer(object):
                 LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
             Told = np.copy(Ts)
             # --- find Ts: Long-wave term is linearized as in Campbell & Norman 1998 Ch 12.
-            Te = 0.5 * (Ta + Ts)
+            #Te = 0.5 * (Ta + Ts)
+            Te = Ta
             gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Te + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
             a = Rni - LE
             b = SPECIFIC_HEAT_AIR * (ga + gr)
@@ -602,7 +606,6 @@ class OrganicLayer(object):
 
             iter_no += 1
 
-# KERSTI
             if iter_no == itermax:
                 print('Maximum number of iterations reached', Ts, err)
                 Ts = Ta
