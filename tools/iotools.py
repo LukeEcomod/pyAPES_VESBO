@@ -162,7 +162,11 @@ def read_forcing(forc_filename, start_time, end_time,
         cols.append('Tsh')
     if 'Wh' in dat:
         cols.append('Wh')
-
+    if 'Tsa' in dat:
+        cols.append('Tsa')
+    if 'Ws' in dat:
+        cols.append('Ws')
+        
     # Forc dataframe from specified columns
     Forc = dat[cols].copy()
 

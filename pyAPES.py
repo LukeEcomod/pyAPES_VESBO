@@ -298,9 +298,9 @@ class Model(object):
                 'ground_heat_flux': -out_ffloor['ground_heat'],
                 'date': self.forcing.index[k]}
 
-            if 'Wa' in self.forcing and self.soil.solve_water is False:
+            if 'Ws' in self.forcing and self.soil.solve_water is False:
                 soil_forcing.update({
-                    'state_water':{'volumetric_water_content': self.forcing['Wa'].iloc[k]}})
+                    'state_water':{'volumetric_water_content': self.forcing['Ws'].iloc[k]}})
             if 'Tsa' in self.forcing and self.soil.solve_heat is False:
                 soil_forcing.update({
                     'state_heat':{'temperature': self.forcing['Tsa'].iloc[k]}})
