@@ -49,7 +49,7 @@ comb = itertools.product(rlai, rCO2, rVcmax, rdec)
 comb = list(comb)
 # number of combinations
 count = len(comb)
-
+print(count)
 # LAI per planttype
 LAIpine = tuple((lai_mean * (1 - rspruce - comb[i][3]) * comb[i][0]) for i in range(len(comb)))
 LAIdecid = tuple(lai_mean * comb[i][3] * comb[i][0] for i in range(len(comb)))
