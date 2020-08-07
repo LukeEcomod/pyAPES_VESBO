@@ -540,6 +540,7 @@ class OrganicLayer(object):
             max_condensation_rate = 0.0
 
         #--- compute surface temperature from surface energy balance
+        Ta = forcing['air_temperature']
 
         # take reflectivities from previous timestep
         # radiation balance # [J m-2 s-1] or [W m-2]
@@ -547,11 +548,6 @@ class OrganicLayer(object):
         # [J m-2 s-1] or [W m-2]
         SWabs = (1.0 - self.albedo['PAR']) * forcing['par'] + \
                 (1.0 - self.albedo['NIR']) * forcing['nir']
-
-
-        # isothermal LW radiation W m-2
-        Ta = forcing['air_temperature']
-        Rni = SWabs +  self.emissivity * forcing['lw_dn'] - self.emissivity * STEFAN_BOLTZMANN * (Ta + DEG_TO_KELVIN)**4
 
         # conductance for heat from surface layer to moss
         # [W m-2 K-1]
@@ -575,12 +571,14 @@ class OrganicLayer(object):
         err = 999.0
         itermax = 50
         iter_no = 0
-        wo = 0.8 # weight of old Ts
-        
-        # SL 28.7.20
-        Ts = 0.5 * (Ta + self.temperature)
-        #Ts = Ta
-        
+
+        #wo = 0.8 # weight of old Ts
+        #
+        ## SL 28.7.20
+        #Ts = 0.5 * (Ta + self.temperature)
+
+        Ts = Ta  # initial guess
+
         while err > 0.01 and iter_no < itermax:
 
             # evaporation demand and supply --> latent heat flux
@@ -592,17 +590,25 @@ class OrganicLayer(object):
                     LE = 0.1 * LATENT_HEAT * max_evaporation_rate
             else: # condensation
                 LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
+
             Told = np.copy(Ts)
+
             # --- find Ts: Long-wave term is linearized as in Campbell & Norman 1998 Ch 12.
-            #Te = 0.5 * (Ta + Ts)
-            Te = Ta
-            gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Te + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
-            a = Rni - LE
-            b = SPECIFIC_HEAT_AIR * (ga + gr)
-            Ts = (a + b * Ta + gms * y[0]) / (b + gms)
+            #Te = Ta
+            #gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Te + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
+            #a = Rni - LE
+            #b = SPECIFIC_HEAT_AIR * (ga + gr)
+            #Ts = (a + b * Ta + gms * y[0]) / (b + gms)
+            
+            #LW_up linearized against Told (instead of Ta): eoT_s^4 ~= eoT_old^4 + 4eoT_old^3*Ts
+            gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Told + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
+            Rn = (SWabs
+                  + self.emissivity * forcing['lw_dn'] - self.emissivity * STEFAN_BOLTZMANN * (Told + DEG_TO_KELVIN)**4)
+
+            Ts = (Rn + SPECIFIC_HEAT_AIR * (gr * Told + ga * Ta) - LE + gms * y[0]) / (
+                SPECIFIC_HEAT_AIR * (ga + gr) + gms)
+
             err = abs(Ts - Told)
-            # new guess
-            Ts =  wo * Told + (1 - wo) * Ts
 
             iter_no += 1
 

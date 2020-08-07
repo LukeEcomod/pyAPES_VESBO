@@ -728,7 +728,7 @@ class CanopyModel(object):
         H2O = self.ones * ([forcing['h2o']])
         CO2 = self.ones * ([forcing['co2']])
         Tleaf = T.copy() * self.lad / (self.lad + EPS)
-        Tground = self.forestfloor.temperature
+        Tground = forcing['air_temperature']
         self.interception.Tl_wet = T.copy()
 
         for pt in self.planttypes:
