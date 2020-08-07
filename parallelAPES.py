@@ -192,11 +192,15 @@ def driver(ncf_params,
     return ncf_params['filepath']
 
 if __name__ == '__main__':
+    """
+    SL changes for hydetrends
+    """
     import argparse
     from parameters.outputs import parallel_logging_configuration, output_variables
     from parameters.SmearII import gpara, cpara, spara
-    from parameters.parameter_tools import get_parameter_list
-
+    from parameters.parametersets_hydetrends import get_parameter_list
+    #from parameters.parameter_tools import get_parameter_list
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--cpu', help='number of cpus to be used', type=int)
     parser.add_argument('--scenario', help='scenario name', type=str)
@@ -210,7 +214,7 @@ if __name__ == '__main__':
 
     # --- TASKS ---
     scen = args.scenario
-
+    
     # list of parameters
     parameters = {
         'general': gpara,
@@ -218,8 +222,9 @@ if __name__ == '__main__':
         'soil': spara
         }
 
-    tasks = get_parameter_list(parameters, scen)
-
+    #tasks = get_parameter_list(parameters, scen)
+    tasks = get_parameter_list(scen, args.year)
+    
     # ncf parameters
     ncf_params = {
         'variables': output_variables['variables'],
@@ -227,9 +232,10 @@ if __name__ == '__main__':
         'Nsoil_nodes': len(tasks[0]['soil']['grid']['dz']),
         'Ncanopy_nodes': tasks[0]['canopy']['grid']['Nlayers'],
         'Nplant_types': len(tasks[0]['canopy']['planttypes']),
-        'Nground_types': 1,  # Tämä hankala jos vaihtelee simulaatioiden välillä!!!!!
+        'Nground_types': 1,  # 
         'time_index': tasks[0]['forcing'].index,
-        'filename': time.strftime('%Y%m%d%H%M_') + scen + '_pyAPES_results.nc',
+        #'filename': time.strftime('%Y%m%d%H%M_') + scen + '_pyAPES_results.nc',
+        'filename': scen + '_%d.nc' %args.year,
         'filepath': tasks[0]['general']['results_directory'],
     }
 
