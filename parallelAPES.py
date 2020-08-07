@@ -225,7 +225,7 @@ if __name__ == '__main__':
         }
 
     #tasks = get_parameter_list(parameters, scen)
-    tasks = get_parameter_list(scen, year)
+    tasks = get_parameter_list(scen, years=[year, year])
     
     # ncf parameters
     ncf_params = {
