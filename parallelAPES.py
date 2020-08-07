@@ -204,6 +204,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cpu', help='number of cpus to be used', type=int)
     parser.add_argument('--scenario', help='scenario name', type=str)
+    parser.add_argument('--year', help='year as forcing', type=int)
+    
     args = parser.parse_args()
 
     # --- Queues ---
@@ -214,7 +216,7 @@ if __name__ == '__main__':
 
     # --- TASKS ---
     scen = args.scenario
-    
+    year = args.year
     # list of parameters
     parameters = {
         'general': gpara,
@@ -223,7 +225,7 @@ if __name__ == '__main__':
         }
 
     #tasks = get_parameter_list(parameters, scen)
-    tasks = get_parameter_list(scen, args.year)
+    tasks = get_parameter_list(scen, year)
     
     # ncf parameters
     ncf_params = {
@@ -235,7 +237,7 @@ if __name__ == '__main__':
         'Nground_types': 1,  # 
         'time_index': tasks[0]['forcing'].index,
         #'filename': time.strftime('%Y%m%d%H%M_') + scen + '_pyAPES_results.nc',
-        'filename': scen + '_%d.nc' %args.year,
+        'filename': scen + '_%d.nc' %year,
         'filepath': tasks[0]['general']['results_directory'],
     }
 
