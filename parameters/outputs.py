@@ -20,27 +20,27 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       # canopy state and model control statistics
       ['canopy_LAI','canopy LAI [m2 m-2]', ('date', 'simulation')],
       ['canopy_lad','leaf area density [m3 m-2]', ('date', 'simulation', 'canopy')],
-      ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
+     # ['canopy_phenostate','canopy phenological state [-]', ('date', 'simulation')],
       ['canopy_z', 'canopy model grid node elevations [m]', ('canopy')],
       ['canopy_planttypes', 'canopy planttype names', ('planttype')],
-      ['canopy_WMA_assumption','WMA assumed (1=True, 0=False)', ('date', 'simulation')],
-      ['canopy_IterWMA', 'number of iterations [-]', ('date', 'simulation')],
+      #['canopy_WMA_assumption','WMA assumed (1=True, 0=False)', ('date', 'simulation')],
+      #['canopy_IterWMA', 'number of iterations [-]', ('date', 'simulation')],
       ['canopy_energy_closure', 'energy closure in canopy [W m-2]', ('date', 'simulation')],
       ['canopy_fr_source', 'Frsource in canopy [W m-2]', ('date', 'simulation')],  #error related to isothermal long-wave balance
 
       # micromet profiles and canopy-layer average leaf temperatures
-      ['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
-      ['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
-      ['canopy_temperature','air temperature [degC]', ('date', 'simulation', 'canopy')],
-      ['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
-      ['canopy_friction_velocity','canopy friction velocity [m s-1]', ('date', 'simulation', 'canopy')],
-      ['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+      #['canopy_h2o','H2O concentration [mol mol-1]', ('date', 'simulation', 'canopy')],
+      #['canopy_co2','CO2 concentration [ppm]', ('date', 'simulation', 'canopy')],
+      #['canopy_temperature','air temperature [degC]', ('date', 'simulation', 'canopy')],
+      #['canopy_wind_speed','canopy wind speed [m s-1]', ('date', 'simulation', 'canopy')],
+      #['canopy_friction_velocity','canopy friction velocity [m s-1]', ('date', 'simulation', 'canopy')],
+      #['canopy_Tleaf', 'leaf temperature [degC]', ('date', 'simulation', 'canopy')],
       #['canopy_Tleaf_wet', 'wet leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-      ['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
-      ['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+      #['canopy_Tleaf_sl', 'sunlit leaf temperature [degC]', ('date', 'simulation', 'canopy')],
+      #['canopy_Tleaf_sh', 'shaded leaf temperature [degC]', ('date', 'simulation', 'canopy')],
 
       # radiation
-      ['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
+      #['canopy_sunlit_fraction','fraction of sunlit leafs [-]', ('date', 'simulation', 'canopy')],
       ['canopy_SWnet', 'net shortwave radiation balance at canopy top [W m-2]', ('date', 'simulation')],
       ['canopy_LWnet', 'net longwave radiation balance at canopy top [W m-2]', ('date', 'simulation')],
       ['canopy_Rnet', 'net radiation balance at canopy top [W m-2]', ('date', 'simulation')],
@@ -67,8 +67,8 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_condensation_drip', 'condensation to canopy that drips [kg m-2 s-1]', ('date', 'simulation')],
       ['canopy_throughfall', 'throughfall to moss or snow [kg m-2 s-1]', ('date', 'simulation')],
       #['canopy_evaporation_ml', 'evaporation from interception storage, profile (condensation incl.) [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
-      ['canopy_throughfall_ml', 'throughfall within canopy, profile [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
-      ['canopy_condensation_drip_ml', 'condensation drip within canopy, profile [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
+      #['canopy_throughfall_ml', 'throughfall within canopy, profile [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
+      #['canopy_condensation_drip_ml', 'condensation drip within canopy, profile [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
       ['canopy_water_closure', 'interception model mass balance error [kg m-2 s-1]', ('date', 'simulation')],
 
       # ecosystem-level fluxes (at highest gridpoint, per m-2 ground)
@@ -80,9 +80,9 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_transpiration', 'transpiration of all planttypes [m s-1]', ('date', 'simulation')],
 
       # flux profiles within canopy
-      ['canopy_co2_flux', 'co2 flux [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
-      ['canopy_latent_heat_flux', 'latent heat flux [W m-2]', ('date', 'simulation', 'canopy')],
-      ['canopy_sensible_heat_flux', 'sensible heat flux [W m-2]', ('date', 'simulation', 'canopy')],
+      #['canopy_co2_flux', 'co2 flux [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
+      #['canopy_latent_heat_flux', 'latent heat flux [W m-2]', ('date', 'simulation', 'canopy')],
+      #['canopy_sensible_heat_flux', 'sensible heat flux [W m-2]', ('date', 'simulation', 'canopy')],
 
       # root sink profile: Kersti - this should be taken out from Soil? Now len(rootsink) != len(Soil.z)
       #['canopy_root_sink', 'root water uptake profile [m s-1]', ('date', 'simulation', 'soil')],

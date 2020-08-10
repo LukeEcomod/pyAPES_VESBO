@@ -71,13 +71,25 @@ interception = {'wmax': 0.2,  # maximum interception storage capacity for rain [
                 'leaf_orientation': 0.5, # leaf orientation factor for randomdly oriented leaves
                 }
 
-# --- define two planttypes ---
+# --- define planttypes ---
+
+lad_normed = np.genfromtxt(r'forcing\lad_profiles_normed.dat', delimiter=';')
+zn = lad_normed[:,0]
 
 z = np.linspace(0, grid['zmax'], grid['Nlayers'])  # grid [m] above ground
+lad = np.zeros((len(z), 3))
 
+# lad: [z, lad_pine, lad_spruce, lad_decid]
+for k in range(1,4):
+    lad[:,k-1] = np.interp(z, zn, lad_normed[:,k])
+    f = sum(lad[:,k-1]*(zn[1] - zn[0]))
+    lad[:,k-1] /= f
+    print(f, sum(lad[:,k-1]*(zn[1] - zn[0])))
+                 
 pt1 = { 'name': 'pine',
-        'LAImax': 1.9, # maximum annual LAI m2m-2
-        'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=3.0, species='pine'),  # leaf-area density m2m-3
+        'LAImax': 2.0, # maximum annual LAI m2m-2
+        #'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=3.0, species='pine'),  # leaf-area density m2m-3
+        'lad': lad[:,0], # pine
         # cycle of photosynthetic activity
         'phenop': {
             'Xo': 0.0,
@@ -130,8 +142,9 @@ pt1 = { 'name': 'pine',
 
 
 pt2 = { 'name': 'spruce',
-        'LAImax': 0.9, # maximum annual LAI m2m-2
-        'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=0.5, species='spruce'),  # leaf-area density m2m-3
+        'LAImax': 1.0, # maximum annual LAI m2m-2
+        #'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=0.5, species='spruce'),  # leaf-area density m2m-3
+        'lad': lad[:,1],
         # cycle of photosynthetic activity
         'phenop': {
             'Xo': 0.0,
@@ -183,8 +196,9 @@ pt2 = { 'name': 'spruce',
         }
 
 pt3 = { 'name': 'decid',
-        'LAImax': 0.9, # maximum annual LAI m2m-2
-        'lad': lad_weibul(z, LAI=1.0, h=10.0, hb=0.5, species='birch'),  # leaf-area density m2m-3
+        'LAImax': 1.0, # maximum annual LAI m2m-2
+        #'lad': lad_weibul(z, LAI=1.0, h=10.0, hb=0.5, species='birch'),  # leaf-area density m2m-3
+        'lad': lad[:,2],
         # cycle of photosynthetic activity
         'phenop': {
             'Xo': 0.0,
