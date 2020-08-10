@@ -112,7 +112,7 @@ def get_parameter_list(scenario, years=None):
             print(k)
             forcing['CO2'] = param_list[k]['CO2']
             param_list[k]['forcing'] = forcing.copy()
-            
+            param_list[k]['nsim'] = k
         return param_list
     
     else:
