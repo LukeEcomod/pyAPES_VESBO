@@ -87,7 +87,7 @@ def get_parameter_list(scenario, years=None):
         if years:
             parameters['general'] = {
                 'start_time' : '%4d-06-01' %years[0],
-                'end_time' : '%4d-06-02' %years[1],
+                'end_time' : '%4d-06-30' %years[1],
                 'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat"
             }
 
@@ -109,7 +109,7 @@ def get_parameter_list(scenario, years=None):
         )
         
         for k in range(count):
-            print(k)
+            #print(k)
             forcing['CO2'] = param_list[k]['CO2']
             param_list[k]['forcing'] = forcing.copy()
             param_list[k]['nsim'] = k
