@@ -73,7 +73,7 @@ interception = {'wmax': 0.2,  # maximum interception storage capacity for rain [
 
 # --- define planttypes ---
 
-lad_normed = np.genfromtxt(r'forcing\lad_profiles_normed.dat', delimiter=';')
+lad_normed = np.genfromtxt(r'forcing/Hyytiala/lad_profiles_normed.dat', delimiter=';')
 zn = lad_normed[:,0]
 
 z = np.linspace(0, grid['zmax'], grid['Nlayers'])  # grid [m] above ground
