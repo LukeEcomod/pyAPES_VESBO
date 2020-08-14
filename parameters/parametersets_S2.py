@@ -38,13 +38,22 @@ rd_pine = pts['pine']['photop']['Rd']
 del pts
 
 # relative changes in parameters
+
+slai = ['LAI_r','LAI_l','LAI_h']
+sCO2 = ['CO2_r','CO2_l','CO2_h']
+sVcmax =['Vmax_r','Vmax_l','Vmax_h']
+sdec = ['df_r']
+
 rlai = [1.0, 0.78, 1.125]
 rCO2 = [1.0, 0.93, 1.065]
 rVcmax = [1.0, 0.95, 1.05]
 rdec = [0.225]
 #rdec = [0.18, 0.225, 0.27]
 
+
 # make all combinations
+combnames = itertools.product(slai, sCO2, sVcmax, sdec)
+combnames = list(combnames)
 comb = itertools.product(rlai, rCO2, rVcmax, rdec)
 comb = list(comb)
 # number of combinations
@@ -63,7 +72,7 @@ Rdpine = tuple(rd_pine * comb[i][2] for i in range(len(comb)))
 # CO2
 CO2 = tuple(co2_mean * comb[i][1] for i in range(len(comb)))
 
-def get_parameter_list(scenario, years=None):
+def get_parameter_list_S2(scenario, years=None, listout=False):
     if scenario.upper()== 'S2':
         
         parameters = {
@@ -113,9 +122,12 @@ def get_parameter_list(scenario, years=None):
             forcing['CO2'] = param_list[k]['CO2']
             param_list[k]['forcing'] = forcing.copy()
             param_list[k]['nsim'] = k
-        return param_list
-    
+        if listout:
+            return param_list, comb, combnames
+        else:
+            return param_list
     else:
         raise ValueError("Unknown parameterset!")
+
 
 # EOF

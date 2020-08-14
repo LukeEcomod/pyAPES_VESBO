@@ -196,9 +196,11 @@ if __name__ == '__main__':
     SL changes for hydetrends
     """
     import argparse
+
     from parameters.outputs import parallel_logging_configuration, output_variables
     from parameters.SmearII import gpara, cpara, spara
-    from parameters.parametersets_hydetrends import get_parameter_list
+    from parameters.parametersets_S1 import get_parameter_list_S1
+    from parameters.parametersets_S2 import get_parameter_list_S2
     #from parameters.parameter_tools import get_parameter_list
     
     parser = argparse.ArgumentParser()
@@ -226,7 +228,10 @@ if __name__ == '__main__':
         }
 
     #tasks = get_parameter_list(parameters, scen)
-    tasks = get_parameter_list(scen, years=[year, year])
+    if scen.upper()== 'S1':
+        tasks = get_parameter_list_S1(year)
+    elif scen.upper()== 'S2':
+        tasks = get_parameter_list_S2('S2', years=[year, year])
     
     # ncf parameters
     ncf_params = {
@@ -257,5 +262,8 @@ if __name__ == '__main__':
         ncf_params=ncf_params,
         logging_configuration=parallel_logging_configuration,
         N_workers=N_workers)
-
+    
+#    if scen.upper() == 'S1':
+#        ncfiles = [f for f in glob.glob(r'results/Hyytiala/S1*.nc')]
+#        ds = xarray.open_dataset(r'results/Hyytiala/S1.nc')
     print(outputfile)

@@ -13,25 +13,33 @@ SCRIPT TO TEST RUNNING SCENARIO S2 FOR HYDE TIMESERIES PAPER
 #import numpy as np
 #import pandas as pd
 #from matplotlib import pyplot as plt
-import sys
+#import sys
+#import glob
+#import xarray
 
 from pyAPES import driver
-from parameters.parametersets_hydetrends import get_parameter_list
+from parameters.parametersets_S1 import get_parameter_list_S1
 #from tools.iotools import read_results
 #from tools.iotools import  read_data
 #from pyAPES_utilities.plotting import plot_fluxes
 
 # read command line
-print(sys.argv)
-fyear = int(sys.argv[1])
-lyear = int(sys.argv[2])
+#print(sys.argv)
+#fyear = int(sys.argv[1])
+#lyear = int(sys.argv[2])
 #resfile = sys.argv(4)
 
+fyear=2005
+lyear=2006
 for yr in range(fyear, lyear+1):
     #print(yr)
     # Get parametersets
-    params = get_parameter_list('S2', years=[yr, yr])
-    resfile = 'S2_%4d.nc' %yr
+    params = get_parameter_list_S1(year=yr)
+    resfile = 'S1_%4d.nc' %yr
+    for k in range(len(params)):
+        print(k, params[k]['canopy']['planttypes']['pine']['LAImax'],
+              params[k]['canopy']['planttypes']['spruce']['LAImax'],
+              params[k]['canopy']['planttypes']['decid']['LAImax'])
     # run model
     _ ,_ = driver(parameters=params, create_ncf=True, result_file=resfile)
     print('done: %d' %yr)
