@@ -100,7 +100,7 @@ pt1 = { 'name': 'pine',
             },
         # cycle of LAI
         'laip': {
-            'lai_min': 0.8,
+            'lai_min': 0.9,
             'lai_ini': None,
             'DDsum0': 0.0,
             'Tbase': 5.0,
@@ -111,9 +111,9 @@ pt1 = { 'name': 'pine',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 55.0,
-            'Jmax': 105.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 1.3,  # 0.023*Vcmax
+            'Vcmax': 60.0,
+            'Jmax': 114.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.4,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
                 'Vcmax': [78., 200., 649.],
                 'Jmax': [56., 200., 646.],
@@ -155,7 +155,7 @@ pt2 = { 'name': 'spruce',
             },
         # cycle of LAI
         'laip': {
-            'lai_min': 0.8,
+            'lai_min': 0.9,
             'lai_ini': None,
             'DDsum0': 0.0,
             'Tbase': 5.0,
@@ -166,9 +166,9 @@ pt2 = { 'name': 'spruce',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 65.0,
-            'Jmax': 128.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 1.5,  # 0.023*Vcmax
+            'Vcmax': 75.0,
+            'Jmax': 142.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.7,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
                 'Vcmax': [53., 202., 640.],
                 'Jmax': [56., 202., 656.],
@@ -176,7 +176,7 @@ pt2 = { 'name': 'spruce',
                 },
             'alpha': 0.2,   # quantum efficiency parameter -
             'theta': 0.7,   # curvature parameter
-            'g1': 2.1,      # stomatal slope kPa^(0.5)
+            'g1': 2.0,      # stomatal slope kPa^(0.5)
             'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
             'beta': 0.95,   # co-limitation parameter -
@@ -209,7 +209,7 @@ pt3 = { 'name': 'decid',
             },
         # annual cycle of LAI
         'laip': {
-            'lai_min': 0.1, # relative to LAImax
+            'lai_min': 0.2, # relative to LAImax
             'lai_ini': None,
             'DDsum0': 0.0,
             'Tbase': 5.0,
@@ -220,8 +220,8 @@ pt3 = { 'name': 'decid',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 50.0,
-            'Jmax': 95.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Vcmax': 55.0,
+            'Jmax': 104.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
             'Rd': 1.3,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
                 'Vcmax': [77., 200., 637.],
