@@ -201,7 +201,8 @@ if __name__ == '__main__':
     from parameters.SmearII import gpara, cpara, spara
     from parameters.parametersets_S1 import get_parameter_list_S1
     from parameters.parametersets_S2 import get_parameter_list_S2
-    #from parameters.parameter_tools import get_parameter_list
+    from parameters.parametersets_S3 import get_parameter_list_S3
+
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--cpu', help='number of cpus to be used', type=int)
@@ -232,7 +233,9 @@ if __name__ == '__main__':
         tasks = get_parameter_list_S1(year)
     elif scen.upper()== 'S2':
         tasks = get_parameter_list_S2('S2', years=[year, year])
-    
+    elif scen.upper()== 'S3':
+        tasks = get_parameter_list_S3(year)
+        
     # ncf parameters
     ncf_params = {
         'variables': output_variables['variables'],
