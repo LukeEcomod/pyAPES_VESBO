@@ -47,18 +47,20 @@ sdec = ['df_r']
 rlai = [1.0, 0.78, 1.125]
 rCO2 = [1.0, 0.93, 1.065]
 rVcmax = [1.0, 0.95, 1.05]
-rdec = [0.225]
+#rdec = [0.225]
 #rdec = [0.18, 0.225, 0.27]
 
 
 # make all combinations
-combnames = itertools.product(slai, sCO2, sVcmax, sdec)
+combnames = itertools.product(slai, sCO2, sVcmax) #, sdec)
 combnames = list(combnames)
-comb = itertools.product(rlai, rCO2, rVcmax, rdec)
+comb = itertools.product(rlai, rCO2, rVcmax) #, rdec)
 comb = list(comb)
+
 # number of combinations
 count = len(comb)
 print(count)
+
 # LAI per planttype
 LAIpine = tuple((lai_mean * (1 - rspruce - comb[i][3]) * comb[i][0]) for i in range(len(comb)))
 LAIdecid = tuple(lai_mean * comb[i][3] * comb[i][0] for i in range(len(comb)))
@@ -97,7 +99,7 @@ def get_parameter_list_S2(scenario, years=None, listout=False):
             parameters['general'] = {
                 'start_time' : '%4d-04-01' %years[0],
                 'end_time' : '%4d-10-31' %years[1],
-                'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat"
+                'forc_filename' : "Hyytiala/FIHy_forcing_1997-2019.dat"
             }
 
         # make parameter lists

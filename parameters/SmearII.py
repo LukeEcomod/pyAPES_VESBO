@@ -27,11 +27,11 @@ gpara = {'dt' : 1800.0,  # timestep in forcing data file [s]
 
 # --- control flags (True/False) ---
 ctr = {'Eflow': True,  # ensemble flow
-       'WMA': False,  #True,  #  well-mixed assumption
+       'WMA': True,  #True,  #  well-mixed assumption
        'Ebal': True,  #False,  #  computes leaf temperature by solving energy balance
        'WaterStress': 'Rew',  #'PsiL',  # Rew or PsiL or None
-       'seasonal_LAI': True,  # account for seasonal LAI dynamics
-       'pheno_cycle': True  # account for phenological cycle
+       'seasonal_LAI': False,  # account for seasonal LAI dynamics
+       'pheno_cycle': False  # account for phenological cycle
        }
 
 # site location
@@ -124,11 +124,11 @@ pt1 = { 'name': 'pine',
             'g1': 2.3,      # stomatal slope kPa^(0.5)
             'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
-            'beta': 0.95,   # co-limitation parameter -
+            'beta': 0.99,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
-            'lt': 0.02,     # leaf length scale m
+            'lt': 0.03,     # leaf length scale m
             },
         # root zone
         'rootp': {
@@ -179,11 +179,11 @@ pt2 = { 'name': 'spruce',
             'g1': 2.0,      # stomatal slope kPa^(0.5)
             'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
-            'beta': 0.95,   # co-limitation parameter -
+            'beta': 0.99,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
-            'lt': 0.02,     # leaf length scale m
+            'lt': 0.03,     # leaf length scale m
             },
         # root zone
         'rootp': {
@@ -237,7 +237,7 @@ pt3 = { 'name': 'decid',
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
-            'lt': 0.05,     # leaf length scale m
+            'lt': 0.06,     # leaf length scale m
             },
         # root zone
         'rootp': {
@@ -262,7 +262,7 @@ pt4 = { 'name': 'shrubs',
             },
         # annual cycle of LAI
         'laip': {
-            'lai_min': 0.1, # relative to LAImax
+            'lai_min': 0.6, # relative to LAImax
             'lai_ini': None,
             'DDsum0': 0.0,
             'Tbase': 5.0,
@@ -290,7 +290,7 @@ pt4 = { 'name': 'shrubs',
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
-            'lt': 0.02,     # leaf length scale m
+            'lt': 0.03,     # leaf length scale m
             },
         # root zone
         'rootp': {

@@ -49,17 +49,20 @@ rdecid = 0.25
 def get_parameter_list_S1(year=None, listout=False):
         
         ix = np.where(laidata.index == year)
-        laipine = laidata['LAIpine'].loc[year]
-        laispruce = laidata['LAIspruce'].loc[year]
-        laidecid = laidata['LAIdecid'].loc[year]
-        co2 = laidata['CO2'].loc[year]
-        fvmax = laidata['f_vcmax'].loc[year]
-        
-        lai = laipine + laispruce + laidecid
-        print(ix, laipine, laispruce, laidecid, co2, fvmax)
+#        laipine = laidata['LAIpine'].loc[year]
+#        laispruce = laidata['LAIspruce'].loc[year]
+#        laidecid = laidata['LAIdecid'].loc[year]
+#        lai = laipine + laispruce + laidecid
 #        fpine = laipine / (lai + EPS)
 #        fspruce = laispruce / (lai + EPS)
 #        fdec = laidecid / (lai + EPS)
+        
+        lai = laidata['LAItot'].loc[year]        
+        co2 = laidata['CO2'].loc[year]
+
+        fvmax = laidata['f_vcmax'].loc[year]
+        
+        print(ix, lai, co2, fvmax)
         
         comb = itertools.product([lai, lai_ref],[co2, co2_mean], [fvmax, 1.0])
         comb = list(comb)

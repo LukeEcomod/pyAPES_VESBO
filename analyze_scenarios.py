@@ -10,18 +10,18 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from pyAPES import driver
-from parameters.parametersets_hydetrends import get_parameter_list
+from parameters.parametersets_S2 import get_parameter_list_S2
 from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
 from pyAPES_utilities.plotting import plot_fluxes
 
 scen = 'S2'
-year = 2005
+year = 2008
 
 rfile = 'results/Scenarios/' + scen + '/' + scen + '_%4d.nc' %year
 
 # Get parameterlist and forcing
-params, p, pnames = get_parameter_list('S2', years=[year, year], listout=True)
+params, p, pnames = get_parameter_list_S2('S2', years=[year, year], listout=True)
 
 p = [list(i) for i in p] # list of lists
 p = np.array(p)
@@ -58,5 +58,9 @@ plot_fluxes(results, flxdata, norain=True,
                       'canopy_NEE','canopy_GPP','canopy_Reco'],
             Data_var=['Rnet','H','LE','NEE','GPP','Reco'],
             fmonth=5, lmonth=9, sim_idx=0)
+
+#%%
+cres, resu = scen_differences(results, pnames)
+
 
 

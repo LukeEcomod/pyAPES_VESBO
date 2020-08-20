@@ -40,7 +40,7 @@ sCO2 = ['CO2_r','CO2_l','CO2_h']
 sVcmax =['Vmax_r','Vmax_l','Vmax_h']
 sdec = ['df_r']
 
-lai = np.linspace(1.0, 7.0, 7)
+lai = [2.0, 4.0, 6.0] #np.linspace(1.0, 7.0, 7)
 co2 = co2_mean * np.linspace(1.0, 1.6, 10)
 vcmax = [60.0] #, 80.0]
 m = [2.0, 4.0]

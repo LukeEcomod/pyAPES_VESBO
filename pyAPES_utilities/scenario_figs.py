@@ -37,7 +37,7 @@ def scen_differences(results, scens, rsim=0, nsim=None):
     Returns:
         none
     """
-
+    
     dt = 1800.0
     wet_dur = 24
     v = ['LAI', 'CO2', 'Vmax', 'GPP', 'Reco', 'ET', 'tr', 'WUE', 'LUE', 'Gs', 'alpha', 'CiCa']
@@ -76,9 +76,9 @@ def scen_differences(results, scens, rsim=0, nsim=None):
         
         header.append(scens[k][0] + ' ' + scens[k][1] + ' ' + scens[k][2])
         
-        cres['LAI'].append(scens[k,0].split('_')[1])
-        cres['CO2'].append(scens[k,1].split('_')[1])
-        cres['Vmax'].append(scens[k,2].split('_')[1])
+        cres['LAI'].append(scens[k][0].split('_')[1])
+        cres['CO2'].append(scens[k][1].split('_')[1])
+        cres['Vmax'].append(scens[k][2].split('_')[1])
         
         # compute big-leaf parameters
         cres['GPP'].append(sum(gpp*cfact))
@@ -94,9 +94,11 @@ def scen_differences(results, scens, rsim=0, nsim=None):
         ETeq = 1e3 * eq_evap(rnet, ta, P=1e3*pamb, units='mol')
         cres['alpha'].append(sum(et[et>0]) / sum(ETeq[ETeq>0]))
         
-        gsc = 1e6 / 1.6 * canopy_conductance(et[ix], vpd[ix], pamb[ix], rg[ix])
+        ix = np.where((dryc == 1) & (par > 100))
+        gsc = 1 / 1.6 * canopy_conductance(et[ix], vpd[ix], pamb[ix], rg[ix])
         
         cica = 1 - gpp[ix] / (gsc * co2[ix])
+        
         
         cres['CiCa'].append(np.nanmean(cica))
         
