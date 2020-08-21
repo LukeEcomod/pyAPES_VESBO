@@ -174,7 +174,7 @@ class CanopyModel(object):
     def run_daily(self, doy, Ta, Rew=1.0):
         r""" Computatations at daily timestep.
         Updates planttypes and total canopy leaf area index and phenological state.
-        Recomputes normalize flow statistics with new leaf area density profile.
+        Recomputes normalized flow statistics with new leaf area density profile.
 
         Args:
             doy (float): day of year [days]
@@ -187,7 +187,6 @@ class CanopyModel(object):
             if pt.LAImax > 0.0:
                 PsiL = (pt.Roots.h_root - self.z) / 100.0  # MPa
                 pt.update_daily(doy, Ta, PsiL=PsiL, Rew=Rew)  # updates pt properties
-
         # total leaf area index [m2 m-2]
         self.LAI = sum([pt.LAI for pt in self.planttypes])
         # total leaf area density [m2 m-3]
@@ -456,7 +455,6 @@ class CanopyModel(object):
 
             # mean leaf temperature of canopy layer
             Tleaf = Tleaf / (self.lad + EPS)
-
             err_Tl = max(abs(Tleaf - Tleaf_prev))
 
             # --- solve forest floor water & heat balance & carbon exchange ---
