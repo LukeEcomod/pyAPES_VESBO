@@ -503,9 +503,9 @@ def canopy_sw_ZhaoQualls(LAIz, Clump, x, ZEN, IbSky, IdSky, LeafAlbedo, SoilAlbe
     del X, xi
 
     # incident radiation on sunlit and shaded leaves Wm-2
-    # Samuli 19.08.2020: some fishy change here? Q_sh should not be multiplied by Clump!
-    
+    # Samuli 19.08.2020: some change been made here? Q_sh should not be multiplied by Clump! 
     #Q_sh = Clump*Kd*(SWdo + SWuo)  # normal to shaded leaves is all diffuse
+    
     Q_sh = Kd*(SWdo + SWuo)  # normal to shaded leaves is all diffuse
     Q_sl = Kb*IbSky + Q_sh  # normal to sunlit leaves is direct and diffuse
 
