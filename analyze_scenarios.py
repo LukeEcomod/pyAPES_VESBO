@@ -14,6 +14,7 @@ from parameters.parametersets_S2 import get_parameter_list_S2
 from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
 from pyAPES_utilities.plotting import plot_fluxes
+#from pyAPES_utilities.scenario_figs import scen_differences
 
 scen = 'S2'
 year = 2008

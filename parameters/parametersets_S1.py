@@ -101,8 +101,8 @@ def get_parameter_list_S1(year=None, listout=False):
             }
         
         parameters['general'] = {
-                    'start_time' : '%4d-06-01' %year,
-                    'end_time' : '%4d-06-02' %year,
+                    'start_time' : '%4d-04-01' %year,
+                    'end_time' : '%4d-10-31' %year,
                     'forc_filename' : "Hyytiala/FIHy_forcing_1997-2019.dat"
                     }
 

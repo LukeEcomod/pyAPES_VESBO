@@ -47,14 +47,14 @@ sdec = ['df_r']
 rlai = [1.0, 0.78, 1.125]
 rCO2 = [1.0, 0.93, 1.065]
 rVcmax = [1.0, 0.95, 1.05]
-#rdec = [0.225]
+rdec = [0.225]
 #rdec = [0.18, 0.225, 0.27]
 
 
 # make all combinations
-combnames = itertools.product(slai, sCO2, sVcmax) #, sdec)
+combnames = itertools.product(slai, sCO2, sVcmax, sdec)
 combnames = list(combnames)
-comb = itertools.product(rlai, rCO2, rVcmax) #, rdec)
+comb = itertools.product(rlai, rCO2, rVcmax, rdec)
 comb = list(comb)
 
 # number of combinations

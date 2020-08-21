@@ -15,7 +15,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from pyAPES import driver
-from parameters.parameter_tools import get_parameter_list
+from parameters.parametersets_S2 import get_parameter_list_S2
 from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
 from pyAPES_utilities.plotting import plot_fluxes
@@ -43,7 +43,10 @@ params = {
 #params = get_parameter_list(params, 'test')
 # params = get_parameter_list(params, 'bypass_soil')
 
-outputfile, Model = driver(parameters=params, create_ncf=True, result_file='Hyde_test.nc')
+params = get_parameter_list_S2('S2', years=[2008, 2008])
+#params, p, pnames = get_parameter_list_S2('S2', years=[2008, 2008], listout=True)
+
+outputfile, Model = driver(parameters=params, create_ncf=True, result_file='S2_2008_noebal.nc')
 
 # read results from NetCDF-file to xarray-dataset: xarray documentation here:
 # http://xarray.pydata.org/en/stable/index.html

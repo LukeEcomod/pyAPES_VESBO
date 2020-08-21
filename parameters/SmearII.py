@@ -27,11 +27,11 @@ gpara = {'dt' : 1800.0,  # timestep in forcing data file [s]
 
 # --- control flags (True/False) ---
 ctr = {'Eflow': True,  # ensemble flow
-       'WMA': True,  #True,  #  well-mixed assumption
+       'WMA': False,  #True,  #  well-mixed assumption
        'Ebal': True,  #False,  #  computes leaf temperature by solving energy balance
        'WaterStress': 'Rew',  #'PsiL',  # Rew or PsiL or None
-       'seasonal_LAI': False,  # account for seasonal LAI dynamics
-       'pheno_cycle': False  # account for phenological cycle
+       'seasonal_LAI': True,  # account for seasonal LAI dynamics
+       'pheno_cycle': True  # account for phenological cycle
        }
 
 # site location
