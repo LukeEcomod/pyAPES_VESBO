@@ -241,9 +241,19 @@ class Model(object):
             # --- CanopyModel ---
             # run daily loop: updates LAI, phenology and moisture stress ---
             if self.forcing['doy'].iloc[k] != self.forcing['doy'].iloc[k-1] or k == 0:
+                
+                if 'Rew' in self.forcing and self.soil.solve_water is False:
+                    # this is for Hyde-trend paper where we use single-layer soil and impose 
+                    # Rew from forcing
+                    Rew = self.forcing['Rew'].iloc[k]
+                else:
+                    # this should be computed within planttype from soil moisture profile
+                    Rew = 1.0
+             
                 self.canopy_model.run_daily(
                         self.forcing['doy'].iloc[k],
-                        self.forcing['Tdaily'].iloc[k])
+                        self.forcing['Tdaily'].iloc[k],
+                        Rew=Rew)
 
             # compile forcing dict for canopy model: soil_ refers to state of soil model
             canopy_forcing = {
@@ -273,9 +283,6 @@ class Model(object):
                 'soil_depth': self.soil.grid['z'][0],   # [m]
                 'soil_hydraulic_conductivity': self.soil.water.Kv[self.canopy_model.ix_roots], # [m s-1]
                 'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],        # [W m-1 K-1]?
-                # SINGLE SOIL LAYER
-                # 'state_water':{'volumetric_water_content': self.forcing['Wliq'].iloc[k]},
-                #                'state_heat':{'temperature': self.forcing['Tsoil'].iloc[k]}
                 'date': self.forcing.index[k]   # pd.datetime
             }
 
