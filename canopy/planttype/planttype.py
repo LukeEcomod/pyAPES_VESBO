@@ -100,7 +100,7 @@ class PlantType(object):
                     # 'La': stomatal parameter of stomatal optimality model
                     'g1': stomatal parameter of Medlyn A-gs model
                     'g0': residual conductance for CO2 [molm-2s-1]
-                    'kn': nitrgogen attenuation factor [-]; vertical scaling of Vcmax, Jmax, Rd
+                    'kn': nitrogen attenuation factor [-]; vertical scaling of Vcmax, Jmax, Rd
                     'beta':  co-limitation parameter of Farquhar-model
                     'drp': drought-response parameters
                     'tresp' (dict): temperature sensitivity parameters
@@ -258,7 +258,8 @@ class PlantType(object):
                 'air_temperature' (array): air temperature [degC]
                 'air_pressure' (float): ambient pressure [Pa]
                 'wind_speed' (array): mean wind speed [m s-1]
-                'par' (dict): incident and absorbed PAR [Wm-2] for sunlit & shaded leaves seprately; see structure in caller
+                'par' (dict): incident and absorbed PAR [Wm-2] for sunlit & shaded leaves seprately;
+                                see structure in caller
                 'nir' (dict): --"-- for NIR
                 'lw' (dict): long-wave related inputs; see structure from caller
 
@@ -464,7 +465,6 @@ class PlantType(object):
         f2 = (1.0 - f_sl) * self.lad * df
 
         # upscale over planttype, flux per m-2 (ground)
-        # NOTE: now also CO2 exchange takes place only from dry fraction!
         keys = ['net_co2', 'dark_respiration', 'transpiration', 'latent_heat', 'sensible_heat', 'fr',
                 'stomatal_conductance', 'boundary_conductance']
         pt_stats = {k: (np.sum(sl[k]*f1 + sh[k]*f2)) * self.dz for k in keys}
