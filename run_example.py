@@ -10,7 +10,8 @@ Created on Tue Oct 09 16:31:25 2018
 # import matplotlib.pyplot
 # %matplotlib qt
 
-import numpy as np
+
+#  wrap parameters and forcing in dictionaryimport numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -31,7 +32,7 @@ forcing = read_forcing(
     dt=gpara['dt']
 )
 
-#  wrap parameters and forcing in dictionary
+print(forcing.columns)
 params = {
     'general': gpara,
     'canopy': cpara,
@@ -43,7 +44,7 @@ params = {
 #params = get_parameter_list(params, 'test')
 # params = get_parameter_list(params, 'bypass_soil')
 
-params = get_parameter_list_S2('S2', years=[2008, 2008])
+#params = get_parameter_list_S2('S2', years=[2008, 2008])
 #params, p, pnames = get_parameter_list_S2('S2', years=[2008, 2008], listout=True)
 
 outputfile, Model = driver(parameters=params, create_ncf=True, result_file='S2_2008_noebal.nc')

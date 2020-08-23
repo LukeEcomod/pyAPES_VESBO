@@ -42,7 +42,7 @@ sdec = ['df_r']
 
 lai = [2.0, 4.0, 6.0] #np.linspace(1.0, 7.0, 7)
 co2 = co2_mean * np.linspace(1.0, 1.6, 10)
-vcmax = [60.0] #, 80.0]
+vcmax = [40.0, 60.0]
 m = [2.0, 4.0]
 
 # make all combinations
@@ -83,8 +83,8 @@ def get_parameter_list_S3(year, listout=False):
         }
     parameters['general'] = {
                 'start_time' : '%4d-07-01' %year,
-                'end_time' : '%4d-07-15' %year,
-                'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat"
+                'end_time' : '%4d-07-30' %year,
+                'forc_filename' : "Hyytiala/FIHy_forcing_1997-2019.dat"
         }
 
     # make parameter lists

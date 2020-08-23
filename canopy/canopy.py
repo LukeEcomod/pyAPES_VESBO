@@ -197,7 +197,7 @@ class CanopyModel(object):
         """ normalized flow statistics in canopy with new lad """
         if self.Switch_Eflow and self.planttypes[0].Switch_lai:
             self.micromet.normalized_flow_stats(self.z, self.lad, self.hc)
-
+                
     def run(self, dt, forcing, parameters):
         r""" Calculates one timestep and updates state of CanopyModel object.
         Args:

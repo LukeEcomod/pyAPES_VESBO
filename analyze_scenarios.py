@@ -16,8 +16,8 @@ from tools.iotools import read_forcing, read_data
 from pyAPES_utilities.plotting import plot_fluxes
 #from pyAPES_utilities.scenario_figs import scen_differences
 
-scen = 'S2'
-year = 2008
+scen = 'S1'
+year = 2009
 
 rfile = 'results/Scenarios/' + scen + '/' + scen + '_%4d.nc' %year
 
@@ -45,6 +45,9 @@ sCV = np.where(rLAI==1)
 
 results = read_results(rfile)
 
+ffile = 'results/Scenarios/temp/' + scen + '_%4d.nc' %year
+results2= read_results(ffile)
+
 # import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:
 # https://pandas.pydata.org/pandas-docs/stable/index.html
 
@@ -54,14 +57,14 @@ metdata = read_data("forcing/Hyytiala/FIHy_met_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
 
 #%%
-plot_fluxes(results, flxdata, norain=True,
+plot_fluxes(results2, flxdata, norain=True,
             res_var=['canopy_Rnet','canopy_SH','canopy_LE',
                       'canopy_NEE','canopy_GPP','canopy_Reco'],
             Data_var=['Rnet','H','LE','NEE','GPP','Reco'],
             fmonth=5, lmonth=9, sim_idx=0)
 
 #%%
-cres, resu = scen_differences(results, pnames)
+cres, resu = scen_differences(results2, pnames)
 
 
 

@@ -97,8 +97,8 @@ def get_parameter_list_S2(scenario, years=None, listout=False):
             }
         if years:
             parameters['general'] = {
-                'start_time' : '%4d-04-01' %years[0],
-                'end_time' : '%4d-10-31' %years[1],
+                'start_time' : '%4d-06-01' %years[0],
+                'end_time' : '%4d-08-31' %years[1],
                 'forc_filename' : "Hyytiala/FIHy_forcing_1997-2019.dat"
             }
 
