@@ -11,10 +11,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import itertools
 
-from bigleaf_functions import saturation_vapor_pressure, water_use_efficiency,\
+from pyAPES_utilities.bigleaf_functions import saturation_vapor_pressure, water_use_efficiency,\
     light_use_efficiency, canopy_conductance, eq_evap
 
-from timeseries import running_mean
+from pyAPES_utilities.timeseries import running_mean
 
 eps = np.finfo(float).eps  # machine epsilon
 
@@ -48,7 +48,7 @@ def scen_differences(results, scens, rsim=0, nsim=None):
     cres = {k: [] for k in v }
     header = []
     for k in range(nsim):
-        
+        print(k, nsim)
         par = results['forcing_par'][:,k].values * PAR_TO_UMOL
         rg = results['forcing_par'][:,k].values + results['forcing_nir'][:,k].values
         prec = results['forcing_precipitation'][:,k].values
@@ -137,3 +137,79 @@ def scen_differences(results, scens, rsim=0, nsim=None):
         ax[2,m].tick_params(direction='in')
     
     return cres, resu
+
+
+def summarize_scenarios(results, para, nsim=None):
+    
+    dt = 1800.0
+    wet_dur = 24
+    v = ['LAI', 'Ca', 'Vmax', 'g1', 'NEE', 'GPP', 'Reco', 'ET', 'tr', 'WUE',
+         'LUE', 'WUEs', 'LUEs', 'Gs', 'alpha','EF', 'CiCa']
+    
+    if nsim is None:
+        nsim = len(results.simulation)
+    
+
+    cres = {i: [] for i in v }
+    
+    for k in range(nsim):
+        print(k, nsim)
+        X = results.isel(simulation=k)
+        par = X['forcing_par'].values * PAR_TO_UMOL
+        rg = X['forcing_par'].values + X['forcing_nir'].values
+        prec = X['forcing_precipitation'].values
+        pamb = 1e-3 * X['forcing_pressure'].values  #kPa
+        ta = X['forcing_air_temperature'].values
+        h2o = X['forcing_h2o'].values
+        co2 = X['forcing_co2'].values
+        rnet = X['canopy_Rnet'].values
+        gpp = X['canopy_GPP'].values
+        reco = X['canopy_Reco'].values
+        nee = X['canopy_NEE'].values
+        et = 1e3 * X['canopy_LE'].values / LATENT_HEAT  #mmol s-1
+        es,_ = saturation_vapor_pressure(ta) 
+        vpd = 1e-3*es - h2o *pamb #  kPa
+        
+        # dry canopy times:
+        N = len(prec)
+        ix = running_mean(prec, wet_dur, center=False)
+        dryc = np.ones(N)
+        f = np.where(ix > 0)[0]  # wet canopy indices
+        dryc[f] = 0
+        del ix
+        ix = np.where((dryc == 1) & (par >100))
+        
+        # compute big-leaf parameters
+        cres['NEE'].append(sum(nee*cfact))
+        cres['GPP'].append(sum(gpp*cfact))
+        cres['Reco'].append(sum(reco*cfact))
+        cres['ET'].append(sum(et[et>0]*etfact))
+        cres['tr'].append(sum(X['canopy_transpiration'].values * 1e3 / MOLAR_MASS_H2O *dt))  #molm-2
+        
+        cres['LUE'].append(np.nanmean(light_use_efficiency(gpp[ix], par[ix]))) # mol CO2 / mol Par
+        cres['WUE'].append(np.nanmean(water_use_efficiency(gpp[ix], et[ix], par[ix])))  # mmolCO2 / mol H2O
+        cres['Gs'].append(np.nanmean(canopy_conductance(et[ix], vpd[ix], pamb[ix], rg[ix])))
+    
+        cres['LUEs'].append(sum(gpp[ix]) / sum(par[ix]))
+        cres['WUEs'].append(sum(gpp[ix]) / sum(et[ix]))
+        
+        ETeq = 1e3 * eq_evap(rnet, ta, P=1e3*pamb, units='mol')
+        cres['alpha'].append(sum(et[et>0]) / sum(ETeq[et>0]))
+        cres['EF'].append(sum(X['canopy_LE'][ix] / sum(rnet[ix])))
+        
+        gsc = 1 / 1.6 * canopy_conductance(et[ix], vpd[ix], pamb[ix], rg[ix])
+        
+        cica = 1 - gpp[ix] / (gsc * co2[ix])
+        
+        cres['CiCa'].append(np.nanmean(cica))
+        
+        # scenario params
+        cres['LAI'].append(para['LAI'][k])
+        cres['Ca'].append(para['Ca'][k])
+        cres['Vmax'].append(para['Vmax'][k])
+        cres['g1'].append(para['g1'][k])
+        
+    resu = pd.DataFrame.from_dict(cres)
+    resu.index = np.arange(0, nsim)
+
+    return resu

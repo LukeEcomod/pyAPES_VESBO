@@ -219,8 +219,8 @@ def read_results(outputfiles):
         fp = outputfile
         result = xr.open_dataset(fp)
         result.coords['simulation'] = result.simulation.values
-        result.coords['soil'] = result.soil_z.values
-        result.coords['canopy'] = result.canopy_z.values
+#        result.coords['soil'] = result.soil_z.values
+#        result.coords['canopy'] = result.canopy_z.values
 #        result.coords['planttype'] = ['pine','spruce','decid','shrubs']
         results.append(result)
 

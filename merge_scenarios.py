@@ -16,18 +16,19 @@ import matplotlib.pyplot as plt
 
 # utility functions
 #from utils.functions import vpd_from_rh 
-from pyAPES_utilities.bigleaf_functions import light_use_efficiency, water_use_efficiency, \
-                            intrinsic_water_use_efficiency, canopy_conductance, eq_evap, \
-                            saturation_vapor_pressure
+#from pyAPES_utilities.bigleaf_functions import light_use_efficiency, water_use_efficiency, \
+#                            intrinsic_water_use_efficiency, canopy_conductance, eq_evap, \
+#                            saturation_vapor_pressure
 from pyAPES_utilities.plotting import xarray_to_df
-
-                            
+                         
 scens = ['LCN', 'LC','LN','L','CN','C','N','ref']
 sims = 8
 
-mres = []
-keys = ['date', 'NEE', 'GPP', 'Reco', 'ET', 'LUE', 'WUE', 'IWUE', 'Gs', 'ETeq', 'CiCa']
+#mres = []
+#keys = ['date', 'NEE', 'GPP', 'Reco', 'ET', 'LUE', 'WUE', 'IWUE', 'Gs', 'ETeq', 'CiCa']
 
+outfile = r'results/Scenarios/S1/scens_250820.pk'
+    
 fpath = r'results/Scenarios/S1/*.nc'
 files = glob.glob(fpath)
 
@@ -116,8 +117,7 @@ for k in range(0, sims):
     out.append(df)
     del df
     
-    ffile = r'results/Scenarios/S1/scens.pk'
-    file = open(ffile, 'wb')
+    file = open(outfile, 'wb')
     pickle.dump([out, scens], file)
     file.close()
     

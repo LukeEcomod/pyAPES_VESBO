@@ -111,9 +111,9 @@ pt1 = { 'name': 'pine',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 60.0,
-            'Jmax': 114.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 1.4,  # 0.023*Vcmax
+            'Vcmax': 55.0,
+            'Jmax': 105.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.26,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
                 'Vcmax': [78., 200., 649.],
                 'Jmax': [56., 200., 646.],
@@ -124,7 +124,7 @@ pt1 = { 'name': 'pine',
             'g1': 2.3,      # stomatal slope kPa^(0.5)
             'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
-            'beta': 0.99,   # co-limitation parameter -
+            'beta': 0.95,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
@@ -166,9 +166,9 @@ pt2 = { 'name': 'spruce',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 75.0,
-            'Jmax': 142.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 1.7,  # 0.023*Vcmax
+            'Vcmax': 65.0,
+            'Jmax': 123.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.5,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
                 'Vcmax': [53., 202., 640.],
                 'Jmax': [56., 202., 656.],
@@ -179,7 +179,7 @@ pt2 = { 'name': 'spruce',
             'g1': 2.0,      # stomatal slope kPa^(0.5)
             'g0': 1.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
-            'beta': 0.99,   # co-limitation parameter -
+            'beta': 0.95,   # co-limitation parameter -
             'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
             },
         'leafp': {
@@ -220,9 +220,9 @@ pt3 = { 'name': 'decid',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 55.0,
-            'Jmax': 104.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 1.3,  # 0.023*Vcmax
+            'Vcmax': 50.0,
+            'Jmax': 95.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.15,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
                 'Vcmax': [77., 200., 637.],
                 'Jmax': [43., 200., 637.],

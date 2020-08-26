@@ -399,10 +399,13 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
         plt.legend(frameon=False, borderpad=0.0,loc="center right")
 
 def xarray_to_df(results, variables, sim_idx=0):
+    # note: works only for 1d variables
     series = []
     for var in variables:
+        #print(var)
         series.append(results[var].isel(simulation=sim_idx).to_pandas())
     df = pd.concat(series, axis=1)
+    #print(np.shape(df), len(variables), df.columns)
     df.columns = variables
     df.index = df.index.round('30T')
 

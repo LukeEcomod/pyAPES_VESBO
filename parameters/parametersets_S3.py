@@ -24,10 +24,10 @@ default_params = {'general': gpara,
                   'canopy': cpara,
                   'soil': spara
                  }
-        
+       
 pts = cpara['planttypes']
 
-co2_mean = 385.0 #ppm
+co2_mean = 385.0  #ppm
 
 rjv = pts['trees']['photop']['Jmax'] / pts['trees']['photop']['Vcmax']
 rrv = pts['trees']['photop']['Rd'] / pts['trees']['photop']['Vcmax']
@@ -35,10 +35,10 @@ del pts
 
 # parameter ranges
 
-slai = ['LAI_r','LAI_l','LAI_h']
-sCO2 = ['CO2_r','CO2_l','CO2_h']
-sVcmax =['Vmax_r','Vmax_l','Vmax_h']
-sdec = ['df_r']
+#slai = ['LAI_r','LAI_l','LAI_h']
+#sCO2 = ['CO2_r','CO2_l','CO2_h']
+#sVcmax =['Vmax_r','Vmax_l','Vmax_h']
+#sdec = ['df_r']
 
 lai = [2.0, 4.0, 6.0] #np.linspace(1.0, 7.0, 7)
 co2 = co2_mean * np.linspace(1.0, 1.6, 10)
@@ -46,13 +46,10 @@ vcmax = [40.0, 60.0]
 m = [2.0, 4.0]
 
 # make all combinations
-#combnames = itertools.product(slai, sCO2, sVcmax, sdec)
-#combnames = list(combnames)
 comb = itertools.product(lai, co2, vcmax, m) #, Vcmax, g1)
 comb = list(comb)
 # number of combinations
 count = len(comb)
-print(count)
 
 # LAI per planttype
 LAI = tuple(comb[i][0] for i in range(len(comb)))
@@ -63,8 +60,8 @@ g1 = tuple(comb[i][3] for i in range(len(comb)))
 Jmax = tuple(rjv * comb[i][2] for i in range(len(comb)))
 Rd = tuple(rrv * comb[i][2] for i in range(len(comb)))
 
-def get_parameter_list_S3(year, listout=False):
-        
+
+def get_parameter_list_S3(year, listout=False):        
     parameters = {
         'count': count,
         'scenario': 'S2',
@@ -76,7 +73,8 @@ def get_parameter_list_S3(year, listout=False):
                          'photop': {
                              'Vcmax': Vcmax,
                              'Jmax': Jmax,
-                             'Rd': Rd}
+                             'Rd': Rd, 
+                             'g1': g1}
                          },
                 }
             }
