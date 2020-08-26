@@ -41,7 +41,7 @@ del pts
 #sdec = ['df_r']
 
 lai = [2.0, 4.0, 6.0] #np.linspace(1.0, 7.0, 7)
-co2 = co2_mean * np.linspace(1.0, 1.6, 10)
+co2 = co2_mean * np.linspace(0.9, 1.6, 11)
 vcmax = [40.0, 60.0]
 m = [2.0, 4.0]
 
