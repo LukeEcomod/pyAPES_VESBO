@@ -6,20 +6,20 @@ Created on Tue Oct 09 16:31:25 2018
 """
 
 # to show figures in qt (pop-up's!)
-# write in console: 
+# write in console:
 # import matplotlib.pyplot
 # %matplotlib qt
 
-import numpy as np
+
+#  wrap parameters and forcing in dictionaryimport numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
 from pyAPES import driver
-#from parameters.parameter_tools import get_parameter_list
+from parameters.parametersets_S2 import get_parameter_list_S2
 from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
-#from pyAPES_utilities.plotting import plot_timeseries_xr, plot_timeseries_df, plot_fluxes
-
+from pyAPES_utilities.plotting import plot_fluxes
 
 # Get parameters and forcing for SMEAR II -site
 
@@ -32,7 +32,7 @@ forcing = read_forcing(
     dt=gpara['dt']
 )
 
-#  wrap parameters and forcing in dictionary
+print(forcing.columns)
 params = {
     'general': gpara,
     'canopy': cpara,
@@ -40,24 +40,40 @@ params = {
     'forcing': forcing
 }
 
-# %% Run model, results are saved into netcdf-file and log-file pyAPES.log. driver returns filepath to results
+# to run multiple simulation with some parameters varying
+#params = get_parameter_list(params, 'test')
+# params = get_parameter_list(params, 'bypass_soil')
 
-outputfile, Model = driver(parameters=params, create_ncf=True)
+#params = get_parameter_list_S2('S2', years=[2008, 2008])
+#params, p, pnames = get_parameter_list_S2('S2', years=[2008, 2008], listout=True)
 
-#%% from now on, we just play with results and SMEAR II -data; this is all external to the model
+outputfile, Model = driver(parameters=params, create_ncf=True, result_file='S2_2008_noebal.nc')
 
 # read results from NetCDF-file to xarray-dataset: xarray documentation here:
-#http://xarray.pydata.org/en/stable/index.html
+# http://xarray.pydata.org/en/stable/index.html
 
 results = read_results(outputfile)
 
-# import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here: 
+# import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:
 # https://pandas.pydata.org/pandas-docs/stable/index.html
 
 flxdata = read_data("forcing/Hyytiala/FIHy_flx_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
 metdata = read_data("forcing/Hyytiala/FIHy_met_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
+
+#%%
+plot_fluxes(results, flxdata, norain=True,
+            res_var=['canopy_Rnet','canopy_SH','canopy_LE',
+                      'canopy_NEE','canopy_GPP','canopy_Reco'],
+            Data_var=['Rnet','H','LE','NEE','GPP','Reco'],
+            fmonth=5, lmonth=9, sim_idx=0)
+
+plt.figure()
+results['soil_temperature'].isel(soil=0).plot.line(x='date')
+
+plt.figure()
+results['soil_volumetric_water_content'].isel(soil=0).plot.line(x='date')
 
 #%%
 # --- prints content of results -dataset
@@ -124,13 +140,13 @@ plt.figure('flow')
 
 plt.subplot(121);
 plt.plot(results['canopy_wind_speed'][:, sim, :], zcm, 'k', alpha=0.1)
-plt.plot(U, zc, 'r-'); 
+plt.plot(U, zc, 'r-');
 plt.xlabel('wind speed [m/s]')
 plt.ylabel(zc.attrs['units'])
 
 plt.subplot(122);
 plt.plot(results['canopy_friction_velocity'][:, sim, :], zcm, 'k', alpha=0.1)
-plt.plot(ust, zc, 'r-'); 
+plt.plot(ust, zc, 'r-');
 plt.xlabel('mean ustar [m/s]')
 plt.ylabel(zc.attrs['units'])
 
@@ -172,7 +188,7 @@ for v in var:
 
 #%% --- canopy.radiation.Radiation -model solves short-wave and long-wave radiation:
     # it provides profiles of incident downward, and upward radiation components [W m-2 (ground)]
-    # and radiation absorbed per unit leaf area  [W m-2 (leaf) at each layer, separately for sunlit and 
+    # and radiation absorbed per unit leaf area  [W m-2 (leaf) at each layer, separately for sunlit and
     # shaded faction of leaves
 
 # daytime short-wave profiles
@@ -228,39 +244,39 @@ plt.ylabel('SW albedo [-]')
 
 plt.figure('co2 fluxes')
 
-plt.subplot(311); 
+plt.subplot(311);
 plt.plot(t, flxdata['NEE'], 'ko', alpha=0.3)
 plt.plot(t, results['canopy_NEE'], 'r-');
 plt.ylabel(results['canopy_NEE'].attrs['units'])
 
-plt.subplot(312); 
+plt.subplot(312);
 plt.plot(t, flxdata['GPP'], 'ko', alpha=0.3)
 plt.plot(t, results['canopy_GPP'], 'r-');
 plt.ylabel(results['canopy_GPP'].attrs['units'])
 
-plt.subplot(313); 
+plt.subplot(313);
 plt.plot(t, flxdata['Reco'], 'ko', alpha=0.3)
 plt.plot(t, results['canopy_Reco'], 'r-');
 plt.ylabel(results['canopy_Reco'].attrs['units'])
 
 plt.figure('energy fluxes')
 
-plt.subplot(411); 
+plt.subplot(411);
 plt.plot(t, metdata['Rnet'], 'ko', alpha=0.3)
 plt.plot(t, results['canopy_Rnet'], 'r-');
 plt.ylabel(results['canopy_Rnet'].attrs['units'])
 
-plt.subplot(412); 
+plt.subplot(412);
 plt.plot(t, flxdata['H'], 'ko', alpha=0.3)
 plt.plot(t, results['canopy_SH'], 'r-');
 plt.ylabel(results['canopy_SH'].attrs['units'])
 
-plt.subplot(413); 
+plt.subplot(413);
 plt.plot(t, flxdata['LE'], 'ko', alpha=0.3)
 plt.plot(t, results['canopy_LE'], 'r-');
 plt.ylabel(results['canopy_LE'].attrs['units'])
 
-plt.subplot(414); 
+plt.subplot(414);
 plt.plot(t, flxdata['Gflux'], 'ko', alpha=0.3)
 
 # let's take modeled G at 10cm depth
@@ -291,7 +307,7 @@ for v in var:
 # leaf-air temperature difference, average at canopy layers
 plt.subplot(2,2,n)
 x = results['canopy_Tleaf'][:, sim, :] - results['canopy_temperature'][:, sim, :]
-xmd = np.mean(x.loc[par > 200, :], axis=0) # day
+xmd = np.mean(x.loc[par > 1000, :], axis=0) # day
 plt.plot(xmd, zc, '-', label='T_l - T_a [degC]')
 plt.xlabel('T_{leaf} - T_{air} [degC]'); plt.ylabel(zc.attrs['units'])
 
@@ -310,11 +326,11 @@ vsh = ['pt_net_co2_shaded', 'pt_latent_heat_shaded', 'pt_sensible_heat_shaded', 
 
 for k in range(6):
     plt.subplot(3,2,k+1)
-    
+
     xsl = np.mean(results[vsl[k]][:, sim, ptype, :].loc[par > 200, :], axis=0) # day
     plt.plot(xsl, zc, '-', label='sunlit')
     xsh = np.mean(results[vsh[k]][:, sim, ptype, :].loc[par > 200, :], axis=0) # day
-    plt.plot(xsh, zc, '--', label='shaded')    
+    plt.plot(xsh, zc, '--', label='shaded')
     plt.xlabel(results[vsl[k]].attrs['units']); plt.ylabel(zc.attrs['units'])
 plt.legend()
 
@@ -324,31 +340,31 @@ plt.figure('sunlit leaves timeseries at all heights', figsize=(12,8))
 
 for k in range(6):
     plt.subplot(3,2,k+1)
-    
-    plt.plot(t, results[vsl[k]][:, sim, ptype, :], '-', label='sunlit') 
+
+    plt.plot(t, results[vsl[k]][:, sim, ptype, :], '-', label='sunlit')
     plt.ylabel(results[vsl[k]].attrs['units'])
 
+plt.subplot(3,2,5)
+plt.plot(t, results['forcing_air_temperature'], 'k-')
 #%% --- canopy.forestfloor -submodel handles moss and litter layer CO2, water and energy exchange
 
 var = ['ffloor_net_radiation', 'ffloor_sensible_heat', 'ffloor_latent_heat',
-       'ffloor_ground_heat', 'ffloor_photosynthesis', 'ffloor_water_storage']
+       'ffloor_ground_heat', 'ffloor_photosynthesis', 'ffloor_water_storage', 'ffloor_surface_temperature']
 
 plt.figure('forestfloor fluxes', figsize=(12,8))
 
-for k in range(6):
-    plt.subplot(3,2,k+1)
-    
-    plt.plot(t, results[var[k]][:, sim], '-', label='sunlit') 
-    plt.ylabel(results[var[k]].attrs['units'])
-    
-#%% --- and forestfloor could consist of different groundtypes...
+for k in range(7):
+    plt.subplot(3,3,k+1)
 
-# ...
-    
+    plt.plot(t, results[var[k]][:, sim], '-', label='sunlit')
+    plt.ylabel(results[var[k]].attrs['units'])
+
+
+
 #%% --- soil - submodule computes soil moisture and temperature
 
 var = ['soil_temperature', 'soil_volumetric_water_content']
-lyrs = [0, 1, 2, 3, 4] # five top layers 
+lyrs = [0, 1, 2, 3, 4] # five top layers
 plt.figure('soil')
 k = 1
 for v in var:

@@ -525,6 +525,9 @@ def thermal_conductivity(poros, wliq, wice, solid_composition, bedrockL):
     wice = np.array(wice, ndmin=1)
     wair = poros - wliq - wice
 
+# KH 18.5.20 volume fraction of minerals
+    f_minerals = 1 -poros
+
     # component thermal conductivities W m-1 K-1
     ks = K_SAND**f_sand * K_SILT**f_silt * K_CLAY**f_clay * K_ORG**f_org
     kw = K_WATER
@@ -552,8 +555,12 @@ def thermal_conductivity(poros, wliq, wice, solid_composition, bedrockL):
 
     #print f_min, f_gas
     # thermal conductivity W m-1 K-1
-    L = (wliq*kw + f_gas*wair*kg + f_min*poros*ks + f_ice*wice*ki) \
-        / (wliq + f_gas*wair + f_min*poros + f_ice*wice)
+    # L = (wliq*kw + f_gas*wair*kg + f_min*poros*ks + f_ice*wice*ki) \
+    #     / (wliq + f_gas*wair + f_min*poros + f_ice*wice)
+
+# KH 18.5.20 volume fraction of minerals
+    L = (wliq*kw + f_gas*wair*kg + f_min*f_minerals*ks + f_ice*wice*ki) \
+        / (wliq + f_gas*wair + f_min*f_minerals + f_ice*wice)
 
     # in fully organic layer, use o'Donnell et al. 2009
     L[f_org >= 0.9] = 0.032 + 5e-1 * wliq[f_org >= 0.9]

@@ -198,7 +198,10 @@ class Interception(object):
                          iterNo,
                          np.mean(Tl_wet), np.mean(T),
                          np.mean(forcing['net_lw_leaf']), np.mean(Tl_ave), np.mean(self.Tl_wet))
-                    Tl_wet = T.copy()
+                    
+                    Tl_wet = T.copy() 
+                    # SL 28.07.20: set equal to T at ubc
+                    #Tl_wet[:] = T[-1].copy()
 
                 elif iterNo == itermax:
                     logger.debug(controls['logger_info'] + ' Maximum number of iterations reached: Tl_wet = %.2f, err = %.2f',

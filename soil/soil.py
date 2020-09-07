@@ -49,7 +49,7 @@ class Soil(object):
                         'silt' (list/array)
                         'clay' (list/array)
                     'freezing_curve' (list/array): freezing curve parameter [-]
-                    'bedrock' (dict): 
+                    'bedrock' (dict):
                         'heat_capacity' (float): [J m-3 (total volume) K-1]
                         'thermal_conductivity' (float): [W m-1 K-1]
                 'water_model':
@@ -164,7 +164,7 @@ class Soil(object):
                                           water_sink=water_sink,
                                           lower_boundary=lbc_water)
             fluxes.update(water_fluxes)
-        
+
         # if self.solve_water == False, update state if given as input
         elif 'state_water' in forcing:
             self.water.update_state(forcing['state_water'])
@@ -183,7 +183,7 @@ class Soil(object):
                                         lower_boundary=lbc_heat)
 
             fluxes.update(heat_fluxes)
-        
+
         # if self.solve_heat == False, update state if given as input
         else:
             if'state_heat' in forcing:
@@ -234,7 +234,7 @@ def form_profile(z, zh, p, lbc_water):
                 'silt' (list/array)
                 'clay' (list/array)
             'freezing_curve' (list/array): freezing curve parameter [-]
-            'bedrock' (dict): 
+            'bedrock' (dict):
                 'heat_capacity' (float): [J m-3 (total volume) K-1]
                 'thermal_conductivity' (float): [W m-1 K-1]
         lbc_water (dict):

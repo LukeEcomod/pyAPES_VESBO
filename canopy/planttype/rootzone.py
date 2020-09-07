@@ -97,13 +97,15 @@ def RootDistribution(beta, dz, root_depth):
         Gale and Grigal, 1987 Can. J. For.Res., 17, 829 - 834.
     """
     z = np.concatenate([[0.0], np.cumsum(dz)])
+    root_depth = np.minimum(root_depth, z[-1])
     z = np.concatenate([z[z < root_depth], [root_depth]])
     d = abs(z * 100.0)  # depth in cm
 
     Y = 1.0 - beta**d  # cumulative distribution (Gale & Grigal 1987)
     R = Y[1:] - Y[:-1]  # root area density distribution
 # TESTI, SET FIRST LAYER WITH NO ROOTS
-    R[0] = 0.0
+    if len(R) > 1:
+        R[0] = 0.0
 
     # addjust distribution to match soil profile depth
     R = R / sum(R) / dz[:len(R)]

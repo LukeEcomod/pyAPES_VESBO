@@ -110,10 +110,13 @@ sand*.ipynb
 
 /figures
 /results
-
+/forcing
 /forcing/Hyytiala/FIHy_forcing_1997-2019.dat
 /forcing/Hyytiala/FIHy_flx_1997-2019.dat
 /forcing/Hyytiala/FIHy_met_1997-2019.dat
+
+*.err
+*.out
 
 .DS_Store
 

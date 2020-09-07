@@ -501,11 +501,9 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         Rd_T = tresp['Rd']
         Vcmax, Jmax, Rd, Tau_c = photo_temperature_response(Vcmax, Jmax, Rd, Vcmax_T, Jmax_T, Rd_T, Tk)
 
-    # --- model parameters k1_c, k2_c [umol/m2/s]
+    # ---
     Km = Kc*(1.0 + O2_IN_AIR / Ko)
     J = (Jmax + alpha*Qp -((Jmax + alpha*Qp)**2.0 - (4*theta*Jmax*alpha*Qp))**(0.5)) / (2*theta)
-    #k1_c = J / 4.0
-    #k2_c = J / 4.0 * Km / Vcmax
 
     # --- iterative solution for cs and ci
     err = 9999.0
@@ -524,11 +522,11 @@ def photo_c3_medlyn_farquhar(photop, Qp, T, VPD, ca, gb_c, gb_v, P=101300.0):
         An = (x - (x**2.0 - 4.0*beta*y)**0.5) / (2.0*beta) - Rd  # co-limitation
 
         An1 = np.maximum(An, 0.0)
-        #print An1
+
         # stomatal conductance
         gs_opt = g0 + (1.0 + g1 / (VPD**0.5)) * An1 / cs
-        gs_opt = np.maximum(g0, gs_opt)  # gcut is the lower limit
-        #print gs_opt
+        gs_opt = np.maximum(g0, gs_opt)  # g0 is the lower limit
+
         # CO2 supply
         cs = np.maximum(ca - An1 / gb_c, 0.5*ca)  # through boundary layer
         ci0 = ci

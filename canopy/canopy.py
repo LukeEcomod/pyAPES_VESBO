@@ -174,7 +174,7 @@ class CanopyModel(object):
     def run_daily(self, doy, Ta, Rew=1.0):
         r""" Computatations at daily timestep.
         Updates planttypes and total canopy leaf area index and phenological state.
-        Recomputes normalize flow statistics with new leaf area density profile.
+        Recomputes normalized flow statistics with new leaf area density profile.
 
         Args:
             doy (float): day of year [days]
@@ -187,7 +187,6 @@ class CanopyModel(object):
             if pt.LAImax > 0.0:
                 PsiL = (pt.Roots.h_root - self.z) / 100.0  # MPa
                 pt.update_daily(doy, Ta, PsiL=PsiL, Rew=Rew)  # updates pt properties
-
         # total leaf area index [m2 m-2]
         self.LAI = sum([pt.LAI for pt in self.planttypes])
         # total leaf area density [m2 m-3]
@@ -198,7 +197,7 @@ class CanopyModel(object):
         """ normalized flow statistics in canopy with new lad """
         if self.Switch_Eflow and self.planttypes[0].Switch_lai:
             self.micromet.normalized_flow_stats(self.z, self.lad, self.hc)
-
+                
     def run(self, dt, forcing, parameters):
         r""" Calculates one timestep and updates state of CanopyModel object.
         Args:
@@ -401,6 +400,7 @@ class CanopyModel(object):
                 'wind_speed': U,
                 'par': radiation_profiles['par'],
                 'average_leaf_temperature': Tleaf_prev, # sl changed 25.11.
+                'wet_leaf_temperature': self.interception.Tl_wet # kh for wet leaf rd
             }
 
             if self.Switch_Ebal:
@@ -427,7 +427,7 @@ class CanopyModel(object):
 
             for pt in self.planttypes:
 
-                # --- sunlit and shaded leaves gas-exchange and optional energy balance
+                # sunlit and shaded leaves gas-exchange and optional energy balance
                 pt_stats_i, layer_stats_i = pt.run(
                     forcing=forcing_pt,
                     parameters=parameters_pt,
@@ -455,7 +455,6 @@ class CanopyModel(object):
 
             # mean leaf temperature of canopy layer
             Tleaf = Tleaf / (self.lad + EPS)
-
             err_Tl = max(abs(Tleaf - Tleaf_prev))
 
             # --- solve forest floor water & heat balance & carbon exchange ---
@@ -612,6 +611,7 @@ class CanopyModel(object):
                 'lad': self.lad, # m2 m-3
                 'IterWMA': iter_no,
                 'WMA_assumption': 1.0*Switch_WMA,
+                'phenostate': sum([pt.LAI * pt.pheno_state for pt in self.planttypes])/(self.LAI + EPS),
 
                 # micromet profiles
                 'wind_speed': U,    # [m s-1]
@@ -726,7 +726,7 @@ class CanopyModel(object):
         H2O = self.ones * ([forcing['h2o']])
         CO2 = self.ones * ([forcing['co2']])
         Tleaf = T.copy() * self.lad / (self.lad + EPS)
-        Tground = self.forestfloor.temperature
+        Tground = forcing['air_temperature']
         self.interception.Tl_wet = T.copy()
 
         for pt in self.planttypes:

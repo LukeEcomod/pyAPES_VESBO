@@ -16,55 +16,12 @@ from matplotlib import pyplot as plt
 from scipy.optimize import minimize
 
 from pyAPES_utilities.timeseries_tools import diurnal_cycle, yearly_cumulative
-from tools.iotools import read_forcing
-from canopy.constants import LATENT_HEAT, MOLAR_MASS_H2O, MOLAR_MASS_CO2, PAR_TO_UMOL
 
 EPS = np.finfo(float).eps
 
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default = prop_cycle.by_key()['color']
 pal=default
-
-def plot_results(results):
-
-    # Read snow
-
-    # Read weir
-    weir = read_forcing("Lettosuo_weir.csv", cols=['runf'])
-
-    # Read gwl
-    gwl_meas = read_forcing("lettosuo_WTD_pred.csv", cols=['part','clear','ctrl'])
-#    gwl_meas = read_forcing("Lettosuo_gwl.csv", cols=['WT_E','WT_N','WT_W','WT_S'], na_values=-999)
-
-    plt.figure(figsize=(10,9))
-    ax = plt.subplot(711)
-    plot_timeseries_xr(results, 'forcing_air_temperature', colors=pal, xticks=False)
-    plt.subplot(712, sharex=ax)
-    plot_timeseries_xr(results, ['forcing_precipitation', 'canopy_throughfall'],
-                       colors=pal[3:], xticks=False, unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
-    plt.subplot(713, sharex=ax)
-    plot_timeseries_xr(results, ['ffloor_evaporation_bryo', 'ffloor_evaporation_soil', 'canopy_transpiration', 'canopy_evaporation',
-                       'soil_drainage', 'soil_surface_runoff'],
-                       colors=pal, cum=True, stack=True, xticks=False,
-                       unit_conversion={'unit':'mm', 'conversion':1e3},)
-    plt.subplot(714, sharex=ax)
-    plot_timeseries_xr(results, ['canopy_evaporation', 'canopy_transpiration', 'ffloor_evaporation_bryo', 'ffloor_evaporation_soil'],
-                       colors=[pal[3]] + [pal[2]] + [pal[0]] + [pal[1]], xticks=False,
-                       unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
-    plt.subplot(715, sharex=ax)
-    plot_timeseries_df(weir, 'runf', unit_conversion = {'unit':'mm h-1', 'conversion':3600},
-                       labels='measured runoff', colors=['k'], xticks=False)
-    plot_timeseries_xr(results, 'soil_drainage', colors=pal, xticks=False,
-                      unit_conversion={'unit':'mm h-1', 'conversion':1e3*3600})
-    plt.subplot(716, sharex=ax)
-    plot_timeseries_xr(results, 'ffloor_snow_water_equivalent', colors=['gray'], xticks=False, stack=True,
-                       unit_conversion={'unit':'mm', 'conversion':1e3})
-    plt.subplot(717, sharex=ax)
-    plot_timeseries_df(gwl_meas, ['part','clear','ctrl'], colors=pal[1:], xticks=True, limits=False)
-    plot_timeseries_xr(results, 'soil_ground_water_level', colors=pal[0:], xticks=True)
-    plt.ylim(-1.0, 0.0)
-
-    plt.tight_layout(rect=(0, 0, 0.8, 1))
 
 def plot_fluxes(results, Data,
                 res_var=['canopy_Rnet','canopy_SH','canopy_LE'],
@@ -136,62 +93,11 @@ def plot_fluxes(results, Data,
             plt.xlabel('')
 
     plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
-    
+
     if save_to_path:
         plt.savefig(save_to_path)
-    
+
     return fig
-
-def plot_pt_results(results, variable):
-    if variable == 'canopy_pt_transpiration':
-        unit1={'unit':'mm h-1', 'conversion':1e3*3600}
-        unit2={'unit':'mm', 'conversion':1e3}
-    else:
-        unit1={'unit':'mg CO2 m-2 s-1', 'conversion': 44.01 * 1e-3}
-        unit2={'unit':'kg CO2 m-2', 'conversion': 44.01 * 1e-9}
-    plt.figure(figsize=(10,4))
-    ax = plt.subplot(211)
-    plot_timeseries_pt(results, variable,
-                       unit_conversion=unit1,
-                       xticks=False, stack=False, cum=False)
-    plt.subplot(212, sharex=ax)
-    plot_timeseries_pt(results, variable,
-                       unit_conversion=unit2,
-                       xticks=True, stack=True, cum=True)
-    plt.title('')
-    plt.tight_layout(rect=(0, 0, 0.9, 1))
-
-def plot_timeseries_pt(results, variable, unit_conversion={'unit':None, 'conversion':1.0},
-                    xticks=True, stack=True, cum=True, legend=True, limits=True, colors=None):
-    """
-    Plot results by plant type.
-    Args:
-        results (xarray): xarray dataset
-        variables (str): variable name to plot
-        sim_idx (int): index of simulation in xarray dataset
-        unit_converrsion (dict):
-            'unit' (str): unit of plotted variable (if different from unit in dataset)
-            'conversion' (float): conversion needed to get to 'unit'
-        xticks (boolean): False for no xticklabels
-        stack (boolean): stack plotted timeseries (fills areas)
-        cum (boolean): plot yearly cumulative timeseries
-    """
-    species=['Pine','Spruce','Decid']
-    labels=[]
-    if colors == None:
-        prop_cycle = plt.rcParams['axes.prop_cycle']
-        colors = prop_cycle.by_key()['color']
-    sub_planttypes = (len(results.planttype) - 1) / 3
-    if sub_planttypes > 1:
-        for sp in species:
-            labels += [sp + '_' + str(k) for k in range(sub_planttypes)]
-    else:
-        labels = species
-    labels.append('Shrubs')
-    plot_timeseries_xr([results.isel(planttype=i) for i in range(len(results.planttype))],
-                       variable, colors=colors, xticks=xticks,
-                       stack=stack, cum=cum,
-                       unit_conversion=unit_conversion, labels=labels, legend=legend, limits=limits)
 
 def plot_timeseries_xr(results, variables, unit_conversion = {'unit':None, 'conversion':1.0},
                        colors=default, xticks=True, stack=False, cum=False, labels=None, limits=True, legend=True):
@@ -492,94 +398,14 @@ def plot_diurnal(var, quantiles=False, color=default[0], title='', ylabel='', la
         plt.legend()
         plt.legend(frameon=False, borderpad=0.0,loc="center right")
 
-def plot_efficiencies(results, treatment='control-N', sim_idx=0):
-    PAR = read_forcing("Lettosuo_forcing_2010_2019.csv",cols=['diffPar','dirPar'],
-                       start_time=results.date[0].values, end_time=results.date[-1].values)
-    Data = read_forcing("Lettosuo_EC.csv", cols='all',
-                        start_time=results.date[0].values, end_time=results.date[-1].values)
-    Data.columns = Data.columns.str.split('_', expand=True)
-    Data = Data[treatment]
-    Data['ET'] = Data.LE / LATENT_HEAT * 1e3 # [mmol m-2 s-1]
-    Data.GPP = -Data.GPP / MOLAR_MASS_CO2  # [umol m-2 s-1]
-    Data['PAR'] = (PAR['diffPar'] + PAR['dirPar']) * PAR_TO_UMOL  # [umol m-2 s-1]
-
-    variables=['canopy_GPP','canopy_transpiration','canopy_evaporation','forcing_precipitation','ffloor_evaporation']
-    df = xarray_to_df(results, variables, sim_idx=sim_idx)
-    Data = Data.merge(df, how='outer', left_index=True, right_index=True)
-    Data['ET_mod'] = (Data.canopy_transpiration + Data.canopy_evaporation + Data.ffloor_evaporation) / MOLAR_MASS_H2O * 1e3 * 1e3 # [mmol m-2 s-1]
-    Data.canopy_GPP = Data.canopy_GPP  # [umol m-2 s-1]
-
-    dates = Data.index
-
-    ix = Data['forcing_precipitation'].rolling(48, 1).sum()
-    dryc = np.ones(len(dates))
-    f = np.where(ix > 0)[0]  # wet canopy indices
-    dryc[f] = 0.0
-    months = Data.index.month
-    fmonth = 4
-    lmonth = 9
-    hours = Data.index.hour
-    fhour = 0
-    lhour = 24
-    Data.ET[Data.gapped == 1] = Data.ET[Data.gapped == 1] * np.nan
-
-    Data.GPP[Data.gapped == 1] = Data.GPP[Data.gapped == 1] * np.nan
-
-    labels=['Modelled', 'Measured']
-
-    Data['LUE'] = Data.GPP / Data.PAR
-    Data['WUE'] = Data.GPP / Data.ET
-
-    Data['LUE_mod'] = Data.canopy_GPP / Data.PAR
-    Data['WUE_mod'] = Data.canopy_GPP / Data.ET_mod
-    ixET = np.where((months >= fmonth) & (months <= lmonth) &
-                    (hours >= fhour) & (hours <= lhour) &
-                    (dryc == 1) & np.isfinite(Data.WUE))[0]
-    ixGPP = np.where((months >= fmonth) & (months <= lmonth) &
-                    (hours >= fhour) & (hours <= lhour) &
-                    np.isfinite(Data.LUE))[0]
-
-    plt.figure(figsize=(10,4.5))
-    plt.subplot(241)
-    plot_xy(Data.LUE[ixGPP], Data.LUE_mod[ixGPP], color=pal[0], axislabels={'x': '', 'y': 'Modelled'})
-    plt.ylim(0, 0.05)
-    plt.xlim(0, 0.05)
-
-    plt.subplot(245)
-    plot_xy(Data.WUE[ixET], Data.WUE_mod[ixET], color=pal[2], axislabels={'x': 'Measured', 'y': 'Modelled'})
-    plt.ylim(0, 20)
-    plt.xlim(0, 20)
-    ax = plt.subplot(2,4,(2,3))
-    plot_timeseries_df(Data, ['LUE_mod', 'LUE'], colors=[pal[0],'k'], xticks=False,
-                       labels=labels, marker=[None, '.'], limits=False)
-    plt.title('Ligth use efficiency [umol/umol]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
-    plt.ylim(0, 0.05)
-
-    plt.subplot(2,4,(6,7), sharex=ax)
-    plot_timeseries_df(Data, ['WUE_mod','WUE'], colors=[pal[2],'k'], xticks=True,
-                       labels=labels, marker=[None, '.'], limits=False)
-    plt.title('Water use efficiency [umol/mmol]', fontsize=10)
-    plt.legend(bbox_to_anchor=(1.6,0.5), loc="center left", frameon=False, borderpad=0.0)
-    plt.ylim(0, 20)
-
-    ax =plt.subplot(244)
-    plot_diurnal(Data.LUE[ixGPP], color='k', legend=False)
-    plot_diurnal(Data.LUE_mod[ixGPP], color=pal[0], legend=False)
-    plt.setp(plt.gca().axes.get_xticklabels(), visible=False)
-    plt.xlabel('')
-
-    plt.subplot(248, sharex=ax)
-    plot_diurnal(Data.WUE[ixET], color='k', legend=False)
-    plot_diurnal(Data.WUE_mod[ixET], color=pal[2], legend=False)
-
-    plt.tight_layout(rect=(0, 0, 0.88, 1), pad=0.5)
-
 def xarray_to_df(results, variables, sim_idx=0):
+    # note: works only for 1d variables
     series = []
     for var in variables:
+        #print(var)
         series.append(results[var].isel(simulation=sim_idx).to_pandas())
     df = pd.concat(series, axis=1)
+    #print(np.shape(df), len(variables), df.columns)
     df.columns = variables
     df.index = df.index.round('30T')
 
@@ -594,7 +420,7 @@ def l1_fit(U, v):
     source:
     https://github.com/flatironinstitute/least_absolute_regression/blob/master/lae_regression/lae_regression/least_abs_err_regression.py
     """
-    
+
     def fit(x, params):
         y = params[0] * x + params[1]
         return y
