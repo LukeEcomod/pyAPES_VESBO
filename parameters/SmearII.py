@@ -2,20 +2,26 @@
 """
 DEFINES PARAMETERS FOR pyAPES SIMULATION at HYYTIALA SMEAR II -SITE
 
-to import:
-    
-    from parameters.SmearII import gpara, cpara, spara
+to import: from parameters.SmearII import gpara, cpara, spara
+
+pyAPES output variables and logger config in parameters.outputs
+
+Todo:
+- currently testing that all works, all parameters are not properly selected
+- implement reading canopy structure from tree inventory data
+- for thinning-simulations and long-term trend paper, use parameters.parametersets to
+    override nominal parameters defined here!
+
 """
 
 import numpy as np
-from tools.utilities import lad_weibul #, lad_constant
+from tools.utilities import lad_weibul, lad_constant
 
 
 gpara = {'dt' : 1800.0,  # timestep in forcing data file [s]
-           'start_time' : "2014-06-01",  # start time of simulation [yyyy-mm-dd]
-           'end_time' : "2014-06-05",  # end time of simulation [yyyy-mm-dd]
-           'forc_filename' : "forcing/Hyytiala/FIHy_forcing_1997-2019.dat",  # forcing data file*
-           #'forc_filename' : "Degero/Degero_forcing_2014_2016.csv",
+           'start_time' : "2005-06-01",  # start time of simulation [yyyy-mm-dd]
+           'end_time' : "2005-06-10",  # end time of simulation [yyyy-mm-dd]
+           'forc_filename' : "Hyytiala/FIHy_forcing_2005-2010.dat",  # forcing data file*
            'results_directory':'results/Hyytiala/'
          }
 
@@ -69,8 +75,8 @@ interception = {'wmax': 0.2,  # maximum interception storage capacity for rain [
 
 z = np.linspace(0, grid['zmax'], grid['Nlayers'])  # grid [m] above ground
 
-pt1 = { 'name': 'canopytrees',
-        'LAImax': 3.0, # maximum annual LAI m2m-2
+pt1 = { 'name': 'pine',
+        'LAImax': 2.1, # maximum annual LAI m2m-2
         'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=3.0, species='pine'),  # leaf-area density m2m-3
         # cycle of photosynthetic activity
         'phenop': {
@@ -93,17 +99,17 @@ pt1 = { 'name': 'canopytrees',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 45.0,
-            'Jmax': 85.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 0.9,  # 0.023*Vcmax
+            'Vcmax': 55.0,
+            'Jmax': 105.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.3,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
-                'Vcmax': [72., 200., 649.],
-                'Jmax': [50., 200., 646.],
+                'Vcmax': [78., 200., 649.],
+                'Jmax': [56., 200., 646.],
                 'Rd': [33.0]
                 },
             'alpha': 0.2,   # quantum efficiency parameter -
             'theta': 0.7,   # curvature parameter
-            'g1': 2.1,      # stomatal slope kPa^(0.5)
+            'g1': 2.3,      # stomatal slope kPa^(0.5)
             'g0': 5.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
             'beta': 0.95,   # co-limitation parameter -
@@ -123,9 +129,9 @@ pt1 = { 'name': 'canopytrees',
         }
 
 
-pt2 = { 'name': 'understory',
+pt2 = { 'name': 'spruce',
         'LAImax': 1.0, # maximum annual LAI m2m-2
-        'lad': lad_weibul(z, LAI=1.0, h=5.0, hb=0.0, species='pine'),  # leaf-area density m2m-3
+        'lad': lad_weibul(z, LAI=1.0, h=15.0, hb=0.5, species='spruce'),  # leaf-area density m2m-3
         # cycle of photosynthetic activity
         'phenop': {
             'Xo': 0.0,
@@ -134,9 +140,9 @@ pt2 = { 'name': 'understory',
             'tau': 8.33,  # Kolari 2007
             'smax': 18.0  # Kolari 2014
             },
-        # annual cycle of LAI
+        # cycle of LAI
         'laip': {
-            'lai_min': 0.8, # relative to LAImax
+            'lai_min': 0.8,
             'lai_ini': None,
             'DDsum0': 0.0,
             'Tbase': 5.0,
@@ -147,17 +153,17 @@ pt2 = { 'name': 'understory',
             },
         # A-gs model
         'photop': {
-            'Vcmax': 45.0,
-            'Jmax': 85.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
-            'Rd': 0.9,  # 0.023*Vcmax
+            'Vcmax': 60.0,
+            'Jmax': 114.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.5,  # 0.023*Vcmax
             'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
-                'Vcmax': [72., 200., 649.],
-                'Jmax': [50., 200., 646.],
+                'Vcmax': [53., 202., 640.],
+                'Jmax': [56., 202., 656.],
                 'Rd': [33.0]
                 },
             'alpha': 0.2,   # quantum efficiency parameter -
             'theta': 0.7,   # curvature parameter
-            'g1': 2.1,      # stomatal slope kPa^(0.5)
+            'g1': 2.3,      # stomatal slope kPa^(0.5)
             'g0': 5.0e-3,   # residual conductance mol m-2 s-1
             'kn': 0.5,      # nitrogen attenuation coefficient -
             'beta': 0.95,   # co-limitation parameter -
@@ -175,7 +181,113 @@ pt2 = { 'name': 'understory',
             'root_cond': 5.0e8, # [s]
             }
         }
+        
+pt3 = { 'name': 'decid',
+        'LAImax': 1.2, # maximum annual LAI m2m-2
+        'lad': lad_weibul(z, LAI=1.0, h=10.0, hb=0.5, species='birch'),  # leaf-area density m2m-3
+        # cycle of photosynthetic activity
+        'phenop': {
+            'Xo': 0.0,
+            'fmin': 0.1,
+            'Tbase': -4.67,  # Kolari 2007
+            'tau': 8.33,  # Kolari 2007
+            'smax': 18.0  # Kolari 2014
+            },
+        # annual cycle of LAI
+        'laip': {
+            'lai_min': 0.1, # relative to LAImax
+            'lai_ini': None,
+            'DDsum0': 0.0,
+            'Tbase': 5.0,
+            'ddo': 45.0,
+            'ddmat': 250.0,
+            'sdl': 12.0,
+            'sdur': 30.0
+            },
+        # A-gs model
+        'photop': {
+            'Vcmax': 50.0,
+            'Jmax': 95.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 1.3,  # 0.023*Vcmax
+            'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
+                'Vcmax': [77., 200., 637.],
+                'Jmax': [43., 200., 637.],
+                'Rd': [33.0]
+                },
+            'alpha': 0.2,   # quantum efficiency parameter -
+            'theta': 0.7,   # curvature parameter
+            'g1': 4.5,      # stomatal slope kPa^(0.5)
+            'g0': 5.0e-3,   # residual conductance mol m-2 s-1
+            'kn': 0.5,      # nitrogen attenuation coefficient -
+            'beta': 0.95,   # co-limitation parameter -
+            'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
+            },
+        'leafp': {
+            'lt': 0.05,     # leaf length scale m
+            },
+        # root zone
+        'rootp': {
+            'root_depth': 0.5, # rooting depth [m]
+            'beta': 0.943, # root distribution shape [-]
+            'RAI_LAI_multiplier': 2.0, # fine-root to leaf-area ratio [-]
+            'fine_radius': 2.0e-3, # [m]
+            'root_cond': 5.0e8, # [s]
+            }
+        }
 
+pt4 = { 'name': 'shrubs',
+        'LAImax': 0.7, # maximum annual LAI m2m-2
+        'lad': lad_constant(z, LAI=1.0, h=0.5, hb=0.0),  # leaf-area density m2m-3
+        # cycle of photosynthetic activity
+        'phenop': {
+            'Xo': 0.0,
+            'fmin': 0.1,
+            'Tbase': -4.67,  # Kolari 2007
+            'tau': 8.33,  # Kolari 2007
+            'smax': 18.0  # Kolari 2014
+            },
+        # annual cycle of LAI
+        'laip': {
+            'lai_min': 0.1, # relative to LAImax
+            'lai_ini': None,
+            'DDsum0': 0.0,
+            'Tbase': 5.0,
+            'ddo': 45.0,
+            'ddmat': 250.0,
+            'sdl': 12.0,
+            'sdur': 30.0
+            },
+        # A-gs model
+        'photop': {
+            'Vcmax': 40.0,
+            'Jmax': 76.0,  # 1.97*Vcmax (Kattge and Knorr, 2007)
+            'Rd': 0.7,  # 0.023*Vcmax
+            'tresp': { # temperature response parameters (Kattge and Knorr, 2007)
+                'Vcmax': [77., 200., 637.],
+                'Jmax': [43., 200., 637.],
+                'Rd': [33.0]
+                },
+            'alpha': 0.2,   # quantum efficiency parameter -
+            'theta': 0.7,   # curvature parameter
+            'g1': 4.5,      # stomatal slope kPa^(0.5)
+            'g0': 5.0e-3,   # residual conductance mol m-2 s-1
+            'kn': 0.5,      # nitrogen attenuation coefficient -
+            'beta': 0.95,   # co-limitation parameter -
+            'drp': [0.39, 0.83, 0.31, 3.0] # Rew-based drought response
+            },
+        'leafp': {
+            'lt': 0.05,     # leaf length scale m
+            },
+        # root zone
+        'rootp': {
+            'root_depth': 0.5, # rooting depth [m]
+            'beta': 0.943, # root distribution shape [-]
+            'RAI_LAI_multiplier': 2.0, # fine-root to leaf-area ratio [-]
+            'fine_radius': 2.0e-3, # [m]
+            'root_cond': 5.0e8, # [s]
+            }
+        }
+        
 """ --- forestfloor --- """
 
 snowpack = {
@@ -256,7 +368,7 @@ cpara = {'loc': loc,
          'radiation': radiation,
          'micromet': micromet,
          'interception': interception,
-         'planttypes': {'plant1': pt1, 'plant2': pt2},
+         'planttypes': {'pine': pt1, 'spruce': pt2, 'decid': pt3, 'shrubs': pt4},
          'forestfloor': forestfloor
          }
 

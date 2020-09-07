@@ -30,13 +30,12 @@ LAST EDITS: Samuli Launiainen 15.01.2020
         * ff_longwave computed in canopy
         * _restore() returns also Tsurf = forestfloor temperature in previous timestep
     - units of water fluxes [m s-1] -->  [kg m-2 s-1]
-        -> * forcing['precipitation'] nuw in [kg m-2 s-1]
+        -> * forcing['precipitation'] now in [kg m-2 s-1]
          * interception updated accordingly
     - cleaned forcing
     - returns altered
 TODO:
     - clean interception -code
-    - check everything!
 
 """
 

@@ -1,6 +1,6 @@
-%FIHy_forcing_1997-2017.dat columns for 
+%FIHy_forcing_1997-2019.dat columns
 
-Hyytiala SMEAR II / Samuli Launiainen 04.03.2019
+Hyytiala SMEAR II / Samuli Launiainen 08.04.2020
 
 1 year
 2 month
@@ -10,14 +10,14 @@ Hyytiala SMEAR II / Samuli Launiainen 04.03.2019
 6 doy, day of year
 
 7 U, mean horizontal wind speed (m/s)
-8 ust, friction velocity (m/s)
-9 Ta, air temperature (degC)
+8 Ustar, friction velocity (m/s)
+9 Tair, air temperature (degC)
 10 RH, air relative humidity (%)
 11 CO2, air CO2 mixing ratio (ppm)
 12 H2O, air H2O mixing ratio (ppth)
-13 O3, air ozone  (ppb); NOT INCLUDES
-14 Prec, precipitation rate (mm/30min)
-15 P, air pressure (kPa)
+13 O3, air ozone  (ppb); NOT INCLUDED
+14 Prec, precipitation rate (kg m-2 30min-1); divide with 1800.0 to get kg m-2 s-1
+15 P, air pressure (Pa)
 16 dirPAR, direct PAR radiation (Wm-2)
 17 diffPAR, diffuse PAR radiation (Wm-2)
 18 dirNIR, direct NIR radiation (Wm-2)

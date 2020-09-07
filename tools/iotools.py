@@ -117,11 +117,11 @@ def initialize_netcdf(variables,
 
 
 def read_forcing(forc_filename, start_time=None, end_time=None,
-                 cols=None, dt=None, na_values='NaN'):
+                 cols=None, dt=1800.0, na_values='NaN', sep=';'):
     """
     Reads forcing or other data from csv file to dataframe
     Args:
-        forc_filename (str): forcing file name with comma separator
+        forc_filename (str): forcing file name
         start_time (str): starting time [yyyy-mm-dd], if None first date in
             file used
         end_time (str): ending time [yyyy-mm-dd], if None last date
@@ -131,27 +131,32 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
         dt (float): time step [s], if given checks
             that dt in file is equal to this
         na_values (str/float): nan value representation in file
+        sep (str): field separator
     Returns:
         Forc (dataframe): dataframe with datetime as index and cols read from file
     """
 
     # filepath
     forc_fp = "forcing/" + forc_filename
-    dat = pd.read_csv(forc_fp, sep=',', header='infer', na_values=na_values)
+    dat = pd.read_csv(forc_fp, header='infer', na_values=na_values, sep=sep)
 
     # set to dataframe index
-    dat.index = pd.to_datetime({'year': dat['yyyy'],
-                                'month': dat['mo'],
-                                'day': dat['dd'],
-                                'hour': dat['hh'],
-                                'minute': dat['mm']})
+    tvec = pd.to_datetime(dat[['year', 'month', 'day', 'hour', 'minute']])
+    tvec = pd.DatetimeIndex(tvec)
+    dat.index = tvec
 
+    # select time period    
     if start_time == None:
         start_time = dat.index[0]
     if end_time == None:
         end_time = dat.index[-1]
-    dat = dat[(dat.index >= start_time) & (dat.index < end_time)]
+    
+    dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
 
+    # convert: H2O mmol / mol --> mol / mol; Prec kg m-2 in dt --> kg m-2 s-1
+    dat['H2O'] = 1e-3 * dat['H2O']
+    dat['Prec'] = dat['Prec'] / dt
+    
     # if cols is not defined; return these
     if cols is None:
         cols = ['doy',
@@ -179,7 +184,7 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
         cols = [col for col in dat]
     # Forc dataframe from specified columns
     Forc = dat[cols].copy()
-
+    
     # Check time step if specified
     if dt is not None:
         if len(set(Forc.index[1:]-Forc.index[:-1])) > 1:
@@ -189,54 +194,22 @@ def read_forcing(forc_filename, start_time=None, end_time=None,
 
     return Forc
 
-def read_hyde_forcing(forc_filename, start_time=None, end_time=None, dt=None, na_values='NaN'):
-    """
-    Reads forcing or other data from csv file to dataframe
-    Args:
-        forc_filename (str): forcing file name with comma separator
-        start_time (str): starting time [yyyy-mm-dd], if None first date in
-            file used
-        end_time (str): ending time [yyyy-mm-dd]. to get whole day, use yyyy-mm-dd+1 
-                        if None last date in file used.
-        na_values (str/float): nan value representation in file
-    Returns:
-        Forc (dataframe): dataframe with datetime as index and cols read from file
-    """
-    dt = 1800.0
-
-    dat = pd.read_csv(forc_filename, sep=';', header='infer', na_values=na_values)
-
+def read_data(ffile, start_time=None, end_time=None, na_values='NaN', sep=';'):
+    dat = pd.read_csv(ffile, header='infer', na_values=na_values, sep=sep)
     # set to dataframe index
     tvec = pd.to_datetime(dat[['year', 'month', 'day', 'hour', 'minute']])
     tvec = pd.DatetimeIndex(tvec)
     dat.index = tvec
 
-    dat['doy'] = dat['doy'].astype(float)
-    dat['P'] = dat['P'].values * 1e3 # Pa
-    dat['H2O'] = dat['H2O'].values *1e-3 # mmol/mol
-    dat['Prec'] = dat['Prec'] / dt # mms-1
-    
+    # select time period    
     if start_time == None:
         start_time = dat.index[0]
     if end_time == None:
         end_time = dat.index[-1]
     
-    dat = dat[start_time:end_time]
-    
- 
-    cols = dat.columns
+    dat = dat[(dat.index >= start_time) & (dat.index <= end_time)]
 
-    # Forc dataframe from specified columns
-    Forc = dat[cols].copy()
-
-    # Check time step if specified
-    if dt is not None:
-        if len(set(Forc.index[1:]-Forc.index[:-1])) > 1:
-            sys.exit("Forcing file does not have constant time step")
-        if (Forc.index[1] - Forc.index[0]).total_seconds() != dt:
-            sys.exit("Forcing file time step differs from dt given in general parameters")
-            
-    return Forc
+    return dat
 
 def read_results(outputfiles):
     """

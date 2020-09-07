@@ -38,7 +38,6 @@ Todo:
 
 """
 import time
-from copy import deepcopy as copy
 import logging
 
 import numpy as np
@@ -53,14 +52,14 @@ def driver(parameters,
            create_ncf=False,
            result_file=None):
     """
-    Reads parameters, prepares output files, runs model.
+    Reads parameters as argument, prepares output files, runs model.
     Args:
         parameters (dict/list): either single parameter dictionary or list of parameters
         create_ncf (bool): results saved to netCDF4 file
         result_file (str): name of result file
     """
     
-    # --- CONFIGURATION PARAMETERS of LOGGING and NetCDF
+    # --- CONFIGURATION PARAMETERS of LOGGING and NetCDF -outputs read 
     from parameters.outputs import output_variables, logging_configuration
     from logging.config import dictConfig
     
@@ -68,11 +67,6 @@ def driver(parameters,
     dictConfig(logging_configuration)
     logger = logging.getLogger(__name__)
     
-    # There shouldn't be anymore dependencies to matplotlib in simulation code
-    # removing commented lines soon.
-    #mpl_logger = logging.getLogger('matplotlib')
-    #mpl_logger.setLevel(logging.WARNING)
-
     # --- CHECK PARAMETERS ---
 
     if isinstance(parameters, dict):
@@ -109,9 +103,11 @@ def driver(parameters,
         else:
             filename = timestr + '_pyAPES_results.nc'
 
-        freq = '{}S'.format(gpara['dt'])
-        time_index = date_range(gpara['start_time'], gpara['end_time'], freq=freq, closed='left')
-
+        #freq = '{}S'.format(gpara['dt'])
+        #time_index = date_range(gpara['start_time'], gpara['end_time'], freq=freq, closed='left')
+        
+        time_index = parameters[0]['forcing'].index
+        
         ncf, _ = initialize_netcdf(
                 output_variables['variables'],
                 Nsim,
@@ -138,7 +134,7 @@ def driver(parameters,
         
         ncf.close()
         
-        return output_file
+        return output_file, tasks[0]
 
     else: # returns dictionary of outputs
         running_time = time.time()
@@ -146,7 +142,7 @@ def driver(parameters,
 
         logger.info('Running time %.2f seconds' % (time.time() - running_time))
 
-        return results #, Model # this would return also last Model instance
+        return results, tasks[0] # this would return also 1st Model instance
 
 
 class Model(object):
@@ -205,7 +201,7 @@ class Model(object):
         Loops through self.forcing and appends to self.results.
 
         self.forcing variables and units; correspond to uppermost gridpoint:
-            precipitation [m/s]
+            precipitation [kg m-2 s-1]
             air_pressure [Pa]
             air_temperature [degC]
             wind_speed [m/s]
@@ -228,7 +224,6 @@ class Model(object):
         k_steps=np.arange(0, self.Nsteps, int(self.Nsteps/10))
 
         for k in range(0, self.Nsteps):
-
             # --- print progress on screen
             if k in k_steps[:-1]:
                 s = str(np.where(k_steps==k)[0][0]*10) + '%'
@@ -246,7 +241,7 @@ class Model(object):
                 'wind_speed': self.forcing['U'].iloc[k],            # [m s-1]
                 'friction_velocity': self.forcing['Ustar'].iloc[k], # [m s-1]
                 'air_temperature': self.forcing['Tair'].iloc[k],    # [deg C]
-                'precipitation': self.forcing['Prec'].iloc[k] * WATER_DENSITY, # [kg m-2 s-1]
+                'precipitation': self.forcing['Prec'].iloc[k],      # [kg m-2 s-1]
                 'h2o': self.forcing['H2O'].iloc[k],                 # [mol mol-1]
                 'co2': self.forcing['CO2'].iloc[k],                 # [ppm]
                 'PAR': {'direct': self.forcing['dirPar'].iloc[k],   # [W m-2]

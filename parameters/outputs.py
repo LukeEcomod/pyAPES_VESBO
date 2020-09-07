@@ -55,8 +55,8 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_par_up', 'upward PAR [W m-2]', ('date', 'simulation', 'canopy')],
       ['canopy_nir_down', 'downward NIR [W m-2]', ('date', 'simulation', 'canopy')],
       ['canopy_nir_up', 'upward NIR [W m-2]', ('date', 'simulation', 'canopy')],
-      ['canopy_LW_down', 'downward LW [W m-2]', ('date', 'simulation', 'canopy')],
-      ['canopy_LW_up', 'upward LW [W m-2]', ('date', 'simulation', 'canopy')],
+      ['canopy_lw_down', 'downward LW [W m-2]', ('date', 'simulation', 'canopy')],
+      ['canopy_lw_up', 'upward LW [W m-2]', ('date', 'simulation', 'canopy')],
 
       # interception sub-model results
       ['canopy_interception', 'canopy interception [kg m-2 s-1]', ('date', 'simulation')],
@@ -64,7 +64,6 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_evaporation', 'evaporation from interception storage [kg m-2 s-1]', ('date', 'simulation')],
       ['canopy_condensation', 'condensation to canopy interception storage [kg m-2 s-1]', ('date', 'simulation')],
       ['canopy_condensation_drip', 'condensation to canopy that drips [kg m-2 s-1]', ('date', 'simulation')],
-      ['canopy_transpiration','transpiration [kg m-2 s-1]', ('date', 'simulation')],
       ['canopy_throughfall', 'throughfall to moss or snow [kg m-2 s-1]', ('date', 'simulation')],
       ['canopy_evaporation_ml', 'evaporation from interception storage, profile (condensation incl.) [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
       ['canopy_throughfall_ml', 'throughfall within canopy, profile [kg m-2 s-1]', ('date', 'simulation', 'canopy')],
@@ -77,7 +76,7 @@ output_variables = {'variables': [# variable name, description [units], (dimensi
       ['canopy_NEE', 'net ecosystem exchange [umol m-2 s-1]', ('date', 'simulation')],
       ['canopy_GPP', 'ecosystem gross primary production [umol m-2 s-1]', ('date', 'simulation')],
       ['canopy_Reco', 'ecosystem respiration [umol m-2 s-1]', ('date', 'simulation')],
-      ['canopy__transpiration', 'transpiration of all planttypes [m s-1]', ('date', 'simulation')],
+      ['canopy_transpiration', 'transpiration of all planttypes [m s-1]', ('date', 'simulation')],
 
       # flux profiles within canopy
       ['canopy_co2_flux', 'co2 flux [umol m-2 s-1]', ('date', 'simulation', 'canopy')],
