@@ -54,7 +54,7 @@ def initialize_netcdf(variables,
                       groundtypes,
                       time_index,
                       filepath='results/',
-                      filename='climoss.nc',
+                      filename='vesbo.nc',
                       description='Simulation results'):
     """ Climoss netCDF4 format output file initialization
 
@@ -167,7 +167,7 @@ def read_forcing(forc_filename, start_time, end_time,
     if 'Ws' in dat:
         cols.append('Ws')
     if 'Rew' in dat:
-        cols.append('Rew')        
+        cols.append('Rew')
     # Forc dataframe from specified columns
     Forc = dat[cols].copy()
 
