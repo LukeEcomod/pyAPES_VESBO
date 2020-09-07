@@ -132,15 +132,15 @@ def lad_weibul(z, LAI, h, hb=0.0, b=None, c=None, species=None):
     AUTHOR:
         Gabriel Katul, 2009. Coverted to Python 16.4.2014 / Samuli Launiainen
     """
-    
+
     para = {'pine': [0.906, 2.145], 'spruce': [2.375, 1.289], 'birch': [0.557, 1.914]} 
-    
+
     if (max(z) <= h) | (h <= hb):
         raise ValueError("h must be lower than uppermost gridpoint")
-        
+
     if b is None or c is None:
         b, c = para[species]
-    
+
     z = np.array(z)
     dz = abs(z[1]-z[0])
     N = np.size(z)
@@ -157,12 +157,12 @@ def lad_weibul(z, LAI, h, hb=0.0, b=None, c=None, species=None):
             / (1.0 - np.exp(-(1.0 / b)**c))
 
     a[ix] = cc
-    a = np.abs(a / sum(a*dz))    
+    a = np.abs(a / sum(a*dz))
 
     LAD = LAI * a
 
     # plt.figure(1)
-    # plt.plot(LAD,z,'r-')      
+    # plt.plot(LAD,z,'r-')
     return LAD
 
 def lad_constant(z, LAI, h, hb=0.0):
@@ -184,7 +184,7 @@ def lad_constant(z, LAI, h, hb=0.0):
     z = np.array(z)
     dz = abs(z[1]-z[0])
     N = np.size(z)
-    
+
 #    # dummy variables
 #    a = np.zeros(N)
 #    x = z[z <= h] / h  # normalized heigth
@@ -192,7 +192,7 @@ def lad_constant(z, LAI, h, hb=0.0):
 #
 #    if n == 1: n = 2
 #    a[1:n] = 1.0
-    
+
     # dummy variables
     a = np.zeros(N)
     ix = np.where( (z > hb) & (z <= h)) [0]
