@@ -58,15 +58,15 @@ def driver(parameters,
         create_ncf (bool): results saved to netCDF4 file
         result_file (str): name of result file
     """
-    
-    # --- CONFIGURATION PARAMETERS of LOGGING and NetCDF -outputs read 
+
+    # --- CONFIGURATION PARAMETERS of LOGGING and NetCDF -outputs read
     from parameters.outputs import output_variables, logging_configuration
     from logging.config import dictConfig
-    
+
     # --- LOGGING ---
     dictConfig(logging_configuration)
     logger = logging.getLogger(__name__)
-    
+
     # --- CHECK PARAMETERS ---
 
     if isinstance(parameters, dict):
@@ -80,9 +80,9 @@ def driver(parameters,
     logger.info('Simulation started. Number of simulations: {}'.format(Nsim))
 
     # --- SIMULATIOS AND OUTPUTS ---
-    
+
     tasks = []
-    
+
     for k in range(Nsim):
         tasks.append(
             Model(
@@ -94,7 +94,7 @@ def driver(parameters,
                 nsim=k
             )
         )
-    
+
     if create_ncf: # outputs to NetCDF-file, returns filename
         gpara = parameters[0]['general'] # same for all tasks
         timestr = time.strftime('%Y%m%d%H%M')
@@ -105,9 +105,9 @@ def driver(parameters,
 
         #freq = '{}S'.format(gpara['dt'])
         #time_index = date_range(gpara['start_time'], gpara['end_time'], freq=freq, closed='left')
-        
+
         time_index = parameters[0]['forcing'].index
-        
+
         ncf, _ = initialize_netcdf(
                 output_variables['variables'],
                 Nsim,
@@ -131,9 +131,9 @@ def driver(parameters,
 
         output_file = gpara['results_directory'] + filename
         logger.info('Ready! Results are in: ' + output_file)
-        
+
         ncf.close()
-        
+
         return output_file, tasks[0]
 
     else: # returns dictionary of outputs
@@ -161,6 +161,8 @@ class Model(object):
                  outputs,
                  nsim=0):
 
+        logger = logging.getLogger(__name__)
+        
         self.dt = dt
 
         self.Nsteps = len(forcing)
@@ -173,6 +175,15 @@ class Model(object):
         # create soil model instance
         self.soil = Soil(soil_para)
 
+        if 'Wa' in forcing and soil_para['water_model']['solve'] is False:
+            logger.info("Soil moisture from forcing file")
+            soil_para['water_model']['initial_condition']['volumetric_water_content'] = (
+                forcing['Wa'].iloc[0])
+        if 'Tsa' in forcing and soil_para['heat_model']['solve'] is False:
+            logger.info("Soil temperature from forcing file")
+            soil_para['heat_model']['initial_condition']['temperature'] = (
+                forcing['Tsa'].iloc[0])
+        
         # create canopy model instance
         # initial delayed temperature and degreedaysum for pheno & LAI-models
         if canopy_para['ctr']['pheno_cycle'] and 'X' in forcing:
@@ -241,7 +252,7 @@ class Model(object):
                 'wind_speed': self.forcing['U'].iloc[k],            # [m s-1]
                 'friction_velocity': self.forcing['Ustar'].iloc[k], # [m s-1]
                 'air_temperature': self.forcing['Tair'].iloc[k],    # [deg C]
-                'precipitation': self.forcing['Prec'].iloc[k],      # [kg m-2 s-1]
+                'precipitation': self.forcing['Prec'].iloc[k],      # [kg m-2 s-1]                
                 'h2o': self.forcing['H2O'].iloc[k],                 # [mol mol-1]
                 'co2': self.forcing['CO2'].iloc[k],                 # [ppm]
                 'PAR': {'direct': self.forcing['dirPar'].iloc[k],   # [W m-2]
@@ -264,9 +275,6 @@ class Model(object):
                 'soil_depth': self.soil.grid['z'][0],   # [m]
                 'soil_hydraulic_conductivity': self.soil.water.Kv[self.canopy_model.ix_roots], # [m s-1]
                 'soil_thermal_conductivity': self.soil.heat.thermal_conductivity[0],        # [W m-1 K-1]?
-                # SINGLE SOIL LAYER
-                # 'state_water':{'volumetric_water_content': self.forcing['Wliq'].iloc[k]},
-                #                'state_heat':{'temperature': self.forcing['Tsoil'].iloc[k]}
                 'date': self.forcing.index[k]   # pd.datetime
             }
 
@@ -289,6 +297,14 @@ class Model(object):
                 'ground_heat_flux': -out_ffloor['ground_heat'],
                 'date': self.forcing.index[k]}
 
+            
+            if 'Ws' in self.forcing and self.soil.solve_water is False:
+                soil_forcing.update({
+                    'state_water':{'volumetric_water_content': self.forcing['Ws'].iloc[k]}})
+            if 'Tsa' in self.forcing and self.soil.solve_heat is False:
+                soil_forcing.update({
+                    'state_heat':{'temperature': self.forcing['Tsa'].iloc[k]}})
+            
             # call self.soil to solve below-ground water and heat flow
             soil_flux, soil_state = self.soil.run(
                     dt=self.dt,

@@ -140,6 +140,7 @@ def read_forcing(forc_filename, start_time, end_time,
 
     # set to dataframe index
     tvec = pd.to_datetime(dat[['year', 'month', 'day', 'hour', 'minute']])
+    
     tvec = pd.DatetimeIndex(tvec)
     dat.index = tvec
 

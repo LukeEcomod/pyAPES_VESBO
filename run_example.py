@@ -10,19 +10,16 @@ Created on Tue Oct 09 16:31:25 2018
 # import matplotlib.pyplot
 # %matplotlib qt
 
-
-#  wrap parameters and forcing in dictionaryimport numpy as np
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
 from pyAPES import driver
-from parameters.parametersets_S2 import get_parameter_list_S2
+
 from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
-from pyAPES_utilities.plotting import plot_fluxes
 
 # Get parameters and forcing for SMEAR II -site
-
 from parameters.SmearII import gpara, cpara, spara
 
 forcing = read_forcing(
@@ -33,6 +30,8 @@ forcing = read_forcing(
 )
 
 print(forcing.columns)
+
+# wrap parameters and forcing in dictionary
 params = {
     'general': gpara,
     'canopy': cpara,
@@ -40,14 +39,12 @@ params = {
     'forcing': forcing
 }
 
-# to run multiple simulation with some parameters varying
-#params = get_parameter_list(params, 'test')
-# params = get_parameter_list(params, 'bypass_soil')
+# %% Run model
+# results are saved into netcdf-file and log-file pyAPES.log. driver returns filepath to results
 
-#params = get_parameter_list_S2('S2', years=[2008, 2008])
-#params, p, pnames = get_parameter_list_S2('S2', years=[2008, 2008], listout=True)
+outputfile, Model = driver(parameters=params, create_ncf=True, result_file='example.nc')
 
-outputfile, Model = driver(parameters=params, create_ncf=True, result_file='S2_2008_noebal.nc')
+#%% from now on, we just play with results and SMEAR II -data; this is all external to the model
 
 # read results from NetCDF-file to xarray-dataset: xarray documentation here:
 # http://xarray.pydata.org/en/stable/index.html
@@ -61,19 +58,6 @@ flxdata = read_data("forcing/Hyytiala/FIHy_flx_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
 metdata = read_data("forcing/Hyytiala/FIHy_met_2005-2010.dat", sep=';',
                        start_time=results.date[0].values, end_time=results.date[-1].values)
-
-#%%
-plot_fluxes(results, flxdata, norain=True,
-            res_var=['canopy_Rnet','canopy_SH','canopy_LE',
-                      'canopy_NEE','canopy_GPP','canopy_Reco'],
-            Data_var=['Rnet','H','LE','NEE','GPP','Reco'],
-            fmonth=5, lmonth=9, sim_idx=0)
-
-plt.figure()
-results['soil_temperature'].isel(soil=0).plot.line(x='date')
-
-plt.figure()
-results['soil_volumetric_water_content'].isel(soil=0).plot.line(x='date')
 
 #%%
 # --- prints content of results -dataset
@@ -118,11 +102,11 @@ zs = results.soil_z # depth in soil is shown negative [m]
 # now plot some results using matplolib; Kersti has some more advanced codes in pyAPES_utilities.plotting
 
 # --- canopy structure and planttypes
-
 # leaf-area density profile at end of simulation: these are not realistic for SMEAR II yet.
 plt.figure('LAD')
 var = 'canopy_lad'
-plt.plot(results[var][-1, sim, :], zc); plt.xlabel(results[var].attrs['units'])
+plt.plot(results[var][-1, sim, :], zc)
+plt.xlabel(results[var].attrs['units'])
 plt.ylabel(zc.attrs['units'])
 plt.title('canopy LAI = ' + (str(results['canopy_LAI'][-1, sim,].values)))
 
@@ -138,15 +122,15 @@ ust = np.mean(results['canopy_friction_velocity'][:, sim, :], axis=0)
 
 plt.figure('flow')
 
-plt.subplot(121);
+plt.subplot(121)
 plt.plot(results['canopy_wind_speed'][:, sim, :], zcm, 'k', alpha=0.1)
-plt.plot(U, zc, 'r-');
+plt.plot(U, zc, 'r-')
 plt.xlabel('wind speed [m/s]')
 plt.ylabel(zc.attrs['units'])
 
-plt.subplot(122);
+plt.subplot(122)
 plt.plot(results['canopy_friction_velocity'][:, sim, :], zcm, 'k', alpha=0.1)
-plt.plot(ust, zc, 'r-');
+plt.plot(ust, zc, 'r-')
 plt.xlabel('mean ustar [m/s]')
 plt.ylabel(zc.attrs['units'])
 
@@ -360,8 +344,67 @@ for k in range(7):
     plt.ylabel(results[var[k]].attrs['units'])
 
 
+    
+    
+#%% -- Second case: Degerö Stormyr site with soil dynamics
+
+# This means that soil temperature and water content are simulated.
+
+# Steps are:
+
+# 1. Get parameters and forcing for study sites
+# 2. Wrap parameters and forcing in dictionary
+# 3. Run the model
+
+# Simulation results are saved into netcdf-file, logging is saved in pyAPES.log,
+# and driver-function returns file path to results of simulation and pyAPES model instance.
+
+
+from parameters.Degero import gpara, cpara, spara
+from tools.iotools import read_forcing
+
+from pyAPES import driver
+
+forcing = read_forcing(
+    forc_filename=gpara['forc_filename'],
+    start_time=gpara['start_time'],
+    end_time=gpara['end_time'],
+    dt=gpara['dt'],
+)
+
+# check forcing
+print(forcing.columns)
+
+params = {
+    'general': gpara,
+    'canopy': cpara,
+    'soil': spara,
+    'forcing': forcing
+}
+
+outputfile, Model = driver(parameters=params, create_ncf=True, result_file='demo_2.nc')
 
 #%% --- soil - submodule computes soil moisture and temperature
+
+results = read_results(outputfile)
+
+sim = 0  # we have only one simulation
+# python indices start from 0, -1 refers to last element in array, : means 'all'
+t = results.date  # time
+zc = results.canopy_z  # height above ground [m]
+zs = results.soil_z  # depth of soil; shown negative [m]
+
+#%% --- soil - submodule computes soil moisture and temperature
+
+var = ['soil_temperature', 'soil_volumetric_water_content']
+lyrs = [0, 1, 2, 3, 4] # five top layers
+plt.figure('soil')
+k = 1
+for v in var:
+    plt.subplot(2,1,k)
+    plt.plot(t, results[v][:,sim,lyrs])
+    plt.ylabel(results[v].attrs['units'])
+    k += 1
 
 var = ['soil_temperature', 'soil_volumetric_water_content']
 lyrs = [0, 1, 2, 3, 4] # five top layers
