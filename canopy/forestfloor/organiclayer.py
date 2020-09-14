@@ -481,7 +481,8 @@ class OrganicLayer(object):
                 water content and water fluxes [kg m-2 s-1 = mm s-1]
                 energy fluxes [J m-2 s-1 = W m-2]
         """
-
+        logger = logging.getLogger(__name__)
+        
         dudt = np.zeros(12)
 
         if dt == 0.0:
@@ -613,7 +614,8 @@ class OrganicLayer(object):
             iter_no += 1
 
             if iter_no == itermax:
-                print('Maximum number of iterations reached', Ts, err)
+                #logger.debug('Maximum number of iterations reached: Ts = %.2f, err = %.2f', np.mean(Ts), err)
+
                 Ts = Ta
                 es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
                 LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
