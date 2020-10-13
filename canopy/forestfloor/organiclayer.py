@@ -267,7 +267,8 @@ class OrganicLayer(object):
         # store iteration results
         self.iteration_results = states
 
-        #-- compute soil evaporation through moss layer: diffusion through moss, then turbulent transport
+        #-- compute soil evaporation through moss layer:
+        # diffusion through moss, then turbulent transport
         conductance_to_air = surface_atm_conductance(wind_speed=forcing['wind_speed'],
                                                      zref=parameters['reference_height'],
                                                      zom=self.roughness_height,
@@ -580,7 +581,6 @@ class OrganicLayer(object):
         iter_no = 0
 
         #wo = 0.8 # weight of old Ts
-        #
         ## SL 28.7.20
         #Ts = 0.5 * (Ta + self.temperature)
 
@@ -591,6 +591,7 @@ class OrganicLayer(object):
             # evaporation demand and supply --> latent heat flux
             es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
             LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
+            
             if LEdemand > 0:
                 LE = min(LEdemand, LATENT_HEAT * max_evaporation_rate)
                 if iter_no > 100:
@@ -677,8 +678,10 @@ class OrganicLayer(object):
         # [m s-1]
         Kh = (g_moss * g_soil / (g_moss + g_soil)) * (zm + zs)
 
-        capillary_rise = WATER_DENSITY * max(0.0, - Kh * ((water_potential - forcing['soil_water_potential'])
-                                                          / (zm + zs) + 1.0))
+        capillary_rise = (
+            WATER_DENSITY * max(
+                0.0, - Kh * ((water_potential - forcing['soil_water_potential']) / (zm + zs) + 1.0))
+        )
 
         # [kg m-2 s-1] or [mm s-1]
         capillary_rise = min(capillary_rise, max_recharge_rate)
@@ -719,20 +722,22 @@ class OrganicLayer(object):
 
         # heat capacities
         # [J K-1]
-        heat_capacity_old = (SPECIFIC_HEAT_ORGANIC_MATTER
-                         * self.dry_mass
-                         + SPECIFIC_HEAT_H2O * y[1])
+        heat_capacity_old = (
+            SPECIFIC_HEAT_ORGANIC_MATTER
+            * self.dry_mass
+            + SPECIFIC_HEAT_H2O * y[1])
 
-        heat_capacity_new = (SPECIFIC_HEAT_ORGANIC_MATTER
-                             * self.dry_mass
-                             + SPECIFIC_HEAT_H2O * (y[1] + dy_water * dt))
+        heat_capacity_new = (
+            SPECIFIC_HEAT_ORGANIC_MATTER
+            * self.dry_mass
+            + SPECIFIC_HEAT_H2O * (y[1] + dy_water * dt))
 
         # calculate new temperature from heat balance
         heat_fluxes = (
                 + conducted_heat_flux
                 + heat_advection
                 - ground_heat_flux
-                )
+        )
 
         new_temperature = (heat_fluxes * dt + heat_capacity_old * y[0]) / heat_capacity_new
 
