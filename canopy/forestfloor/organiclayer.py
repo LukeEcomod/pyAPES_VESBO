@@ -481,7 +481,7 @@ class OrganicLayer(object):
                 water content and water fluxes [kg m-2 s-1 = mm s-1]
                 energy fluxes [J m-2 s-1 = W m-2]
         """
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger(self.__name__)
         
         dudt = np.zeros(12)
 
