@@ -39,7 +39,7 @@ from .carbon import BryophyteFarquhar, OrganicRespiration
 EPS = np.finfo(float).eps
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(self.__name__)
 
 class OrganicLayer(object):
     r"""
