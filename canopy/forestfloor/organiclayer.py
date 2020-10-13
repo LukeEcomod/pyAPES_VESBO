@@ -156,15 +156,21 @@ class OrganicLayer(object):
         self.volumetric_water = (self.water_content / WATER_DENSITY * self.bulk_density)
 
         #: [m]
-        self.water_potential = water_retention_curve(self.water_retention, theta=self.volumetric_water)
+        self.water_potential = water_retention_curve(
+            self.water_retention,
+            theta=self.volumetric_water
+        )
 #        self.water_potential = convert_hydraulic_parameters(
 #                self.volumetric_water,
 #                self.water_retention,
 #                'volumetric_water')
 
-        self.albedo = reflectance(water_content=self.water_content,
-                                  max_water_content=self.max_water_content,
-                                  albedo=self.optical_properties['albedo'])
+        self.albedo = reflectance(
+            water_content=self.water_content,
+            max_water_content=self.max_water_content,
+            albedo=self.optical_properties['albedo']
+        )
+    
         self.emissivity = self.optical_properties['emissivity']
 
         #-- dict for temporal storage of object state after iteration
