@@ -20,7 +20,9 @@ from tools.iotools import read_results
 from tools.iotools import read_forcing, read_data
 
 # Get parameters and forcing for SMEAR II -site
-from parameters.SmearII import gpara, cpara, spara
+#from parameters.SmearII import gpara, cpara, spara
+# Get parameters and forcing for Degero
+from parameters.Degero import gpara, cpara, spara
 
 forcing = read_forcing(
     forc_filename=gpara['forc_filename'],
@@ -42,13 +44,12 @@ params = {
 # %% Run model
 # results are saved into netcdf-file and log-file pyAPES.log. driver returns filepath to results
 
-outputfile, Model = driver(parameters=params, create_ncf=True, result_file='example.nc')
+outputfile, Model = driver(parameters=params, create_ncf=True, result_file='example1.nc')
 
 #%% from now on, we just play with results and SMEAR II -data; this is all external to the model
 
 # read results from NetCDF-file to xarray-dataset: xarray documentation here:
 # http://xarray.pydata.org/en/stable/index.html
-
 results = read_results(outputfile)
 
 # import fluxdata and meteorological datafiles into pd.dataframes: pandas documentation here:

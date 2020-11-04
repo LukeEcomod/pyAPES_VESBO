@@ -19,8 +19,8 @@ from pyAPES_utilities.soiltypes.sphagnum_peat import soil_properties, zh
 
 gpara = {
     'dt' : 1800.0,  # timestep in forcing data file [s]
-    'start_time' : "2014-06-01",  # start time of simulation [yyyy-mm-dd]
-    'end_time' : "2014-06-08",  # end time of simulation [yyyy-mm-dd]
+    'start_time' : "2016-06-01",  # start time of simulation [yyyy-mm-dd]
+    'end_time' : "2016-06-15",  # end time of simulation [yyyy-mm-dd]
     'forc_filename' : "Degero/Degero_forcing_2014-2016.dat",  # forcing data file*
     'results_directory':'results/Degero/'
 }
