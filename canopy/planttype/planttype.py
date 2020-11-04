@@ -282,14 +282,29 @@ class PlantType(object):
             self.Tl_sh = sh['leaf_temperature'].copy()
             self.Tl_sl = sl['leaf_temperature'].copy()
 
-# TEST
-        # --- wet leaf respiration
-        _, _, Rd_wet, _ = photo_temperature_response(0.0, 0.0, self.photop['Rd'],
-                                                   [0,0,0], [0,0,0], self.photop['tresp']['Rd'],
-                                                   forcing['wet_leaf_temperature'] + 273.15)
+# TEST: CO2 exchange for wet leaves
+        gb_h, gb_c, gb_v = leaf_boundary_layer_conductance(forcing['wind_speed'], self.leafp['lt'],
+                                                            forcing['air_temperature'],
+                                                            forcing['wet_leaf_temperature'] - forcing['air_temperature'],
+                                                            forcing['air_pressure'])
+
+        # VDP from Tl_wet
+        esat, s = e_sat(forcing['wet_leaf_temperature'])
+        Dleaf = esat / forcing['air_pressure'] - forcing['h2o']
+        # sunlit shaded separately
+        An_wet_sl, Rd_wet_sl, _, _, _, _ = photo_c3_medlyn_farquhar(self.photop,
+                                                                    forcing['par']['sunlit']['incident']* PAR_TO_UMOL,
+                                                                    forcing['wet_leaf_temperature'],
+                                                                    Dleaf, forcing['co2'], gb_c, gb_v, P=forcing['air_pressure'])
+        An_wet_sh, Rd_wet_sh, _, _, _, _ = photo_c3_medlyn_farquhar(self.photop,
+                                                                    forcing['par']['shaded']['incident']* PAR_TO_UMOL,
+                                                                    forcing['wet_leaf_temperature'],
+                                                                    Dleaf, forcing['co2'], gb_c, gb_v, P=forcing['air_pressure'])
+        An_wet = (1 - parameters['sunlit_fraction']) * An_wet_sh + parameters['sunlit_fraction'] * An_wet_sl
+        Rd_wet = (1 - parameters['sunlit_fraction']) * Rd_wet_sh + parameters['sunlit_fraction'] * Rd_wet_sl
 
         # prepare outputs
-        pt_stats, layer_stats = self._outputs(sl, sh, Rd_wet, f_sl=parameters['sunlit_fraction'], df=parameters['dry_leaf_fraction'])
+        pt_stats, layer_stats = self._outputs(sl, sh, Rd_wet, An_wet, f_sl=parameters['sunlit_fraction'], df=parameters['dry_leaf_fraction'])
 
         return pt_stats, layer_stats
 
@@ -451,7 +466,7 @@ class PlantType(object):
 
         return x
 
-    def _outputs(self, sl, sh, Rd_wet, f_sl, df):
+    def _outputs(self, sl, sh, Rd_wet, An_wet, f_sl, df):
         """
         Combines outputs.
         Args:
@@ -472,7 +487,7 @@ class PlantType(object):
         del keys
 
 # TEST
-        pt_stats['net_co2'] -= (np.sum(self.lad * (1.0 - df) * Rd_wet)) * self.dz
+        pt_stats['net_co2'] += (np.sum(self.lad * (1.0 - df) * An_wet)) * self.dz
         pt_stats['dark_respiration'] += (np.sum(self.lad * (1.0 - df) * Rd_wet)) * self.dz
 
         # layerwise fluxes [units per m-3] for Micromet sink-source profiles
@@ -480,7 +495,7 @@ class PlantType(object):
         layer_stats = {k: sl[k]*f1 + sh[k]*f2 for k in keys}
 
 # TEST
-        layer_stats['net_co2'] -= self.lad * (1.0 - df) * Rd_wet
+        layer_stats['net_co2'] += self.lad * (1.0 - df) * An_wet
         layer_stats['dark_respiration'] += self.lad * (1.0 - df) * Rd_wet
 
         # ... and outputs separately for sunlit and shaded leaves
