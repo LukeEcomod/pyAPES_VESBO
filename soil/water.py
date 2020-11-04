@@ -323,7 +323,7 @@ def waterFlow1D(t_final, grid, forcing, initial_state, pF, Ksat,
 
     # initial state
     h_ini = initial_state['water_potential']
-    pond_ini = initial_state['pond_storage']
+    pond_ini = initial_state['pond_storage'] - forcing['pond_recharge'] * t_final
     W_ini = h_to_cellmoist(pF, h_ini, dz)
 
     # variables updated during solution
@@ -717,7 +717,7 @@ def waterStorage1D(t_final, grid, forcing, initial_state, pF, Ksat, wsto_gwl,
     h_ini = initial_state['water_potential']
     gwl = get_gwl(h_ini, z)
     Wsto_ini = GwlToWsto(gwl)
-    pond_ini = initial_state['pond_storage']
+    pond_ini = initial_state['pond_storage'] - forcing['pond_recharge'] * t_final
 
     # hydraulic condictivity, only used at boundaries at i=-1/2 and i=N+1/2
     KLh = hydraulic_conductivity(pF, x=h_ini, Ksat=Ksat)

@@ -120,6 +120,7 @@ class Soil(object):
             forcing (dict):
                 'potential_infiltration': [m s-1]
                 'potential_evaporation': [m s-1]
+                'pond_recharge': [m s-1]
                 'atmospheric_pressure_head': [m]
                 'ground_heat_flux' (float): heat flux from soil surface [W m-2]
                     OR 'temperature' (float): soil surface temperature [degC]

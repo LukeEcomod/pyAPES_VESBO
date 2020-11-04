@@ -170,7 +170,7 @@ class OrganicLayer(object):
             max_water_content=self.max_water_content,
             albedo=self.optical_properties['albedo']
         )
-    
+
         self.emissivity = self.optical_properties['emissivity']
 
         #-- dict for temporal storage of object state after iteration
@@ -224,6 +224,7 @@ class OrganicLayer(object):
             fluxes (dict)
             states (dict)
         """
+        forcing['max_pond_recharge'] = forcing['soil_pond_storage'] / dt
 
         if controls['energy_balance']:
             # calculate moss energy and water balance
@@ -489,7 +490,7 @@ class OrganicLayer(object):
                 energy fluxes [J m-2 s-1 = W m-2]
         """
         logger = logging.getLogger(__name__)
-        
+
         dudt = np.zeros(12)
 
         if dt == 0.0:
@@ -591,7 +592,7 @@ class OrganicLayer(object):
             # evaporation demand and supply --> latent heat flux
             es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
             LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
-            
+
             if LEdemand > 0:
                 LE = min(LEdemand, LATENT_HEAT * max_evaporation_rate)
                 if iter_no > 100:
@@ -607,7 +608,7 @@ class OrganicLayer(object):
             #a = Rni - LE
             #b = SPECIFIC_HEAT_AIR * (ga + gr)
             #Ts = (a + b * Ta + gms * y[0]) / (b + gms)
-            
+
             #LW_up linearized against Told (instead of Ta): eoT_s^4 ~= eoT_old^4 + 4eoT_old^3*Ts
             gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Told + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
             Rn = (SWabs
@@ -657,7 +658,7 @@ class OrganicLayer(object):
         # [kg m-2] or [mm]
         max_recharge = max(max_recharge - interception, 0.0)
 
-        pond_recharge = min(max_recharge - EPS, forcing['soil_pond_storage'])
+        pond_recharge = min(max_recharge - EPS, forcing['max_pond_recharge'] * dt)
 
         # [kg m-2 s-1] or [mm s-1]
         pond_recharge_rate = pond_recharge / dt
@@ -860,7 +861,7 @@ class OrganicLayer(object):
         d_water_storage += interception
 
         pond_recharge = min(max_storage - (water_storage + d_water_storage),
-                            forcing['soil_pond_storage'])
+                            forcing['max_pond_recharge'] * dt)
         d_water_storage += pond_recharge
 
         #--- capillary rise from underlying soil during dt [kg m-2]
@@ -1499,7 +1500,7 @@ def soil_boundary_layer_conductance(u, z, zo, Ta, dT, P=101300.):
         # [kg m-2] or [mm]
         max_recharge = max(max_recharge - interception, 0.0)
 
-        pond_recharge = min(max_recharge - EPS, forcing['soil_pond_storage'])
+        pond_recharge = min(max_recharge - EPS, forcing['max_pond_recharge'] * dt)
 
         # [kg m-2 s-1] or [mm s-1]
         pond_recharge_rate = pond_recharge / dt

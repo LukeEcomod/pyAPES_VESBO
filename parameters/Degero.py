@@ -19,8 +19,8 @@ from pyAPES_utilities.soiltypes.sphagnum_peat import soil_properties, zh
 
 gpara = {
     'dt' : 1800.0,  # timestep in forcing data file [s]
-    'start_time' : "2014-06-01",  # start time of simulation [yyyy-mm-dd]
-    'end_time' : "2014-06-08",  # end time of simulation [yyyy-mm-dd]
+    'start_time' : "2015-06-01",  # start time of simulation [yyyy-mm-dd]
+    'end_time' : "2015-09-01",  # end time of simulation [yyyy-mm-dd]
     'forc_filename' : "Degero/Degero_forcing_2014-2016.dat",  # forcing data file*
     'results_directory':'results/Degero/'
 }
@@ -321,8 +321,8 @@ soil_properties = {
            'alpha': [0.338, 0.072, 0.072, 0.072, 0.072, 0.072, 0.072, 0.072, 0.072, 0.072, 0.072, 0.072],
            'n': [1.402, 1.371, 1.371, 1.371, 1.371, 1.371, 1.371, 1.371, 1.371, 1.371, 1.371, 1.371]
        },
-       'saturated_conductivity_vertical': [30*8.99E-05, 20*2.98E-05, 10*9.86E-06, 3.27E-06, 1.08E-06, 3.58E-07, 1.19E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07],  # saturated vertical hydraulic conductivity [m s-1]
-       'saturated_conductivity_horizontal': [30*8.99E-05, 20*2.98E-05, 10*9.86E-06, 3.27E-06, 1.08E-06, 3.58E-07, 1.19E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07],  # saturated horizontal hydraulic conductivity [m s-1]
+       'saturated_conductivity_vertical': [8.99E-05, 2.98E-05, 9.86E-06, 3.27E-06, 1.08E-06, 3.58E-07, 1.19E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07],  # saturated vertical hydraulic conductivity [m s-1]
+       'saturated_conductivity_horizontal': [8.99E-05, 2.98E-05, 9.86E-06, 3.27E-06, 1.08E-06, 3.58E-07, 1.19E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07, 1.16E-07],  # saturated horizontal hydraulic conductivity [m s-1]
        'solid_heat_capacity': None,  # [J m-3 (solid) K-1] - if None, estimated from organic/mineral composition
        'solid_composition': {
            'organic': [1.0 for i in range(N)],
@@ -341,7 +341,7 @@ soil_properties = {
 water_model = {
     'solve': True,
     'type': 'Equilibrium', #'Richards', # solution approach 'Equilibrium' for equilibrium approach else solves flow using Richards equation
-    'pond_storage_max': 0.05,  #  maximum pond depth [m]
+    'pond_storage_max': 0.002,  #  maximum pond depth [m]
     'initial_condition': {  # (dict) initial conditions
         'ground_water_level': -0.05,  # groundwater depth [m]
         'pond_storage': 0.0  # initial pond depth at surface [m]

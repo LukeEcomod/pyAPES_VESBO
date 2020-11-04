@@ -162,7 +162,7 @@ class Model(object):
                  nsim=0):
 
         logger = logging.getLogger(__name__)
-        
+
         self.dt = dt
 
         self.Nsteps = len(forcing)
@@ -183,7 +183,7 @@ class Model(object):
             logger.info("Soil temperature from forcing file")
             soil_para['heat_model']['initial_condition']['temperature'] = (
                 forcing['Tsa'].iloc[0])
-        
+
         # create canopy model instance
         # initial delayed temperature and degreedaysum for pheno & LAI-models
         if canopy_para['ctr']['pheno_cycle'] and 'X' in forcing:
@@ -252,7 +252,7 @@ class Model(object):
                 'wind_speed': self.forcing['U'].iloc[k],            # [m s-1]
                 'friction_velocity': self.forcing['Ustar'].iloc[k], # [m s-1]
                 'air_temperature': self.forcing['Tair'].iloc[k],    # [deg C]
-                'precipitation': self.forcing['Prec'].iloc[k],      # [kg m-2 s-1]                
+                'precipitation': self.forcing['Prec'].iloc[k],      # [kg m-2 s-1]
                 'h2o': self.forcing['H2O'].iloc[k],                 # [mol mol-1]
                 'co2': self.forcing['CO2'].iloc[k],                 # [ppm]
                 'PAR': {'direct': self.forcing['dirPar'].iloc[k],   # [W m-2]
@@ -291,20 +291,20 @@ class Model(object):
             soil_forcing = {
                 'potential_infiltration': out_ffloor['throughfall'] / WATER_DENSITY,
                 'potential_evaporation': ((out_ffloor['soil_evaporation'] +
-                                          out_ffloor['capillary_rise'] +
-                                          out_ffloor['pond_recharge']) / WATER_DENSITY),
+                                          out_ffloor['capillary_rise']) / WATER_DENSITY),
+                'pond_recharge': out_ffloor['pond_recharge'] / WATER_DENSITY,
                 'atmospheric_pressure_head': -1.0E6,  # set to large value, because potential_evaporation already account for h_soil
                 'ground_heat_flux': -out_ffloor['ground_heat'],
                 'date': self.forcing.index[k]}
 
-            
+
             if 'Ws' in self.forcing and self.soil.solve_water is False:
                 soil_forcing.update({
                     'state_water':{'volumetric_water_content': self.forcing['Ws'].iloc[k]}})
             if 'Tsa' in self.forcing and self.soil.solve_heat is False:
                 soil_forcing.update({
                     'state_heat':{'temperature': self.forcing['Tsa'].iloc[k]}})
-            
+
             # call self.soil to solve below-ground water and heat flow
             soil_flux, soil_state = self.soil.run(
                     dt=self.dt,
