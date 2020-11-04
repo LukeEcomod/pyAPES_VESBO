@@ -576,18 +576,18 @@ class OrganicLayer(object):
         gv = gav * relative_conductance # h2o, [mol m-2 s-1]
 
         # -- solve surface temperature Ts iteratively
+        Rni = SWabs + self.emissivity * forcing['lw_dn'] \
+            - self.emissivity * STEFAN_BOLTZMANN *(Ta + DEG_TO_KELVIN) **4
+
         err = 999.0
         itermax = 50
         iter_no = 0
-
-        #wo = 0.8 # weight of old Ts
-        ## SL 28.7.20
-        #Ts = 0.5 * (Ta + self.temperature)
-
-        Ts = Ta  # initial guess
-
+        wo = 0.5 # weight of old Ts
+        
+        # initial guess
+        Ts = 0.5 * (Ta + self.temperature)
+        
         while err > 0.01 and iter_no < itermax:
-
             # evaporation demand and supply --> latent heat flux
             es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
             LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
@@ -599,40 +599,55 @@ class OrganicLayer(object):
             else: # condensation
                 LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
 
-            Told = np.copy(Ts)
+            Told = Ts.copy()
 
             # --- find Ts: Long-wave term is linearized as in Campbell & Norman 1998 Ch 12.
-            #Te = Ta
-            #gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Te + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
-            #a = Rni - LE
-            #b = SPECIFIC_HEAT_AIR * (ga + gr)
-            #Ts = (a + b * Ta + gms * y[0]) / (b + gms)
+            Te =  0.5 * (Ta + Ts)
             
-            #LW_up linearized against Told (instead of Ta): eoT_s^4 ~= eoT_old^4 + 4eoT_old^3*Ts
-            gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Told + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
-            Rn = (SWabs
-                  + self.emissivity * forcing['lw_dn'] - self.emissivity * STEFAN_BOLTZMANN * (Told + DEG_TO_KELVIN)**4)
-
-            Ts = (Rn + SPECIFIC_HEAT_AIR * (gr * Told + ga * Ta) - LE + gms * y[0]) / (
-                SPECIFIC_HEAT_AIR * (ga + gr) + gms)
+            gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Te + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
+            a = Rni - LE
+            b = SPECIFIC_HEAT_AIR * (ga + gr)
+            Ts = (a + b * Ta + gms * y[0]) / (b + gms)
+            
+#            #LW_up linearized against Told (instead of Ta): eoT_s^4 ~= eoT_old^4 + 4eoT_old^3*Ts
+#            #This results in smaller err but solution does not converge in all cases!
+#            gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Told + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
+#            Rn = (SWabs
+#                  + self.emissivity * forcing['lw_dn'] 
+#                  - self.emissivity * STEFAN_BOLTZMANN * (Told + DEG_TO_KELVIN)**4)
+#
+#            Ts = (Rn + SPECIFIC_HEAT_AIR * (gr * Told + ga * Ta) - LE + gms * y[0]) / (
+#                SPECIFIC_HEAT_AIR * (ga + gr) + gms)
 
             err = abs(Ts - Told)
-
+            # new guess
+            Ts =  wo * Told + (1 - wo) * Ts
+            
             iter_no += 1
+            
+        if iter_no == itermax:
+            logger.debug('gt Tsurf: Maximum number of iterations reached: Ts = %.2f, err = %.2f', np.mean(Ts), err)
+            # solve Ts assuming evaporating surface is at Ta, then compute Ts and other fluxes
 
-            if iter_no == itermax:
-                #logger.debug('Maximum number of iterations reached: Ts = %.2f, err = %.2f', np.mean(Ts), err)
-
-                Ts = Ta
-                es = saturation_vapor_pressure(Ts) / forcing['air_pressure']
-                LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
-                if LEdemand > 0:
-                    LE = min(LEdemand, LATENT_HEAT * max_evaporation_rate)
-                else: # condensation
-                    LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
-
+            # evaporation demand and supply --> latent heat flux
+            es = saturation_vapor_pressure(Ta) / forcing['air_pressure']
+            LEdemand = LATENT_HEAT * gv * (es - forcing['h2o'])
+        
+            if LEdemand > 0:
+                LE = min(LEdemand, LATENT_HEAT * max_evaporation_rate)
+                if iter_no > 100:
+                    LE = 0.1 * LATENT_HEAT * max_evaporation_rate
+            else: # condensation
+                LE = max(LEdemand, LATENT_HEAT * max_condensation_rate)
+                
+            Te =  0.5 * (Ta + Ts)
+        
+            gr = 4 * self.emissivity * STEFAN_BOLTZMANN * (Te + DEG_TO_KELVIN)**3 / SPECIFIC_HEAT_AIR
+            a = Rni - LE
+            b = SPECIFIC_HEAT_AIR * (ga + gr)
+            Ts = (a + b * Ta + gms * y[0]) / (b + gms)
+                
         # -- energy fluxes  [J m-2 s-1] or [W m-2]
-
         LWup = self.emissivity * STEFAN_BOLTZMANN * (Ts + DEG_TO_KELVIN)**4
         net_radiation = SWabs +  self.emissivity * forcing['lw_dn'] - LWup
         sensible_heat_flux = SPECIFIC_HEAT_AIR * ga * (Ts - Ta)
@@ -1117,7 +1132,9 @@ def evaporation_through_organic_layer(forcing,
     Ts = forcing['soil_temperature']
     Pamb = forcing['air_pressure']
     afp = porosity - volumetric_water
-
+    
+#    if np.isfinite(afp) == False:
+#        print(afp)
     #-- conductance for h2o "from soil surface through porous media"
 
     # [mol m-3], air molar density
@@ -1126,7 +1143,7 @@ def evaporation_through_organic_layer(forcing,
     # D/Do, diffusivity in porous media relative to that in free air,
     # Millington and Quirk (1961)
     relative_diffusivity = (np.power(Ta / 293.16, 1.75) * np.power(afp, 10.0/3.0) / porosity**2)
-
+    
     g_molecular = cair * MOLECULAR_DIFFUSIVITY_H2O * relative_diffusivity / moss_height
 
     # [mol m-2 s-1], two resistors in series
