@@ -52,7 +52,5 @@ see tools/dataprocessing_scripts
 * Documentation!
 * Updating bryophyte model (energy and water)
 * Description of soil respiration? branches etc..
-* Marklund biomass functions ok for drained peatlands?
-* Feedbacks from soil to canopy
-* Parallelize model run and result writing (netCDF4) as in Climoss
-* Running sensitivity analysis easily?
+* Feedbacks from soil to canopy + trunk water storage dynamics
+
